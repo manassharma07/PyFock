@@ -1,0 +1,155 @@
+Notes about Pople basis sets
+============================
+
+There are a few types - 3-21G, 4-31G, 5-21G, 5-31G, 6-21G, 6-31G. Of
+these, only 3-21G and the 6-31G subfamily are regularly used.
+
+5-21G is only included in the original BSE due to Gaussian using it for
+Li and B for the 4-31G basis set. I believe they are rarely used.
+
+For hydrogen and helium, there is no split core/valence. Therefore,
+4-31G, 5-31G, and 6-31G are all equivalent for H and He. These basis
+sets are stored in the 31G-* files.
+
+For beryllium, the 5-21G/6-31G basis sets given in dill1975a were
+superseded by ones given in binkley1977a. The original data from dill1975a
+is not included in the new BSE.
+
+For 6-31G, the basis sets for potassium and calcium were originally
+given in rassolov1998a, along with d-type polarization functions with an
+exponent of 0.2000.  Rassolov2001a updates these basis sets, adding extra
+d functions to the valence. In doing so, the d-type polarization functions
+were also updated, to be 1/4 the smallest valence d function.
+
+As far, diffuse functions for K,Ca have not been published. Gaussian
+uses the diffuse functions from blaudeau1997a. But those functions
+are for a different kind of basis set. This is also
+true for Sc-Zn. Gaussian is also missing the updated data from Rassolov2001a for
+K,Ca. In light of this inconsistency, I have removed K-Zn from v1.
+
+There does not appear to be diffuse functions available for helium. The data
+here is taken from Gaussian.
+
+For Na-Ar (Z=11-18), 6-31G uses the same core as 6-21G (gordon1982a)
+with a different valence (francl1982a).
+
+For Li-Ne (Z=3-10), 3-21G uses the same valence as 6-21G (binkley1980a).
+
+6-31G for helium/neon do not appear to be published. For v1, I have taken the data
+from Gaussian 09.
+
+In Gaussian, the added polarization function for He is the same as for H.
+Neon uses the same as for C-F. The polarization functions for Li-B are of unknown
+origin, but appear to be evenly-spaced.
+
+
+Data sources
+------------
+
+v1 of the data comes from Gaussian09 and GAMESS. Both generally match the old BSE,
+however it looks like GAUSSIAN as re-normalized contraction coefficients, so they
+have more decimal places.
+
+I have chosen GAMESS for the data for Ga-Kr, due to Gaussian using a different
+basis set for Ga-Kr. See below for the reason.
+
+
+Differences with Gaussian
+-------------------------
+
+Gaussian does not included the added d shell for K,Ca found in rassolov2001. I have added them
+directly from the paper. The polarization functions for K,Ca that are in gaussian are of unknown
+origin.
+
+Gaussian choses a different basis set for Ga-Kr. They have chosen the basis sets
+found in blaudeau1997a. This basis is not consistent with the typical terminology,
+and therefore moved to 6-31G(C), as recommended in rassolov2001a.
+
+The original BSE had the data for Ga-Kr, but only for the 6-31G*. The basis sets there
+are consistent with my interpretation, and therefore differed from Gaussian.
+
+
+3-21G basis
+-----------
+
+3-21G was developed later, and uses pieces of the Huzinaga MINI basis set for the
+core and some valence.
+
+
+Differences/Issues with the original BSE
+----------------------------------------
+
+The original BSE sometimes truncates to a fixed number of decimal places, removing
+significant figures.
+
+In the original BSE, the H basis for 6-31G and 4-31G differ slightly,
+possibly due to transcription error. The 6-31G basis set for H in
+GAMESS and Gaussion both agree with the basis set given in 4-31G in the
+original BSE.
+
+The original BSE was missing the modified potassium and calcium given in rassolov2001a.
+
+
+-------------------------------------------------
+ REFERENCES MENTIONED ABOVE
+ (not necessarily references for the basis sets)
+-------------------------------------------------
+binkley1977a
+    Binkley, J. Stephen, Pople, John A.
+    Self-consistent molecular orbital methods. XIX. Split-valence
+            Gaussian-type basis sets for beryllium
+    J. Chem. Phys., 66, 879-880 (1977)
+    10.1063/1.433929
+
+binkley1980a
+    Binkley, J. Stephen, Pople, John A., Hehre, Warren J.
+    Self-consistent molecular orbital methods. 21. Small split-valence
+            basis sets for first-row elements
+    J. Am. Chem. Soc., 102, 939-947 (1980)
+    10.1021/ja00523a008
+
+blaudeau1997a
+    Blaudeau, Jean-Philippe, McGrath, Mark P., Curtiss, Larry A., Radom,
+            Leo
+    Extension of Gaussian-2 (G2) theory to molecules containing third-row
+            atoms K and Ca
+    J. Chem. Phys., 107, 5016-5021 (1997)
+    10.1063/1.474865
+
+dill1975a
+    Dill, James D., Pople, John A.
+    Self-consistent molecular orbital methods. XV. Extended Gaussian-type
+            basis sets for lithium, beryllium, and boron
+    J. Chem. Phys., 62, 2921-2923 (1975)
+    10.1063/1.430801
+
+francl1982a
+    Francl, Michelle M., Pietro, William J., Hehre, Warren J., Binkley, J.
+            Stephen, Gordon, Mark S., DeFrees, Douglas J., Pople, John A.
+    Self-consistent molecular orbital methods. XXIII. A polarization-type
+            basis set for second-row elements
+    J. Chem. Phys., 77, 3654-3665 (1982)
+    10.1063/1.444267
+
+gordon1982a
+    Gordon, Mark S., Binkley, J. Stephen, Pople, John A., Pietro, William
+            J., Hehre, Warren J.
+    Self-consistent molecular-orbital methods. 22. Small split-valence
+            basis sets for second-row elements
+    J. Am. Chem. Soc., 104, 2797-2803 (1982)
+    10.1021/ja00374a017
+
+rassolov1998a
+    Rassolov, Vitaly A., Pople, John A., Ratner, Mark A., Windus, Theresa
+            L.
+    6-31G* basis set for atoms K through Zn
+    J. Chem. Phys., 109, 1223-1229 (1998)
+    10.1063/1.476673
+
+rassolov2001a
+    Rassolov, Vitaly A., Ratner, Mark A., Pople, John A., Redfern, Paul
+            C., Curtiss, Larry A.
+    6-31G* basis set for third-row atoms
+    J. Comput. Chem., 22, 976-984 (2001)
+    10.1002/jcc.1058.abs
+

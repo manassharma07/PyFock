@@ -1,0 +1,1999 @@
+/home/manas/anaconda3/envs/python_39/lib/python3.9/site-packages/pyscf/dft/libxc.py:771: UserWarning: Since PySCF-2.3, B3LYP (and B3P86) are changed to the VWN-RPA variant, corresponding to the original definition by Stephens et al. (issue 1480) and the same as the B3LYP functional in Gaussian. To restore the VWN5 definition, you can put the setting "B3LYP_WITH_VWN5 = True" in pyscf_conf.py
+  warnings.warn('Since PySCF-2.3, B3LYP (and B3P86) are changed to the VWN-RPA variant, '
+Operating System: Linux 6.2.0-36-generic
+System Type: 64bit
+CPU Model: AMD Ryzen Threadripper PRO 5995WX 64-Cores
+Number of Cores: 64
+Number of Threads: 128
+Memory (GB): 503.49410247802734
+Number of cores being actually used/requested for the benchmark: 16
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 16
+OPENBLAS_NUM_THREADS = 16
+MKL_NUM_THREADS = 16
+VECLIB_MAXIMUM_THREADS = 16
+NUMEXPR_NUM_THREADS = 16
+PYSCF_MAX_MEMORY = 450000
+#INFO: **** input file is /home/manas/tmpdir/PyFock/benchmarks_tests/benchmark_DFT_LDA_DF.py ****
+####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_LDA_DF.py'
+####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
+####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
+####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
+#######
+####### This may be required in some cases when using GPU on WSL
+####### export NUMBA_CUDA_DRIVER="/usr/lib/wsl/lib/libcuda.so.1"
+
+import os
+import platform
+import psutil
+# import numba
+# numba.config.THREADING_LAYER='omp'
+# Set the number of threads/cores to be used by PyFock and PySCF
+ncores = 16
+os.environ['OMP_NUM_THREADS'] = str(ncores)
+os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
+os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
+# os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=1
+# Set the max memory for PySCF
+os.environ["PYSCF_MAX_MEMORY"] = str(450000) 
+
+# Print system information 
+from pyfock import Utils
+
+Utils.print_sys_info()
+
+# Check if the environment variables are properly set
+print("Number of cores being actually used/requested for the benchmark:", ncores)
+print('Confirming that the environment variables are properly set...')
+print('OMP_NUM_THREADS =', os.environ.get('OMP_NUM_THREADS', None))
+print('OPENBLAS_NUM_THREADS =', os.environ.get('OPENBLAS_NUM_THREADS', None))
+print('MKL_NUM_THREADS =', os.environ.get('MKL_NUM_THREADS', None))
+print('VECLIB_MAXIMUM_THREADS =', os.environ.get('VECLIB_MAXIMUM_THREADS', None))
+print('NUMEXPR_NUM_THREADS =', os.environ.get('NUMEXPR_NUM_THREADS', None))
+print('PYSCF_MAX_MEMORY =', os.environ.get('PYSCF_MAX_MEMORY', None))
+
+
+# Run your tasks here
+from pyfock import Basis
+from pyfock import Mol
+from pyfock import Integrals
+from pyfock import DFT
+from timeit import default_timer as timer
+import numpy as np
+import scipy
+
+from pyscf import gto, dft, df
+
+#DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# LDA_X LDA_C_VWN 
+# funcx = 1
+# funcc = 7
+
+# LDA_X LDA_C_PW 
+# funcx = 1
+# funcc = 12
+
+# LDA_X LDA_C_PW_MOD 
+# funcx = 1
+# funcc = 13
+
+# GGA_X_PBE, GGA_C_PBE (PBE)
+funcx = 101
+funcc = 130
+
+# GGA_X_B88, GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+funcidcrysx = [funcx, funcc]
+funcidpyscf = str(funcx)+','+str(funcc)
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVPD'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-QZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-QZVPP'
+# basis_set_name = 'def2-TZVPD'
+# basis_set_name = 'def2-QZVPD'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-TZVP'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'H2O.xyz'
+
+xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'Taxol.xyz'
+# xyzFilename = 'Valinomycin.xyz'
+# xyzFilename = 'Olestra.xyz'
+# xyzFilename = 'Ubiquitin.xyz'
+
+### 1D Carbon Alkanes
+# xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+### 2D Carbon
+# xyzFilename = 'Graphene_C16.xyz'
+# xyzFilename = 'Graphene_C76.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### 3d Carbon Fullerenes
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'C70.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+
+# ---------PySCF---------------
+#Comparison with PySCF
+molPySCF = gto.Mole()
+molPySCF.atom = xyzFilename
+molPySCF.basis = basis_set_name
+molPySCF.cart = True
+molPySCF.verbose = 5
+molPySCF.max_memory=450000
+# molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
+molPySCF.build()
+#print(molPySCF.cart_labels())
+
+print('\n\nPySCF Results\n\n')
+start=timer()
+mf = dft.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf.xc = funcidpyscf
+# mf.verbose = 4
+mf.direct_scf = False
+# mf.with_df.max_memory = 25000
+# dmat_init = mf.init_guess_by_1e(molPySCF)
+# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(molPySCF)
+# mf.init_guess = 'atom'
+# dmat_init = mf.init_guess_by_atom(molPySCF)
+mf.max_cycle = 30
+mf.conv_tol = 1e-7
+mf.grids.level = 5
+print('begin df build')
+start_df_pyscf=timer()
+# mf.with_df.build()
+duration_df_pyscf = timer()- start_df_pyscf
+print('PySCF df time: ', duration_df_pyscf)
+print('end df build')
+energyPyscf = mf.kernel(dm0=dmat_init)
+print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+print('\n\n PySCF Dipole moment')
+dmat = mf.make_rdm1()
+mol_dip_pyscf = mf.dip_moment(molPySCF, dmat, unit='AU')
+mf = 0#None
+import psutil
+
+# Get memory information
+memory_info = psutil.virtual_memory()
+
+# Convert bytes to human-readable format
+used_memory = psutil._common.bytes2human(memory_info.used)
+
+
+# If you want to print in a more human-readable format, you can use psutil's utility function
+print(f"Currently Used memory: {used_memory}")
+#--------------------CrysX --------------------------
+
+#Initialize a Mol object with somewhat large geometry
+molCrysX = Mol(coordfile=xyzFilename)
+print('\n\nNatoms :',molCrysX.natoms)
+# print(molCrysX.coordsBohrs)
+
+#Initialize a Basis object with a very large basis set
+basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
+print('\n\nNAO :',basis.bfs_nao)
+
+auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
+print('\n\naux NAO :',auxbasis.bfs_nao)
+
+dftObj = DFT(molCrysX, basis, xc=funcidcrysx)
+# GPU acceleration
+dftObj.use_gpu = True
+dftObj.keep_ao_in_gpu = False
+dftObj.use_libxc = False
+dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
+dftObj.n_gpus = 1 # Specify the number of GPUs
+dftObj.free_gpu_mem = True
+dftObj.threads_x = 16
+dftObj.threads_y = 16
+# SAO or CAO basis
+dftObj.sao = False
+# print(dmat_init)
+# Using PySCF grids to compare the energies
+energyCrysX, dmat = dftObj.scf(max_itr=35, ncores=ncores, dmat=dmat_init, conv_crit=1.0E-7, grids=pyscfGrids, \
+                               isDF=True, auxbasis=auxbasis, rys=True, DF_algo=6, blocksize=20480, XC_algo=3, debug=False, \
+                                sortGrids=False, save_ao_values=False, xc_bf_screen=True, threshold_schwarz=1e-9, \
+                                strict_schwarz=True, cholesky=True, orthogonalize=True)
+# print(dmat)
+
+# Using CrysX grids 
+# To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
+# radial_precision=1.0e-13
+# level=3
+# pruning by density with threshold = 1e-011
+# alpha_min and alpha_max corresponding to QZVP
+# energyCrysX, dmat = dftObj.scf(max_itr=30, ncores=ncores, dmat=dmat_init, grids=None, gridsLevel=3, isDF=True, auxbasis=auxbasis,
+#                             rys=True, DF_algo=6, blocksize=5000, XC_algo=2, debug=False, sortGrids=False, save_ao_values=True,
+#                             xc_bf_screen=True,threshold_schwarz=1e-9)
+
+
+print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
+
+print('\n\nPyFock Dipole moment')
+M = Integrals.dipole_moment_mat_symm(basis)
+mol_dip = molCrysX.get_dipole_moment(M, dmat)
+print('Dipole moment(X, Y, Z, A.U.):', *mol_dip)
+print('Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
+
+#Print package versions
+import joblib
+import scipy
+import numba
+import threadpoolctl
+import opt_einsum
+import pylibxc
+import llvmlite 
+import cupy
+import numexpr
+import pyscf
+print('\n\n\n Package versions')
+print('pyscf version', pyscf.__version__)
+# print('psi4 version', psi4.__version__)
+print('np version', np.__version__)
+print('joblib version', joblib.__version__)
+print('numba version', numba.__version__)
+print('threadpoolctl version', threadpoolctl.__version__)
+print('opt_einsum version', opt_einsum.__version__)
+# print('pylibxc version', pylibxc.__version__)
+print('llvmlite version', llvmlite.__version__)
+print('cupy version', cupy.__version__)
+print('numexpr version', numexpr.__version__)
+print('scipy version', scipy.__version__)
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Linux', node='odin', release='6.2.0-36-generic', version='#37~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Oct  9 15:34:04 UTC 2', machine='x86_64')  Threads 16
+Python 3.9.18 (main, Sep 11 2023, 13:41:44) 
+[GCC 11.2.0]
+numpy 1.22.3  scipy 1.10.1
+Date: Sat Jan  6 22:07:17 2024
+PySCF version 2.4.0
+PySCF path  /home/manas/anaconda3/envs/python_39/lib/python3.9/site-packages/pyscf
+
+[ENV] PYSCF_MAX_MEMORY 450000
+[CONFIG] conf_file None
+[INPUT] verbose = 5
+[INPUT] max_memory = 450000 
+[INPUT] num. atoms = 24
+[INPUT] num. electrons = 102
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Cartesian GTO integrals (6d 10f)
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 N      1.580800000000   0.702700000000  -0.227900000000 AA    2.987279057712   1.327910547732  -0.430668583788 Bohr   0.0
+[INPUT]  2 C      1.706200000000  -0.737400000000  -0.212600000000 AA    3.224250713733  -1.393484044254  -0.401755774083 Bohr   0.0
+[INPUT]  3 N      0.534000000000  -1.567100000000  -0.350300000000 AA    1.009113750518  -2.961389809806  -0.661971061435 Bohr   0.0
+[INPUT]  4 C      0.323100000000   1.360000000000   0.027400000000 AA    0.610570510847   2.570027529408   0.051778495813 Bohr   0.0
+[INPUT]  5 C     -0.812300000000   0.455300000000   0.081700000000 AA   -1.535024530984   0.860392304514   0.154390624377 Bohr   0.0
+[INPUT]  6 C     -0.696700000000  -0.932200000000  -0.066200000000 AA   -1.316572190984  -1.761602693320  -0.125099869446 Bohr   0.0
+[INPUT]  7 N     -2.188600000000   0.699000000000   0.278300000000 AA   -4.135854596223   1.320918561071   0.525910780466 Bohr   0.0
+[INPUT]  8 C     -2.851200000000  -0.520500000000   0.253200000000 AA   -5.387987126360  -0.983602447836   0.478478654740 Bohr   0.0
+[INPUT]  9 N     -1.953700000000  -1.518800000000   0.042600000000 AA   -3.691957929563  -2.870116037989   0.080502332906 Bohr   0.0
+[INPUT] 10 C      0.656800000000  -3.027400000000  -0.167500000000 AA    1.241172118614  -5.720956869508  -0.316529125865 Bohr   0.0
+[INPUT] 11 O      2.813600000000  -1.255800000000  -0.169300000000 AA    5.316933424076  -2.373118067229  -0.319930632889 Bohr   0.0
+[INPUT] 12 O      0.284900000000   2.574400000000   0.159100000000 AA    0.538382972889   4.864910935080   0.300655426418 Bohr   0.0
+[INPUT] 13 C     -2.809600000000   2.003100000000   0.503200000000 AA   -5.309374519578   3.785310400116   0.950910185881 Bohr   0.0
+[INPUT] 14 C      2.830100000000   1.500400000000  -0.196800000000 AA    5.348113905132   2.835345077297  -0.371898101314 Bohr   0.0
+[INPUT] 15 H     -3.927100000000  -0.678700000000   0.376200000000 AA   -7.421143463779  -1.282557120742   0.710914968061 Bohr   0.0
+[INPUT] 16 H      1.482300000000  -3.404600000000  -0.786500000000 AA    2.801141034443  -6.433761563694  -1.486269596970 Bohr   0.0
+[INPUT] 17 H     -0.270800000000  -3.520400000000  -0.486800000000 AA   -0.511737834532  -6.652591848919  -0.919918677438 Bohr   0.0
+[INPUT] 18 H      0.856700000000  -3.299000000000   0.878800000000 AA    1.618928370915  -6.234206484940   1.660691318268 Bohr   0.0
+[INPUT] 19 H     -2.412300000000   2.747800000000  -0.201700000000 AA   -4.558586330288   5.192589445080  -0.381157759325 Bohr   0.0
+[INPUT] 20 H     -2.604200000000   2.362100000000   1.522100000000 AA   -4.921224773592   4.463722078835   2.876352134200 Bohr   0.0
+[INPUT] 21 H     -3.897300000000   1.934400000000   0.369500000000 AA   -7.364829625267   3.655486215359   0.698253803027 Bohr   0.0
+[INPUT] 22 H      3.595900000000   1.033300000000  -0.831400000000 AA    6.795266171324   1.952654004513  -1.571118299963 Bohr   0.0
+[INPUT] 23 H      3.224900000000   1.579100000000   0.825500000000 AA    6.094177779110   2.984066523301   1.559968915828 Bohr   0.0
+[INPUT] 24 H      2.643100000000   2.513000000000  -0.579300000000 AA    4.994735119838   4.748881751032  -1.094718343961 Bohr   0.0
+[INPUT] ---------------- BASIS SET ---------------- 
+[INPUT] l, kappa, [nprim/nctr], expnt,             c_1 c_2 ...
+[INPUT] C
+[INPUT] 0    0    [5    /1   ]  1238.4016938      0.0054568832082
+                                186.29004992      0.040638409211
+                                42.251176346      0.18025593888
+                                11.676557932      0.46315121755
+                                3.5930506482      0.44087173314
+[INPUT] 0    0    [1    /1   ]  0.40245147363        1
+[INPUT] 0    0    [1    /1   ]  0.13090182668        1
+[INPUT] 1    0    [3    /1   ]  9.4680970621      0.038387871728
+                                2.0103545142      0.21117025112
+                                0.54771004707     0.51328172114
+[INPUT] 1    0    [1    /1   ]  0.15268613795        1
+[INPUT] 2    0    [1    /1   ]  0.8                  1
+[INPUT] O
+[INPUT] 0    0    [5    /1   ]  2266.1767785      -0.0053431809926
+                                340.87010191      -0.03989003923
+                                77.363135167      -0.17853911985
+                                21.47964494       -0.46427684959
+                                6.6589433124      -0.44309745172
+[INPUT] 0    0    [1    /1   ]  0.80975975668        1
+[INPUT] 0    0    [1    /1   ]  0.25530772234        1
+[INPUT] 1    0    [3    /1   ]  17.721504317      0.043394573193
+                                3.863550544       0.23094120765
+                                1.0480920883      0.51375311064
+[INPUT] 1    0    [1    /1   ]  0.27641544411        1
+[INPUT] 2    0    [1    /1   ]  1.2                  1
+[INPUT] N
+[INPUT] 0    0    [5    /1   ]  1712.8415853      -0.0053934125305
+                                257.64812677      -0.040221581118
+                                58.458245853      -0.1793114499
+                                16.198367905      -0.46376317823
+                                5.0052600809      -0.44171422662
+[INPUT] 0    0    [1    /1   ]  0.58731856571        1
+[INPUT] 0    0    [1    /1   ]  0.18764592253        1
+[INPUT] 1    0    [3    /1   ]  13.571470233      -0.040072398852
+                                2.9257372874      -0.21807045028
+                                0.79927750754     -0.51294466049
+[INPUT] 1    0    [1    /1   ]  0.21954348034        1
+[INPUT] 2    0    [1    /1   ]  1                    1
+[INPUT] H
+[INPUT] 0    0    [3    /1   ]  13.010701         0.019682158
+                                1.9622572         0.13796524
+                                0.44453796        0.47831935
+[INPUT] 0    0    [1    /1   ]  0.12194962           1
+[INPUT] 1    0    [1    /1   ]  0.8                  1
+
+nuclear repulsion = 912.858684489473
+number of shells = 114
+number of NR pGTOs = 420
+number of NR cGTOs = 260
+basis = def2-SVP
+ecp = {}
+CPU time:         3.59
+
+
+PySCF Results
+
+
+Initial guess from minao.
+begin df build
+PySCF df time:  2.1141022443771362e-07
+end df build
+
+
+******** <class 'pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = False
+chkfile to save SCF result = /tmp/tmp43f3xt2o
+max_memory 450000 MB (current use 241 MB)
+XC library pyscf.dft.libxc version 6.1.0
+    S. Lehtola, C. Steigemann, M. J.T. Oliveira, and M. A.L. Marques.,  SoftwareX 7, 1–5 (2018)
+XC functionals = 101,130
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x7fb0d634d160>
+grids dens level: 5
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x7fb0d634d040>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+atom N rad-grids = 105, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  50  50  50  50  50  50  50  50  50  50  50  50  86  86  86  86
+  86  86  86  86  86  86  86  86  86 590 590 590 590 590 590 590 590 590
+ 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770
+ 770 770 770 770 770 770 770 770 770 770 590 590 590 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 590 590]
+atom C rad-grids = 105, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  86  86  86
+  86  86  86  86  86  86  86  86  86  86 590 590 590 590 590 590 590 590
+ 590 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770
+ 770 770 770 770 770 770 770 770 770 770 770 590 590 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 590 590]
+atom O rad-grids = 105, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  50  50  50  50  50  50  50  50  50  50  50  86  86  86  86  86
+  86  86  86  86  86  86  86  86 590 590 590 590 590 590 590 590 590 770
+ 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770
+ 770 770 770 770 770 770 770 770 590 590 590 590 590 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 590 590]
+atom H rad-grids = 70, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  86  86  86  86  86 434 434 434 434 434 434 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 434 434 434 434 434
+ 434 434 434 434 434 434 434 434 434 434 434 434 434 434 434 434]
+tot_boxes 5187, boxes in each direction [19 17 11]
+Padding 4 grids
+tot grids = 838296
+Drop grids 147888
+prune_by_density_: 0 padding grids
+    CPU time for setting up grids     15.79 sec, wall time      1.35 sec
+nelec by numeric integration = 101.95181045178704
+    CPU time for vxc     34.87 sec, wall time      3.60 sec
+num shells = 260, num cGTOs = 974
+    CPU time for df-vj      4.23 sec, wall time      0.10 sec
+E1 = -2732.080894091171  Ecoul = 1229.186032383852  Exc = -90.75436365727987
+init E= -680.790540875125
+cond(S) = 19148.711453448384
+    CPU time for initialize scf     55.48 sec, wall time      5.06 sec
+  HOMO = -0.24192460849646  LUMO = -0.108575810703442
+  mo_energy =
+[-1.89573855e+01 -1.89571144e+01 -1.40526746e+01 -1.40448222e+01
+ -1.40413483e+01 -1.40382995e+01 -9.98119026e+00 -9.98042468e+00
+ -9.98008248e+00 -9.97866718e+00 -9.97344762e+00 -9.97093842e+00
+ -9.96941128e+00 -9.96717814e+00 -1.07409966e+00 -1.06980080e+00
+ -9.72720375e-01 -9.03762277e-01 -8.74196960e-01 -8.45580445e-01
+ -7.57070371e-01 -7.05250914e-01 -6.94882454e-01 -6.85892466e-01
+ -6.26659947e-01 -6.12512002e-01 -5.82058916e-01 -5.67071046e-01
+ -5.41605444e-01 -5.21085390e-01 -5.12035326e-01 -4.93946098e-01
+ -4.89973427e-01 -4.74097611e-01 -4.66989716e-01 -4.61720169e-01
+ -4.47668641e-01 -4.43403875e-01 -4.42548938e-01 -4.31468126e-01
+ -4.22572757e-01 -4.13174059e-01 -4.12585677e-01 -4.06719395e-01
+ -3.75932495e-01 -3.55093884e-01 -3.30395038e-01 -3.19376020e-01
+ -3.07984767e-01 -2.80019532e-01 -2.41924608e-01 -1.08575811e-01
+ -6.53196586e-02 -5.10323351e-02  1.51425771e-02  2.03885429e-02
+  3.04671385e-02  3.15737190e-02  3.49837503e-02  4.23269443e-02
+  5.62259412e-02  5.69153610e-02  7.27269773e-02  7.49375002e-02
+  7.93679986e-02  8.18581619e-02  8.79633651e-02  9.36823947e-02
+  1.02483587e-01  1.25242552e-01  1.36745659e-01  1.61143972e-01
+  1.69331022e-01  1.87958735e-01  2.13583607e-01  2.27312581e-01
+  2.43393279e-01  2.55350948e-01  2.64594344e-01  3.08184444e-01
+  3.29136767e-01  3.33697848e-01  3.41743325e-01  3.47250435e-01
+  3.54776970e-01  3.59592318e-01  3.80897410e-01  3.91922026e-01
+  4.00668641e-01  4.15275689e-01  4.30455582e-01  4.40959411e-01
+  4.66012331e-01  4.72766983e-01  4.90898485e-01  5.07633529e-01
+  5.16592400e-01  5.17168789e-01  5.28427751e-01  5.29861602e-01
+  5.39813267e-01  5.42225967e-01  5.47229690e-01  5.52374910e-01
+  5.54376544e-01  5.56561624e-01  5.64330492e-01  5.67302024e-01
+  5.69551055e-01  5.79250178e-01  5.85982612e-01  6.05703890e-01
+  6.16362436e-01  6.39382108e-01  6.58019744e-01  6.59150349e-01
+  6.89472019e-01  7.10549149e-01  7.19568103e-01  7.31675499e-01
+  7.57860848e-01  7.66709790e-01  7.81497968e-01  7.99487879e-01
+  8.35043961e-01  8.49195802e-01  8.66809211e-01  8.93339535e-01
+  9.02213209e-01  9.30809567e-01  9.67177830e-01  9.71639101e-01
+  9.92229211e-01  1.03819735e+00  1.04286589e+00  1.05668369e+00
+  1.07148558e+00  1.07796639e+00  1.09677151e+00  1.11015312e+00
+  1.12804501e+00  1.14787319e+00  1.16680742e+00  1.19052072e+00
+  1.20957417e+00  1.22703343e+00  1.24130003e+00  1.27325516e+00
+  1.29766048e+00  1.31542300e+00  1.34501830e+00  1.35680603e+00
+  1.37894875e+00  1.39993035e+00  1.40961036e+00  1.41734579e+00
+  1.42316332e+00  1.43161341e+00  1.47991700e+00  1.49046693e+00
+  1.50865477e+00  1.51736192e+00  1.55066638e+00  1.58484307e+00
+  1.63136729e+00  1.63986024e+00  1.64788134e+00  1.65547734e+00
+  1.66483536e+00  1.67108275e+00  1.67163653e+00  1.68347813e+00
+  1.69879156e+00  1.70902660e+00  1.71295033e+00  1.71499415e+00
+  1.73596762e+00  1.76737110e+00  1.77670591e+00  1.79429156e+00
+  1.80455520e+00  1.82028253e+00  1.83751113e+00  1.85236213e+00
+  1.86478356e+00  1.88407189e+00  1.91052925e+00  1.92417972e+00
+  1.93704586e+00  1.95785673e+00  1.96650613e+00  1.99586114e+00
+  2.03445090e+00  2.08572885e+00  2.11156005e+00  2.14846008e+00
+  2.17538652e+00  2.19211336e+00  2.20396571e+00  2.24812073e+00
+  2.25230775e+00  2.26263418e+00  2.27521898e+00  2.29869622e+00
+  2.31289109e+00  2.31490604e+00  2.33023201e+00  2.34622949e+00
+  2.38294792e+00  2.40276128e+00  2.41533621e+00  2.43999945e+00
+  2.45276871e+00  2.45614244e+00  2.47724985e+00  2.51397597e+00
+  2.53280200e+00  2.56292619e+00  2.56702708e+00  2.58261665e+00
+  2.59976004e+00  2.61619880e+00  2.63207666e+00  2.66630787e+00
+  2.68662634e+00  2.70006592e+00  2.75280884e+00  2.75491100e+00
+  2.76611543e+00  2.78007517e+00  2.78577747e+00  2.80675084e+00
+  2.82691672e+00  2.84315800e+00  2.86637192e+00  2.91859205e+00
+  2.95298547e+00  3.00349578e+00  3.02476593e+00  3.07722430e+00
+  3.13435353e+00  3.23964173e+00  3.25807765e+00  3.37173134e+00
+  3.40259354e+00  3.47926400e+00  4.93321154e+00  5.01600878e+00
+  5.03336510e+00  5.07178843e+00  5.10281950e+00  5.10731231e+00
+  5.13812710e+00  5.21199909e+00  5.55537309e+00  5.66480233e+00
+  5.68286808e+00  5.73116686e+00  6.01387579e+00  6.09132273e+00]
+nelec by numeric integration = 101.99999884798333
+    CPU time for vxc     36.47 sec, wall time      3.63 sec
+    CPU time for df-vj      2.70 sec, wall time      0.09 sec
+E1 = -2738.483134182167  Ecoul = 1238.4371144697318  Exc = -91.55938041577475
+cycle= 1 E= -678.746715638736  delta_E= 2.04  |g|= 1.36  |ddm|= 5.82
+    CPU time for cycle= 1     39.47 sec, wall time      3.73 sec
+  HOMO = -0.0542351685093835  LUMO = -0.0360515274294732
+  mo_energy =
+[-1.81664435e+01 -1.81517445e+01 -1.42097033e+01 -1.42039536e+01
+ -1.41979371e+01 -1.38409899e+01 -1.02480023e+01 -1.01442536e+01
+ -1.00718588e+01 -1.00371873e+01 -9.96827024e+00 -9.88002807e+00
+ -9.85427864e+00 -9.83771300e+00 -1.01516352e+00 -9.71803775e-01
+ -9.37468602e-01 -8.33611345e-01 -8.02257853e-01 -7.57538491e-01
+ -7.32216717e-01 -6.83969828e-01 -6.63110032e-01 -6.43226280e-01
+ -6.19486821e-01 -6.04665307e-01 -5.72912877e-01 -5.34877601e-01
+ -4.95802802e-01 -4.93174619e-01 -4.71563888e-01 -4.55532395e-01
+ -4.48812644e-01 -4.29916420e-01 -4.24526439e-01 -4.08250425e-01
+ -3.66484826e-01 -3.60509419e-01 -3.37409821e-01 -3.31558114e-01
+ -3.23636076e-01 -3.17617052e-01 -3.03999916e-01 -2.51185934e-01
+ -2.05707578e-01 -1.92104944e-01 -1.87706555e-01 -1.67258017e-01
+ -1.46781600e-01 -8.42452975e-02 -5.42351685e-02 -3.60515274e-02
+  1.07715593e-02  1.15115527e-02  2.31466750e-02  4.00230803e-02
+  5.64267510e-02  6.93385687e-02  7.67781501e-02  8.33051442e-02
+  8.38835633e-02  9.67475903e-02  1.02441598e-01  1.06701087e-01
+  1.22426915e-01  1.28210980e-01  1.33543617e-01  1.40041610e-01
+  1.46187324e-01  1.51713980e-01  1.57500849e-01  1.73668911e-01
+  1.80528016e-01  2.06472278e-01  2.27437832e-01  2.37112907e-01
+  2.56231025e-01  2.74007935e-01  2.83188270e-01  3.20006824e-01
+  3.28465453e-01  3.44491208e-01  3.53926909e-01  3.69280104e-01
+  3.96766377e-01  4.02836453e-01  4.18990789e-01  4.32037015e-01
+  4.34751816e-01  4.43665660e-01  4.52283301e-01  4.64382007e-01
+  5.09061191e-01  5.18761074e-01  5.25172764e-01  5.34858092e-01
+  5.37796268e-01  5.45291271e-01  5.51861926e-01  5.82951526e-01
+  5.91727084e-01  6.04322467e-01  6.08764638e-01  6.17296409e-01
+  6.22537557e-01  6.23840973e-01  6.30416922e-01  6.35820972e-01
+  6.38279647e-01  6.40582579e-01  6.54048249e-01  6.58572684e-01
+  6.65107012e-01  6.79161380e-01  6.91067640e-01  7.08686361e-01
+  7.31088866e-01  7.45169481e-01  7.63287703e-01  7.82612084e-01
+  7.84814247e-01  8.15113406e-01  8.45603450e-01  8.59059540e-01
+  8.92159951e-01  9.23829668e-01  9.48830096e-01  9.74757060e-01
+  9.98554817e-01  1.01617223e+00  1.03431706e+00  1.05705172e+00
+  1.06390205e+00  1.08395682e+00  1.09875249e+00  1.11657275e+00
+  1.13858362e+00  1.15769872e+00  1.19007785e+00  1.19535159e+00
+  1.21254467e+00  1.22238853e+00  1.24487722e+00  1.27013150e+00
+  1.28455201e+00  1.29760984e+00  1.31697784e+00  1.34534700e+00
+  1.35025057e+00  1.37813221e+00  1.38767357e+00  1.40511104e+00
+  1.40837018e+00  1.42205843e+00  1.44268416e+00  1.45530722e+00
+  1.48566308e+00  1.49816301e+00  1.51354412e+00  1.52245317e+00
+  1.54860605e+00  1.57396780e+00  1.58919824e+00  1.64644711e+00
+  1.66350447e+00  1.66719647e+00  1.68466447e+00  1.70479202e+00
+  1.71271539e+00  1.72208841e+00  1.72819859e+00  1.73542895e+00
+  1.74351598e+00  1.74755856e+00  1.75785466e+00  1.77035776e+00
+  1.77683144e+00  1.79435462e+00  1.79548850e+00  1.80903615e+00
+  1.83713608e+00  1.84708416e+00  1.85791280e+00  1.88886310e+00
+  1.89667500e+00  1.92583362e+00  1.93042884e+00  1.95797102e+00
+  1.96860656e+00  1.98355655e+00  1.99898438e+00  2.05107220e+00
+  2.07224695e+00  2.09945438e+00  2.15266588e+00  2.19238892e+00
+  2.21175676e+00  2.22423310e+00  2.24902448e+00  2.27110919e+00
+  2.28955656e+00  2.30859679e+00  2.33674183e+00  2.35364699e+00
+  2.37131015e+00  2.37853151e+00  2.39138723e+00  2.40708411e+00
+  2.44413287e+00  2.44813383e+00  2.47556670e+00  2.53577050e+00
+  2.53641193e+00  2.55990995e+00  2.59048749e+00  2.60498202e+00
+  2.60625461e+00  2.63327468e+00  2.64563161e+00  2.67150259e+00
+  2.69223904e+00  2.73763950e+00  2.78286261e+00  2.80789684e+00
+  2.83651453e+00  2.84101545e+00  2.84835611e+00  2.85196270e+00
+  2.86785085e+00  2.88009523e+00  2.88663833e+00  2.89684297e+00
+  2.91428919e+00  2.92210218e+00  2.94241692e+00  3.02521966e+00
+  3.07077739e+00  3.13400676e+00  3.20388051e+00  3.22445312e+00
+  3.25869307e+00  3.33334061e+00  3.44285628e+00  3.55614655e+00
+  3.70681065e+00  3.75169829e+00  4.88531044e+00  4.94508285e+00
+  4.99653041e+00  5.09119748e+00  5.14359762e+00  5.18818506e+00
+  5.20688081e+00  5.21917882e+00  5.60128160e+00  5.61736601e+00
+  5.67207017e+00  5.71252305e+00  6.50546911e+00  6.59369152e+00]
+nelec by numeric integration = 101.99999822280252
+    CPU time for vxc     36.51 sec, wall time      3.62 sec
+    CPU time for df-vj      2.65 sec, wall time      0.09 sec
+E1 = -2739.7074818118767  Ecoul = 1243.359821461893  Exc = -89.99843154950419
+cycle= 2 E= -673.487407410014  delta_E= 5.26  |g|= 4.55  |ddm|= 6.41
+    CPU time for cycle= 2     39.61 sec, wall time      3.72 sec
+  HOMO = -0.144287546026245  LUMO = -0.0373041854067583
+  mo_energy =
+[-1.87763593e+01 -1.87336810e+01 -1.40430407e+01 -1.40278905e+01
+ -1.39964732e+01 -1.38717930e+01 -1.00549212e+01 -1.00219090e+01
+ -9.90728812e+00 -9.88943388e+00 -9.88459109e+00 -9.87921801e+00
+ -9.87062484e+00 -9.82666967e+00 -9.88426340e-01 -9.74218369e-01
+ -8.57331074e-01 -8.40744903e-01 -8.21268116e-01 -7.22554933e-01
+ -6.64241903e-01 -6.18818177e-01 -6.08131414e-01 -5.96538991e-01
+ -5.56887459e-01 -5.29280011e-01 -4.96798054e-01 -4.62250079e-01
+ -4.34930008e-01 -4.29849755e-01 -4.18214122e-01 -4.03614693e-01
+ -3.96908368e-01 -3.89319302e-01 -3.84679996e-01 -3.81315134e-01
+ -3.62238510e-01 -3.53936715e-01 -3.48082382e-01 -3.42255451e-01
+ -3.35041752e-01 -3.25009128e-01 -3.11567793e-01 -2.99913129e-01
+ -2.61478031e-01 -2.45505610e-01 -2.41399404e-01 -2.32533546e-01
+ -1.67101681e-01 -1.48558526e-01 -1.44287546e-01 -3.73041854e-02
+ -1.56391713e-02  5.01976718e-02  5.83924798e-02  6.00035205e-02
+  7.29253881e-02  7.90624427e-02  8.95591368e-02  9.88515372e-02
+  1.03565242e-01  1.14616974e-01  1.17179578e-01  1.25136551e-01
+  1.35000554e-01  1.35447047e-01  1.46680287e-01  1.57621917e-01
+  1.63168710e-01  1.92468612e-01  2.00552172e-01  2.16403063e-01
+  2.34458600e-01  2.48042073e-01  2.76901468e-01  2.92490318e-01
+  3.10053942e-01  3.26714980e-01  3.40356914e-01  3.69874445e-01
+  3.83393587e-01  3.84613170e-01  4.00018581e-01  4.09770538e-01
+  4.19361667e-01  4.29553316e-01  4.43497962e-01  4.60391856e-01
+  4.66644017e-01  4.80708122e-01  4.90502769e-01  5.08123319e-01
+  5.24380393e-01  5.52483689e-01  5.59147115e-01  5.74242917e-01
+  5.75367652e-01  5.90103643e-01  5.91767088e-01  5.97844251e-01
+  6.01298708e-01  6.04818581e-01  6.09060162e-01  6.21714078e-01
+  6.27283530e-01  6.27830888e-01  6.31737142e-01  6.34761757e-01
+  6.38914988e-01  6.50287746e-01  6.55696571e-01  6.70540191e-01
+  6.83573994e-01  7.03981770e-01  7.19415980e-01  7.34635659e-01
+  7.71169867e-01  7.93512442e-01  8.01686161e-01  8.08742179e-01
+  8.19579598e-01  8.51398582e-01  8.69265449e-01  8.78440853e-01
+  9.12972327e-01  9.28568872e-01  9.47137244e-01  9.59743935e-01
+  9.85787481e-01  1.00653226e+00  1.03283632e+00  1.05223774e+00
+  1.06645977e+00  1.10526894e+00  1.10819569e+00  1.13332863e+00
+  1.13470440e+00  1.15326940e+00  1.16955878e+00  1.18263051e+00
+  1.20123539e+00  1.22322894e+00  1.24974515e+00  1.26915397e+00
+  1.28416449e+00  1.29766277e+00  1.31284048e+00  1.33535845e+00
+  1.36367460e+00  1.39733911e+00  1.40324365e+00  1.42690358e+00
+  1.44559639e+00  1.46070832e+00  1.46650477e+00  1.47633497e+00
+  1.48730589e+00  1.50625597e+00  1.53276756e+00  1.56176882e+00
+  1.57281616e+00  1.58898557e+00  1.60556783e+00  1.66108167e+00
+  1.69454069e+00  1.70239632e+00  1.71548622e+00  1.72137295e+00
+  1.72667850e+00  1.73194831e+00  1.74824520e+00  1.75305445e+00
+  1.76927651e+00  1.77547601e+00  1.79025810e+00  1.79371727e+00
+  1.82930387e+00  1.83609049e+00  1.84729095e+00  1.85308473e+00
+  1.87358957e+00  1.88542060e+00  1.91791571e+00  1.92723869e+00
+  1.94053359e+00  1.96364856e+00  1.98295296e+00  2.00410914e+00
+  2.02423559e+00  2.03937976e+00  2.04729546e+00  2.06714962e+00
+  2.11910193e+00  2.18178226e+00  2.19529020e+00  2.20757038e+00
+  2.25391142e+00  2.26348648e+00  2.29184107e+00  2.31421271e+00
+  2.33356170e+00  2.35503086e+00  2.37422417e+00  2.38152671e+00
+  2.40245323e+00  2.40885181e+00  2.43556993e+00  2.45068044e+00
+  2.48000587e+00  2.48702317e+00  2.50225732e+00  2.53021769e+00
+  2.54078439e+00  2.56233081e+00  2.57770460e+00  2.59979305e+00
+  2.64490667e+00  2.65713767e+00  2.66999349e+00  2.68604164e+00
+  2.70048033e+00  2.70824382e+00  2.71832721e+00  2.74565239e+00
+  2.77867165e+00  2.78714752e+00  2.83188851e+00  2.84848578e+00
+  2.86192488e+00  2.87558538e+00  2.87897460e+00  2.88329556e+00
+  2.91552719e+00  2.93001723e+00  2.96775762e+00  3.02003239e+00
+  3.05039054e+00  3.09577751e+00  3.13711464e+00  3.18597201e+00
+  3.24552273e+00  3.34497894e+00  3.37670630e+00  3.47148873e+00
+  3.49880682e+00  3.57717422e+00  4.98425150e+00  5.04692454e+00
+  5.12509658e+00  5.15732495e+00  5.18063406e+00  5.19410577e+00
+  5.24937201e+00  5.31808148e+00  5.70074952e+00  5.73312495e+00
+  5.74921301e+00  5.80704500e+00  6.17126794e+00  6.22067063e+00]
+nelec by numeric integration = 101.99999849100085
+    CPU time for vxc     36.43 sec, wall time      3.60 sec
+    CPU time for df-vj      2.73 sec, wall time      0.10 sec
+E1 = -2731.3015463457145  Ecoul = 1230.060301088896  Exc = -90.59081228932766
+cycle= 3 E= -678.973373056673  delta_E= -5.49  |g|= 0.696  |ddm|= 5.84
+    CPU time for cycle= 3     39.59 sec, wall time      3.71 sec
+  HOMO = -0.194465423102818  LUMO = -0.0707535757338832
+  mo_energy =
+[-1.87456692e+01 -1.86827832e+01 -1.41110180e+01 -1.41018638e+01
+ -1.40962808e+01 -1.40455538e+01 -1.00271994e+01 -1.00237648e+01
+ -9.99128067e+00 -9.98809061e+00 -9.97322150e+00 -9.97121502e+00
+ -9.96251378e+00 -9.94525845e+00 -9.70388128e-01 -9.50153244e-01
+ -9.12859883e-01 -8.77702390e-01 -8.32422925e-01 -8.16452000e-01
+ -7.23086867e-01 -6.68993988e-01 -6.57360737e-01 -6.32248997e-01
+ -5.78342760e-01 -5.76898809e-01 -5.35030745e-01 -5.21771345e-01
+ -4.87992011e-01 -4.60079881e-01 -4.52369482e-01 -4.45865844e-01
+ -4.23628679e-01 -4.18282848e-01 -4.02325029e-01 -3.94352950e-01
+ -3.81281655e-01 -3.77861638e-01 -3.74607651e-01 -3.55666345e-01
+ -3.50544984e-01 -3.41805695e-01 -3.29175016e-01 -3.27781310e-01
+ -2.92873422e-01 -2.79301737e-01 -2.65452780e-01 -2.38406038e-01
+ -2.13511597e-01 -2.03696397e-01 -1.94465423e-01 -7.07535757e-02
+ -3.03448603e-02 -8.00952180e-03  3.48125751e-02  4.80327849e-02
+  5.38747601e-02  6.52213534e-02  6.84080850e-02  7.74189589e-02
+  7.86555401e-02  8.47540563e-02  1.00226142e-01  1.08344942e-01
+  1.11428349e-01  1.16271911e-01  1.20805010e-01  1.26928599e-01
+  1.35385124e-01  1.58285242e-01  1.77951894e-01  1.91716173e-01
+  2.06138277e-01  2.13803208e-01  2.41940465e-01  2.58236631e-01
+  2.78649248e-01  2.88273276e-01  2.97686225e-01  3.25519889e-01
+  3.54319113e-01  3.67523187e-01  3.73632494e-01  3.84138243e-01
+  3.98996266e-01  4.07413126e-01  4.19519365e-01  4.23957414e-01
+  4.28550265e-01  4.43061566e-01  4.57287935e-01  4.83783708e-01
+  4.97953528e-01  5.12876128e-01  5.29198034e-01  5.42930386e-01
+  5.48830089e-01  5.55281762e-01  5.60072237e-01  5.75128319e-01
+  5.85782928e-01  5.87518186e-01  5.92584464e-01  5.94952619e-01
+  5.97041104e-01  6.02345220e-01  6.07415088e-01  6.12673808e-01
+  6.14287246e-01  6.23269447e-01  6.30615251e-01  6.45802225e-01
+  6.50927643e-01  6.77892825e-01  6.95495379e-01  7.08868861e-01
+  7.38597120e-01  7.44609207e-01  7.65189654e-01  7.83727665e-01
+  7.95371283e-01  8.02504233e-01  8.11166656e-01  8.36118988e-01
+  8.93872955e-01  8.97968222e-01  9.12833143e-01  9.62123113e-01
+  9.69179002e-01  1.00787459e+00  1.01663126e+00  1.02757748e+00
+  1.04114626e+00  1.07790115e+00  1.08167731e+00  1.09961603e+00
+  1.11696478e+00  1.11921573e+00  1.13046825e+00  1.17603163e+00
+  1.18478890e+00  1.19464923e+00  1.20454201e+00  1.21924687e+00
+  1.25801348e+00  1.26524991e+00  1.29375151e+00  1.32804751e+00
+  1.34122268e+00  1.35573875e+00  1.37554051e+00  1.39082678e+00
+  1.41108250e+00  1.42527905e+00  1.44688370e+00  1.46092504e+00
+  1.48480664e+00  1.48605466e+00  1.51437377e+00  1.53162295e+00
+  1.55097478e+00  1.57603058e+00  1.59143767e+00  1.61773982e+00
+  1.66814834e+00  1.67706484e+00  1.68290871e+00  1.70633715e+00
+  1.71133802e+00  1.72152256e+00  1.72485541e+00  1.72567703e+00
+  1.74536925e+00  1.74863051e+00  1.75848431e+00  1.76239723e+00
+  1.76574187e+00  1.80273960e+00  1.81705835e+00  1.84692863e+00
+  1.85064140e+00  1.86465828e+00  1.86802485e+00  1.89415838e+00
+  1.90451508e+00  1.93288782e+00  1.94998837e+00  1.96221406e+00
+  1.97174563e+00  1.98964094e+00  1.99835508e+00  2.05330314e+00
+  2.07140859e+00  2.12160378e+00  2.15163546e+00  2.19647592e+00
+  2.21983702e+00  2.23873458e+00  2.25429039e+00  2.27237364e+00
+  2.30074735e+00  2.30549735e+00  2.32214961e+00  2.34136022e+00
+  2.36929447e+00  2.37559179e+00  2.37988236e+00  2.40055670e+00
+  2.44291302e+00  2.44968097e+00  2.49258545e+00  2.51367501e+00
+  2.52819261e+00  2.55033730e+00  2.56309772e+00  2.59570116e+00
+  2.60088665e+00  2.60860003e+00  2.62206929e+00  2.63984698e+00
+  2.66742990e+00  2.68665957e+00  2.70359284e+00  2.72112004e+00
+  2.72866748e+00  2.74695340e+00  2.80581828e+00  2.81382485e+00
+  2.82514470e+00  2.83155520e+00  2.84418557e+00  2.86459038e+00
+  2.87632558e+00  2.89379559e+00  2.90511032e+00  3.03694772e+00
+  3.05193035e+00  3.06298911e+00  3.09787179e+00  3.12168445e+00
+  3.18150827e+00  3.31457559e+00  3.33825324e+00  3.48491076e+00
+  3.53021030e+00  3.60357635e+00  4.96033882e+00  5.02497149e+00
+  5.06206212e+00  5.10227256e+00  5.14006890e+00  5.14636441e+00
+  5.16003114e+00  5.23571933e+00  5.56359276e+00  5.67553257e+00
+  5.70142060e+00  5.74207757e+00  6.18433498e+00  6.29747531e+00]
+nelec by numeric integration = 101.9999986955824
+    CPU time for vxc     36.38 sec, wall time      3.60 sec
+    CPU time for df-vj      2.68 sec, wall time      0.09 sec
+E1 = -2736.0258341688946  Ecoul = 1234.9716294345267  Exc = -90.87928593392466
+cycle= 4 E= -679.074806178819  delta_E= -0.101  |g|= 0.429  |ddm|= 1.41
+    CPU time for cycle= 4     39.48 sec, wall time      3.70 sec
+  HOMO = -0.201759359641852  LUMO = -0.0795379542769065
+  mo_energy =
+[-1.87973541e+01 -1.87394801e+01 -1.41376416e+01 -1.40884224e+01
+ -1.40652538e+01 -1.39850567e+01 -1.00441993e+01 -1.00343245e+01
+ -9.99762964e+00 -9.99416217e+00 -9.99311824e+00 -9.98106670e+00
+ -9.95420387e+00 -9.95062159e+00 -9.75220658e-01 -9.50473647e-01
+ -9.49391842e-01 -8.66870288e-01 -8.44389923e-01 -8.06500953e-01
+ -7.25699499e-01 -6.69906339e-01 -6.57055990e-01 -6.37907241e-01
+ -5.89745798e-01 -5.72976776e-01 -5.44067208e-01 -5.27633135e-01
+ -4.87517116e-01 -4.63945759e-01 -4.57044691e-01 -4.38044584e-01
+ -4.30658712e-01 -4.14695736e-01 -4.09144851e-01 -4.01646510e-01
+ -3.91489974e-01 -3.84178063e-01 -3.77511950e-01 -3.73106119e-01
+ -3.55065093e-01 -3.49277098e-01 -3.42735382e-01 -3.42168205e-01
+ -2.85776335e-01 -2.57766698e-01 -2.51075676e-01 -2.39342642e-01
+ -2.29180728e-01 -2.17873946e-01 -2.01759360e-01 -7.95379543e-02
+ -2.33810947e-02 -1.03577715e-02  2.89026529e-02  4.19768754e-02
+  5.11246259e-02  6.05066665e-02  6.97594244e-02  7.07783059e-02
+  7.20075832e-02  7.51066791e-02  9.80920897e-02  1.02655719e-01
+  1.08820873e-01  1.19397686e-01  1.25983035e-01  1.29190413e-01
+  1.36133778e-01  1.52243970e-01  1.66526030e-01  1.82626766e-01
+  1.96137996e-01  2.23333228e-01  2.38186130e-01  2.53242363e-01
+  2.69963924e-01  2.81086988e-01  2.95079006e-01  3.27708204e-01
+  3.48493567e-01  3.60524463e-01  3.67555121e-01  3.80582191e-01
+  4.00867772e-01  4.09683824e-01  4.15166988e-01  4.23541836e-01
+  4.37457616e-01  4.39256453e-01  4.56895795e-01  4.78247629e-01
+  5.03723056e-01  5.08928253e-01  5.22747515e-01  5.44073838e-01
+  5.47432354e-01  5.51007776e-01  5.56256730e-01  5.58359799e-01
+  5.78158107e-01  5.83185270e-01  5.87749648e-01  5.94085264e-01
+  5.95492013e-01  6.00191605e-01  6.01817144e-01  6.04537778e-01
+  6.14326414e-01  6.17043349e-01  6.22654381e-01  6.38038774e-01
+  6.52702125e-01  6.77719887e-01  6.96941857e-01  6.98644669e-01
+  7.36035212e-01  7.54544253e-01  7.67768176e-01  7.88812142e-01
+  7.90577084e-01  8.02995918e-01  8.23208183e-01  8.31406098e-01
+  8.92019654e-01  8.98114708e-01  9.17155584e-01  9.47197609e-01
+  9.61001381e-01  1.00252219e+00  1.01618974e+00  1.02397357e+00
+  1.02956567e+00  1.07122889e+00  1.07486475e+00  1.09641321e+00
+  1.11211633e+00  1.12148206e+00  1.13293620e+00  1.17672574e+00
+  1.18312770e+00  1.19374095e+00  1.20800413e+00  1.21879057e+00
+  1.25301903e+00  1.26047280e+00  1.28797267e+00  1.31737214e+00
+  1.33455947e+00  1.35366311e+00  1.37595700e+00  1.38302754e+00
+  1.40806021e+00  1.42914869e+00  1.43903068e+00  1.46453091e+00
+  1.47133007e+00  1.48018146e+00  1.51193760e+00  1.52726608e+00
+  1.55054886e+00  1.56715728e+00  1.58828619e+00  1.60668949e+00
+  1.65572132e+00  1.67083321e+00  1.68706068e+00  1.69676788e+00
+  1.71051848e+00  1.71375959e+00  1.72109345e+00  1.72427528e+00
+  1.73645553e+00  1.74290020e+00  1.75393638e+00  1.75805094e+00
+  1.76755266e+00  1.79675214e+00  1.81993783e+00  1.83848311e+00
+  1.84994345e+00  1.85521066e+00  1.86656045e+00  1.88934644e+00
+  1.89741187e+00  1.92693117e+00  1.94415884e+00  1.95654282e+00
+  1.96258504e+00  1.99197436e+00  2.00515619e+00  2.04116649e+00
+  2.06810636e+00  2.12183940e+00  2.15675596e+00  2.19415308e+00
+  2.20926325e+00  2.23308614e+00  2.25513201e+00  2.28276907e+00
+  2.28810568e+00  2.30839719e+00  2.31784965e+00  2.34662669e+00
+  2.35646451e+00  2.36703795e+00  2.38315134e+00  2.40786796e+00
+  2.44383597e+00  2.44984182e+00  2.47496426e+00  2.51749975e+00
+  2.52289929e+00  2.55410626e+00  2.57749578e+00  2.58412441e+00
+  2.59276526e+00  2.60398932e+00  2.61757677e+00  2.63860688e+00
+  2.66101752e+00  2.68474896e+00  2.68916564e+00  2.71346339e+00
+  2.73399817e+00  2.74387895e+00  2.79994773e+00  2.80710699e+00
+  2.81637608e+00  2.83023816e+00  2.84380173e+00  2.86393055e+00
+  2.88481827e+00  2.89246291e+00  2.90979374e+00  3.03086484e+00
+  3.04420687e+00  3.06398297e+00  3.06850075e+00  3.12779760e+00
+  3.19325723e+00  3.30902165e+00  3.33146072e+00  3.46337085e+00
+  3.51215105e+00  3.57426640e+00  4.93793145e+00  5.02792878e+00
+  5.04647119e+00  5.09530449e+00  5.14098579e+00  5.14816204e+00
+  5.16336627e+00  5.22235497e+00  5.63538962e+00  5.66140614e+00
+  5.68857989e+00  5.74098424e+00  6.19230850e+00  6.23078239e+00]
+nelec by numeric integration = 101.99999881077342
+    CPU time for vxc     36.33 sec, wall time      3.61 sec
+    CPU time for df-vj      2.71 sec, wall time      0.09 sec
+E1 = -2736.8426161419416  Ecoul = 1235.7986530636254  Exc = -90.91422949179828
+cycle= 5 E= -679.099508080641  delta_E= -0.0247  |g|= 0.299  |ddm|= 0.723
+    CPU time for cycle= 5     39.38 sec, wall time      3.71 sec
+  HOMO = -0.196716767411877  LUMO = -0.0676227713383173
+  mo_energy =
+[-1.87597134e+01 -1.87508989e+01 -1.40856685e+01 -1.40811285e+01
+ -1.40738012e+01 -1.40131770e+01 -1.00493858e+01 -1.00230470e+01
+ -9.98741777e+00 -9.98690352e+00 -9.96272969e+00 -9.94813138e+00
+ -9.94791377e+00 -9.94249836e+00 -9.67636654e-01 -9.43064303e-01
+ -9.30808045e-01 -8.70014249e-01 -8.37406130e-01 -8.02922659e-01
+ -7.10824582e-01 -6.57989378e-01 -6.52921108e-01 -6.34441331e-01
+ -5.81313740e-01 -5.70236123e-01 -5.36940456e-01 -5.16125972e-01
+ -4.78785141e-01 -4.54526416e-01 -4.44672973e-01 -4.33174103e-01
+ -4.22927133e-01 -4.09867832e-01 -4.03449996e-01 -3.98850524e-01
+ -3.81195620e-01 -3.76092660e-01 -3.68382333e-01 -3.67136295e-01
+ -3.50876157e-01 -3.46500221e-01 -3.43764183e-01 -3.40401676e-01
+ -2.82957792e-01 -2.49417313e-01 -2.44572738e-01 -2.40802050e-01
+ -2.29246441e-01 -2.12524948e-01 -1.96716767e-01 -6.76227713e-02
+ -2.48924252e-02 -1.02576208e-02  3.51729370e-02  4.88719947e-02
+  5.62192913e-02  6.37567139e-02  6.96258169e-02  7.39579192e-02
+  7.98958669e-02  8.71053839e-02  1.05678747e-01  1.09221978e-01
+  1.10964126e-01  1.18867006e-01  1.26694653e-01  1.30555345e-01
+  1.35329521e-01  1.62478722e-01  1.72370569e-01  1.89881286e-01
+  2.01384491e-01  2.22377865e-01  2.45610559e-01  2.58318928e-01
+  2.81248579e-01  2.83141523e-01  2.98433502e-01  3.35321042e-01
+  3.57197827e-01  3.68794680e-01  3.73127023e-01  3.85374655e-01
+  4.00322492e-01  4.09775287e-01  4.21317551e-01  4.26815492e-01
+  4.39890683e-01  4.43297868e-01  4.62911241e-01  4.78838831e-01
+  5.09531222e-01  5.12005654e-01  5.27159863e-01  5.47778780e-01
+  5.53814130e-01  5.54181179e-01  5.66640781e-01  5.69796437e-01
+  5.87049409e-01  5.90406234e-01  5.93013390e-01  5.97928016e-01
+  6.00515549e-01  6.01515720e-01  6.06983986e-01  6.08508080e-01
+  6.14742952e-01  6.21094242e-01  6.26044549e-01  6.44446358e-01
+  6.52916316e-01  6.82615110e-01  7.00304513e-01  7.04444348e-01
+  7.43400638e-01  7.55465073e-01  7.71717369e-01  7.88935586e-01
+  7.94195701e-01  8.13644223e-01  8.18869468e-01  8.39819885e-01
+  8.94125441e-01  8.99105478e-01  9.18037877e-01  9.55199412e-01
+  9.67877907e-01  1.00623420e+00  1.02363045e+00  1.03153453e+00
+  1.03357967e+00  1.07831765e+00  1.08592835e+00  1.09928986e+00
+  1.11547693e+00  1.12396169e+00  1.13452193e+00  1.17664430e+00
+  1.18812546e+00  1.19755175e+00  1.20850846e+00  1.22486576e+00
+  1.25993181e+00  1.26647518e+00  1.29096813e+00  1.32546875e+00
+  1.33907798e+00  1.35909051e+00  1.37894163e+00  1.39291798e+00
+  1.41403362e+00  1.43592501e+00  1.44236619e+00  1.46547530e+00
+  1.47207338e+00  1.48139473e+00  1.51756044e+00  1.53089296e+00
+  1.55044754e+00  1.57100594e+00  1.59366419e+00  1.61396748e+00
+  1.66541702e+00  1.68303099e+00  1.68590308e+00  1.70484178e+00
+  1.71450533e+00  1.71939079e+00  1.72441462e+00  1.72683934e+00
+  1.74844629e+00  1.75057863e+00  1.75789664e+00  1.76214169e+00
+  1.77556475e+00  1.80534933e+00  1.81873879e+00  1.83863091e+00
+  1.85051913e+00  1.85754350e+00  1.87361864e+00  1.89506338e+00
+  1.90341064e+00  1.93353775e+00  1.95039967e+00  1.96469658e+00
+  1.97492646e+00  1.99804968e+00  2.00706599e+00  2.04525237e+00
+  2.07500952e+00  2.13130093e+00  2.15779214e+00  2.19913181e+00
+  2.21826779e+00  2.23782995e+00  2.25425622e+00  2.29151808e+00
+  2.29725449e+00  2.31117135e+00  2.32681055e+00  2.35373926e+00
+  2.37035575e+00  2.37525581e+00  2.38339134e+00  2.41096160e+00
+  2.45044497e+00  2.45237402e+00  2.48071836e+00  2.51786299e+00
+  2.52647899e+00  2.55944641e+00  2.58406785e+00  2.58957408e+00
+  2.60459195e+00  2.61462448e+00  2.62736135e+00  2.63874545e+00
+  2.66925016e+00  2.68848615e+00  2.69257132e+00  2.72304780e+00
+  2.73928232e+00  2.74789626e+00  2.80816605e+00  2.81011158e+00
+  2.82884430e+00  2.83414009e+00  2.84388740e+00  2.86661783e+00
+  2.88567511e+00  2.89479408e+00  2.91376276e+00  3.03507016e+00
+  3.05187183e+00  3.07077007e+00  3.07902658e+00  3.13380019e+00
+  3.19851982e+00  3.31580885e+00  3.33787955e+00  3.47129716e+00
+  3.51634971e+00  3.58346099e+00  4.95620993e+00  5.03066056e+00
+  5.05170838e+00  5.11159182e+00  5.14108799e+00  5.15744311e+00
+  5.16652017e+00  5.24433146e+00  5.61854481e+00  5.68328262e+00
+  5.69559903e+00  5.74596202e+00  6.17888689e+00  6.26070485e+00]
+nelec by numeric integration = 101.99999871073426
+    CPU time for vxc     36.33 sec, wall time      3.60 sec
+    CPU time for df-vj      2.71 sec, wall time      0.09 sec
+E1 = -2735.814944814638  Ecoul = 1234.689425346482  Exc = -90.85357985675908
+cycle= 6 E= -679.120414835441  delta_E= -0.0209  |g|= 0.0772  |ddm|= 0.385
+    CPU time for cycle= 6     39.43 sec, wall time      3.70 sec
+  HOMO = -0.194239652214442  LUMO = -0.0665377068100066
+  mo_energy =
+[-1.87472698e+01 -1.87467084e+01 -1.41013449e+01 -1.40724205e+01
+ -1.40622783e+01 -1.40113799e+01 -1.00337564e+01 -1.00142277e+01
+ -9.98336835e+00 -9.98125356e+00 -9.96056254e+00 -9.95156503e+00
+ -9.94250961e+00 -9.93783503e+00 -9.61392673e-01 -9.40965666e-01
+ -9.32122748e-01 -8.64598223e-01 -8.31391891e-01 -8.03027520e-01
+ -7.09223207e-01 -6.57775042e-01 -6.49675030e-01 -6.30708847e-01
+ -5.77345959e-01 -5.66929961e-01 -5.32765741e-01 -5.14997361e-01
+ -4.77979387e-01 -4.52893659e-01 -4.43264927e-01 -4.30354558e-01
+ -4.21575551e-01 -4.06938005e-01 -4.01425392e-01 -3.95860710e-01
+ -3.78158526e-01 -3.74630332e-01 -3.67227684e-01 -3.66179938e-01
+ -3.47782122e-01 -3.43617423e-01 -3.40771969e-01 -3.38102844e-01
+ -2.80849298e-01 -2.46378173e-01 -2.44328903e-01 -2.37011177e-01
+ -2.24624086e-01 -2.10237873e-01 -1.94239652e-01 -6.65377068e-02
+ -1.85849508e-02 -8.20846579e-03  3.55216679e-02  4.96931905e-02
+  5.72670794e-02  6.70891779e-02  7.10229389e-02  7.57309040e-02
+  8.01922758e-02  8.66241273e-02  1.07020710e-01  1.09341908e-01
+  1.11243451e-01  1.20284585e-01  1.29150299e-01  1.32194370e-01
+  1.38257400e-01  1.63086236e-01  1.76714102e-01  1.91845215e-01
+  2.04685040e-01  2.25565407e-01  2.47193378e-01  2.61390057e-01
+  2.83484726e-01  2.86548176e-01  3.01512582e-01  3.36076121e-01
+  3.57765320e-01  3.70453471e-01  3.74309592e-01  3.87214958e-01
+  4.02380582e-01  4.12382117e-01  4.23750461e-01  4.29116186e-01
+  4.42973342e-01  4.45390143e-01  4.63919136e-01  4.81930342e-01
+  5.11562910e-01  5.14098818e-01  5.29396619e-01  5.50012778e-01
+  5.55645053e-01  5.56538169e-01  5.66707578e-01  5.71142509e-01
+  5.88289868e-01  5.91475725e-01  5.94074854e-01  5.99848206e-01
+  6.02496559e-01  6.03161113e-01  6.07922209e-01  6.09939982e-01
+  6.17075460e-01  6.22518667e-01  6.27512404e-01  6.45420919e-01
+  6.55509720e-01  6.84387570e-01  7.02618324e-01  7.05401895e-01
+  7.45125854e-01  7.57392120e-01  7.73796954e-01  7.92963307e-01
+  7.96669045e-01  8.13083093e-01  8.20710000e-01  8.39492193e-01
+  8.97194738e-01  9.02115293e-01  9.20348788e-01  9.56918415e-01
+  9.69289086e-01  1.00846699e+00  1.02502753e+00  1.03272117e+00
+  1.03443359e+00  1.08016131e+00  1.08593690e+00  1.10229103e+00
+  1.11764398e+00  1.12653807e+00  1.13674791e+00  1.17983351e+00
+  1.19029421e+00  1.19948290e+00  1.21137704e+00  1.22652151e+00
+  1.26164148e+00  1.26866110e+00  1.29389018e+00  1.32645367e+00
+  1.34180602e+00  1.36133077e+00  1.38190376e+00  1.39358865e+00
+  1.41594414e+00  1.43718184e+00  1.44394172e+00  1.46782023e+00
+  1.47639970e+00  1.48146246e+00  1.51948897e+00  1.53308721e+00
+  1.55374999e+00  1.57344927e+00  1.59532766e+00  1.61516384e+00
+  1.66574786e+00  1.68315751e+00  1.68882146e+00  1.70647718e+00
+  1.71607926e+00  1.72042081e+00  1.72594757e+00  1.72888695e+00
+  1.74871971e+00  1.75258246e+00  1.76033081e+00  1.76309301e+00
+  1.77642364e+00  1.80732012e+00  1.82359780e+00  1.84337957e+00
+  1.85486267e+00  1.86109320e+00  1.87522408e+00  1.89719823e+00
+  1.90487764e+00  1.93665032e+00  1.95274932e+00  1.96590952e+00
+  1.97531588e+00  2.00012370e+00  2.00958350e+00  2.04756273e+00
+  2.07619497e+00  2.13326448e+00  2.16047428e+00  2.20145984e+00
+  2.21903601e+00  2.24132805e+00  2.25817788e+00  2.29197566e+00
+  2.29944451e+00  2.31343738e+00  2.32830585e+00  2.35485807e+00
+  2.37151528e+00  2.37578908e+00  2.38691284e+00  2.41295606e+00
+  2.45230487e+00  2.45424452e+00  2.48425801e+00  2.52103493e+00
+  2.52875058e+00  2.56184615e+00  2.58584108e+00  2.59126480e+00
+  2.60483049e+00  2.61506881e+00  2.62866215e+00  2.64206345e+00
+  2.67053428e+00  2.69301117e+00  2.69524990e+00  2.72489213e+00
+  2.74102393e+00  2.75081072e+00  2.81024676e+00  2.81441957e+00
+  2.82959287e+00  2.83558074e+00  2.84660760e+00  2.86925532e+00
+  2.88843588e+00  2.89786499e+00  2.91569125e+00  3.03964579e+00
+  3.05465405e+00  3.07304754e+00  3.07992614e+00  3.13585207e+00
+  3.19983474e+00  3.31891663e+00  3.34077301e+00  3.47547928e+00
+  3.52105614e+00  3.58673331e+00  4.96010173e+00  5.03701871e+00
+  5.05687502e+00  5.11320428e+00  5.14626796e+00  5.16023484e+00
+  5.16969853e+00  5.24475883e+00  5.62116379e+00  5.68347305e+00
+  5.70052659e+00  5.74767070e+00  6.18601457e+00  6.26170555e+00]
+nelec by numeric integration = 101.99999872151285
+    CPU time for vxc     36.36 sec, wall time      3.60 sec
+    CPU time for df-vj      2.68 sec, wall time      0.09 sec
+E1 = -2735.542058078952  Ecoul = 1234.4007851530296  Exc = -90.83913401552283
+cycle= 7 E= -679.121722451972  delta_E= -0.00131  |g|= 0.0275  |ddm|= 0.095
+    CPU time for cycle= 7     39.48 sec, wall time      3.70 sec
+  HOMO = -0.194666113183615  LUMO = -0.0666715855005262
+  mo_energy =
+[-1.87495734e+01 -1.87470155e+01 -1.40942374e+01 -1.40737414e+01
+ -1.40680536e+01 -1.40095385e+01 -1.00354157e+01 -1.00140349e+01
+ -9.98379225e+00 -9.98287883e+00 -9.96247334e+00 -9.95412976e+00
+ -9.94432187e+00 -9.94048311e+00 -9.62849655e-01 -9.41871793e-01
+ -9.31855388e-01 -8.65346965e-01 -8.33952777e-01 -8.02102319e-01
+ -7.09752051e-01 -6.57469255e-01 -6.50329887e-01 -6.31730555e-01
+ -5.78201105e-01 -5.67303824e-01 -5.33790349e-01 -5.15142489e-01
+ -4.77816128e-01 -4.52859873e-01 -4.43298505e-01 -4.30890516e-01
+ -4.21843694e-01 -4.07699812e-01 -4.01815581e-01 -3.97020673e-01
+ -3.78352124e-01 -3.74960203e-01 -3.68238462e-01 -3.66640642e-01
+ -3.48502170e-01 -3.44423104e-01 -3.41837087e-01 -3.39313694e-01
+ -2.80638783e-01 -2.46860003e-01 -2.43787808e-01 -2.37221950e-01
+ -2.26541739e-01 -2.11737547e-01 -1.94666113e-01 -6.66715855e-02
+ -1.98197165e-02 -7.83355080e-03  3.59442156e-02  4.94595081e-02
+  5.73689456e-02  6.61342696e-02  7.07074928e-02  7.49646646e-02
+  8.04533255e-02  8.68591795e-02  1.06624833e-01  1.09453357e-01
+  1.10943081e-01  1.19758409e-01  1.28350683e-01  1.31410944e-01
+  1.38008265e-01  1.63009764e-01  1.75326635e-01  1.91690333e-01
+  2.03739292e-01  2.25262878e-01  2.47021906e-01  2.60731054e-01
+  2.83327861e-01  2.85537030e-01  3.01048591e-01  3.36445315e-01
+  3.58069156e-01  3.69891001e-01  3.74017261e-01  3.86509561e-01
+  4.01806501e-01  4.11746821e-01  4.22971251e-01  4.28566269e-01
+  4.42718513e-01  4.44691272e-01  4.64121987e-01  4.81122545e-01
+  5.11675157e-01  5.13532979e-01  5.29065313e-01  5.49899844e-01
+  5.55364903e-01  5.55949027e-01  5.66883976e-01  5.70672226e-01
+  5.87728804e-01  5.91120705e-01  5.93933961e-01  5.99236412e-01
+  6.02177638e-01  6.02817348e-01  6.07712916e-01  6.08977898e-01
+  6.16378751e-01  6.22169773e-01  6.26736935e-01  6.44854549e-01
+  6.54978771e-01  6.83914832e-01  7.02283717e-01  7.04737078e-01
+  7.44514148e-01  7.57791310e-01  7.73747113e-01  7.91817183e-01
+  7.96000282e-01  8.13783806e-01  8.21027429e-01  8.39841012e-01
+  8.96442743e-01  9.01355681e-01  9.20083161e-01  9.55932093e-01
+  9.68802034e-01  1.00791748e+00  1.02486748e+00  1.03236548e+00
+  1.03402782e+00  1.07975413e+00  1.08642907e+00  1.10125906e+00
+  1.11709036e+00  1.12606682e+00  1.13653674e+00  1.17910387e+00
+  1.18939789e+00  1.19901222e+00  1.21118322e+00  1.22647337e+00
+  1.26107061e+00  1.26815087e+00  1.29286758e+00  1.32567128e+00
+  1.34117833e+00  1.36097840e+00  1.38139947e+00  1.39360298e+00
+  1.41559035e+00  1.43739998e+00  1.44399346e+00  1.46762120e+00
+  1.47524708e+00  1.48059857e+00  1.51968692e+00  1.53247731e+00
+  1.55302856e+00  1.57249402e+00  1.59530242e+00  1.61511892e+00
+  1.66611666e+00  1.68351508e+00  1.68821614e+00  1.70568295e+00
+  1.71595689e+00  1.71952838e+00  1.72561442e+00  1.72822928e+00
+  1.74885151e+00  1.75218436e+00  1.75958746e+00  1.76238847e+00
+  1.77657706e+00  1.80720715e+00  1.82268752e+00  1.84214672e+00
+  1.85411547e+00  1.86002121e+00  1.87545286e+00  1.89670749e+00
+  1.90459810e+00  1.93572631e+00  1.95207918e+00  1.96559149e+00
+  1.97534417e+00  2.00007752e+00  2.00925978e+00  2.04632654e+00
+  2.07636719e+00  2.13259204e+00  2.16015624e+00  2.20067274e+00
+  2.21871677e+00  2.24048330e+00  2.25746876e+00  2.29276253e+00
+  2.29880067e+00  2.31302347e+00  2.32794106e+00  2.35459926e+00
+  2.37106284e+00  2.37566674e+00  2.38604341e+00  2.41289401e+00
+  2.45261016e+00  2.45390021e+00  2.48215997e+00  2.52033417e+00
+  2.52763862e+00  2.56137865e+00  2.58639622e+00  2.58997856e+00
+  2.60462226e+00  2.61524418e+00  2.62818510e+00  2.64165441e+00
+  2.67043747e+00  2.69177031e+00  2.69389903e+00  2.72416444e+00
+  2.74104671e+00  2.75012026e+00  2.80963723e+00  2.81336892e+00
+  2.82931970e+00  2.83511464e+00  2.84567522e+00  2.86816751e+00
+  2.88801331e+00  2.89681323e+00  2.91548026e+00  3.03855756e+00
+  3.05427977e+00  3.07159955e+00  3.07990994e+00  3.13566453e+00
+  3.20028411e+00  3.31828991e+00  3.34012964e+00  3.47396896e+00
+  3.51982495e+00  3.58531742e+00  4.95897428e+00  5.03602921e+00
+  5.05613537e+00  5.11264418e+00  5.14515369e+00  5.15856937e+00
+  5.16920838e+00  5.24393376e+00  5.62245099e+00  5.68386327e+00
+  5.69891284e+00  5.74760957e+00  6.18545274e+00  6.25948234e+00]
+nelec by numeric integration = 101.99999871896644
+    CPU time for vxc     36.33 sec, wall time      3.59 sec
+    CPU time for df-vj      2.68 sec, wall time      0.09 sec
+E1 = -2735.6339299256983  Ecoul = 1234.4956961796652  Exc = -90.84232548486062
+cycle= 8 E= -679.12187474142  delta_E= -0.000152  |g|= 0.00997  |ddm|= 0.0314
+    CPU time for cycle= 8     39.43 sec, wall time      3.69 sec
+  HOMO = -0.194956759826392  LUMO = -0.0669158428641255
+  mo_energy =
+[-1.87492962e+01 -1.87492049e+01 -1.40960027e+01 -1.40741179e+01
+ -1.40669288e+01 -1.40097033e+01 -1.00370088e+01 -1.00152421e+01
+ -9.98479314e+00 -9.98268418e+00 -9.96322655e+00 -9.95361806e+00
+ -9.94466029e+00 -9.94054445e+00 -9.63579367e-01 -9.42480548e-01
+ -9.32200889e-01 -8.65889934e-01 -8.33975626e-01 -8.02409592e-01
+ -7.09891967e-01 -6.57719629e-01 -6.50579849e-01 -6.31863417e-01
+ -5.78495228e-01 -5.67627476e-01 -5.34001213e-01 -5.15341112e-01
+ -4.78031919e-01 -4.53178244e-01 -4.43555220e-01 -4.31061449e-01
+ -4.22149226e-01 -4.07781508e-01 -4.01985615e-01 -3.97073732e-01
+ -3.78806691e-01 -3.75487066e-01 -3.68279523e-01 -3.66729439e-01
+ -3.48653352e-01 -3.44602953e-01 -3.42332166e-01 -3.39500161e-01
+ -2.81036797e-01 -2.47183136e-01 -2.43962008e-01 -2.37518741e-01
+ -2.26780964e-01 -2.11984489e-01 -1.94956760e-01 -6.69158429e-02
+ -2.05393141e-02 -8.01821448e-03  3.58565065e-02  4.93688526e-02
+  5.72485990e-02  6.60269635e-02  7.06583866e-02  7.48512675e-02
+  8.02956198e-02  8.66656030e-02  1.06564507e-01  1.09322095e-01
+  1.10892142e-01  1.19752358e-01  1.28303793e-01  1.31352528e-01
+  1.37837690e-01  1.62822373e-01  1.75129965e-01  1.91453177e-01
+  2.03540452e-01  2.24974441e-01  2.46857623e-01  2.60481804e-01
+  2.83057001e-01  2.85285907e-01  3.00779631e-01  3.36209235e-01
+  3.57888245e-01  3.69747234e-01  3.73886815e-01  3.86394122e-01
+  4.01770575e-01  4.11547630e-01  4.22850411e-01  4.28411593e-01
+  4.42523373e-01  4.44592627e-01  4.63921033e-01  4.80857398e-01
+  5.11464041e-01  5.13180049e-01  5.28813941e-01  5.49657329e-01
+  5.55230449e-01  5.55848302e-01  5.66731181e-01  5.70466752e-01
+  5.87668759e-01  5.90989104e-01  5.93803620e-01  5.99073657e-01
+  6.02086155e-01  6.02729798e-01  6.07552635e-01  6.08952208e-01
+  6.16230110e-01  6.21965387e-01  6.26669175e-01  6.44731659e-01
+  6.54835455e-01  6.83825103e-01  7.02085593e-01  7.04642379e-01
+  7.44449484e-01  7.57654363e-01  7.73568670e-01  7.91791221e-01
+  7.95669048e-01  8.13472777e-01  8.20920927e-01  8.39587349e-01
+  8.96181802e-01  9.01211606e-01  9.19835032e-01  9.55806218e-01
+  9.68608348e-01  1.00751677e+00  1.02463852e+00  1.03224134e+00
+  1.03375330e+00  1.07957230e+00  1.08620808e+00  1.10115084e+00
+  1.11695082e+00  1.12587914e+00  1.13630902e+00  1.17869812e+00
+  1.18929692e+00  1.19891294e+00  1.21100949e+00  1.22632144e+00
+  1.26087502e+00  1.26795114e+00  1.29269113e+00  1.32559541e+00
+  1.34090140e+00  1.36076108e+00  1.38119431e+00  1.39339040e+00
+  1.41539099e+00  1.43733994e+00  1.44390152e+00  1.46753627e+00
+  1.47489466e+00  1.48067978e+00  1.51930699e+00  1.53229079e+00
+  1.55279407e+00  1.57233772e+00  1.59513141e+00  1.61493923e+00
+  1.66601091e+00  1.68332277e+00  1.68809391e+00  1.70567237e+00
+  1.71581972e+00  1.71950402e+00  1.72554532e+00  1.72814940e+00
+  1.74865337e+00  1.75200801e+00  1.75947804e+00  1.76233154e+00
+  1.77640646e+00  1.80693819e+00  1.82236974e+00  1.84178606e+00
+  1.85375929e+00  1.85979353e+00  1.87516942e+00  1.89654606e+00
+  1.90440702e+00  1.93558488e+00  1.95193304e+00  1.96542811e+00
+  1.97516977e+00  1.99986687e+00  2.00909423e+00  2.04628815e+00
+  2.07613895e+00  2.13255050e+00  2.16000861e+00  2.20056897e+00
+  2.21857852e+00  2.24019860e+00  2.25721216e+00  2.29246295e+00
+  2.29860503e+00  2.31287217e+00  2.32780452e+00  2.35448362e+00
+  2.37090328e+00  2.37550545e+00  2.38592301e+00  2.41261442e+00
+  2.45236261e+00  2.45356868e+00  2.48223856e+00  2.52011888e+00
+  2.52754971e+00  2.56106646e+00  2.58617770e+00  2.58971682e+00
+  2.60427900e+00  2.61502808e+00  2.62776007e+00  2.64135940e+00
+  2.66986248e+00  2.69157094e+00  2.69357684e+00  2.72401285e+00
+  2.74065685e+00  2.74988884e+00  2.80947704e+00  2.81321151e+00
+  2.82916998e+00  2.83495787e+00  2.84560504e+00  2.86809978e+00
+  2.88783491e+00  2.89667442e+00  2.91527901e+00  3.03781080e+00
+  3.05386392e+00  3.07127599e+00  3.07965482e+00  3.13540570e+00
+  3.19987079e+00  3.31779603e+00  3.33976214e+00  3.47359196e+00
+  3.51901690e+00  3.58490223e+00  4.95865185e+00  5.03542353e+00
+  5.05555196e+00  5.11228741e+00  5.14475721e+00  5.15847056e+00
+  5.16890358e+00  5.24386476e+00  5.62238554e+00  5.68354027e+00
+  5.69877635e+00  5.74718288e+00  6.18399889e+00  6.25964771e+00]
+nelec by numeric integration = 101.99999872012856
+    CPU time for vxc     36.33 sec, wall time      3.59 sec
+    CPU time for df-vj      2.70 sec, wall time      0.09 sec
+E1 = -2735.6604328507556  Ecoul = 1234.5249179209184  Exc = -90.84506280675055
+cycle= 9 E= -679.121893247114  delta_E= -1.85e-05  |g|= 0.00376  |ddm|= 0.0116
+    CPU time for cycle= 9     39.39 sec, wall time      3.69 sec
+  HOMO = -0.194935322247835  LUMO = -0.0669690465380865
+  mo_energy =
+[-1.87498946e+01 -1.87485618e+01 -1.40960655e+01 -1.40742058e+01
+ -1.40671331e+01 -1.40104810e+01 -1.00367754e+01 -1.00153834e+01
+ -9.98441724e+00 -9.98283683e+00 -9.96284554e+00 -9.95355695e+00
+ -9.94457256e+00 -9.94051850e+00 -9.63442846e-01 -9.42459417e-01
+ -9.32264488e-01 -8.65833186e-01 -8.34008580e-01 -8.02500852e-01
+ -7.09896902e-01 -6.57677181e-01 -6.50557999e-01 -6.31897435e-01
+ -5.78490575e-01 -5.67640752e-01 -5.34015760e-01 -5.15351828e-01
+ -4.78047347e-01 -4.53177316e-01 -4.43533861e-01 -4.31053669e-01
+ -4.22073230e-01 -4.07813241e-01 -4.02027176e-01 -3.97113567e-01
+ -3.78669152e-01 -3.75331365e-01 -3.68399607e-01 -3.66743417e-01
+ -3.48626844e-01 -3.44610946e-01 -3.42277740e-01 -3.39455200e-01
+ -2.80995571e-01 -2.47260493e-01 -2.44105281e-01 -2.37637069e-01
+ -2.26731602e-01 -2.12084545e-01 -1.94935322e-01 -6.69690465e-02
+ -2.03805349e-02 -8.17022705e-03  3.58680438e-02  4.93775699e-02
+  5.72449782e-02  6.60305713e-02  7.06493238e-02  7.48646453e-02
+  8.03231673e-02  8.66959659e-02  1.06584159e-01  1.09346175e-01
+  1.10908703e-01  1.19746548e-01  1.28307888e-01  1.31363525e-01
+  1.37791585e-01  1.62823805e-01  1.75112484e-01  1.91448760e-01
+  2.03523380e-01  2.24985011e-01  2.46830602e-01  2.60500175e-01
+  2.83026704e-01  2.85255616e-01  3.00785638e-01  3.36239368e-01
+  3.57928524e-01  3.69753374e-01  3.73907356e-01  3.86414178e-01
+  4.01758804e-01  4.11586526e-01  4.22837570e-01  4.28431972e-01
+  4.42438156e-01  4.44599038e-01  4.63954579e-01  4.80904832e-01
+  5.11440295e-01  5.13256804e-01  5.28837378e-01  5.49666055e-01
+  5.55247543e-01  5.55832455e-01  5.66754820e-01  5.70430670e-01
+  5.87697179e-01  5.91026199e-01  5.93829417e-01  5.99124096e-01
+  6.02080758e-01  6.02731254e-01  6.07583253e-01  6.08962951e-01
+  6.16256375e-01  6.21991007e-01  6.26691723e-01  6.44751481e-01
+  6.54840483e-01  6.83800699e-01  7.02087890e-01  7.04664649e-01
+  7.44394833e-01  7.57542004e-01  7.73488919e-01  7.91750026e-01
+  7.95737328e-01  8.13486134e-01  8.20753546e-01  8.39584079e-01
+  8.96196251e-01  9.01183972e-01  9.19837983e-01  9.55779950e-01
+  9.68585052e-01  1.00761142e+00  1.02462817e+00  1.03219226e+00
+  1.03376511e+00  1.07957654e+00  1.08622713e+00  1.10113274e+00
+  1.11690702e+00  1.12589572e+00  1.13632950e+00  1.17880085e+00
+  1.18929088e+00  1.19882283e+00  1.21094560e+00  1.22632083e+00
+  1.26088022e+00  1.26796441e+00  1.29271743e+00  1.32558682e+00
+  1.34093153e+00  1.36072557e+00  1.38117945e+00  1.39340532e+00
+  1.41539589e+00  1.43733307e+00  1.44387762e+00  1.46751025e+00
+  1.47490465e+00  1.48072569e+00  1.51935689e+00  1.53230260e+00
+  1.55282992e+00  1.57234493e+00  1.59511801e+00  1.61491373e+00
+  1.66602866e+00  1.68335242e+00  1.68810213e+00  1.70568278e+00
+  1.71583185e+00  1.71953410e+00  1.72554738e+00  1.72814727e+00
+  1.74866957e+00  1.75201243e+00  1.75947266e+00  1.76235719e+00
+  1.77638719e+00  1.80694100e+00  1.82239686e+00  1.84184884e+00
+  1.85379207e+00  1.85984106e+00  1.87514764e+00  1.89655721e+00
+  1.90444865e+00  1.93552174e+00  1.95194594e+00  1.96543031e+00
+  1.97519686e+00  1.99983139e+00  2.00908975e+00  2.04633051e+00
+  2.07615945e+00  2.13252845e+00  2.15997939e+00  2.20058546e+00
+  2.21862708e+00  2.24024613e+00  2.25721817e+00  2.29245543e+00
+  2.29861392e+00  2.31286948e+00  2.32775077e+00  2.35445444e+00
+  2.37085795e+00  2.37547743e+00  2.38590748e+00  2.41258494e+00
+  2.45235270e+00  2.45360511e+00  2.48225359e+00  2.52012797e+00
+  2.52758825e+00  2.56107826e+00  2.58607161e+00  2.58969495e+00
+  2.60432315e+00  2.61502371e+00  2.62780771e+00  2.64131715e+00
+  2.66997737e+00  2.69154409e+00  2.69359616e+00  2.72398649e+00
+  2.74068323e+00  2.74988310e+00  2.80947533e+00  2.81313188e+00
+  2.82923954e+00  2.83501228e+00  2.84561850e+00  2.86811909e+00
+  2.88783571e+00  2.89667622e+00  2.91525655e+00  3.03796639e+00
+  3.05388240e+00  3.07120466e+00  3.07958504e+00  3.13533613e+00
+  3.19984562e+00  3.31782518e+00  3.33972687e+00  3.47359422e+00
+  3.51917014e+00  3.58486001e+00  4.95862140e+00  5.03552989e+00
+  5.05559870e+00  5.11237708e+00  5.14482132e+00  5.15854412e+00
+  5.16895415e+00  5.24385570e+00  5.62190372e+00  5.68352962e+00
+  5.69872616e+00  5.74716628e+00  6.18448923e+00  6.25927875e+00]
+nelec by numeric integration = 101.99999871992785
+    CPU time for vxc     36.35 sec, wall time      3.60 sec
+    CPU time for df-vj      2.71 sec, wall time      0.09 sec
+E1 = -2735.662857488341  Ecoul = 1234.5277217460493  Exc = -90.84544442134131
+cycle= 10 E= -679.12189567416  delta_E= -2.43e-06  |g|= 0.00192  |ddm|= 0.00551
+    CPU time for cycle= 10     39.53 sec, wall time      3.70 sec
+  HOMO = -0.194888238222547  LUMO = -0.0668998014644483
+  mo_energy =
+[-1.87496036e+01 -1.87487863e+01 -1.40959727e+01 -1.40740632e+01
+ -1.40672159e+01 -1.40100365e+01 -1.00365854e+01 -1.00152259e+01
+ -9.98438667e+00 -9.98275674e+00 -9.96273870e+00 -9.95358991e+00
+ -9.94449501e+00 -9.94050230e+00 -9.63399876e-01 -9.42374691e-01
+ -9.32158531e-01 -8.65773777e-01 -8.33964253e-01 -8.02374443e-01
+ -7.09850812e-01 -6.57630430e-01 -6.50510726e-01 -6.31854291e-01
+ -5.78451178e-01 -5.67570053e-01 -5.33975500e-01 -5.15299370e-01
+ -4.77994518e-01 -4.53127124e-01 -4.43483816e-01 -4.31021447e-01
+ -4.22042114e-01 -4.07777277e-01 -4.01967791e-01 -3.97062963e-01
+ -3.78669324e-01 -3.75338108e-01 -3.68314121e-01 -3.66692867e-01
+ -3.48609620e-01 -3.44555799e-01 -3.42232702e-01 -3.39430634e-01
+ -2.80958257e-01 -2.47186677e-01 -2.43996521e-01 -2.37555889e-01
+ -2.26717543e-01 -2.12003954e-01 -1.94888238e-01 -6.68998015e-02
+ -2.03436999e-02 -8.06609734e-03  3.58660223e-02  4.93959585e-02
+  5.72548401e-02  6.60687119e-02  7.06626617e-02  7.48954956e-02
+  8.03371161e-02  8.67245699e-02  1.06597588e-01  1.09365411e-01
+  1.10928669e-01  1.19761513e-01  1.28330599e-01  1.31390410e-01
+  1.37847087e-01  1.62864874e-01  1.75154947e-01  1.91494933e-01
+  2.03575998e-01  2.25030441e-01  2.46877002e-01  2.60543267e-01
+  2.83090066e-01  2.85323267e-01  3.00837871e-01  3.36277334e-01
+  3.57948998e-01  3.69789853e-01  3.73940750e-01  3.86449738e-01
+  4.01781946e-01  4.11610212e-01  4.22880558e-01  4.28468608e-01
+  4.42516977e-01  4.44632821e-01  4.63982343e-01  4.80944737e-01
+  5.11500068e-01  5.13285886e-01  5.28875010e-01  5.49701443e-01
+  5.55269096e-01  5.55863250e-01  5.66781398e-01  5.70493642e-01
+  5.87715142e-01  5.91051087e-01  5.93849218e-01  5.99144422e-01
+  6.02095698e-01  6.02754289e-01  6.07610008e-01  6.08983689e-01
+  6.16279627e-01  6.22019505e-01  6.26714089e-01  6.44785261e-01
+  6.54873205e-01  6.83837135e-01  7.02121511e-01  7.04696484e-01
+  7.44447121e-01  7.57607207e-01  7.73550688e-01  7.91792993e-01
+  7.95752463e-01  8.13522751e-01  8.20852186e-01  8.39621897e-01
+  8.96229104e-01  9.01232399e-01  9.19875709e-01  9.55833778e-01
+  9.68634868e-01  1.00762365e+00  1.02467595e+00  1.03225262e+00
+  1.03380964e+00  1.07961824e+00  1.08625423e+00  1.10117509e+00
+  1.11696215e+00  1.12592684e+00  1.13636255e+00  1.17880630e+00
+  1.18932923e+00  1.19889527e+00  1.21100132e+00  1.22634281e+00
+  1.26092232e+00  1.26799784e+00  1.29275090e+00  1.32562712e+00
+  1.34096475e+00  1.36078078e+00  1.38122758e+00  1.39343803e+00
+  1.41543208e+00  1.43735591e+00  1.44391481e+00  1.46751709e+00
+  1.47495756e+00  1.48073067e+00  1.51939728e+00  1.53233935e+00
+  1.55286108e+00  1.57237850e+00  1.59514040e+00  1.61494242e+00
+  1.66604386e+00  1.68337921e+00  1.68812505e+00  1.70570495e+00
+  1.71585438e+00  1.71955585e+00  1.72556788e+00  1.72817515e+00
+  1.74870670e+00  1.75205104e+00  1.75949746e+00  1.76238151e+00
+  1.77642879e+00  1.80697889e+00  1.82244360e+00  1.84189829e+00
+  1.85383305e+00  1.85987929e+00  1.87519200e+00  1.89659327e+00
+  1.90447519e+00  1.93558897e+00  1.95198433e+00  1.96547460e+00
+  1.97522822e+00  1.99989065e+00  2.00912698e+00  2.04634447e+00
+  2.07618849e+00  2.13257794e+00  2.16002176e+00  2.20061820e+00
+  2.21865040e+00  2.24028484e+00  2.25725876e+00  2.29250397e+00
+  2.29865769e+00  2.31290677e+00  2.32781313e+00  2.35450963e+00
+  2.37092251e+00  2.37553550e+00  2.38594864e+00  2.41265270e+00
+  2.45239439e+00  2.45363851e+00  2.48226936e+00  2.52015418e+00
+  2.52760603e+00  2.56113031e+00  2.58616447e+00  2.58975822e+00
+  2.60436612e+00  2.61507597e+00  2.62784912e+00  2.64138945e+00
+  2.67000107e+00  2.69160452e+00  2.69364571e+00  2.72404358e+00
+  2.74072533e+00  2.74993259e+00  2.80952850e+00  2.81320684e+00
+  2.82926593e+00  2.83503696e+00  2.84564483e+00  2.86815609e+00
+  2.88787046e+00  2.89672523e+00  2.91531639e+00  3.03798874e+00
+  3.05394205e+00  3.07129611e+00  3.07966832e+00  3.13542114e+00
+  3.19991488e+00  3.31788066e+00  3.33980160e+00  3.47365083e+00
+  3.51918925e+00  3.58493685e+00  4.95869209e+00  5.03560316e+00
+  5.05568369e+00  5.11244168e+00  5.14488527e+00  5.15857236e+00
+  5.16901091e+00  5.24390236e+00  5.62215667e+00  5.68356426e+00
+  5.69878101e+00  5.74723843e+00  6.18437155e+00  6.25945998e+00]
+nelec by numeric integration = 101.99999871990487
+    CPU time for vxc     36.33 sec, wall time      3.60 sec
+    CPU time for df-vj      2.65 sec, wall time      0.09 sec
+E1 = -2735.655123824218  Ecoul = 1234.5195376743538  Exc = -90.84499473552353
+cycle= 11 E= -679.121896395915  delta_E= -7.22e-07  |g|= 0.000639  |ddm|= 0.00201
+    CPU time for cycle= 11     39.50 sec, wall time      3.71 sec
+  HOMO = -0.194886913578533  LUMO = -0.0668957638644035
+  mo_energy =
+[-1.87495593e+01 -1.87486635e+01 -1.40959596e+01 -1.40740994e+01
+ -1.40671266e+01 -1.40100268e+01 -1.00366686e+01 -1.00152117e+01
+ -9.98440227e+00 -9.98273912e+00 -9.96279258e+00 -9.95357564e+00
+ -9.94450681e+00 -9.94047557e+00 -9.63390453e-01 -9.42363781e-01
+ -9.32157647e-01 -8.65778182e-01 -8.33943849e-01 -8.02382543e-01
+ -7.09847386e-01 -6.57642376e-01 -6.50513497e-01 -6.31849728e-01
+ -5.78444321e-01 -5.67575479e-01 -5.33969318e-01 -5.15302459e-01
+ -4.77996619e-01 -4.53131585e-01 -4.43487852e-01 -4.31017012e-01
+ -4.22049138e-01 -4.07770225e-01 -4.01968005e-01 -3.97060220e-01
+ -3.78662828e-01 -3.75330409e-01 -3.68305784e-01 -3.66696738e-01
+ -3.48609050e-01 -3.44551240e-01 -3.42224709e-01 -3.39420094e-01
+ -2.80958523e-01 -2.47167841e-01 -2.43992876e-01 -2.37536828e-01
+ -2.26689152e-01 -2.11981631e-01 -1.94886914e-01 -6.68957639e-02
+ -2.03433848e-02 -8.06319404e-03  3.58609688e-02  4.93964889e-02
+  5.72543740e-02  6.60662220e-02  7.06636556e-02  7.48965883e-02
+  8.03308772e-02  8.67199112e-02  1.06597697e-01  1.09359521e-01
+  1.10925219e-01  1.19761594e-01  1.28331792e-01  1.31391207e-01
+  1.37847546e-01  1.62863897e-01  1.75165550e-01  1.91493126e-01
+  2.03575672e-01  2.25029113e-01  2.46877204e-01  2.60544885e-01
+  2.83089708e-01  2.85323217e-01  3.00835130e-01  3.36269708e-01
+  3.57942460e-01  3.69790264e-01  3.73935805e-01  3.86447693e-01
+  4.01782509e-01  4.11610122e-01  4.22884630e-01  4.28466077e-01
+  4.42519562e-01  4.44632254e-01  4.63978189e-01  4.80939646e-01
+  5.11498508e-01  5.13282658e-01  5.28870414e-01  5.49700406e-01
+  5.55267941e-01  5.55865371e-01  5.66776285e-01  5.70492862e-01
+  5.87714743e-01  5.91045543e-01  5.93843875e-01  5.99143422e-01
+  6.02095503e-01  6.02750675e-01  6.07603656e-01  6.08988729e-01
+  6.16279400e-01  6.22018327e-01  6.26717063e-01  6.44786107e-01
+  6.54871010e-01  6.83838624e-01  7.02124234e-01  7.04696915e-01
+  7.44449624e-01  7.57609179e-01  7.73553792e-01  7.91795504e-01
+  7.95764326e-01  8.13523224e-01  8.20857085e-01  8.39624135e-01
+  8.96238251e-01  9.01236141e-01  9.19880778e-01  9.55837728e-01
+  9.68639371e-01  1.00763587e+00  1.02467917e+00  1.03225342e+00
+  1.03381808e+00  1.07961626e+00  1.08624981e+00  1.10117727e+00
+  1.11696497e+00  1.12592748e+00  1.13636192e+00  1.17881655e+00
+  1.18933731e+00  1.19889662e+00  1.21100451e+00  1.22634437e+00
+  1.26092689e+00  1.26799840e+00  1.29275550e+00  1.32563184e+00
+  1.34096991e+00  1.36078287e+00  1.38122510e+00  1.39343703e+00
+  1.41543126e+00  1.43734874e+00  1.44390926e+00  1.46751834e+00
+  1.47495991e+00  1.48073390e+00  1.51938955e+00  1.53234042e+00
+  1.55285990e+00  1.57238310e+00  1.59514093e+00  1.61494360e+00
+  1.66603582e+00  1.68337228e+00  1.68812165e+00  1.70570710e+00
+  1.71584958e+00  1.71955808e+00  1.72556591e+00  1.72817603e+00
+  1.74870185e+00  1.75204808e+00  1.75950269e+00  1.76238447e+00
+  1.77642787e+00  1.80697876e+00  1.82243896e+00  1.84189209e+00
+  1.85383088e+00  1.85987484e+00  1.87519257e+00  1.89659137e+00
+  1.90446888e+00  1.93559413e+00  1.95198234e+00  1.96547303e+00
+  1.97522377e+00  1.99988945e+00  2.00912288e+00  2.04635025e+00
+  2.07618194e+00  2.13257816e+00  2.16001867e+00  2.20061999e+00
+  2.21864688e+00  2.24028462e+00  2.25725557e+00  2.29249911e+00
+  2.29865709e+00  2.31290487e+00  2.32781512e+00  2.35451228e+00
+  2.37092367e+00  2.37553711e+00  2.38594857e+00  2.41265487e+00
+  2.45239434e+00  2.45363495e+00  2.48228790e+00  2.52015908e+00
+  2.52761456e+00  2.56113573e+00  2.58616212e+00  2.58977468e+00
+  2.60437010e+00  2.61507072e+00  2.62786150e+00  2.64139039e+00
+  2.67001124e+00  2.69160722e+00  2.69365931e+00  2.72404722e+00
+  2.74072931e+00  2.74993862e+00  2.80952530e+00  2.81321378e+00
+  2.82925664e+00  2.83503107e+00  2.84564502e+00  2.86815629e+00
+  2.88786573e+00  2.89672796e+00  2.91531449e+00  3.03800777e+00
+  3.05394601e+00  3.07131274e+00  3.07967203e+00  3.13542309e+00
+  3.19991754e+00  3.31788781e+00  3.33980912e+00  3.47366366e+00
+  3.51921218e+00  3.58495264e+00  4.95869841e+00  5.03558517e+00
+  5.05567169e+00  5.11242850e+00  5.14487193e+00  5.15857755e+00
+  5.16900424e+00  5.24390815e+00  5.62216450e+00  5.68358109e+00
+  5.69878672e+00  5.74723225e+00  6.18443423e+00  6.25948183e+00]
+nelec by numeric integration = 101.9999987198899
+    CPU time for vxc     36.31 sec, wall time      3.59 sec
+    CPU time for df-vj      2.68 sec, wall time      0.09 sec
+E1 = -2735.654773116689  Ecoul = 1234.518992705692  Exc = -90.84480055301617
+cycle= 12 E= -679.12189647454  delta_E= -7.86e-08  |g|= 0.000127  |ddm|= 0.000585
+    CPU time for cycle= 12     39.36 sec, wall time      3.69 sec
+  HOMO = -0.194893100156258  LUMO = -0.0669095001610966
+  mo_energy =
+[-1.87495606e+01 -1.87487043e+01 -1.40959960e+01 -1.40740499e+01
+ -1.40671749e+01 -1.40100993e+01 -1.00366489e+01 -1.00152332e+01
+ -9.98440839e+00 -9.98275845e+00 -9.96281326e+00 -9.95361096e+00
+ -9.94450237e+00 -9.94048188e+00 -9.63392570e-01 -9.42369393e-01
+ -9.32180685e-01 -8.65773292e-01 -8.33956279e-01 -8.02411909e-01
+ -7.09865435e-01 -6.57656968e-01 -6.50521407e-01 -6.31853320e-01
+ -5.78456123e-01 -5.67581544e-01 -5.33978635e-01 -5.15317722e-01
+ -4.78012755e-01 -4.53138939e-01 -4.43501260e-01 -4.31028208e-01
+ -4.22058447e-01 -4.07780260e-01 -4.01977166e-01 -3.97061498e-01
+ -3.78670778e-01 -3.75339871e-01 -3.68310581e-01 -3.66710545e-01
+ -3.48606458e-01 -3.44557962e-01 -3.42224267e-01 -3.39423093e-01
+ -2.80965531e-01 -2.47180460e-01 -2.44017390e-01 -2.37558490e-01
+ -2.26700675e-01 -2.11987312e-01 -1.94893100e-01 -6.69095002e-02
+ -2.03438645e-02 -8.08456022e-03  3.58549501e-02  4.93900802e-02
+  5.72482164e-02  6.60644464e-02  7.06627394e-02  7.48924208e-02
+  8.03222969e-02  8.67074249e-02  1.06593890e-01  1.09352965e-01
+  1.10919015e-01  1.19762940e-01  1.28330509e-01  1.31388068e-01
+  1.37838852e-01  1.62850739e-01  1.75157127e-01  1.91482734e-01
+  2.03571876e-01  2.25023116e-01  2.46867452e-01  2.60534636e-01
+  2.83076185e-01  2.85316904e-01  3.00827152e-01  3.36257474e-01
+  3.57931432e-01  3.69781427e-01  3.73927841e-01  3.86441366e-01
+  4.01782306e-01  4.11608807e-01  4.22873660e-01  4.28458800e-01
+  4.42505138e-01  4.44625403e-01  4.63967329e-01  4.80939349e-01
+  5.11484953e-01  5.13277275e-01  5.28864710e-01  5.49691800e-01
+  5.55262039e-01  5.55857236e-01  5.66763464e-01  5.70482646e-01
+  5.87709356e-01  5.91037978e-01  5.93836446e-01  5.99140291e-01
+  6.02095585e-01  6.02748399e-01  6.07595605e-01  6.08983372e-01
+  6.16279053e-01  6.22012976e-01  6.26712773e-01  6.44778214e-01
+  6.54867679e-01  6.83830868e-01  7.02116767e-01  7.04690068e-01
+  7.44440912e-01  7.57595064e-01  7.73542432e-01  7.91793226e-01
+  7.95756711e-01  8.13506796e-01  8.20835695e-01  8.39610889e-01
+  8.96232971e-01  9.01231632e-01  9.19870703e-01  9.55834906e-01
+  9.68632068e-01  1.00762850e+00  1.02467022e+00  1.03224571e+00
+  1.03380762e+00  1.07961044e+00  1.08623552e+00  1.10117522e+00
+  1.11695708e+00  1.12592125e+00  1.13635402e+00  1.17881484e+00
+  1.18932688e+00  1.19889012e+00  1.21099373e+00  1.22633366e+00
+  1.26091741e+00  1.26799097e+00  1.29275060e+00  1.32562382e+00
+  1.34096091e+00  1.36077315e+00  1.38122132e+00  1.39342552e+00
+  1.41542397e+00  1.43733810e+00  1.44389750e+00  1.46752090e+00
+  1.47495529e+00  1.48073390e+00  1.51938042e+00  1.53233286e+00
+  1.55285781e+00  1.57238086e+00  1.59513507e+00  1.61493746e+00
+  1.66602352e+00  1.68335832e+00  1.68812382e+00  1.70570008e+00
+  1.71584491e+00  1.71955211e+00  1.72556087e+00  1.72817360e+00
+  1.74868641e+00  1.75204170e+00  1.75949622e+00  1.76237708e+00
+  1.77641244e+00  1.80696649e+00  1.82243734e+00  1.84189354e+00
+  1.85382759e+00  1.85987228e+00  1.87517948e+00  1.89658494e+00
+  1.90446121e+00  1.93558393e+00  1.95197343e+00  1.96546161e+00
+  1.97520879e+00  1.99987529e+00  2.00911847e+00  2.04634540e+00
+  2.07617275e+00  2.13256446e+00  2.16001444e+00  2.20061232e+00
+  2.21863533e+00  2.24027487e+00  2.25725614e+00  2.29248187e+00
+  2.29864719e+00  2.31289840e+00  2.32779944e+00  2.35449847e+00
+  2.37090876e+00  2.37552150e+00  2.38594479e+00  2.41263924e+00
+  2.45238452e+00  2.45363048e+00  2.48227778e+00  2.52015872e+00
+  2.52760861e+00  2.56112722e+00  2.58614211e+00  2.58976982e+00
+  2.60435709e+00  2.61505531e+00  2.62785014e+00  2.64138414e+00
+  2.67000023e+00  2.69160642e+00  2.69365371e+00  2.72403839e+00
+  2.74071544e+00  2.74992480e+00  2.80951494e+00  2.81320191e+00
+  2.82924623e+00  2.83502339e+00  2.84564471e+00  2.86815374e+00
+  2.88786567e+00  2.89672241e+00  2.91530138e+00  3.03800534e+00
+  3.05393425e+00  3.07130992e+00  3.07965199e+00  3.13540725e+00
+  3.19989898e+00  3.31787992e+00  3.33979918e+00  3.47365809e+00
+  3.51921087e+00  3.58494944e+00  4.95867965e+00  5.03558188e+00
+  5.05566489e+00  5.11241118e+00  5.14487381e+00  5.15856889e+00
+  5.16899426e+00  5.24388358e+00  5.62211765e+00  5.68355518e+00
+  5.69878416e+00  5.74723021e+00  6.18441984e+00  6.25948493e+00]
+nelec by numeric integration = 101.9999987199809
+    CPU time for vxc     36.36 sec, wall time      3.59 sec
+    CPU time for df-vj      2.65 sec, wall time      0.09 sec
+E1 = -2735.6561978186332  Ecoul = 1234.520521299046  Exc = -90.84490442892488
+Extra cycle  E= -679.121896459039  delta_E= 1.55e-08  |g|= 0.000298  |ddm|= 0.000408
+    CPU time for scf_cycle    568.52 sec, wall time     53.22 sec
+    CPU time for SCF    568.53 sec, wall time     53.22 sec
+converged SCF energy = -679.121896459039
+Nuc-Nuc PySCF=  912.8586844894734
+One electron integrals energy -2735.6561978186332
+Coulomb energy  1234.520521299046
+EXC  -90.84490442892488
+PySCF time:  53.25735928863287
+PySCF Grid Size:  (690408,)
+
+
+ PySCF Dipole moment
+Dipole moment(X, Y, Z, A.U.): -1.25014,  0.25874,  0.18107
+Currently Used memory: 3.1G
+
+
+Natoms : 24
+
+
+NAO : 260
+
+
+aux NAO : 974
+Running DFT using 16 threads for Numba.
+
+
+GPU acceleration is enabled. Currently this only accelerates AO values and XC term evaluation.
+GPU(s) information:
+Found 1 CUDA devices
+id 0    b'NVIDIA GeForce RTX 2060'                              [SUPPORTED]
+                      Compute Capability: 7.5
+                           PCI Device ID: 0
+                              PCI Bus ID: 1
+                                    UUID: GPU-a3ed5238-d80b-3f67-00dc-94a030778e1f
+                                Watchdog: Enabled
+             FP32/FP64 Performance Ratio: 32
+Summary:
+	1/1 devices are supported
+True
+Max threads per block supported by the GPU:  1024
+The user has specified to use 1 GPU(s).
+Threads per block configuration:  (16, 16)
+
+
+Will use dynamic precision. 
+This means that the XC term will be evaluated in single precision until the 
+relative energy difference b/w successive iterations is less than 5.0E-7.
+
+Calculating overlap and kinetic integrals...
+
+
+Core H size in GB  0.0010816
+done!
+Time taken 0.14867484848946333 seconds.
+
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.06988786347210407 seconds.
+
+
+
+Performing Schwarz screening...
+Threshold  1e-09
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.09096838347613811
+Time taken to evaluate the square roots needed:  0.00025790929794311523
+Time for significant indices evaluation:  0.24508266989141703
+Size of permanent array storing the significant indices of 3c2e ERI in GB  0.129895152
+No. of elements in the standard three-centered two electron ERI tensor:  65842400
+No. of elements in the triangular three-centered two electron ERI tensor:  33047820
+No. of significant triplets based on Schwarz inequality and triangularity: 21649192 or 32.9% of original
+Schwarz screening done!
+Total time taken for Schwarz screening 0.3365315040573478 seconds.
+
+Time taken to evaluate the nuclear potential matrix with strict Schwarz screening:  0.10974692460149527
+Two Center Two electron ERI size in GB  0.007589408
+Three Center Two electron ERI size in GB  0.173193536
+Three-centered two electron evaluation done!
+Time taken for Cholesky factorization fo two-centered two-electron integrals 0.004328692331910133 seconds.
+
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  2.7165033519268036 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  690408
+Size (in GB) for storing the coordinates of grid:       0.016569792
+Size (in GB) for storing the weights of grid:           0.005523264
+Size (in GB) for storing the density at gridpoints:     0.005523264
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  20480
+No. of batches:  34
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.1733638634905219 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    214
+Average no. of basis functions contributing to a batch of grid points:    168
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+XC Functional IDs supplied:  [101, 130]
+
+
+Description of exchange functional: 
+
+The Exchange function belongs to the family: GGA
+Functional ID: 101
+Functional Name: gga_x_pbe
+Attributes:
+    Name: Perdew, Burke & Ernzerhof
+    Kind: 0
+  Family: 2
+Citations:
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+
+
+Description of correlation functional: 
+
+ The Correlation function belongs to the family: GGA
+Functional ID: 130
+Functional Name: gga_c_pbe
+Attributes:
+    Name: Perdew, Burke & Ernzerhof
+    Kind: 1
+  Family: 2
+Citations:
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+------------------------------------------------------
+
+
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.972725
+
+
+
+------Iteration 1--------
+
+
+Energies
+Electron-Nuclear Energy       -3412.050995249878
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                679.4214791512552
+Coulomb Energy                1229.7223369672208
+Exchange-Correlation Energy   -90.77835
+-------------------------
+Total Energy  -680.8268454695619
+-------------------------
+
+
+
+Energy difference :  680.8268454695619
+
+
+Time taken for the previous iteration: 0.9512933632358909
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999
+
+
+
+------Iteration 2--------
+
+
+Energies
+Electron-Nuclear Energy       -3410.974766042401
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                672.6981810365095
+Coulomb Energy                1238.1551229285228
+Exchange-Correlation Energy   -91.515564
+-------------------------
+Total Energy  -678.778341550294
+-------------------------
+
+
+
+Energy difference :  2.048503919267887
+
+
+Time taken for the previous iteration: 0.3650874746963382
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999
+
+
+
+------Iteration 3--------
+
+
+Energies
+Electron-Nuclear Energy       -3402.9953200705804
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                663.5362442937623
+Coulomb Energy                1242.3443465051605
+Exchange-Correlation Energy   -90.022865
+-------------------------
+Total Energy  -674.2789100751497
+-------------------------
+
+
+
+Energy difference :  4.49943147514432
+
+
+Time taken for the previous iteration: 0.3722353158518672
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.999985
+
+
+
+------Iteration 4--------
+
+
+Energies
+Electron-Nuclear Energy       -3399.23273504024
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                667.3424241863983
+Coulomb Energy                1230.5950662085
+Exchange-Correlation Energy   -90.58126
+-------------------------
+Total Energy  -679.0178208345762
+-------------------------
+
+
+
+Energy difference :  4.738910759426517
+
+
+Time taken for the previous iteration: 0.3655069414526224
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999
+
+
+
+------Iteration 5--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.6403709335946
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                668.8883481096957
+Coulomb Energy                1234.6170104499897
+Exchange-Correlation Energy   -90.81106
+-------------------------
+Total Energy  -679.0873859264248
+-------------------------
+
+
+
+Energy difference :  0.06956509184851711
+
+
+Time taken for the previous iteration: 0.36651827953755856
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999
+
+
+
+------Iteration 6--------
+
+
+Energies
+Electron-Nuclear Energy       -3405.9507790612315
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.474981659479
+Coulomb Energy                1235.3965133151787
+Exchange-Correlation Energy   -90.88623
+-------------------------
+Total Energy  -679.1068300634056
+-------------------------
+
+
+
+Energy difference :  0.019444136980837357
+
+
+Time taken for the previous iteration: 0.3686118619516492
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.999985
+
+
+
+------Iteration 7--------
+
+
+Energies
+Electron-Nuclear Energy       -3405.043119945876
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.2420119695024
+Coulomb Energy                1234.6745898216466
+Exchange-Correlation Energy   -90.85301
+-------------------------
+Total Energy  -679.1208457477694
+-------------------------
+
+
+
+Energy difference :  0.014015684363812397
+
+
+Time taken for the previous iteration: 0.37381509132683277
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  102.0
+
+
+
+------Iteration 8--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.740013421014
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.1422261203624
+Coulomb Energy                1234.4588690455787
+Exchange-Correlation Energy   -90.84107
+-------------------------
+Total Energy  -679.121305845674
+-------------------------
+
+
+
+Energy difference :  0.00046009790457901545
+
+
+Time taken for the previous iteration: 0.3722022222355008
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999
+
+
+
+------Iteration 9--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.79159499702
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.1502167705646
+Coulomb Energy                1234.503955923677
+Exchange-Correlation Energy   -90.84263
+-------------------------
+Total Energy  -679.121366289864
+-------------------------
+
+
+
+Energy difference :  6.044419001227652e-05
+
+Switching to double precision for XC evaluation after 9 iterations!
+
+
+Time taken for the previous iteration: 0.3728265883401036
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999872014064
+
+
+
+------Iteration 10--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.8306796495017
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.1719670890723
+Coulomb Energy                1234.5241308486331
+Exchange-Correlation Energy   -90.84598626473432
+-------------------------
+Total Energy  -679.121883484612
+-------------------------
+
+
+
+Energy difference :  0.0005171947479993833
+
+
+Time taken for the previous iteration: 1.1251052124425769
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999871965903
+
+
+
+------Iteration 11--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.8157438528615
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.1617504529452
+Coulomb Energy                1234.51806144581
+Exchange-Correlation Energy   -90.84464578390805
+-------------------------
+Total Energy  -679.1218932460965
+-------------------------
+
+
+
+Energy difference :  9.761484534465126e-06
+
+
+Time taken for the previous iteration: 1.1136460369452834
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.9999987197338
+
+
+
+------Iteration 12--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.810342959363
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.1614413950936
+Coulomb Energy                1234.5130194036415
+Exchange-Correlation Energy   -90.84469637018489
+-------------------------
+Total Energy  -679.1218940388949
+-------------------------
+
+
+
+Energy difference :  7.927983460831456e-07
+
+
+Time taken for the previous iteration: 1.1127245398238301
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.9999987205557
+
+
+
+------Iteration 13--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.8315108064853
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.1630914510755
+Coulomb Energy                1234.53278865779
+Exchange-Correlation Energy   -90.84494714230112
+-------------------------
+Total Energy  -679.1218933480025
+-------------------------
+
+
+
+Energy difference :  6.908924206072697e-07
+
+
+Time taken for the previous iteration: 1.1124403029680252
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  101.99999871948003
+
+
+
+------Iteration 14--------
+
+
+Energies
+Electron-Nuclear Energy       -3404.8209912389175
+Nuclear repulsion Energy      912.8586844919183
+Kinetic Energy                669.1630025897284
+Coulomb Energy                1234.5224230617155
+Exchange-Correlation Energy   -90.84501224323158
+-------------------------
+Total Energy  -679.1218933387868
+-------------------------
+
+
+
+Energy difference :  9.215682439389639e-09
+
+
+Time taken for the previous iteration: 1.1124622449278831
+
+
+
+SCF Converged after 14 iterations!
+
+-------------------------------------
+Total Energy =  -679.1218933387868
+-------------------------------------
+
+
+
+Time taken : 12.543638909235597 seconds.
+
+
+
+-------------------------------------
+Profiling
+-------------------------------------
+Preprocessing                           0.1733638634905219
+Density Fitting                         0.4288491616025567
+    DF (gamma)                          0.22322158701717854
+    DF (coeff)                          0.043670160695910454
+    DF (Jtri)                           0.13815628085285425
+    DF (Cholesky)                       0.004328692331910133
+DIIS                                    0.14470522943884134
+KS matrix diagonalization               0.41014943551272154
+One electron Integrals (S, T, Vnuc)     0.14867484848946333
+Coulomb Integrals (2c2e + 3c2e)         2.7121746595948935
+Grids construction                      0
+Exchange-Correlation Term               8.483919959515333
+Misc.                                   0.0418017515912652
+Complete SCF                            12.543638909235597
+Energy diff (PySCF-CrysX) 3.1202517902784166e-06
+
+
+PyFock Dipole moment
+Dipole moment(X, Y, Z, A.U.): -1.2498296413738397 0.25732073829111335 0.18096345137788616
+Max Diff dipole moment (PySCF-CrysX) 0.001418266147036995
+
+
+
+ Package versions
+pyscf version 2.4.0
+np version 1.22.3
+joblib version 1.3.2
+numba version 0.59.0rc1
+threadpoolctl version 3.2.0
+opt_einsum version v3.3.0
+llvmlite version 0.42.0rc1
+cupy version 12.3.0
+numexpr version 2.8.8
+scipy version 1.10.1

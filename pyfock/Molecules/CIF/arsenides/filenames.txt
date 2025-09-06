@@ -1,0 +1,8 @@
+AlAs.cif
+BAs.cif
+Co.87Fe.11Ni.13As3-Skutterudite.cif
+CoAs3-Skutterudite.cif
+filenames.txt
+GaAs.cif
+InAs.cif
+NiAs-Nickeline.cif

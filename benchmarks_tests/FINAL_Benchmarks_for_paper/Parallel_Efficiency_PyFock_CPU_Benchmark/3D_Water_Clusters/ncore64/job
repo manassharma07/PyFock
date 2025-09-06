@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+#SBATCH -o output_strict_schwarz_off_def2-SVP_GGA_save_ao_fat
+#SBATCH -p fat
+
+##SBATCH --ntasks=48
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=64
+##SBATCH --cpus-per-task=1
+##SBATCH --gpus=1
+##SBATCH --gpus-per-task=1
+##SBATCH --gres=gpu:1
+##SBATCH --time=24:00:00
+#SBATCH --nodelist=fat04
+
+##SBATCH --mail-user=manas.sharma@uni-jena.de
+##SBATCH --mail-type=begin,end,fail
+
+#SBATCH --exclusive
+
+echo 'RUNNING on PART: ' $SLURM_JOB_PARTITION    >  job.info
+echo 'NODE(S):         ' $SLURM_JOB_NODELIST     >> job.info
+echo 'No. TASKS/NODE:  ' $SLURM_NTASKS_PER_NODE  >> job.info
+echo 'No. CORES/TASK:  ' $SLURM_CPUS_PER_TASK    >> job.info
+
+
+
+
+module load tools/python/3.8
+python3 benchmark_DFT_LDA_DF.py

@@ -1,0 +1,436 @@
+PySCF Results
+
+
+
+
+******** <class 'pyscf.df.df_jk.density_fit.<locals>.DensityFitting'> ********
+method = DensityFitting-RKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = False
+chkfile to save SCF result = /home/manas/temp_pyfock/PyFock/benchmarks_tests/benchmarks_DFT_LDA_DF/tmppg4k1elf
+max_memory 120000 MB (current use 221 MB)
+XC library pyscf.dft.libxc version 5.2.0
+    S. Lehtola, C. Steigemann, M. J. Oliveira, and M. A. Marques, SoftwareX 7, 1 (2018)
+XC functionals = 1,7
+    P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+    F. Bloch, Z. Phys. 57, 545 (1929)
+    S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+init E= -1558.9432973148
+  HOMO = -0.354009686269003  LUMO = -0.0277904989400965
+cycle= 1 E= -1556.95146633822  delta_E= 1.99  |g|= 1.64  |ddm|= 11.4
+  HOMO = -0.0810784274707087  LUMO = 0.0690703401786127
+cycle= 2 E= -1555.98917837165  delta_E= 0.962  |g|= 2.51  |ddm|= 5.22
+  HOMO = -0.227146088816571  LUMO = 0.0233978368787638
+cycle= 3 E= -1557.75480056454  delta_E= -1.77  |g|= 0.0993  |ddm|= 3.34
+  HOMO = -0.224816893145852  LUMO = 0.0226461293005117
+cycle= 4 E= -1557.75698350394  delta_E= -0.00218  |g|= 0.0327  |ddm|= 0.164
+  HOMO = -0.223844335669627  LUMO = 0.0228107264713929
+cycle= 5 E= -1557.75720597304  delta_E= -0.000222  |g|= 0.0145  |ddm|= 0.053
+  HOMO = -0.223935947808813  LUMO = 0.0227500252635504
+cycle= 6 E= -1557.75725907582  delta_E= -5.31e-05  |g|= 0.00141  |ddm|= 0.0182
+  HOMO = -0.223953600740838  LUMO = 0.0227351152497956
+cycle= 7 E= -1557.75725941773  delta_E= -3.42e-07  |g|= 0.000873  |ddm|= 0.00297
+  HOMO = -0.223937686390766  LUMO = 0.0227348905400597
+cycle= 8 E= -1557.7572596065  delta_E= -1.89e-07  |g|= 0.000174  |ddm|= 0.00118
+  HOMO = -0.223940884631912  LUMO = 0.0227323470531442
+cycle= 9 E= -1557.75725961446  delta_E= -7.95e-09  |g|= 2.55e-05  |ddm|= 0.000277
+  HOMO = -0.223944335720325  LUMO = 0.0227306884929587
+Extra cycle  E= -1557.75725961422  delta_E= 2.39e-10  |g|= 4.03e-05  |ddm|= 8.35e-05
+converged SCF energy = -1557.75725961422
+Nuc-Nuc PySCF=  3467.777198332121
+One electron integrals energy -9007.960967593526
+Coulomb energy  4214.280967506191
+EXC  -231.85445785900353
+PySCF time:  335.123488958925
+PySCF Grid Size:  (2955072,)
+
+
+NAO : 1010
+
+
+aux NAO : 3424
+Running DFT using 4 threads for Numba.
+
+
+
+Calculating one electron integrals...
+
+
+Core H size in GB  0.0081608
+done!
+Time taken 10.968967530876398 seconds.
+
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+
+
+Performing Schwarz screening...
+Threshold  1e-11
+[1009, 1009, 3423]
+392499936
+Size of permanent array storing the significant indices of 3c2e ERI in GB  2.3549996159999997
+No. of elements in the standard three-centered two electron ERI tensor:  3492822400
+No. of elements in the triangular three-centered two electron ERI tensor:  1748140320
+No. of significant triplets based on Schwarz inequality and triangularity: 392499936 or 11.2% of original
+Schwarz screening done!
+Time taken 15.710008401423693 seconds.
+
+Two Center Two electron ERI size in GB  0.093790208
+Three Center Two electron ERI size in GB  3.139999488
+Three-centered two electron evaluation done!
+Time taken 297.0346861258149 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  2955072
+Size (in GB) for storing the coordinates of grid:       0.070921728
+Size (in GB) for storing the weights of grid:           0.023640576
+Size (in GB) for storing the density at gridpoints:     0.023640576
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  5000
+No. of batches:  591
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 5.726603534072638 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    165
+Average no. of basis functions contributing to a batch of grid points:    146
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+XC Functional IDs supplied:  [1, 7]
+
+
+Description of exchange functional: 
+
+The Exchange function belongs to the family: LDA
+Functional ID: 1
+Functional Name: lda_x
+Attributes:
+    Name: Slater exchange
+    Kind: 0
+  Family: 1
+Citations:
+   P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+   F. Bloch, Z. Phys. 57, 545 (1929)
+
+
+Description of correlation functional: 
+
+ The Correlation function belongs to the family: LDA
+Functional ID: 7
+Functional Name: lda_c_vwn
+Attributes:
+    Name: Vosko, Wilk & Nusair (VWN5)
+    Kind: 1
+  Family: 1
+Citations:
+   S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+------------------------------------------------------
+
+
+
+
+Number of electrons:  321.33022165748844
+
+
+
+------Iteration 1--------
+
+
+Energies
+Electron-Nuclear Energy       -10537.36230868406
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1573.5902573618848
+Coulomb Energy                4168.318221562581
+Exchange-Correlation Energy   -230.551853343386
+-------------------------
+Total Energy  -1558.2282359996107
+-------------------------
+
+
+
+Energy difference :  1558.2282359996107
+
+
+Time taken for the previous iteration: 8.572688292711973
+
+
+Number of electrons:  321.99997250702967
+
+
+
+------Iteration 2--------
+
+
+Energies
+Electron-Nuclear Energy       -10600.404854324208
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1549.9262680953975
+Coulomb Energy                4261.181491928924
+Exchange-Correlation Energy   -235.26676260734195
+-------------------------
+Total Energy  -1556.786409803858
+-------------------------
+
+
+
+Energy difference :  1.4418261957525829
+
+
+Time taken for the previous iteration: 8.229651872068644
+
+
+Number of electrons:  321.99994732849535
+
+
+
+------Iteration 3--------
+
+
+Energies
+Electron-Nuclear Energy       -10450.903332574151
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1507.0192399929804
+Coulomb Energy                4147.548664774768
+Exchange-Correlation Energy   -227.2321371421959
+-------------------------
+Total Energy  -1555.7901178452294
+-------------------------
+
+
+
+Energy difference :  0.9962919586287171
+
+
+Time taken for the previous iteration: 8.31155188754201
+
+
+Number of electrons:  321.9999613910637
+
+
+
+------Iteration 4--------
+
+
+Energies
+Electron-Nuclear Energy       -10543.732081131477
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1534.6209779784015
+Coulomb Energy                4215.493341854867
+Exchange-Correlation Energy   -231.91514820058305
+-------------------------
+Total Energy  -1557.755462395421
+-------------------------
+
+
+
+Energy difference :  1.9653445501917304
+
+
+Time taken for the previous iteration: 8.471012026071548
+
+
+Number of electrons:  321.9999616126601
+
+
+
+------Iteration 5--------
+
+
+Energies
+Electron-Nuclear Energy       -10542.350321590795
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1534.2397778314796
+Coulomb Energy                4214.446311841313
+Exchange-Correlation Energy   -231.8701625258445
+-------------------------
+Total Energy  -1557.7569473404765
+-------------------------
+
+
+
+Energy difference :  0.0014849450553811039
+
+
+Time taken for the previous iteration: 8.697930734604597
+
+
+Number of electrons:  321.99996156007626
+
+
+
+------Iteration 6--------
+
+
+Energies
+Electron-Nuclear Energy       -10542.170878415789
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1534.1615059504609
+Coulomb Energy                4214.334438691713
+Exchange-Correlation Energy   -231.85972483123558
+-------------------------
+Total Energy  -1557.7572115014818
+-------------------------
+
+
+
+Energy difference :  0.00026416100536152953
+
+
+Time taken for the previous iteration: 8.942445758730173
+
+
+Number of electrons:  321.9999615320412
+
+
+
+------Iteration 7--------
+
+
+Energies
+Electron-Nuclear Energy       -10542.093522850506
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1534.1280540138587
+Coulomb Energy                4214.285609079492
+Exchange-Correlation Energy   -231.85484623776173
+-------------------------
+Total Energy  -1557.7572588915464
+-------------------------
+
+
+
+Energy difference :  4.739006453746697e-05
+
+
+Time taken for the previous iteration: 9.023505162447691
+
+
+Number of electrons:  321.9999615301239
+
+
+
+------Iteration 8--------
+
+
+Energies
+Electron-Nuclear Energy       -10542.08743693356
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1534.126143800795
+Coulomb Energy                4214.281033700897
+Exchange-Correlation Energy   -231.85444696098983
+-------------------------
+Total Energy  -1557.7572592894876
+-------------------------
+
+
+
+Energy difference :  3.979412213084288e-07
+
+
+Time taken for the previous iteration: 8.969928059726954
+
+
+Number of electrons:  321.99996152988206
+
+
+
+------Iteration 9--------
+
+
+Energies
+Electron-Nuclear Energy       -10542.086458392088
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1534.1259659690988
+Coulomb Energy                4214.280167987369
+Exchange-Correlation Energy   -231.85438211296275
+-------------------------
+Total Energy  -1557.757259445213
+-------------------------
+
+
+
+Energy difference :  1.5572550182696432e-07
+
+
+Time taken for the previous iteration: 8.957244869321585
+
+
+Number of electrons:  321.99996153005014
+
+
+
+------Iteration 10--------
+
+
+Energies
+Electron-Nuclear Energy       -10542.086763062283
+Nuclear repulsion Energy      3467.7774471033704
+Kinetic Energy                1534.1261052966086
+Coulomb Energy                4214.280347248942
+Exchange-Correlation Energy   -231.85439603881633
+-------------------------
+Total Energy  -1557.757259452178
+-------------------------
+
+
+
+Energy difference :  6.9649104261770844e-09
+
+SCF Converged after 10 iterations!
+
+-------------------------------------
+Total Energy =  -1557.757259452178
+-------------------------------------
+
+
+
+Time taken : 400.9449476264417 seconds.
+
+
+
+-------------------------------------
+Profiling
+-------------------------------------
+Preprocessing                           21.43661193549633
+Density Fitting                         22.755359265953302
+DIIS                                    6.138735353946686
+KS matrix diagonalization               2.06021623685956
+One electron Integrals (S, T, Vnuc)     10.968967530876398
+Coulomb Integrals                       281.3246777243912
+Grids construction                      0
+Exchange-Correlation Term               56.07974563166499
+Misc.                                   0.18063394725322723
+Complete SCF                            400.9449476264417
+/home/manas/.local/lib/python3.8/site-packages/pyfock/Integrals/nuc_mat_symm.py:181: NumbaWarning: [1m[1mCannot cache compiled function "Fboys" as it uses dynamic globals (such as ctypes pointers and large global arrays)[0m[0m
+  F = Fboys(l+m+n-2*(r+s+t)-(i1+j1+k),gamma*np.sum(PC**2))
+/home/manas/.local/lib/python3.8/site-packages/pyfock/Integrals/nuc_mat_symm.py:61: NumbaWarning: [1mCannot cache compiled function "nuc_mat_symm_internal" as it uses dynamic globals (such as ctypes pointers and large global arrays)[0m
+  @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
+/home/manas/.local/lib/python3.8/site-packages/pyfock/Integrals/schwarz_helpers.py:147: NumbaWarning: [1m[1mCannot cache compiled function "innerLoop4c2e" as it uses dynamic globals (such as ctypes pointers and large global arrays)[0m[0m
+  sum1 = innerLoop4c2e(la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,gammaP,gammaQ,PI,PJ,QK,QL,PQ,PQsqBy4delta,delta)
+/home/manas/.local/lib/python3.8/site-packages/pyfock/Integrals/schwarz_helpers.py:40: NumbaWarning: [1mCannot cache compiled function "eri_4c2e_diag_internal" as it uses dynamic globals (such as ctypes pointers and large global arrays)[0m
+  @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
+/home/manas/.local/lib/python3.8/site-packages/pyfock/Integrals/schwarz_helpers.py:485: NumbaWarning: [1mCannot cache compiled function "rys_3c2e_tri_schwarz_sparse_internal" as it uses dynamic globals (such as ctypes pointers and large global arrays)[0m
+  @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
+Energy diff (PySCF-CrysX) 1.6204012354137376e-07

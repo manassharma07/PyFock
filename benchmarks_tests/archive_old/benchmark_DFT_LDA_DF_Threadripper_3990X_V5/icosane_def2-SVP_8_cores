@@ -1,0 +1,415 @@
+Operating System: Linux 5.13.0-44-generic
+System Type: 64bit
+CPU Model: AMD Ryzen Threadripper 3990X 64-Core Processor
+Number of Cores: 64
+Number of Threads: 128
+Memory (GB): 125.661865234375
+Number of cores being actually used/requested for the benchmark: 8
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 8
+OPENBLAS_NUM_THREADS = 8
+MKL_NUM_THREADS = 8
+VECLIB_MAXIMUM_THREADS = 8
+NUMEXPR_NUM_THREADS = 8
+PYSCF_MAX_MEMORY = 23000
+
+
+PySCF Results
+
+
+
+
+******** <class 'pyscf.df.df_jk.density_fit.<locals>.DensityFitting'> ********
+method = DensityFitting-RKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = False
+chkfile to save SCF result = /home/manas/temp_pyfock/PyFock/benchmarks_tests/tmph14efdqc
+max_memory 23000 MB (current use 188 MB)
+XC library pyscf.dft.libxc version 5.2.0
+    S. Lehtola, C. Steigemann, M. J. Oliveira, and M. A. Marques, SoftwareX 7, 1 (2018)
+XC functionals = 1,7
+    P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+    F. Bloch, Z. Phys. 57, 545 (1929)
+    S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+init E= -779.920965202526
+  HOMO = -0.355665364653763  LUMO = -0.0253390289790732
+cycle= 1 E= -779.040751094955  delta_E= 0.88  |g|= 1.18  |ddm|= 8.06
+  HOMO = -0.0862477053353169  LUMO = 0.0697780985630824
+cycle= 2 E= -778.534308809384  delta_E= 0.506  |g|= 1.81  |ddm|= 3.73
+  HOMO = -0.231918336685668  LUMO = 0.0236478157802546
+cycle= 3 E= -779.453437877816  delta_E= -0.919  |g|= 0.0752  |ddm|= 2.41
+  HOMO = -0.229574370802964  LUMO = 0.0230564681736735
+cycle= 4 E= -779.454647268815  delta_E= -0.00121  |g|= 0.0286  |ddm|= 0.13
+  HOMO = -0.228476180742467  LUMO = 0.0232828793897955
+cycle= 5 E= -779.454829546482  delta_E= -0.000182  |g|= 0.0102  |ddm|= 0.0424
+  HOMO = -0.228567758177316  LUMO = 0.0232034551240437
+cycle= 6 E= -779.454855765267  delta_E= -2.62e-05  |g|= 0.00119  |ddm|= 0.0131
+  HOMO = -0.228567387255061  LUMO = 0.0231940544987606
+cycle= 7 E= -779.454856040375  delta_E= -2.75e-07  |g|= 0.000658  |ddm|= 0.00245
+  HOMO = -0.228559434551889  LUMO = 0.0231915740561464
+cycle= 8 E= -779.454856144297  delta_E= -1.04e-07  |g|= 0.000154  |ddm|= 0.000924
+  HOMO = -0.228562909341103  LUMO = 0.0231883958563694
+cycle= 9 E= -779.454856150625  delta_E= -6.33e-09  |g|= 1.55e-05  |ddm|= 0.000247
+  HOMO = -0.228565120596346  LUMO = 0.0231871383349828
+Extra cycle  E= -779.454856150559  delta_E= 6.59e-11  |g|= 2.27e-05  |ddm|= 4.81e-05
+converged SCF energy = -779.454856150559
+Nuc-Nuc PySCF=  1381.7539061986924
+One electron integrals energy -3800.215035540378
+Coulomb energy  1755.2622799229955
+EXC  -116.25600673186926
+PySCF time:  96.96659392118454
+PySCF Grid Size:  (1497824,)
+
+
+NAO : 510
+
+
+aux NAO : 1724
+Running DFT using 8 threads for Numba.
+
+
+
+Calculating one electron integrals...
+
+
+Core H size in GB  0.0020808
+done!
+Time taken 1.1907700225710869 seconds.
+
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+
+
+Performing Schwarz screening...
+Threshold  1e-09
+Size of permanent array storing the significant indices of 3c2e ERI in GB  0.509518692
+No. of elements in the standard three-centered two electron ERI tensor:  448412400
+No. of elements in the triangular three-centered two electron ERI tensor:  224645820
+No. of significant triplets based on Schwarz inequality and triangularity: 84919782 or 18.9% of original
+Schwarz screening done!
+Time taken 1.6796132773160934 seconds.
+
+Two Center Two electron ERI size in GB  0.023777408
+Three Center Two electron ERI size in GB  0.679358256
+Three-centered two electron evaluation done!
+Time taken 64.10452729836106 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  1497824
+Size (in GB) for storing the coordinates of grid:       0.035947776
+Size (in GB) for storing the weights of grid:           0.011982592
+Size (in GB) for storing the density at gridpoints:     0.011982592
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  5000
+No. of batches:  299
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 1.3257077783346176 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    165
+Average no. of basis functions contributing to a batch of grid points:    138
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+XC Functional IDs supplied:  [1, 7]
+
+
+Description of exchange functional: 
+
+The Exchange function belongs to the family: LDA
+Functional ID: 1
+Functional Name: lda_x
+Attributes:
+    Name: Slater exchange
+    Kind: 0
+  Family: 1
+Citations:
+   P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+   F. Bloch, Z. Phys. 57, 545 (1929)
+
+
+Description of correlation functional: 
+
+ The Correlation function belongs to the family: LDA
+Functional ID: 7
+Functional Name: lda_c_vwn
+Attributes:
+    Name: Vosko, Wilk & Nusair (VWN5)
+    Kind: 1
+  Family: 1
+Citations:
+   S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+------------------------------------------------------
+
+
+
+
+Number of electrons:  161.66407845614378
+
+
+
+------Iteration 1--------
+
+
+Energies
+Electron-Nuclear Energy       -4566.861384056186
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                787.3879892291103
+Coulomb Energy                1733.7282901969406
+Exchange-Correlation Energy   -115.57360178074276
+-------------------------
+Total Energy  -779.5647010879934
+-------------------------
+
+
+
+Energy difference :  779.5647010879934
+
+
+Time taken for the previous iteration: 2.174675054848194
+
+
+Number of electrons:  161.99998685188908
+
+
+
+------Iteration 2--------
+
+
+Energies
+Electron-Nuclear Energy       -4597.292219912165
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                775.6854765865133
+Coulomb Energy                1778.894797540459
+Exchange-Correlation Energy   -117.99948018428316
+-------------------------
+Total Energy  -778.9574206465913
+-------------------------
+
+
+
+Energy difference :  0.6072804414020538
+
+
+Time taken for the previous iteration: 2.0797938480973244
+
+
+Number of electrons:  161.9999750749608
+
+
+
+------Iteration 3--------
+
+
+Energies
+Electron-Nuclear Energy       -4521.480718788387
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                753.7356951262316
+Coulomb Energy                1721.4417732497154
+Exchange-Correlation Energy   -113.88662269541067
+-------------------------
+Total Energy  -778.4358677849659
+-------------------------
+
+
+
+Energy difference :  0.5215528616254232
+
+
+Time taken for the previous iteration: 2.147403344511986
+
+
+Number of electrons:  161.99998164695546
+
+
+
+------Iteration 4--------
+
+
+Energies
+Electron-Nuclear Energy       -4568.670439177069
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                767.8519484792366
+Coulomb Energy                1755.897768457626
+Exchange-Correlation Energy   -116.28705938737303
+-------------------------
+Total Energy  -779.4537763046949
+-------------------------
+
+
+
+Energy difference :  1.0179085197289623
+
+
+Time taken for the previous iteration: 2.192240234464407
+
+
+Number of electrons:  161.99998175230738
+
+
+
+------Iteration 5--------
+
+
+Energies
+Electron-Nuclear Energy       -4567.9563264883345
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                767.6639520646895
+Coulomb Energy                1755.3484046212477
+Exchange-Correlation Energy   -116.26465457457807
+-------------------------
+Total Energy  -779.4546190540912
+-------------------------
+
+
+
+Energy difference :  0.0008427493962699373
+
+
+Time taken for the previous iteration: 2.2427481785416603
+
+
+Number of electrons:  161.99998173067897
+
+
+
+------Iteration 6--------
+
+
+Energies
+Electron-Nuclear Energy       -4567.866417769951
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                767.6222375098107
+Coulomb Energy                1755.294493410829
+Exchange-Correlation Energy   -116.25915148443465
+-------------------------
+Total Energy  -779.4548330108614
+-------------------------
+
+
+
+Energy difference :  0.00021395677026703197
+
+
+Time taken for the previous iteration: 2.3256065100431442
+
+
+Number of electrons:  161.99998171652584
+
+
+
+------Iteration 7--------
+
+
+Energies
+Electron-Nuclear Energy       -4567.820259580025
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                767.6022753357165
+Coulomb Energy                1755.2653775544275
+Exchange-Correlation Energy   -116.25625429807909
+-------------------------
+Total Energy  -779.4548556650759
+-------------------------
+
+
+
+Energy difference :  2.2654214490103186e-05
+
+
+Time taken for the previous iteration: 2.384694255888462
+
+
+Number of electrons:  161.99998171514696
+
+
+
+------Iteration 8--------
+
+
+Energies
+Electron-Nuclear Energy       -4567.816278070224
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                767.6010555838815
+Coulomb Energy                1755.262374592569
+Exchange-Correlation Energy   -116.2560134078956
+-------------------------
+Total Energy  -779.454855978785
+-------------------------
+
+
+
+Energy difference :  3.137090516247554e-07
+
+
+Time taken for the previous iteration: 2.498859614133835
+
+
+Number of electrons:  161.99998171497634
+
+
+
+------Iteration 9--------
+
+
+Energies
+Electron-Nuclear Energy       -4567.815692721774
+Nuclear repulsion Energy      1381.7540053228845
+Kinetic Energy                767.6009188750695
+Coulomb Energy                1755.2618830184535
+Exchange-Correlation Energy   -116.25597056188485
+-------------------------
+Total Energy  -779.4548560672517
+-------------------------
+
+
+
+Energy difference :  8.846677701512817e-08
+
+SCF Converged after 9 iterations!
+
+-------------------------------------
+Total Energy =  -779.4548560672517
+-------------------------------------
+
+
+
+Time taken : 87.14166813343763 seconds.
+
+
+
+-------------------------------------
+Profiling
+-------------------------------------
+Preprocessing                           3.005321055650711
+Density Fitting                         2.2795959636569023
+DIIS                                    1.2344834171235561
+KS matrix diagonalization               0.42389198020100594
+One electron Integrals (S, T, Vnuc)     1.1907700225710869
+Coulomb Integrals                       62.42491402104497
+Grids construction                      0
+Exchange-Correlation Term               16.54544483497739
+Misc.                                   0.037246838212013245
+Complete SCF                            87.14166813343763
+Energy diff (PySCF-CrysX) 8.33074409456458e-08

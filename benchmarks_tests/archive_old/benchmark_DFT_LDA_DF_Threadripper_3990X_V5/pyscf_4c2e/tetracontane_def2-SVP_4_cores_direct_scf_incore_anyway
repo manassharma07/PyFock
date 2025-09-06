@@ -1,0 +1,65 @@
+Operating System: Linux 5.13.0-44-generic
+System Type: 64bit
+CPU Model: AMD Ryzen Threadripper 3990X 64-Core Processor
+Number of Cores: 64
+Number of Threads: 128
+Memory (GB): 125.661865234375
+Number of cores being actually used/requested for the benchmark: 4
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 4
+OPENBLAS_NUM_THREADS = 4
+MKL_NUM_THREADS = 4
+VECLIB_MAXIMUM_THREADS = 4
+NUMEXPR_NUM_THREADS = 4
+PYSCF_MAX_MEMORY = 120000
+
+
+PySCF Results
+
+
+
+
+******** <class 'pyscf.dft.rks.RKS'> ********
+method = RKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /home/manas/temp_pyfock/PyFock/benchmarks_tests/benchmark_DFT_LDA_DF_Threadripper_3990X_V5/pyscf_4c2e/tmprtzp892q
+max_memory 120000 MB (current use 223 MB)
+XC library pyscf.dft.libxc version 5.2.0
+    S. Lehtola, C. Steigemann, M. J. Oliveira, and M. A. Marques, SoftwareX 7, 1 (2018)
+XC functionals = 1,7
+    P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+    F. Bloch, Z. Phys. 57, 545 (1929)
+    S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+Traceback (most recent call last):
+  File "benchmark_DFT_LDA_DF.py", line 114, in <module>
+    energyPyscf = mf.kernel(dm0=dmat_init)
+  File "<string>", line 2, in kernel
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/scf/hf.py", line 1692, in scf
+    kernel(self, self.conv_tol, self.conv_tol_grad,
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/scf/hf.py", line 128, in kernel
+    vhf = mf.get_veff(mol, dm)
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/dft/rks.py", line 101, in get_veff
+    vj = ks.get_j(mol, dm, hermi)
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/scf/hf.py", line 1753, in get_j
+    return self.get_jk(mol, dm, hermi, with_k=False, omega=omega)[0]
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/scf/hf.py", line 2047, in get_jk
+    self._eri = mol.intor('int2e', aosym='s8')
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/gto/mole.py", line 3460, in intor
+    return moleintor.getints(intor, self._atm, bas, env,
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/gto/moleintor.py", line 240, in getints
+    return getints4c(intor_name, atm, bas, env, shls_slice, comp,
+  File "/home/manas/.local/lib/python3.8/site-packages/pyscf/gto/moleintor.py", line 598, in getints4c
+    out = numpy.ndarray((nao_pair*(nao_pair+1)//2), buffer=out)
+numpy.core._exceptions.MemoryError: Unable to allocate 971. GiB for an array with shape (130333459290,) and data type float64

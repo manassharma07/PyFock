@@ -1,0 +1,1173 @@
+
+  Memory set to 111.759 GiB by Python driver.
+  Threads set to 4 by Python driver.
+
+Scratch directory: /tmp/
+
+*** tstart() called on baldr
+*** at Thu Mar 30 15:48:47 2023
+
+   => Loading Basis Set <=
+
+    Name: DEF2-SVP
+    Role: ORBITAL
+    Keyword: BASIS
+    atoms 1-6, 13-18  entry C          line    90 file /home/manas/psi4conda/share/psi4/basis/def2-svp.gbs 
+    atoms 7-12, 19-24 entry H          line    15 file /home/manas/psi4conda/share/psi4/basis/def2-svp.gbs 
+
+
+         ---------------------------------------------------------
+                                   SCF
+               by Justin Turney, Rob Parrish, Andy Simmonett
+                          and Daniel G. A. Smith
+                              RKS Reference
+                        4 Threads, 114440 MiB Core
+         ---------------------------------------------------------
+
+  ==> Geometry <==
+
+    Molecular point group: c1
+    Full point group: C1
+
+    Geometry (in Angstrom), charge = 0, multiplicity = 1:
+
+       Center              X                  Y                   Z               Mass       
+    ------------   -----------------  -----------------  -----------------  -----------------
+         C           -0.704000000000    -1.219400000000     4.000000000000    12.000000000000
+         C            0.704000000000    -1.219400000000     4.000000000000    12.000000000000
+         C           -1.408100000000     0.000000000000     4.000000000000    12.000000000000
+         C            1.408100000000     0.000000000000     4.000000000000    12.000000000000
+         C           -0.704000000000     1.219400000000     4.000000000000    12.000000000000
+         C            0.704000000000     1.219400000000     4.000000000000    12.000000000000
+         H           -1.215200000000    -2.104800000000     4.000000000000     1.007825032230
+         H            1.215200000000    -2.104800000000     4.000000000000     1.007825032230
+         H           -2.430400000000     0.000000000000     4.000000000000     1.007825032230
+         H            2.430400000000     0.000000000000     4.000000000000     1.007825032230
+         H           -1.215200000000     2.104800000000     4.000000000000     1.007825032230
+         H            1.215200000000     2.104800000000     4.000000000000     1.007825032230
+         C            0.655900000000    -0.000008000000     0.000175000000    12.000000000000
+         C           -0.195500000000    -1.173108000000     0.000375000000    12.000000000000
+         C           -0.195400000000     1.173092000000     0.000175000000    12.000000000000
+         C           -1.461500000000    -0.725608000000    -0.000225000000    12.000000000000
+         C           -1.461300000000     0.725692000000     0.000075000000    12.000000000000
+         C            1.991700000000    -0.000108000000    -0.000125000000    12.000000000000
+         H            0.130500000000    -2.200008000000     0.000375000000     1.007825032230
+         H            0.130800000000     2.199992000000     0.000275000000     1.007825032230
+         H           -2.353400000000    -1.331008000000    -0.000425000000     1.007825032230
+         H           -2.353300000000     1.331292000000    -0.000025000000     1.007825032230
+         H            2.555800000000     0.927192000000    -0.000325000000     1.007825032230
+         H            2.555700000000    -0.927408000000    -0.000325000000     1.007825032230
+
+  Running in c1 symmetry.
+
+  Rotational constants: A =      0.04575  B =      0.01205  C =      0.01149 [cm^-1]
+  Rotational constants: A =   1371.46783  B =    361.31800  C =    344.43076 [MHz]
+  Nuclear repulsion =  611.914458902769411
+
+  Charge       = 0
+  Multiplicity = 1
+  Electrons    = 84
+  Nalpha       = 42
+  Nbeta        = 42
+
+  ==> Algorithm <==
+
+  SCF Algorithm Type is DF.
+  DIIS enabled.
+  MOM disabled.
+  Fractional occupation disabled.
+  Guess Type is SAD.
+  Energy threshold   = 1.00e-07
+  Density threshold  = 1.00e-06
+  Integral threshold = 1.00e-12
+
+  ==> Primary Basis <==
+
+  Basis Set: DEF2-SVP
+    Blend: DEF2-SVP
+    Number of shells: 108
+    Number of basis functions: 240
+    Number of Cartesian functions: 240
+    Spherical Harmonics?: false
+    Max angular momentum: 2
+
+  ==> DFT Potential <==
+
+   => Composite Functional: LDA,VWN5 <= 
+
+    Slater exchange
+    Vosko, Wilk & Nusair (VWN5)
+    P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930) (10.1017/S0305004100016108)
+    F. Bloch, Z. Phys. 57, 545 (1929) (10.1007/BF01340281)
+    S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980) (10.1139/p80-159)
+
+    Deriv               =              1
+    GGA                 =          FALSE
+    Meta                =          FALSE
+
+    Exchange Hybrid     =          FALSE
+    MP2 Hybrid          =          FALSE
+
+   => Exchange Functionals <=
+
+    1.0000         XC_LDA_X
+
+   => Correlation Functionals <=
+
+    1.0000     XC_LDA_C_VWN
+
+   => LibXC Density Thresholds  <==
+
+    XC_LDA_C_VWN:  1.00E-15 
+    XC_LDA_X:  1.00E-15 
+
+   => Molecular Quadrature <=
+
+    Radial Scheme          =       TREUTLER
+    Pruning Scheme         =         ROBUST
+    Pruning Type           =         REGION
+    Nuclear Scheme         =       TREUTLER
+
+    Blocking Scheme        =         OCTREE
+    BS radius alpha        =              1
+    Pruning alpha          =              1
+    Radial Points          =             80
+    Spherical Points       =            590
+    Total Points           =         720070
+    Total Blocks           =           5058
+    Max Points             =            256
+    Max Functions          =            230
+    Weights Tolerance      =       1.00E-15
+
+   => Loading Basis Set <=
+
+    Name: DEF2-UNIVERSAL-JFIT
+    Role: JKFIT
+    Keyword: DF_BASIS_SCF
+    atoms 1-6, 13-18  entry C          line   170 file /home/manas/psi4conda/share/psi4/basis/def2-universal-jfit.gbs 
+    atoms 7-12, 19-24 entry H          line    17 file /home/manas/psi4conda/share/psi4/basis/def2-universal-jfit.gbs 
+
+  ==> Integral Setup <==
+
+  DFHelper Memory: AOs need 0.363 GiB; user supplied 83.125 GiB. Using in-core AOs.
+
+  ==> MemDFJK: Density-Fitted J/K Matrices <==
+
+    J tasked:                   Yes
+    K tasked:                    No
+    wK tasked:                   No
+    OpenMP threads:               4
+    Memory [MiB]:             85120
+    Algorithm:                 Core
+    Schwarz Cutoff:           1E-12
+    Mask sparsity (%):      10.5451
+    Fitting Condition:        1E-10
+
+   => Auxiliary Basis Set <=
+
+  Basis Set: DEF2-UNIVERSAL-JFIT
+    Blend: DEF2-UNIVERSAL-JFIT
+    Number of shells: 240
+    Number of basis functions: 876
+    Number of Cartesian functions: 876
+    Spherical Harmonics?: false
+    Max angular momentum: 4
+
+  Cached 100.0% of DFT collocation blocks in 0.694 [GiB].
+
+  Minimum eigenvalue in the overlap matrix is 3.4543087782E-04.
+  Reciprocal condition number of the overlap matrix is 3.9938292930E-05.
+    Using symmetric orthogonalization.
+
+  ==> Pre-Iterations <==
+
+  SCF Guess: Superposition of Atomic Densities via on-the-fly atomic UHF (no occupation information).
+
+   -------------------------
+    Irrep   Nso     Nmo    
+   -------------------------
+     A        240     240 
+   -------------------------
+    Total     240     240
+   -------------------------
+
+  ==> Iterations <==
+
+                           Total Energy        Delta E     RMS |[F,P]|
+
+   @DF-RKS iter SAD:  -459.26927174234862   -4.59269e+02   0.00000e+00 
+   @DF-RKS iter   1:  -458.67974171556222    5.89530e-01   5.66214e-03 DIIS
+   @DF-RKS iter   2:  -457.34941929297850    1.33032e+00   8.76880e-03 DIIS
+   @DF-RKS iter   3:  -459.67952502344542   -2.33011e+00   1.89547e-03 DIIS
+   @DF-RKS iter   4:  -459.73581167492932   -5.62867e-02   1.41703e-03 DIIS
+   @DF-RKS iter   5:  -459.79877757697648   -6.29659e-02   4.97212e-04 DIIS
+   @DF-RKS iter   6:  -459.80559160396388   -6.81403e-03   2.17910e-04 DIIS
+   @DF-RKS iter   7:  -459.80702231714940   -1.43071e-03   3.65537e-05 DIIS
+   @DF-RKS iter   8:  -459.80706077466010   -3.84575e-05   1.56665e-05 DIIS
+   @DF-RKS iter   9:  -459.80706687097404   -6.09631e-06   6.53112e-06 DIIS
+   @DF-RKS iter  10:  -459.80706831508405   -1.44411e-06   1.39722e-06 DIIS
+   @DF-RKS iter  11:  -459.80706836459456   -4.95105e-08   6.88227e-07 DIIS
+  Energy and wave function converged.
+
+
+  ==> Post-Iterations <==
+
+   Electrons on quadrature grid:
+      Ntotal   =   83.9999981412 ; deviation = -1.859e-06 
+
+    Orbital Energies [Eh]
+    ---------------------
+
+    Doubly Occupied:                                                      
+
+       1A     -9.818934     2A     -9.814263     3A     -9.801863  
+       4A     -9.801558     5A     -9.801518     6A     -9.801394  
+       7A     -9.801307     8A     -9.801157     9A     -9.797590  
+      10A     -9.797549    11A     -9.791550    12A     -9.791524  
+      13A     -0.783268    14A     -0.756531    15A     -0.674993  
+      16A     -0.660638    17A     -0.660627    18A     -0.626127  
+      19A     -0.558115    20A     -0.538015    21A     -0.537980  
+      22A     -0.479973    23A     -0.475605    24A     -0.471582  
+      25A     -0.447210    26A     -0.416722    27A     -0.393644  
+      28A     -0.386425    29A     -0.375180    30A     -0.375120  
+      31A     -0.350365    32A     -0.342927    33A     -0.342452  
+      34A     -0.322662    35A     -0.321191    36A     -0.302381  
+      37A     -0.301889    38A     -0.301816    39A     -0.241180  
+      40A     -0.228518    41A     -0.224759    42A     -0.193645  
+
+    Virtual:                                                              
+
+      43A     -0.101364    44A     -0.041904    45A     -0.041345  
+      46A      0.039406    47A      0.045161    48A      0.059449  
+      49A      0.064036    50A      0.068356    51A      0.075809  
+      52A      0.093866    53A      0.094421    54A      0.097381  
+      55A      0.108521    56A      0.111577    57A      0.124314  
+      58A      0.128770    59A      0.130079    60A      0.153135  
+      61A      0.199535    62A      0.210712    63A      0.241313  
+      64A      0.247020    65A      0.247299    66A      0.254369  
+      67A      0.254995    68A      0.270473    69A      0.301721  
+      70A      0.317143    71A      0.325248    72A      0.332816  
+      73A      0.341477    74A      0.368302    75A      0.383774  
+      76A      0.385769    77A      0.401058    78A      0.403500  
+      79A      0.410061    80A      0.413103    81A      0.432025  
+      82A      0.432084    83A      0.444342    84A      0.449362  
+      85A      0.457648    86A      0.479499    87A      0.480864  
+      88A      0.483925    89A      0.491944    90A      0.518489  
+      91A      0.531389    92A      0.545922    93A      0.579405  
+      94A      0.587196    95A      0.599573    96A      0.601579  
+      97A      0.604250    98A      0.604290    99A      0.617308  
+     100A      0.618294   101A      0.620664   102A      0.634673  
+     103A      0.636126   104A      0.641023   105A      0.648222  
+     106A      0.651563   107A      0.659034   108A      0.666216  
+     109A      0.674983   110A      0.694697   111A      0.696245  
+     112A      0.700659   113A      0.712555   114A      0.718341  
+     115A      0.729355   116A      0.735706   117A      0.768453  
+     118A      0.769153   119A      0.791570   120A      0.805169  
+     121A      0.830806   122A      0.834443   123A      0.965078  
+     124A      0.975695   125A      0.998092   126A      1.046719  
+     127A      1.107510   128A      1.110403   129A      1.126419  
+     130A      1.163928   131A      1.189365   132A      1.191491  
+     133A      1.197688   134A      1.211964   135A      1.216035  
+     136A      1.230583   137A      1.231427   138A      1.243778  
+     139A      1.245799   140A      1.253232   141A      1.256759  
+     142A      1.264538   143A      1.278246   144A      1.478224  
+     145A      1.533018   146A      1.542595   147A      1.564014  
+     148A      1.566430   149A      1.599265   150A      1.619151  
+     151A      1.624260   152A      1.638936   153A      1.640408  
+     154A      1.649574   155A      1.679060   156A      1.687502  
+     157A      1.688877   158A      1.706404   159A      1.716358  
+     160A      1.721256   161A      1.725735   162A      1.740115  
+     163A      1.750147   164A      1.751422   165A      1.755975  
+     166A      1.759879   167A      1.768684   168A      1.788987  
+     169A      1.833747   170A      1.877910   171A      1.882793  
+     172A      1.926190   173A      1.962446   174A      1.971598  
+     175A      1.975129   176A      1.979840   177A      1.986526  
+     178A      1.997017   179A      2.000036   180A      2.032079  
+     181A      2.043208   182A      2.044081   183A      2.049235  
+     184A      2.074778   185A      2.077253   186A      2.101987  
+     187A      2.135735   188A      2.155420   189A      2.162711  
+     190A      2.217858   191A      2.222709   192A      2.223388  
+     193A      2.256191   194A      2.266201   195A      2.270496  
+     196A      2.285031   197A      2.286548   198A      2.323519  
+     199A      2.323554   200A      2.464191   201A      2.501294  
+     202A      2.529259   203A      2.537865   204A      2.545016  
+     205A      2.548139   206A      2.555239   207A      2.569353  
+     208A      2.569525   209A      2.588633   210A      2.660433  
+     211A      2.677252   212A      2.709778   213A      2.782344  
+     214A      2.790403   215A      2.790641   216A      2.810585  
+     217A      2.832794   218A      2.832855   219A      2.838416  
+     220A      2.882826   221A      2.950459   222A      3.159955  
+     223A      3.160052   224A      3.245942   225A      3.267477  
+     226A      3.335805   227A      3.430547   228A      3.639744  
+     229A      4.980804   230A      5.001766   231A      5.054419  
+     232A      5.054496   233A      5.078172   234A      5.081196  
+     235A      5.132577   236A      5.189235   237A      5.189701  
+     238A      5.373168   239A      5.399048   240A      5.459454  
+
+    Final Occupation by Irrep:
+              A 
+    DOCC [    42 ]
+    NA   [    42 ]
+    NB   [    42 ]
+
+  @DF-RKS Final Energy:  -459.80706836459456
+
+   => Energetics <=
+
+    Nuclear Repulsion Energy =            611.9144589027694110
+    One-Electron Energy =               -1837.5861790153944639
+    Two-Electron Energy =                 830.8219988440566794
+    DFT Exchange-Correlation Energy =     -64.9573470960261972
+    Empirical Dispersion Energy =           0.0000000000000000
+    VV10 Nonlocal Energy =                  0.0000000000000000
+    Total Energy =                       -459.8070683645945564
+
+Computation Completed
+
+
+Properties will be evaluated at   0.000000,   0.000000,   0.000000 [a0]
+
+Properties computed using the SCF density matrix
+
+
+ Multipole Moments:
+
+ ------------------------------------------------------------------------------------
+     Multipole            Electronic (a.u.)      Nuclear  (a.u.)        Total (a.u.)
+ ------------------------------------------------------------------------------------
+
+ L = 1.  Multiply by 2.5417464519 to convert [e a0] to [Debye]
+ Dipole X            :          6.5179694           -6.2937329            0.2242365
+ Dipole Y            :          0.0004070           -0.0004460           -0.0000390
+ Dipole Z            :       -317.4759108          317.4782410            0.0023302
+ Magnitude           :                                                    0.2242487
+
+ ------------------------------------------------------------------------------------
+
+*** tstop() called on baldr at Thu Mar 30 15:48:57 2023
+Module time:
+	user time   =      39.23 seconds =       0.65 minutes
+	system time =       0.54 seconds =       0.01 minutes
+	total time  =         10 seconds =       0.17 minutes
+Total time:
+	user time   =      39.23 seconds =       0.65 minutes
+	system time =       0.54 seconds =       0.01 minutes
+	total time  =         10 seconds =       0.17 minutes
+Operating System: Linux 5.13.0-44-generic
+System Type: 64bit
+CPU Model: AMD Ryzen Threadripper 3990X 64-Core Processor
+Number of Cores: 64
+Number of Threads: 128
+Memory (GB): 125.661865234375
+Number of cores being actually used/requested for the benchmark: 4
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 4
+OPENBLAS_NUM_THREADS = 4
+MKL_NUM_THREADS = 4
+VECLIB_MAXIMUM_THREADS = 4
+NUMEXPR_NUM_THREADS = 4
+PYSCF_MAX_MEMORY = 120000
+Psi4 Grid Size:  (720070,)
+#INFO: **** input file is /home/manas/temp_pyfock/PyFock/benchmarks_tests/psi4_pyscf_pyfock_DFT_DF_LDA.py ****
+#DFT SCF benchmark and comparison with PySCF and Psi4
+# Benchmarking accuracy and performance using various techniques and different softwares
+import os
+
+ncores = 4
+max_memory = 120000
+
+os.environ['OMP_NUM_THREADS'] = str(ncores)
+os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4
+os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4
+# Set the max memory for PySCF
+os.environ["PYSCF_MAX_MEMORY"] = str(max_memory)
+
+# Print system information 
+from pyfock import Utils
+Utils.print_sys_info()
+
+# Check if the environment variables are properly set
+print("Number of cores being actually used/requested for the benchmark:", ncores)
+print('Confirming that the environment variables are properly set...')
+print('OMP_NUM_THREADS =', os.environ.get('OMP_NUM_THREADS', None))
+print('OPENBLAS_NUM_THREADS =', os.environ.get('OPENBLAS_NUM_THREADS', None))
+print('MKL_NUM_THREADS =', os.environ.get('MKL_NUM_THREADS', None))
+print('VECLIB_MAXIMUM_THREADS =', os.environ.get('VECLIB_MAXIMUM_THREADS', None))
+print('NUMEXPR_NUM_THREADS =', os.environ.get('NUMEXPR_NUM_THREADS', None))
+print('PYSCF_MAX_MEMORY =', os.environ.get('PYSCF_MAX_MEMORY', None))
+
+from timeit import default_timer as timer
+
+radial_points = 80
+spherical_points = 590
+
+#funcpsi4 = "svwn"
+funcpyscf = "LDA_X, LDA_C_VWN" #'1,7'
+funcx = 1 #LDA_X
+funcc = 7 #LDA_C_VWN
+funccrysx = [funcx, funcc]
+funcpsi4 = {
+    "name": "LDA,VWN5",
+    "x_functionals": {"LDA_X":{}},
+    "c_functionals": {"LDA_C_VWN": {}}
+}
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-DZVP'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'h2o.xyz'
+# xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+###############-----------------PSI4-----------------###############
+
+import psi4
+psi4.set_memory(int(max_memory*1e6))
+numpy_memory = 80
+import numpy as np
+
+#psi4_geo = psi4.geometry(geo_txt)
+with open(xyzFilename,"r") as f:
+    xyz_string = f.read()
+
+psi4_geo = psi4.core.Molecule.from_string(xyz_string, dtype='xyz',fix_symmetry='c1', fix_orientation=True,fix_com=True)
+
+# run psi4 calculation
+psi4.core.set_num_threads(ncores)
+psi4.set_options(
+    {
+        "scf__reference": "rks",
+        "scf_type": "df",
+        "scf__maxiter": 50,
+        "basis": basis_set_name,
+        "df_basis_scf": auxbasis_name,
+        "puream":False,
+        "guess": "sad",
+        "SCF_INITIAL_ACCELERATOR":"none",
+        "dft_spherical_points":spherical_points,
+        "dft_radial_points" :radial_points,
+        "dft_pruning_scheme": "robust",
+        "diis_max_vecs" : 8,
+        #"DFT_NUCLEAR_SCHEME":"becke",
+        "E_CONVERGENCE":1e-7,
+    }
+)
+energy_psi4, wfn = psi4.energy(name="scf",dft_functional=funcpsi4, molecule=psi4_geo, return_wfn=True)
+basis = wfn.basisset()
+
+# Get grid points that were used by psi4 calculation
+functional = psi4.driver.dft.build_superfunctional(funcpsi4, True)[0] # True states that we're working with a restricted system
+Vpot       = psi4.core.VBase.build(basis, functional, "RV")         # This object contains different methods associated with DFT methods and the grid.
+                                                                    # "RV" states that this is a restricted system consystent with 'functional'
+Vpot.initialize() # We initialize the object
+
+# The grid (and weights) can then be extracted from Vpot.
+x, y, z, weights_psi4 = Vpot.get_np_xyzw()
+Vpot = 0 # Get rid of unnecessary stuff
+#print(x.shape)
+#print(y.shape)
+#print(z.shape)
+#print(weights_psi4.shape)
+
+# Combine the arrays into a single 2D array
+points = np.column_stack((x, y, z))
+# Get rid of unnecessary stuff
+x=0 
+y=0
+z=0
+wfn = 0
+print('Psi4 Grid Size: ', weights_psi4.shape)
+
+
+
+###############-----------------PySCF-----------------###############
+import pyscf
+from pyscf import dft, gto
+# run PySCF calculation
+mol = gto.M(
+    atom=xyzFilename,  # just removing the last line that was only for psi4
+    basis=basis_set_name,
+    symmetry=False,
+    verbose=4,
+    cart=True,
+)
+
+
+mf = dft.rks.RKS(mol, xc=funcpyscf).density_fit(auxbasis=auxbasis_name)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(mol)
+mf.grids.level = 5
+mf.verbose = 4
+# mf.grids.prune = None
+# mf.grids.atom_grid = (radial_points, spherical_points)
+# mf.grids.build()
+# mf.grids.becke_scheme = dft.gen_grid.stratmann
+# mf.small_rho_cutoff = 1e-15
+#mf.grids.coords = points
+#print('Check to see if using psi4 grids worked or not?', mf.grids.coords.shape)
+#mf.grids.weights = weights_psi4
+#print('Check to see if using psi4 grids worked or not?', mf.grids.weights.shape)
+mf.conv_tol = 1e-7
+start=timer()
+energy_pyscf = mf.kernel()
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print(mf.grids.coords.shape)
+print('Nuc-Nuc PySCF= ', mol.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+print('Energy diff (Pyscf-Psi4)', abs(energy_pyscf-energy_psi4))
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+# Get rid of unnecessary stuff
+mf = 0
+weights_psi4 = 0
+
+
+
+
+###############-----------------PyFOCK-----------------###############
+from pyfock import Basis
+from pyfock import Mol
+from pyfock import Integrals
+from pyfock import DFT
+
+
+
+#Initialize a Mol object with somewhat large geometry
+molCrysX = Mol(coordfile=xyzFilename)
+
+
+#Initialize a Basis object with a very large basis set
+basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
+print('\n\nNAO :',basis.bfs_nao)
+
+auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
+print('\n\naux NAO :',auxbasis.bfs_nao)
+
+dftObj = DFT(molCrysX, basis, xc=funccrysx)
+#dftObj.diisSpace = 8
+# Using PySCF/Psi4 grids to compare the energies
+energy_crysX, dmat = dftObj.scf(max_itr=30, ncores=ncores, dmat=dmat_init, grids=pyscfGrids, isDF=True, auxbasis=auxbasis, rys=True, DF_algo=6, blocksize=5000, XC_algo=2, debug=False, sortGrids=False, save_ao_values=True, threshold_schwarz=1e-09)
+# Using CrysX grids 
+# To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
+# radial_precision=1.0e-13
+# level=3
+# pruning by density with threshold = 1e-011
+# alpha_min and alpha_max corresponding to QZVP
+# energyCrysX, dmat = dftObj.scf(max_itr=30, ncores=ncores, dmat=dmat_init, grids=None, gridsLevel=3, isDF=True, auxbasis=auxbasis, rys=True, DF_algo=6, blocksize=5000, XC_algo=2, debug=False, sortGrids=True, save_ao_values=False)
+
+
+
+print('Energy diff (PySCF-CrysX)', abs(energy_crysX-energy_pyscf))
+print('Energy diff (Psi4-CrysX)', abs(energy_crysX-energy_psi4))
+
+
+
+#Print package versions
+import joblib
+import scipy
+import numba
+import threadpoolctl
+import opt_einsum
+import pylibxc
+import llvmlite 
+print('\n\n\n Package versions')
+print('pyscf version', pyscf.__version__)
+print('psi4 version', psi4.__version__)
+print('np version', np.__version__)
+print('joblib version', joblib.__version__)
+print('numba version', numba.__version__)
+print('threadpoolctl version', threadpoolctl.__version__)
+print('opt_einsum version', opt_einsum.__version__)
+# print('pylibxc version', pylibxc.__version__)
+print('llvmlite version', llvmlite.__version__)
+
+
+
+print('\n\n\n Numpy Config')
+print(np.show_config())
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Linux', node='baldr', release='5.13.0-44-generic', version='#49~20.04.1-Ubuntu SMP Wed May 18 18:44:28 UTC 2022', machine='x86_64', processor='x86_64')  Threads 4
+Python 3.8.15 (default, Nov 24 2022, 15:19:38) 
+[GCC 11.2.0]
+numpy 1.21.6  scipy 1.7.3
+Date: Thu Mar 30 15:48:59 2023
+PySCF version 2.1.1
+PySCF path  /home/manas/.local/lib/python3.8/site-packages/pyscf
+GIT HEAD      /home/manas/.local/lib/python3.8/site-packages/pyscf/.git/HEAD
+
+[ENV] PYSCF_MAX_MEMORY 120000
+[CONFIG] conf_file None
+[INPUT] verbose = 4
+[INPUT] num. atoms = 24
+[INPUT] num. electrons = 84
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Cartesian GTO integrals (6d 10f)
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 C     -0.704000000000  -1.219400000000   4.000000000000 AA   -1.330367191694  -2.304332036295   7.558904498260 Bohr   0.0
+[INPUT]  2 C      0.704000000000  -1.219400000000   4.000000000000 AA    1.330367191694  -2.304332036295   7.558904498260 Bohr   0.0
+[INPUT]  3 C     -1.408100000000   0.000000000000   4.000000000000 AA   -2.660923356000   0.000000000000   7.558904498260 Bohr   0.0
+[INPUT]  4 C      1.408100000000   0.000000000000   4.000000000000 AA    2.660923356000   0.000000000000   7.558904498260 Bohr   0.0
+[INPUT]  5 C     -0.704000000000   1.219400000000   4.000000000000 AA   -1.330367191694   2.304332036295   7.558904498260 Bohr   0.0
+[INPUT]  6 C      0.704000000000   1.219400000000   4.000000000000 AA    1.330367191694   2.304332036295   7.558904498260 Bohr   0.0
+[INPUT]  7 H     -1.215200000000  -2.104800000000   4.000000000000 AA   -2.296395186571  -3.977495546985   7.558904498260 Bohr   0.0
+[INPUT]  8 H      1.215200000000  -2.104800000000   4.000000000000 AA    2.296395186571  -3.977495546985   7.558904498260 Bohr   0.0
+[INPUT]  9 H     -2.430400000000   0.000000000000   4.000000000000 AA   -4.592790373143   0.000000000000   7.558904498260 Bohr   0.0
+[INPUT] 10 H      2.430400000000   0.000000000000   4.000000000000 AA    4.592790373143   0.000000000000   7.558904498260 Bohr   0.0
+[INPUT] 11 H     -1.215200000000   2.104800000000   4.000000000000 AA   -2.296395186571   3.977495546985   7.558904498260 Bohr   0.0
+[INPUT] 12 H      1.215200000000   2.104800000000   4.000000000000 AA    2.296395186571   3.977495546985   7.558904498260 Bohr   0.0
+[INPUT] 13 C      0.655900000000  -0.000008000000   0.000175000000 AA    1.239471365102  -0.000015117809   0.000330702072 Bohr   0.0
+[INPUT] 14 C     -0.195500000000  -1.173108000000   0.000375000000 AA   -0.369441457352  -2.216852834536   0.000708647297 Bohr   0.0
+[INPUT] 15 C     -0.195400000000   1.173092000000   0.000175000000 AA   -0.369252484740   2.216822598918   0.000330702072 Bohr   0.0
+[INPUT] 16 C     -1.461500000000  -0.725608000000  -0.000225000000 AA   -2.761834731052  -1.371200393793  -0.000425188378 Bohr   0.0
+[INPUT] 17 C     -1.461300000000   0.725692000000   0.000075000000 AA   -2.761456785827   1.371359130788   0.000141729459 Bohr   0.0
+[INPUT] 18 C      1.991700000000  -0.000108000000  -0.000125000000 AA    3.763767522296  -0.000204090421  -0.000236215766 Bohr   0.0
+[INPUT] 19 H      0.130500000000  -2.200008000000   0.000375000000 AA    0.246609259256  -4.157412591852   0.000708647297 Bohr   0.0
+[INPUT] 20 H      0.130800000000   2.199992000000   0.000275000000 AA    0.247176177093   4.157382356234   0.000519674684 Bohr   0.0
+[INPUT] 21 H     -2.353400000000  -1.331008000000  -0.000425000000 AA   -4.447281461551  -2.515240589605  -0.000803133603 Bohr   0.0
+[INPUT] 22 H     -2.353300000000   1.331292000000  -0.000025000000 AA   -4.447092488939   2.515777271824  -0.000047243153 Bohr   0.0
+[INPUT] 23 H      2.555800000000   0.927192000000  -0.000325000000 AA    4.829762029163   1.752138944888  -0.000614160990 Bohr   0.0
+[INPUT] 24 H      2.555700000000  -0.927408000000  -0.000325000000 AA    4.829573056551  -1.752547125731  -0.000614160990 Bohr   0.0
+
+nuclear repulsion = 611.914459191858
+number of shells = 108
+number of NR pGTOs = 384
+number of NR cGTOs = 240
+basis = def2-SVP
+ecp = {}
+CPU time:        45.49
+
+
+******** <class 'pyscf.df.df_jk.density_fit.<locals>.DensityFitting'> ********
+method = DensityFitting-RKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /home/manas/temp_pyfock/PyFock/benchmarks_tests/tmpe68hthak
+max_memory 120000 MB (current use 1310 MB)
+XC library pyscf.dft.libxc version 5.2.0
+    S. Lehtola, C. Steigemann, M. J. Oliveira, and M. A. Marques, SoftwareX 7, 1 (2018)
+XC functionals = LDA_X, LDA_C_VWN
+    P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+    F. Bloch, Z. Phys. 57, 545 (1929)
+    S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x7f4eb01789d0>
+grids dens level: 5
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x7f4eb0178940>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+tot grids = 796632
+init E= -461.081715422777
+  HOMO = -0.291373295955206  LUMO = -0.181813189297148
+cycle= 1 E= -459.662996872501  delta_E= 1.42  |g|= 0.697  |ddm|= 6.45
+  HOMO = -0.0869423241528884  LUMO = -0.0212457404354447
+cycle= 2 E= -459.485859110815  delta_E= 0.177  |g|= 1.06  |ddm|= 2.35
+  HOMO = -0.205622332027433  LUMO = -0.0943278727038244
+cycle= 3 E= -459.758895505624  delta_E= -0.273  |g|= 0.392  |ddm|= 1.77
+  HOMO = -0.194596932383178  LUMO = -0.106650379041678
+cycle= 4 E= -459.80199924167  delta_E= -0.0431  |g|= 0.128  |ddm|= 0.523
+  HOMO = -0.193938562979646  LUMO = -0.10170435245738
+cycle= 5 E= -459.806302070583  delta_E= -0.0043  |g|= 0.0524  |ddm|= 0.193
+  HOMO = -0.194154556709492  LUMO = -0.101380764422594
+cycle= 6 E= -459.807030716348  delta_E= -0.000729  |g|= 0.0105  |ddm|= 0.0647
+  HOMO = -0.193532911607135  LUMO = -0.101416830614755
+cycle= 7 E= -459.807058007233  delta_E= -2.73e-05  |g|= 0.00268  |ddm|= 0.0135
+  HOMO = -0.193623232998027  LUMO = -0.101314195142737
+cycle= 8 E= -459.807059485092  delta_E= -1.48e-06  |g|= 0.00126  |ddm|= 0.0041
+  HOMO = -0.193643745275636  LUMO = -0.101346084896271
+cycle= 9 E= -459.807059836698  delta_E= -3.52e-07  |g|= 0.00063  |ddm|= 0.00205
+  HOMO = -0.193645408478234  LUMO = -0.101363043824564
+cycle= 10 E= -459.807059953896  delta_E= -1.17e-07  |g|= 7.9e-05  |ddm|= 0.000756
+  HOMO = -0.193647270595775  LUMO = -0.101364677973577
+cycle= 11 E= -459.80705995537  delta_E= -1.47e-09  |g|= 3.01e-05  |ddm|= 0.000141
+  HOMO = -0.19364518307794  LUMO = -0.101362740439407
+Extra cycle  E= -459.807059954928  delta_E= 4.42e-10  |g|= 5.1e-05  |ddm|= 0.000102
+converged SCF energy = -459.807059954928
+OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
+PySCF time:  31.057272717356682
+(658832, 3)
+Nuc-Nuc PySCF=  611.9144591918578
+One electron integrals energy -1837.5849115835915
+Coulomb energy  830.8206678488676
+EXC  -64.95727541206166
+Energy diff (Pyscf-Psi4) 8.40966674786614e-06
+PySCF Grid Size:  (658832,)
+
+
+NAO : 240
+
+
+aux NAO : 876
+Running DFT using 4 threads for Numba.
+
+
+
+Calculating one electron integrals...
+
+
+Core H size in GB  0.0004608
+done!
+Time taken 0.3586576543748379 seconds.
+
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+
+
+Performing Schwarz screening...
+Threshold  1e-09
+Size of permanent array storing the significant indices of 3c2e ERI in GB  0.12084782399999999
+No. of elements in the standard three-centered two electron ERI tensor:  50457600
+No. of elements in the triangular three-centered two electron ERI tensor:  25333920
+No. of significant triplets based on Schwarz inequality and triangularity: 20141304 or 39.9% of original
+Schwarz screening done!
+Time taken 0.3923816680908203 seconds.
+
+Two Center Two electron ERI size in GB  0.006139008
+Three Center Two electron ERI size in GB  0.161130432
+Three-centered two electron evaluation done!
+Time taken 15.489668425172567 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  658832
+Size (in GB) for storing the coordinates of grid:       0.015811968
+Size (in GB) for storing the weights of grid:           0.005270656
+Size (in GB) for storing the density at gridpoints:     0.005270656
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  5000
+No. of batches:  131
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.12826497480273247 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    237
+Average no. of basis functions contributing to a batch of grid points:    180
+
+You have asked to save the values of significant basis functions on grid points so as to avoid recalculation for each SCF cycle.
+Please note: This will require addtional memory that is approximately :0.9 GB
+Calculating the value of significantly contributing basis functions (atomic orbitals)...
+done!
+Time taken 1.1156274229288101 seconds.
+
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+XC Functional IDs supplied:  [1, 7]
+
+
+Description of exchange functional: 
+
+The Exchange function belongs to the family: LDA
+Functional ID: 1
+Functional Name: lda_x
+Attributes:
+    Name: Slater exchange
+    Kind: 0
+  Family: 1
+Citations:
+   P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+   F. Bloch, Z. Phys. 57, 545 (1929)
+
+
+Description of correlation functional: 
+
+ The Correlation function belongs to the family: LDA
+Functional ID: 7
+Functional Name: lda_c_vwn
+Attributes:
+    Name: Vosko, Wilk & Nusair (VWN5)
+    Kind: 1
+  Family: 1
+Citations:
+   S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+------------------------------------------------------
+
+
+
+
+Number of electrons:  83.86956490243384
+
+
+
+------Iteration 1--------
+
+
+Energies
+Electron-Nuclear Energy       -2294.072781116044
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                464.66460304147654
+Coulomb Energy                821.4131339812186
+Exchange-Correlation Energy   -64.86550942076998
+-------------------------
+Total Energy  -460.9460504247743
+-------------------------
+
+
+
+Energy difference :  460.9460504247743
+
+
+Time taken for the previous iteration: 0.7462615482509136
+
+
+Number of electrons:  83.99999660472564
+
+
+
+------Iteration 2--------
+
+
+Energies
+Electron-Nuclear Energy       -2303.729778378936
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                456.72785019501157
+Coulomb Energy                841.0918808103528
+Exchange-Correlation Energy   -65.64243974910629
+-------------------------
+Total Energy  -459.63798403333305
+-------------------------
+
+
+
+Energy difference :  1.3080663914412298
+
+
+Time taken for the previous iteration: 0.7299113497138023
+
+
+Number of electrons:  83.99999547714282
+
+
+
+------Iteration 3--------
+
+
+Energies
+Electron-Nuclear Energy       -2272.1571376988322
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                448.40106552237825
+Coulomb Energy                816.5049914694516
+Exchange-Correlation Energy   -64.09910358075115
+-------------------------
+Total Energy  -459.4356811984087
+-------------------------
+
+
+
+Energy difference :  0.2023028349243532
+
+
+Time taken for the previous iteration: 0.7286526039242744
+
+
+Number of electrons:  83.99999577269112
+
+
+
+------Iteration 4--------
+
+
+Energies
+Electron-Nuclear Energy       -2291.4851202840036
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                453.42930128462206
+Coulomb Energy                831.3089098034893
+Exchange-Correlation Energy   -64.92572086340866
+-------------------------
+Total Energy  -459.75812696995627
+-------------------------
+
+
+
+Energy difference :  0.3224457715475637
+
+
+Time taken for the previous iteration: 0.7791771702468395
+
+
+Number of electrons:  83.99999599450625
+
+
+
+------Iteration 5--------
+
+
+Energies
+Electron-Nuclear Energy       -2291.5503045288165
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                453.74153360433934
+Coulomb Energy                831.0625150746505
+Exchange-Correlation Energy   -64.97138468934514
+-------------------------
+Total Energy  -459.80313744982686
+-------------------------
+
+
+
+Energy difference :  0.04501047987059792
+
+
+Time taken for the previous iteration: 0.7127818688750267
+
+
+Number of electrons:  83.9999959996106
+
+
+
+------Iteration 6--------
+
+
+Energies
+Electron-Nuclear Energy       -2291.32083006596
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                453.68860063902565
+Coulomb Energy                830.8771037947049
+Exchange-Correlation Energy   -64.96555847441475
+-------------------------
+Total Energy  -459.80618101729897
+-------------------------
+
+
+
+Energy difference :  0.003043567472104769
+
+
+Time taken for the previous iteration: 0.7196266837418079
+
+
+Number of electrons:  83.99999599386987
+
+
+
+------Iteration 7--------
+
+
+Energies
+Electron-Nuclear Energy       -2291.264617105376
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                453.6462617120831
+Coulomb Energy                830.8570852511782
+Exchange-Correlation Energy   -64.96026361169267
+-------------------------
+Total Energy  -459.8070306644629
+-------------------------
+
+
+
+Energy difference :  0.000849647163931877
+
+
+Time taken for the previous iteration: 0.7289617396891117
+
+
+Number of electrons:  83.99999599071752
+
+
+
+------Iteration 8--------
+
+
+Energies
+Electron-Nuclear Energy       -2291.210834492156
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                453.6243825583144
+Coulomb Energy                830.8222439945022
+Exchange-Correlation Energy   -64.95735279784212
+-------------------------
+Total Energy  -459.80705764783704
+-------------------------
+
+
+
+Energy difference :  2.698337414130947e-05
+
+
+Time taken for the previous iteration: 0.7443337440490723
+
+
+Number of electrons:  83.99999599017488
+
+
+
+------Iteration 9--------
+
+
+Energies
+Electron-Nuclear Energy       -2291.207209272781
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                453.62371672262867
+Coulomb Energy                830.8191180464319
+Exchange-Correlation Energy   -64.95718822035755
+-------------------------
+Total Energy  -459.8070596347334
+-------------------------
+
+
+
+Energy difference :  1.9868963363478542e-06
+
+
+Time taken for the previous iteration: 0.7273736707866192
+
+
+Number of electrons:  83.99999599026414
+
+
+
+------Iteration 10--------
+
+
+Energies
+Electron-Nuclear Energy       -2291.2058530931486
+Nuclear repulsion Energy      611.9145030893447
+Kinetic Energy                453.6234996354792
+Coulomb Energy                830.8178795799812
+Exchange-Correlation Energy   -64.95708889551848
+-------------------------
+Total Energy  -459.8070596838621
+-------------------------
+
+
+
+Energy difference :  4.912874373985687e-08
+
+SCF Converged after 10 iterations!
+
+-------------------------------------
+Total Energy =  -459.8070596838621
+-------------------------------------
+
+
+
+Time taken : 24.451257921755314 seconds.
+
+
+
+-------------------------------------
+Profiling
+-------------------------------------
+Preprocessing                           1.636274065822363
+Density Fitting                         0.5856510661542416
+DIIS                                    0.0950305163860321
+KS matrix diagonalization               0.05966603755950928
+One electron Integrals (S, T, Vnuc)     0.3586576543748379
+Coulomb Integrals                       15.097286757081747
+Grids construction                      0
+Exchange-Correlation Term               6.609922230243683
+Misc.                                   0.008769594132900238
+Complete SCF                            24.451257921755314
+Energy diff (PySCF-CrysX) 2.710656872295658e-07
+Energy diff (Psi4-CrysX) 8.680732435095706e-06
+
+
+
+ Package versions
+pyscf version 2.1.1
+psi4 version 1.7
+np version 1.21.6
+joblib version 1.2.0
+numba version 0.56.4
+threadpoolctl version 3.1.0
+opt_einsum version v3.3.0
+llvmlite version 0.39.1
+
+
+
+ Numpy Config
+blas_mkl_info:
+  NOT AVAILABLE
+blis_info:
+  NOT AVAILABLE
+openblas_info:
+    libraries = ['openblas', 'openblas']
+    library_dirs = ['/usr/local/lib']
+    language = c
+    define_macros = [('HAVE_CBLAS', None)]
+    runtime_library_dirs = ['/usr/local/lib']
+blas_opt_info:
+    libraries = ['openblas', 'openblas']
+    library_dirs = ['/usr/local/lib']
+    language = c
+    define_macros = [('HAVE_CBLAS', None)]
+    runtime_library_dirs = ['/usr/local/lib']
+lapack_mkl_info:
+  NOT AVAILABLE
+openblas_lapack_info:
+    libraries = ['openblas', 'openblas']
+    library_dirs = ['/usr/local/lib']
+    language = c
+    define_macros = [('HAVE_CBLAS', None)]
+    runtime_library_dirs = ['/usr/local/lib']
+lapack_opt_info:
+    libraries = ['openblas', 'openblas']
+    library_dirs = ['/usr/local/lib']
+    language = c
+    define_macros = [('HAVE_CBLAS', None)]
+    runtime_library_dirs = ['/usr/local/lib']
+Supported SIMD extensions in this NumPy install:
+    baseline = SSE,SSE2,SSE3
+    found = SSSE3,SSE41,POPCNT,SSE42,AVX,F16C,FMA3,AVX2
+    not found = AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL
+None

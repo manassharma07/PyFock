@@ -1,0 +1,5 @@
+AlP.cif
+BP.cif
+filelist.txt
+GaP.cif
+InP.cif

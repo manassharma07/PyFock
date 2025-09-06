@@ -1,0 +1,34 @@
+This family is referred to as "Binning/Curtiss XXX" in the old BSE. I have
+move these to the name used in binning1990a.
+
+These basis set is sometimes referred to as "6-31G(C)" (as in rassolov2001a).
+
+Gaussian actually uses these as "6-31G" for Ga-Kr. However, it also
+uses the f-polarization and diffuse functions from 6-311G for some reason.
+Gaussian also uses a splitting factor of 2 (rather than 1.44 metioned in
+binning1990a).
+
+
+F polarization for Kr
+---------------------
+Binning1990a states that the exponent for f polarization could not
+be found, so it was taken to be the same as Br.
+
+
+-------------------------------------------------
+ REFERENCES MENTIONED ABOVE
+ (not necessarily references for the basis sets)
+-------------------------------------------------
+binning1990a
+    Binning, R. C., Curtiss, L. A.
+    Compact contracted basis sets for third-row atoms: Ga-Kr
+    J. Comput. Chem., 11, 1206-1216 (1990)
+    10.1002/jcc.540111013
+
+rassolov2001a
+    Rassolov, Vitaly A., Ratner, Mark A., Pople, John A., Redfern, Paul
+            C., Curtiss, Larry A.
+    6-31G* basis set for third-row atoms
+    J. Comput. Chem., 22, 976-984 (2001)
+    10.1002/jcc.1058.abs
+

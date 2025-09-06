@@ -1,0 +1,7 @@
+BaTiO3.cif
+CaTiO3-Perovskite.cif
+files.txt
+Mg2TiO4-Qandilite-cubic.cif
+Mg2TiO4-Qandilite-tetrag.cif
+MgTiO3.cif
+SrTiO3-Tausonite.cif

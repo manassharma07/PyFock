@@ -1,0 +1,95 @@
+Core/Valence Split
+------------------
+
+
+Reference/Elements     CRENBL                        CRENBS
+------------------     ---------------------         --------------------
+
+pacios1985a
+    Li-Ne              (2)  1s                       -
+    Na-Mg              (2)  1s                       -
+    Al-Ar              (10) 1s-2s,2p                 -
+
+hurley1986a
+    K-Ca               (10) 1s-2s,2p                 -
+    Sc-Zn              (10) 1s-2s,2p                 (18)  1s-3s,2p-3p
+    Ga-Kr              (18) 1s-3s,2p-3p              (28)  1s-3s,2p-3p,3d
+
+lajohn1987a
+    Rb-Sr              (28) 1s-3s,2p-3p,3d           -
+    Y-Cd               (28) 1s-3s,2p-3p,3d           (36)  1s-4s,2p-4p,3d
+    In-Xe              (36) 1s-4s,2p-4p,3d           (46)  1s-4s,2p-4p,3d-4d
+
+ross1990a
+    Cs-Ba              (46) 1s-4s,2p-4p,3d-4d        -
+    La                 (46) 1s-4s,2p-4p,3d-4d        (54)  1s-5s,2p-5p,3d-4d
+    Hf-Hg              (60) 1s-4s,2p-4p,3d-4d,4f     (68)  1s-5s,2p-5p,3d-4d,4f
+    Tl-Rn              (68) 1s-5s,2p-5p,3d-4d,4f     (78)  1s-5s,2p-5p,3d-5d,4f
+
+ross1994a
+    Ce-Lu              (54) 1s-5s,2p-5p,3d-4d        -
+
+ermler1991a
+    Fr-Pu              (78) 1s-5s,2p-5p,3d-5d,4f     -
+
+nash1997a
+    Am-Lr              (78) 1s-5s,2p-5p,3d-5d,4f     -
+    Rf-Og              (78) 1s-5s,2p-5p,3d-5d,4f     (92)  1s-5s,2p-5p,3d-5d,4f-5f
+
+
+-------------------------------------------------
+ REFERENCES MENTIONED ABOVE
+ (not necessarily references for the basis sets)
+-------------------------------------------------
+ermler1991a
+    Ermler, W. C., Ross, R. B., Christiansen, P. A.
+    Ab initio relativistic effective potentials with spin-orbit operators.
+            VI. Fr through Pu
+    Int. J. Quantum Chem., 40, 829-846 (1991)
+    10.1002/qua.560400611
+
+hurley1986a
+    Hurley, M. M., Pacios, Luis Fernandez, Christiansen, P. A., Ross, R.
+            B., Ermler, W. C.
+    Ab initio relativistic effective potentials with spin-orbit operators.
+            II. K through Kr
+    J. Chem. Phys., 84, 6840-6853 (1986)
+    10.1063/1.450689
+
+lajohn1987a
+    LaJohn, L. A., Christiansen, P. A., Ross, R. B., Atashroo, T., Ermler,
+            W. C.
+    Abinitiorelativistic effective potentials with spin-orbit operators.
+            III. Rb through Xe
+    J. Chem. Phys., 87, 2812-2824 (1987)
+    10.1063/1.453069
+
+nash1997a
+    Nash, Clinton S., Bursten, Bruce E., Ermler, Walter C.
+    Ab initio relativistic effective potentials with spin-orbit operators.
+            VII. Am through element 118
+    J. Chem. Phys., 106, 5133-5142 (1997)
+    10.1063/1.473992
+
+pacios1985a
+    Pacios, Luis Fernandez, Christiansen, P. A.
+    Ab initio relativistic effective potentials with spin-orbit operators.
+            I. Li through Ar
+    J. Chem. Phys., 82, 2664-2671 (1985)
+    10.1063/1.448263
+
+ross1990a
+    Ross, R. B., Powers, J. M., Atashroo, T., Ermler, W. C., LaJohn, L.
+            A., Christiansen, P. A.
+    Abinitiorelativistic effective potentials with spin-orbit operators.
+            IV. Cs through Rn
+    J. Chem. Phys., 93, 6654-6670 (1990)
+    10.1063/1.458934
+
+ross1994a
+    Ross, R. B., Gayen, Sanjukta, Ermler, W. C.
+    Ab initio relativistic effective potentials with spin-orbit operators.
+            V. Ce through Lu
+    J. Chem. Phys., 100, 8145- (1994)
+    10.1063/1.466809
+

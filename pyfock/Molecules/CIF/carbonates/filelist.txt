@@ -1,0 +1,6 @@
+CaCO3-Calcite.cif
+CaMgC2O6-Dolomite.cif
+filelist.txt
+Li2CO3-Zabuyelite.cif
+MgCO3-Magnesite.cif
+Na2CO3-Natrite.cif

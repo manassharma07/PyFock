@@ -1,0 +1,343 @@
+#INFO: **** input file is /home/manas/tmpdir/PyFock/benchmarks_tests/PySCF_GPU/test.py ****
+from pyscf import gto
+from gpu4pyscf.dft import rks
+import os
+from timeit import default_timer as timer
+
+#DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# LDA_X LDA_C_VWN 
+# funcx = 1
+# funcc = 7
+
+# LDA_X LDA_C_PW 
+# funcx = 1
+# funcc = 12
+
+# LDA_X LDA_C_PW_MOD 
+# funcx = 1
+# funcc = 13
+
+# GGA_X_PBE, GGA_C_PBE (PBE)
+funcx = 101
+funcc = 130
+
+# GGA_X_B88, GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+funcidcrysx = [funcx, funcc]
+funcidpyscf = str(funcx)+','+str(funcc)
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVPD'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-QZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-QZVPP'
+# basis_set_name = 'def2-TZVPD'
+# basis_set_name = 'def2-QZVPD'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-TZVP'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'H2O.xyz'
+
+# xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'Taxol.xyz'
+# xyzFilename = 'Valinomycin.xyz'
+# xyzFilename = 'Olestra.xyz'
+# xyzFilename = 'Ubiquitin.xyz'
+
+### 1D Carbon Alkanes
+#xyzFilename = 'Ethane.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+### 2D Carbon
+# xyzFilename = 'Graphene_C16.xyz'
+# xyzFilename = 'Graphene_C76.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### 3d Carbon Fullerenes
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'C70.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+molPySCF = gto.Mole()
+molPySCF.atom = xyzFilename
+molPySCF.basis = basis_set_name
+#molPySCF.cart = True
+molPySCF.verbose = 5
+#molPySCF.max_memory=25000
+# molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
+molPySCF.build()
+
+print('\n\nPySCF Results\n\n')
+start=timer()
+mf = rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf.xc = funcidpyscf
+mf.verbose = 5
+mf.direct_scf = False
+# mf.with_df.max_memory = 25000
+# dmat_init = mf.init_guess_by_1e(molPySCF)
+# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(molPySCF)
+# mf.init_guess = 'atom'
+# dmat_init = mf.init_guess_by_atom(molPySCF)
+mf.max_cycle = 30
+mf.conv_tol = 1e-7
+mf.grids.level = 5
+# print('begin df build')
+# start_df_pyscf=timer()
+# mf.with_df.build()
+# duration_df_pyscf = timer()- start_df_pyscf
+# print('PySCF df time: ', duration_df_pyscf)
+# print('end df build')
+energyPyscf = mf.kernel(dm0=dmat_init)
+print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Linux', node='odin', release='6.2.0-36-generic', version='#37~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Oct  9 15:34:04 UTC 2', machine='x86_64')  Threads 4
+Python 3.9.18 (main, Sep 11 2023, 13:41:44) 
+[GCC 11.2.0]
+numpy 1.26.3  scipy 1.11.4
+Date: Fri Jan 12 17:54:57 2024
+PySCF version 2.4.0
+PySCF path  /home/manas/anaconda3/envs/pyscf_gpu/lib/python3.9/site-packages/pyscf
+
+[CONFIG] conf_file None
+[INPUT] verbose = 5
+[INPUT] max_memory = 4000 
+[INPUT] num. atoms = 32
+[INPUT] num. electrons = 82
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 C      0.660900000000   0.387900000000   0.066100000000 AA    1.248919995725   0.733024763719   0.124910896834 Bohr   0.0
+[INPUT]  2 C     -0.642900000000  -0.416100000000   0.097200000000 AA   -1.214904925483  -0.786315040432   0.183681379308 Bohr   0.0
+[INPUT]  3 C      1.914100000000  -0.489400000000   0.024000000000 AA    3.617124775030  -0.924831965362   0.045353426990 Bohr   0.0
+[INPUT]  4 C     -1.896200000000   0.462500000000   0.063500000000 AA   -3.583298677400   0.873998332611   0.119997608910 Bohr   0.0
+[INPUT]  5 C      3.185800000000   0.361800000000   0.007100000000 AA    6.020289487639   0.683702911868   0.013417055484 Bohr   0.0
+[INPUT]  6 C     -3.199200000000  -0.343000000000   0.034200000000 AA   -6.045611817709  -0.648176060726   0.064628633460 Bohr   0.0
+[INPUT]  7 C      4.438100000000  -0.511000000000  -0.073500000000 AA    8.386793513432  -0.965650049653  -0.138894870156 Bohr   0.0
+[INPUT]  8 C     -4.449800000000   0.530500000000  -0.074800000000 AA   -8.408903309090   1.002499709082  -0.141351514117 Bohr   0.0
+[INPUT]  9 C      5.705000000000   0.329500000000  -0.056800000000 AA   10.780887540644   0.622664758044  -0.107336443875 Bohr   0.0
+[INPUT] 10 C     -5.715800000000  -0.312900000000  -0.087000000000 AA  -10.801296582789  -0.591295304376  -0.164406172837 Bohr   0.0
+[INPUT] 11 H      0.654500000000   1.046100000000  -0.811600000000 AA    1.236825748528   1.976842498908  -1.533701722697 Bohr   0.0
+[INPUT] 12 H      0.700300000000   1.037900000000   0.949000000000 AA    1.323375205033   1.961346744686   1.793350092212 Bohr   0.0
+[INPUT] 13 H     -0.661800000000  -1.040700000000   0.998600000000 AA   -1.250620749237  -1.966637977835   1.887080507991 Bohr   0.0
+[INPUT] 14 H     -0.661600000000  -1.098500000000  -0.761600000000 AA   -1.250242804012  -2.075864147835  -1.439215416469 Bohr   0.0
+[INPUT] 15 H      1.926200000000  -1.154000000000   0.896400000000 AA    3.639990461137  -2.180743947748   1.693950498060 Bohr   0.0
+[INPUT] 16 H      1.883700000000  -1.126300000000  -0.868200000000 AA    3.559677100843  -2.128398534098  -1.640660221347 Bohr   0.0
+[INPUT] 17 H     -1.899000000000   1.124300000000   0.938300000000 AA   -3.588589910549   2.124619081848   1.773130022679 Bohr   0.0
+[INPUT] 18 H     -1.856400000000   1.108400000000  -0.822400000000 AA   -3.508087577643   2.094572436468  -1.554110764842 Bohr   0.0
+[INPUT] 19 H      3.160900000000   1.045500000000  -0.850300000000 AA    5.973235307138   1.975708663233  -1.606834123718 Bohr   0.0
+[INPUT] 20 H      3.224700000000   0.980000000000   0.912300000000 AA    6.093799833885   1.851931602074   1.723997143441 Bohr   0.0
+[INPUT] 21 H     -3.172100000000  -1.037400000000  -0.814900000000 AA   -5.994400239733  -1.960401881624  -1.539937818908 Bohr   0.0
+[INPUT] 22 H     -3.260200000000  -0.955900000000   0.942100000000 AA   -6.160885111307  -1.806389202472   1.780310981953 Bohr   0.0
+[INPUT] 23 H      4.460200000000  -1.209400000000   0.771100000000 AA    8.428556460785  -2.285434775049   1.457167814652 Bohr   0.0
+[INPUT] 24 H      4.415400000000  -1.111100000000  -0.990500000000 AA    8.343896730405  -2.099674697004  -1.871773726382 Bohr   0.0
+[INPUT] 25 H     -4.488700000000   1.228900000000   0.769100000000 AA   -8.482413655335   2.322284434478   1.453388362403 Bohr   0.0
+[INPUT] 26 H     -4.405200000000   1.129900000000  -0.991300000000 AA   -8.324621523934   2.135201548146  -1.873285507281 Bohr   0.0
+[INPUT] 27 H      6.587900000000  -0.314500000000  -0.116200000000 AA   12.449326736022  -0.594318866176  -0.219586175674 Bohr   0.0
+[INPUT] 28 H      5.774200000000   0.916700000000   0.864500000000 AA   10.911656588464   1.732311938389   1.633668234686 Bohr   0.0
+[INPUT] 29 H      5.729400000000   1.019000000000  -0.906700000000 AA   10.826996858083   1.925630920932  -1.713414677143 Bohr   0.0
+[INPUT] 30 H     -6.598200000000   0.329900000000  -0.165500000000 AA  -12.468790915105   0.623420648494  -0.312749673616 Bohr   0.0
+[INPUT] 31 H     -5.720200000000  -1.001500000000  -0.937900000000 AA  -10.809611377737  -1.892560713752  -1.772374132230 Bohr   0.0
+[INPUT] 32 H     -5.804400000000  -0.900800000000   0.832000000000 AA  -10.968726317425  -1.702265293008   1.572252135638 Bohr   0.0
+[INPUT] ---------------- BASIS SET ---------------- 
+[INPUT] l, kappa, [nprim/nctr], expnt,             c_1 c_2 ...
+[INPUT] H
+[INPUT] 0    0    [3    /1   ]  13.010701         0.019682158
+                                1.9622572         0.13796524
+                                0.44453796        0.47831935
+[INPUT] 0    0    [1    /1   ]  0.12194962           1
+[INPUT] 1    0    [1    /1   ]  0.8                  1
+[INPUT] C
+[INPUT] 0    0    [5    /1   ]  1238.4016938      0.0054568832082
+                                186.29004992      0.040638409211
+                                42.251176346      0.18025593888
+                                11.676557932      0.46315121755
+                                3.5930506482      0.44087173314
+[INPUT] 0    0    [1    /1   ]  0.40245147363        1
+[INPUT] 0    0    [1    /1   ]  0.13090182668        1
+[INPUT] 1    0    [3    /1   ]  9.4680970621      0.038387871728
+                                2.0103545142      0.21117025112
+                                0.54771004707     0.51328172114
+[INPUT] 1    0    [1    /1   ]  0.15268613795        1
+[INPUT] 2    0    [1    /1   ]  0.8                  1
+
+nuclear repulsion = 519.13846685665
+number of shells = 126
+number of NR pGTOs = 394
+number of NR cGTOs = 250
+basis = def2-SVP
+ecp = {}
+CPU time:         1.56
+
+
+PySCF Results
+
+
+Initial guess from minao.
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = False
+chkfile to save SCF result = /tmp/tmpxt_pdpbq
+max_memory 4000 MB (current use 1140 MB)
+XC library pyscf.dft.libxc version 6.1.0
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x7f3dc13dac10>
+grids dens level: 5
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x7f3dc13daa60>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+num shells = 260, num cGTOs = 732
+atom C rad-grids = 105, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  86  86  86
+  86  86  86  86  86  86  86  86  86  86 590 590 590 590 590 590 590 590
+ 590 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770
+ 770 770 770 770 770 770 770 770 770 770 770 590 590 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 590 590]
+    [0 1] : 42
+    [0 3] : 22
+    [0 5] : 10
+    [1 1] : 32
+    [1 3] : 10
+    [2 1] : 10
+    [0 1] : 94
+    [0 3] : 22
+    [0 7] : 10
+    [1 1] : 30
+    [1 2] : 32
+    [2 1] : 42
+    [2 2] : 10
+    [3 2] : 10
+    [4 1] : 10
+atom H rad-grids = 70, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  86  86  86  86  86 434 434 434 434 434 434 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 434 434 434 434 434
+ 434 434 434 434 434 434 434 434 434 434 434 434 434 434 434 434]
+size of aux basis 732
+Padding 44 grids
+tot grids = 949120
+    [0 1] : 42
+    [0 3] : 22
+    [0 5] : 10
+    [1 1] : 32
+    [1 3] : 10
+    [2 1] : 10
+Padding 2 basis for l=0
+Padding 2 basis for l=1
+Padding 2 basis for l=2
+Drop grids 175399
+prune_by_density_: 39 padding grids
+    [0 1] : 42
+    [0 3] : 22
+    [0 5] : 10
+    [1 1] : 32
+    [1 3] : 10
+    [2 1] : 10
+Padding 2 basis for l=0
+Padding 2 basis for l=1
+Padding 2 basis for l=2
+GPU Memory 5.399 GB available, block size = 32
+E1 = -1549.855272835803  Ecoul = 698.4924566761458  Exc = -61.306216045246494
+init E= -393.530565348253
+GPU Memory 5.396 GB available, block size = 32
+E1 = -1566.3034037495358  Ecoul = 716.5498678175807  Exc = -62.67252169013016
+cycle= 1 E= -393.287590765435  delta_E= 0.243  |ddm|= 5.48
+GPU Memory 5.395 GB available, block size = 32
+E1 = -1543.5885577104077  Ecoul = 692.2330328409623  Exc = -60.863555255518385
+cycle= 2 E= -393.080613268314  delta_E= 0.207  |ddm|= 2.48
+GPU Memory 5.394 GB available, block size = 32
+E1 = -1557.571541142112  Ecoul = 706.8513633608069  Exc = -61.88318816423038
+cycle= 3 E= -393.464899088885  delta_E= -0.384  |ddm|= 1.55
+GPU Memory 5.393 GB available, block size = 32
+E1 = -1557.4015053044577  Ecoul = 706.6830554791197  Exc = -61.88537713516578
+cycle= 4 E= -393.465360103854  delta_E= -0.000461  |ddm|= 0.0812
+GPU Memory 5.392 GB available, block size = 32
+E1 = -1557.4064838921483  Ecoul = 706.688196899695  Exc = -61.88561086420536
+cycle= 5 E= -393.465431000008  delta_E= -7.09e-05  |ddm|= 0.0244
+GPU Memory 5.391 GB available, block size = 32
+E1 = -1557.399730850152  Ecoul = 706.6810084922585  Exc = -61.885184554526354
+cycle= 6 E= -393.46544005577  delta_E= -9.06e-06  |ddm|= 0.00769
+GPU Memory 5.390 GB available, block size = 32
+E1 = -1557.3952804749456  Ecoul = 706.676292357076  Exc = -61.88491910366967
+cycle= 7 E= -393.465440364889  delta_E= -3.09e-07  |ddm|= 0.00182
+GPU Memory 5.389 GB available, block size = 32
+E1 = -1557.394517869566  Ecoul = 706.6754313339602  Exc = -61.88482073550402
+cycle= 8 E= -393.46544041446  delta_E= -4.96e-08  |ddm|= 0.000518
+    CPU time for                                                SCF     19.97 sec, wall time     18.85 sec, GPU time for  18852.38 ms
+converged SCF energy = -393.46544041446
+Nuc-Nuc PySCF=  519.1384668566502
+One electron integrals energy -1557.394517869566
+Coulomb energy  706.6754313339602
+EXC  -61.88482073550402
+PySCF time:  18.88155445177108
+PySCF Grid Size:  (773760,)

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+#SBATCH -o output
+#SBATCH -p fat
+
+##SBATCH --ntasks=48
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=4
+##SBATCH --cpus-per-task=1
+##SBATCH --gpus=1
+##SBATCH --gpus-per-task=1
+##SBATCH --gres=gpu:1
+##SBATCH --time=24:00:00
+##SBATCH --nodelist=gpu012
+
+##SBATCH --mail-user=manas.sharma@uni-jena.de
+##SBATCH --mail-type=begin,end,fail
+
+#SBATCH --exclusive
+
+echo 'RUNNING on PART: ' $SLURM_JOB_PARTITION    >  job.info
+echo 'NODE(S):         ' $SLURM_JOB_NODELIST     >> job.info
+echo 'No. TASKS/NODE:  ' $SLURM_NTASKS_PER_NODE  >> job.info
+echo 'No. CORES/TASK:  ' $SLURM_CPUS_PER_TASK    >> job.info
+
+
+
+
+apps/turbomole/7.9.0
+export OMP_NUM_THREADS=4
+riper > output_4_cores 

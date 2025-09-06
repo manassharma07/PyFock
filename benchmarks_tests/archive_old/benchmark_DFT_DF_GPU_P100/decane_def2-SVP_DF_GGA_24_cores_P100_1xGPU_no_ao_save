@@ -1,0 +1,937 @@
+Operating System: Linux 3.10.0-957.1.3.el7.x86_64
+System Type: 64bit
+CPU Model: Intel(R) Xeon(R) CPU E5-2650 v4 @ 2.20GHz
+Number of Cores: 24
+Number of Threads: 48
+Memory (GB): 125.80519104003906
+Number of cores being actually used/requested for the benchmark: 24
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 24
+OPENBLAS_NUM_THREADS = 24
+MKL_NUM_THREADS = 24
+VECLIB_MAXIMUM_THREADS = 24
+NUMEXPR_NUM_THREADS = 24
+PYSCF_MAX_MEMORY = 125000
+#INFO: **** input file is /home/lu29vow/GPU_Test/benchmark/PyFock/benchmarks_tests/benchmark_DFT_LDA_DF.py ****
+####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_LDA_DF.py'
+####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
+####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
+####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
+#######
+####### This may be required in some cases when using GPU on WSL
+####### export NUMBA_CUDA_DRIVER="/usr/lib/wsl/lib/libcuda.so.1"
+
+import os
+import platform
+import psutil
+# import numba
+# numba.config.THREADING_LAYER='omp'
+# Set the number of threads/cores to be used by PyFock and PySCF
+ncores = 24
+os.environ['OMP_NUM_THREADS'] = str(ncores)
+os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
+os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
+# os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=1
+# Set the max memory for PySCF
+os.environ["PYSCF_MAX_MEMORY"] = str(125000) 
+
+# Print system information 
+from pyfock import Utils
+
+Utils.print_sys_info()
+
+# Check if the environment variables are properly set
+print("Number of cores being actually used/requested for the benchmark:", ncores)
+print('Confirming that the environment variables are properly set...')
+print('OMP_NUM_THREADS =', os.environ.get('OMP_NUM_THREADS', None))
+print('OPENBLAS_NUM_THREADS =', os.environ.get('OPENBLAS_NUM_THREADS', None))
+print('MKL_NUM_THREADS =', os.environ.get('MKL_NUM_THREADS', None))
+print('VECLIB_MAXIMUM_THREADS =', os.environ.get('VECLIB_MAXIMUM_THREADS', None))
+print('NUMEXPR_NUM_THREADS =', os.environ.get('NUMEXPR_NUM_THREADS', None))
+print('PYSCF_MAX_MEMORY =', os.environ.get('PYSCF_MAX_MEMORY', None))
+
+
+# Run your tasks here
+from pyfock import Basis
+from pyfock import Mol
+from pyfock import Integrals
+from pyfock import DFT
+from timeit import default_timer as timer
+import numpy as np
+import scipy
+
+from pyscf import gto, dft, df
+
+#DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# LDA_X LDA_C_VWN 
+# funcx = 1
+# funcc = 7
+
+# LDA_X LDA_C_PW 
+# funcx = 1
+# funcc = 12
+
+# LDA_X LDA_C_PW_MOD 
+# funcx = 1
+# funcc = 13
+
+# GGA_X_PBE, GGA_C_PBE (PBE)
+funcx = 101
+funcc = 130
+
+# GGA_X_B88, GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+funcidcrysx = [funcx, funcc]
+funcidpyscf = str(funcx)+','+str(funcc)
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVPD'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-QZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-QZVPP'
+# basis_set_name = 'def2-TZVPD'
+# basis_set_name = 'def2-QZVPD'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-TZVP'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'H2O.xyz'
+
+# xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'Taxol.xyz'
+# xyzFilename = 'Valinomycin.xyz'
+# xyzFilename = 'Olestra.xyz'
+# xyzFilename = 'Ubiquitin.xyz'
+
+### 1D Carbon Alkanes
+# xyzFilename = 'Ethane.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+### 2D Carbon
+# xyzFilename = 'Graphene_C16.xyz'
+# xyzFilename = 'Graphene_C76.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### 3d Carbon Fullerenes
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'C70.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+
+# ---------PySCF---------------
+#Comparison with PySCF
+molPySCF = gto.Mole()
+molPySCF.atom = xyzFilename
+molPySCF.basis = basis_set_name
+molPySCF.cart = True
+molPySCF.verbose = 4
+molPySCF.max_memory=25000
+# molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
+molPySCF.build()
+#print(molPySCF.cart_labels())
+
+print('\n\nPySCF Results\n\n')
+start=timer()
+mf = dft.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf.xc = funcidpyscf
+# mf.verbose = 4
+mf.direct_scf = False
+# mf.with_df.max_memory = 25000
+# dmat_init = mf.init_guess_by_1e(molPySCF)
+# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(molPySCF)
+# mf.init_guess = 'atom'
+# dmat_init = mf.init_guess_by_atom(molPySCF)
+mf.max_cycle = 30
+mf.conv_tol = 1e-7
+mf.grids.level = 5
+print('begin df build')
+start_df_pyscf=timer()
+# mf.with_df.build()
+duration_df_pyscf = timer()- start_df_pyscf
+print('PySCF df time: ', duration_df_pyscf)
+print('end df build')
+energyPyscf = mf.kernel(dm0=dmat_init)
+print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+print('\n\n PySCF Dipole moment')
+dmat = mf.make_rdm1()
+mol_dip_pyscf = mf.dip_moment(molPySCF, dmat, unit='AU')
+mf = 0#None
+import psutil
+
+# Get memory information
+memory_info = psutil.virtual_memory()
+
+# Convert bytes to human-readable format
+used_memory = psutil._common.bytes2human(memory_info.used)
+
+
+# If you want to print in a more human-readable format, you can use psutil's utility function
+print(f"Currently Used memory: {used_memory}")
+#--------------------CrysX --------------------------
+
+#Initialize a Mol object with somewhat large geometry
+molCrysX = Mol(coordfile=xyzFilename)
+print('\n\nNatoms :',molCrysX.natoms)
+# print(molCrysX.coordsBohrs)
+
+#Initialize a Basis object with a very large basis set
+basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
+print('\n\nNAO :',basis.bfs_nao)
+
+auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
+print('\n\naux NAO :',auxbasis.bfs_nao)
+
+dftObj = DFT(molCrysX, basis, xc=funcidcrysx)
+# GPU acceleration
+dftObj.use_gpu = True
+dftObj.keep_ao_in_gpu = False
+dftObj.use_libxc = False
+dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
+dftObj.n_gpus = 1 # Specify the number of GPUs
+dftObj.free_gpu_mem = True
+dftObj.threads_x = 16
+dftObj.threads_y = 16
+# SAO or CAO basis
+dftObj.sao = False
+# print(dmat_init)
+# Using PySCF grids to compare the energies
+energyCrysX, dmat = dftObj.scf(max_itr=35, ncores=ncores, dmat=dmat_init, conv_crit=1.0E-7, grids=pyscfGrids, \
+                               isDF=True, auxbasis=auxbasis, rys=True, DF_algo=6, blocksize=51200, XC_algo=3, debug=False, \
+                                sortGrids=False, save_ao_values=False, xc_bf_screen=True, threshold_schwarz=1e-9, \
+                                strict_schwarz=True, cholesky=True, orthogonalize=True)
+# print(dmat)
+
+# Using CrysX grids 
+# To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
+# radial_precision=1.0e-13
+# level=3
+# pruning by density with threshold = 1e-011
+# alpha_min and alpha_max corresponding to QZVP
+# energyCrysX, dmat = dftObj.scf(max_itr=30, ncores=ncores, dmat=dmat_init, grids=None, gridsLevel=3, isDF=True, auxbasis=auxbasis,
+#                             rys=True, DF_algo=6, blocksize=5000, XC_algo=2, debug=False, sortGrids=False, save_ao_values=True,
+#                             xc_bf_screen=True,threshold_schwarz=1e-9)
+
+
+print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
+
+print('\n\nPyFock Dipole moment')
+M = Integrals.dipole_moment_mat_symm(basis)
+mol_dip = molCrysX.get_dipole_moment(M, dmat)
+print('Dipole moment(X, Y, Z, A.U.):', *mol_dip)
+print('Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
+
+#Print package versions
+import joblib
+import scipy
+import numba
+import threadpoolctl
+import opt_einsum
+import pylibxc
+import llvmlite 
+import cupy
+import numexpr
+import pyscf
+print('\n\n\n Package versions')
+print('pyscf version', pyscf.__version__)
+# print('psi4 version', psi4.__version__)
+print('np version', np.__version__)
+print('joblib version', joblib.__version__)
+print('numba version', numba.__version__)
+print('threadpoolctl version', threadpoolctl.__version__)
+print('opt_einsum version', opt_einsum.__version__)
+# print('pylibxc version', pylibxc.__version__)
+print('llvmlite version', llvmlite.__version__)
+print('cupy version', cupy.__version__)
+print('numexpr version', numexpr.__version__)
+print('scipy version', scipy.__version__)
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Linux', node='node128', release='3.10.0-957.1.3.el7.x86_64', version='#1 SMP Thu Nov 29 14:49:43 UTC 2018', machine='x86_64', processor='x86_64')  Threads 24
+Python 3.8.13 | packaged by conda-forge | (default, Mar 25 2022, 06:04:10) 
+[GCC 10.3.0]
+numpy 1.22.3  scipy 1.10.1
+Date: Sun Jan  7 23:20:17 2024
+PySCF version 2.4.0
+PySCF path  /home/lu29vow/.local/lib/python3.8/site-packages/pyscf
+
+[ENV] PYSCF_MAX_MEMORY 125000
+[CONFIG] conf_file None
+[INPUT] verbose = 4
+[INPUT] num. atoms = 32
+[INPUT] num. electrons = 82
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Cartesian GTO integrals (6d 10f)
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 C      0.660900000000   0.387900000000   0.066100000000 AA    1.248919995725   0.733024763719   0.124910896834 Bohr   0.0
+[INPUT]  2 C     -0.642900000000  -0.416100000000   0.097200000000 AA   -1.214904925483  -0.786315040432   0.183681379308 Bohr   0.0
+[INPUT]  3 C      1.914100000000  -0.489400000000   0.024000000000 AA    3.617124775030  -0.924831965362   0.045353426990 Bohr   0.0
+[INPUT]  4 C     -1.896200000000   0.462500000000   0.063500000000 AA   -3.583298677400   0.873998332611   0.119997608910 Bohr   0.0
+[INPUT]  5 C      3.185800000000   0.361800000000   0.007100000000 AA    6.020289487639   0.683702911868   0.013417055484 Bohr   0.0
+[INPUT]  6 C     -3.199200000000  -0.343000000000   0.034200000000 AA   -6.045611817709  -0.648176060726   0.064628633460 Bohr   0.0
+[INPUT]  7 C      4.438100000000  -0.511000000000  -0.073500000000 AA    8.386793513432  -0.965650049653  -0.138894870156 Bohr   0.0
+[INPUT]  8 C     -4.449800000000   0.530500000000  -0.074800000000 AA   -8.408903309090   1.002499709082  -0.141351514117 Bohr   0.0
+[INPUT]  9 C      5.705000000000   0.329500000000  -0.056800000000 AA   10.780887540644   0.622664758044  -0.107336443875 Bohr   0.0
+[INPUT] 10 C     -5.715800000000  -0.312900000000  -0.087000000000 AA  -10.801296582789  -0.591295304376  -0.164406172837 Bohr   0.0
+[INPUT] 11 H      0.654500000000   1.046100000000  -0.811600000000 AA    1.236825748528   1.976842498908  -1.533701722697 Bohr   0.0
+[INPUT] 12 H      0.700300000000   1.037900000000   0.949000000000 AA    1.323375205033   1.961346744686   1.793350092212 Bohr   0.0
+[INPUT] 13 H     -0.661800000000  -1.040700000000   0.998600000000 AA   -1.250620749237  -1.966637977835   1.887080507991 Bohr   0.0
+[INPUT] 14 H     -0.661600000000  -1.098500000000  -0.761600000000 AA   -1.250242804012  -2.075864147835  -1.439215416469 Bohr   0.0
+[INPUT] 15 H      1.926200000000  -1.154000000000   0.896400000000 AA    3.639990461137  -2.180743947748   1.693950498060 Bohr   0.0
+[INPUT] 16 H      1.883700000000  -1.126300000000  -0.868200000000 AA    3.559677100843  -2.128398534098  -1.640660221347 Bohr   0.0
+[INPUT] 17 H     -1.899000000000   1.124300000000   0.938300000000 AA   -3.588589910549   2.124619081848   1.773130022679 Bohr   0.0
+[INPUT] 18 H     -1.856400000000   1.108400000000  -0.822400000000 AA   -3.508087577643   2.094572436468  -1.554110764842 Bohr   0.0
+[INPUT] 19 H      3.160900000000   1.045500000000  -0.850300000000 AA    5.973235307138   1.975708663233  -1.606834123718 Bohr   0.0
+[INPUT] 20 H      3.224700000000   0.980000000000   0.912300000000 AA    6.093799833885   1.851931602074   1.723997143441 Bohr   0.0
+[INPUT] 21 H     -3.172100000000  -1.037400000000  -0.814900000000 AA   -5.994400239733  -1.960401881624  -1.539937818908 Bohr   0.0
+[INPUT] 22 H     -3.260200000000  -0.955900000000   0.942100000000 AA   -6.160885111307  -1.806389202472   1.780310981953 Bohr   0.0
+[INPUT] 23 H      4.460200000000  -1.209400000000   0.771100000000 AA    8.428556460785  -2.285434775049   1.457167814652 Bohr   0.0
+[INPUT] 24 H      4.415400000000  -1.111100000000  -0.990500000000 AA    8.343896730405  -2.099674697004  -1.871773726382 Bohr   0.0
+[INPUT] 25 H     -4.488700000000   1.228900000000   0.769100000000 AA   -8.482413655335   2.322284434478   1.453388362403 Bohr   0.0
+[INPUT] 26 H     -4.405200000000   1.129900000000  -0.991300000000 AA   -8.324621523934   2.135201548146  -1.873285507281 Bohr   0.0
+[INPUT] 27 H      6.587900000000  -0.314500000000  -0.116200000000 AA   12.449326736022  -0.594318866176  -0.219586175674 Bohr   0.0
+[INPUT] 28 H      5.774200000000   0.916700000000   0.864500000000 AA   10.911656588464   1.732311938389   1.633668234686 Bohr   0.0
+[INPUT] 29 H      5.729400000000   1.019000000000  -0.906700000000 AA   10.826996858083   1.925630920932  -1.713414677143 Bohr   0.0
+[INPUT] 30 H     -6.598200000000   0.329900000000  -0.165500000000 AA  -12.468790915105   0.623420648494  -0.312749673616 Bohr   0.0
+[INPUT] 31 H     -5.720200000000  -1.001500000000  -0.937900000000 AA  -10.809611377737  -1.892560713752  -1.772374132230 Bohr   0.0
+[INPUT] 32 H     -5.804400000000  -0.900800000000   0.832000000000 AA  -10.968726317425  -1.702265293008   1.572252135638 Bohr   0.0
+
+nuclear repulsion = 519.13846685665
+number of shells = 126
+number of NR pGTOs = 404
+number of NR cGTOs = 260
+basis = def2-SVP
+ecp = {}
+CPU time:         4.20
+
+
+PySCF Results
+
+
+Initial guess from minao.
+begin df build
+PySCF df time:  6.270129233598709e-07
+end df build
+
+
+******** <class 'pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = False
+chkfile to save SCF result = /tmp/tmph11aaae9
+max_memory 25000 MB (current use 424 MB)
+XC library pyscf.dft.libxc version 6.1.0
+    S. Lehtola, C. Steigemann, M. J.T. Oliveira, and M. A.L. Marques.,  SoftwareX 7, 1–5 (2018)
+XC functionals = 101,130
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x2b12c1c47940>
+grids dens level: 5
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x2b12c1c478b0>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+tot grids = 949080
+init E= -393.537632032228
+  HOMO = -0.363256736233554  LUMO = -0.0108941880949015
+cycle= 1 E= -393.305318874992  delta_E= 0.232  |g|= 0.764  |ddm|= 5.59
+  HOMO = -0.127709215356175  LUMO = 0.0751042555581148
+cycle= 2 E= -393.099511711524  delta_E= 0.206  |g|= 1.16  |ddm|= 2.47
+  HOMO = -0.251141818729542  LUMO = 0.0366586281143583
+cycle= 3 E= -393.483312983867  delta_E= -0.384  |g|= 0.0416  |ddm|= 1.53
+  HOMO = -0.250813927815107  LUMO = 0.0357530751571916
+cycle= 4 E= -393.483563941778  delta_E= -0.000251  |g|= 0.0281  |ddm|= 0.091
+  HOMO = -0.251068716884114  LUMO = 0.0356539827195137
+cycle= 5 E= -393.483741932794  delta_E= -0.000178  |g|= 0.00923  |ddm|= 0.0377
+  HOMO = -0.251265861804211  LUMO = 0.035610397837735
+cycle= 6 E= -393.48376291575  delta_E= -2.1e-05  |g|= 0.00114  |ddm|= 0.0109
+  HOMO = -0.251239249257078  LUMO = 0.0356269176213255
+cycle= 7 E= -393.483763210257  delta_E= -2.95e-07  |g|= 0.000444  |ddm|= 0.00179
+  HOMO = -0.251261171489667  LUMO = 0.0356192009951674
+cycle= 8 E= -393.483763256286  delta_E= -4.6e-08  |g|= 0.000116  |ddm|= 0.000554
+  HOMO = -0.251260619181755  LUMO = 0.0356169165974152
+Extra cycle  E= -393.483763254252  delta_E= 2.03e-09  |g|= 0.000148  |ddm|= 0.000357
+converged SCF energy = -393.483763254252
+Nuc-Nuc PySCF=  519.1384668566502
+One electron integrals energy -1557.2952509197773
+Coulomb energy  706.4935221164684
+EXC  -61.820501307593716
+PySCF time:  72.17711631802376
+PySCF Grid Size:  (773720,)
+
+
+ PySCF Dipole moment
+Dipole moment(X, Y, Z, A.U.):  0.00227, -0.00062,  0.00086
+Currently Used memory: 1.8G
+
+
+Natoms : 32
+
+
+NAO : 260
+
+
+aux NAO : 874
+Running DFT using 24 threads for Numba.
+
+
+GPU acceleration is enabled. Currently this only accelerates AO values and XC term evaluation.
+GPU(s) information:
+Found 1 CUDA devices
+id 0    b'Tesla P100-PCIE-16GB'                              [SUPPORTED]
+                      Compute Capability: 6.0
+                           PCI Device ID: 0
+                              PCI Bus ID: 130
+                                    UUID: GPU-cefbe660-bed5-ab84-503f-8a8987cb7a4a
+                                Watchdog: Disabled
+             FP32/FP64 Performance Ratio: 2
+Summary:
+	1/1 devices are supported
+True
+Max threads per block supported by the GPU:  1024
+The user has specified to use 1 GPU(s).
+Threads per block configuration:  (16, 16)
+
+
+Will use dynamic precision. 
+This means that the XC term will be evaluated in single precision until the 
+relative energy difference b/w successive iterations is less than 5.0E-7.
+
+Calculating overlap and kinetic integrals...
+
+
+Core H size in GB  0.0010816
+done!
+Time taken 0.508312730002217 seconds.
+
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.5077258980600163 seconds.
+
+
+
+Performing Schwarz screening...
+Threshold  1e-09
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.14645996410399675
+Time taken to evaluate the square roots needed:  0.00037555990274995565
+Time for significant indices evaluation:  0.0931328380247578
+Size of permanent array storing the significant indices of 3c2e ERI in GB  0.09620886000000001
+No. of elements in the standard three-centered two electron ERI tensor:  59082400
+No. of elements in the triangular three-centered two electron ERI tensor:  29654820
+No. of significant triplets based on Schwarz inequality and triangularity: 16034810 or 27.1% of original
+Schwarz screening done!
+Total time taken for Schwarz screening 0.24034434696659446 seconds.
+
+Time taken to evaluate the nuclear potential matrix with strict Schwarz screening:  0.7429326650453731
+Two Center Two electron ERI size in GB  0.006111008
+Three Center Two electron ERI size in GB  0.12827848
+Three-centered two electron evaluation done!
+Time taken for Cholesky factorization fo two-centered two-electron integrals 0.011991861974820495 seconds.
+
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  39.60634406295139 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  773720
+Size (in GB) for storing the coordinates of grid:       0.01856928
+Size (in GB) for storing the weights of grid:           0.00618976
+Size (in GB) for storing the density at gridpoints:     0.00618976
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  51200
+No. of batches:  16
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.4482608090620488 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    173
+Average no. of basis functions contributing to a batch of grid points:    134
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+XC Functional IDs supplied:  [101, 130]
+
+
+Description of exchange functional: 
+
+The Exchange function belongs to the family: GGA
+Functional ID: 101
+Functional Name: gga_x_pbe
+Attributes:
+    Name: Perdew, Burke & Ernzerhof
+    Kind: 0
+  Family: 2
+Citations:
+   J. P. Perdew, K. Burke, and M. Ernzerhof, Phys. Rev. Lett. 77, 3865 (1996)
+   J. P. Perdew, K. Burke, and M. Ernzerhof, Phys. Rev. Lett. 78, 1396 (1997)
+
+
+Description of correlation functional: 
+
+ The Correlation function belongs to the family: GGA
+Functional ID: 130
+Functional Name: gga_c_pbe
+Attributes:
+    Name: Perdew, Burke & Ernzerhof
+    Kind: 1
+  Family: 2
+Citations:
+   J. P. Perdew, K. Burke, and M. Ernzerhof, Phys. Rev. Lett. 77, 3865 (1996)
+   J. P. Perdew, K. Burke, and M. Ernzerhof, Phys. Rev. Lett. 78, 1396 (1997)
+------------------------------------------------------
+
+
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  81.83533
+
+
+
+------Iteration 1--------
+
+
+Energies
+Electron-Nuclear Energy       -1941.8346120373567
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                394.2871173386257
+Coulomb Energy                696.2819367000909
+Exchange-Correlation Energy   -61.239513
+-------------------------
+Total Energy  -393.36660453781565
+-------------------------
+
+
+
+Energy difference :  393.36660453781565
+
+
+Time taken for the previous iteration: 1.1577378869988024
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.0
+
+
+
+------Iteration 2--------
+
+
+Energies
+Electron-Nuclear Energy       -1958.4319542644907
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                391.3320904037273
+Coulomb Energy                717.3360019211137
+Exchange-Correlation Energy   -62.642403
+-------------------------
+Total Energy  -393.2677977305342
+-------------------------
+
+
+
+Energy difference :  0.09880680728144853
+
+
+Time taken for the previous iteration: 0.3326615629484877
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.0
+
+
+
+------Iteration 3--------
+
+
+Energies
+Electron-Nuclear Energy       -1923.6777872884563
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                381.05950196232766
+Coulomb Energy                691.1707941280288
+Exchange-Correlation Energy   -60.742905
+-------------------------
+Total Energy  -393.05192900314455
+-------------------------
+
+
+
+Energy difference :  0.21586872738964757
+
+
+Time taken for the previous iteration: 0.33642889093607664
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  81.99999
+
+
+
+------Iteration 4--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.9603362479354
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.4506197921934
+Coulomb Energy                706.7119732658609
+Exchange-Correlation Energy   -61.82321
+-------------------------
+Total Energy  -393.48248800176157
+-------------------------
+
+
+
+Energy difference :  0.4305589986170162
+
+
+Time taken for the previous iteration: 0.3286907150177285
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  81.99999
+
+
+
+------Iteration 5--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.7061590190588
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.4049561570387
+Coulomb Energy                706.5009426857061
+Exchange-Correlation Energy   -61.82116
+-------------------------
+Total Energy  -393.4829526810656
+-------------------------
+
+
+
+Energy difference :  0.0004646793040592456
+
+
+Time taken for the previous iteration: 0.33037789398804307
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  81.99999
+
+
+
+------Iteration 6--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.700452479341
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.39674355198866
+Coulomb Energy                706.5027463337776
+Exchange-Correlation Energy   -61.820557
+-------------------------
+Total Energy  -393.4830523761584
+-------------------------
+
+
+
+Energy difference :  9.969509278562327e-05
+
+Switching to double precision for XC evaluation after 6 iterations!
+
+
+Time taken for the previous iteration: 0.3296748709399253
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.0000008715907
+
+
+
+------Iteration 7--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.687592936034
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.3903736541336
+Coulomb Energy                706.4954588820656
+Exchange-Correlation Energy   -61.82046567498123
+-------------------------
+Total Energy  -393.48375921677484
+-------------------------
+
+
+
+Energy difference :  0.0007068406164307817
+
+
+Time taken for the previous iteration: 0.431021751021035
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.00000087144065
+
+
+
+------Iteration 8--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.6752588349211
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.3860229788763
+Coulomb Energy                706.4869221423331
+Exchange-Correlation Energy   -61.81991412395493
+-------------------------
+Total Energy  -393.48376097962534
+-------------------------
+
+
+
+Energy difference :  1.7628505020184093e-06
+
+
+Time taken for the previous iteration: 0.40410381997935474
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.00000087167578
+
+
+
+------Iteration 9--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.6745287213676
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.3851032832128
+Coulomb Energy                706.48714509303
+Exchange-Correlation Energy   -61.81994862602274
+-------------------------
+Total Energy  -393.4837621131062
+-------------------------
+
+
+
+Energy difference :  1.1334808505125693e-06
+
+
+Time taken for the previous iteration: 0.40299268101807684
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.00000087137529
+
+
+
+------Iteration 10--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.6851236052935
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.38886768172466
+Coulomb Energy                706.4945789011035
+Exchange-Correlation Energy   -61.82055221841011
+-------------------------
+Total Energy  -393.48376238283413
+-------------------------
+
+
+
+Energy difference :  2.6972793421009555e-07
+
+
+Time taken for the previous iteration: 0.3978766850195825
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.00000087139726
+
+
+
+------Iteration 11--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.6829295163116
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.3877157265663
+Coulomb Energy                706.4934650261782
+Exchange-Correlation Energy   -61.82048079986963
+-------------------------
+Total Energy  -393.4837627053953
+-------------------------
+
+
+
+Energy difference :  3.225611635571113e-07
+
+
+Time taken for the previous iteration: 0.3954326679231599
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  82.00000087143992
+
+
+
+------Iteration 12--------
+
+
+Energies
+Electron-Nuclear Energy       -1944.6826936140305
+Nuclear repulsion Energy      519.1384668580413
+Kinetic Energy                387.3876403556306
+Coulomb Energy                706.4933054681915
+Exchange-Correlation Energy   -61.82048177601811
+-------------------------
+Total Energy  -393.4837627081854
+-------------------------
+
+
+
+Energy difference :  2.7901023713639006e-09
+
+
+Time taken for the previous iteration: 0.39541687292512506
+
+
+
+SCF Converged after 12 iterations!
+
+-------------------------------------
+Total Energy =  -393.4837627081854
+-------------------------------------
+
+
+
+Time taken : 45.849870520993136 seconds.
+
+
+
+-------------------------------------
+Profiling
+-------------------------------------
+Preprocessing                           0.4482608090620488
+Density Fitting                         0.6115815649973229
+    DF (gamma)                          0.34653719794005156
+    DF (coeff)                          0.07336450996808708
+    DF (Jtri)                           0.14458375598769635
+    DF (Cholesky)                       0.011991861974820495
+DIIS                                    0.13952446775510907
+KS matrix diagonalization               0.3900973020354286
+One electron Integrals (S, T, Vnuc)     0.508312730002217
+Coulomb Integrals (2c2e + 3c2e)         39.59435220097657
+Grids construction                      0
+Exchange-Correlation Term               4.068592291790992
+Misc.                                   0.08914915437344462
+Complete SCF                            45.849870520993136
+Energy diff (PySCF-CrysX) 5.460670990942162e-07
+
+
+PyFock Dipole moment
+Dipole moment(X, Y, Z, A.U.): 0.0022633023277519176 -0.0006326895098432428 0.0008538391669039025
+Max Diff dipole moment (PySCF-CrysX) 1.0297740994646976e-05
+
+
+
+ Package versions
+pyscf version 2.4.0
+np version 1.22.3
+joblib version 1.3.2
+numba version 0.56.4
+threadpoolctl version 3.2.0
+opt_einsum version v3.3.0
+llvmlite version 0.39.1
+cupy version 12.3.0
+numexpr version 2.8.3
+scipy version 1.10.1

@@ -1,0 +1,8 @@
+filelist.txt
+H2O-Ice-Ih.cif
+H2O-Ice-II.cif
+H2O-Ice-III.cif
+H2O-Ice-IV.cif
+H2O-Ice-VI.cif
+H2O-Ice-VII.cif
+H2O-Ice.cif

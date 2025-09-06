@@ -1,0 +1,9 @@
+BaSO4-Barite.cif
+CaSO4-2(H2O)-Gypsum.cif
+CaSO4-Anhydrite.cif
+CoSO4.cif
+CuSO4.cif
+filelist.txt
+MgSO4.cif
+PbSO4-Anglesite.cif
+SrSO4-Celestine.cif

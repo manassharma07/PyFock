@@ -1,0 +1,17 @@
+AgBr-Bromargyrite.cif
+AgCl-Chlorargyrite.cif
+AlCl3.cif
+AlNa3F6-Cryolite.cif
+CaF2-Fluorite.cif
+CdCl2.cif
+CdI2.cif
+CrCl2.cif
+CrCl3.cif
+CsCl.cif
+FeCl3-Molysite.cif
+filelist.txt
+HgCl-Calomel.cif
+KBr.cif
+KCl-Sylvite.cif
+NaCl-Halite.cif
+PbFCl-Matlockite.cif

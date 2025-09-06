@@ -1,0 +1,725 @@
+#INFO: **** input file is /home/lu29vow/GPU_Test/pyscf_gpu.py ****
+from pyscf import gto
+from gpu4pyscf.dft import rks
+import os
+from timeit import default_timer as timer
+
+#DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# LDA_X LDA_C_VWN
+funcx = 1
+funcc = 7
+
+# LDA_X LDA_C_PW
+# funcx = 1
+# funcc = 12
+
+# LDA_X LDA_C_PW_MOD
+# funcx = 1
+# funcc = 13
+
+# GGA_X_PBE, GGA_C_PBE (PBE)
+# funcx = 101
+# funcc = 130
+
+# GGA_X_B88, GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+funcidcrysx = [funcx, funcc]
+funcidpyscf = str(funcx)+','+str(funcc)
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+# basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVPD'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-QZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-QZVPP'
+basis_set_name = 'def2-TZVPD'
+# basis_set_name = 'def2-QZVPD'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-TZVP'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'H2O.xyz'
+
+# xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'Taxol.xyz'
+# xyzFilename = 'Valinomycin.xyz'
+# xyzFilename = 'Olestra.xyz'
+# xyzFilename = 'Ubiquitin.xyz'
+
+### 1D Carbon Alkanes
+# xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+### 2D Carbon
+# xyzFilename = 'Graphene_C16.xyz'
+# xyzFilename = 'Graphene_C76.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### 3d Carbon Fullerenes
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'C70.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+molPySCF = gto.Mole()
+molPySCF.atom = 'molecular-structures/'+xyzFilename
+molPySCF.basis = basis_set_name
+# molPySCF.cart = True
+molPySCF.verbose = 6
+#molPySCF.max_memory=25000
+# molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
+molPySCF.build()
+
+print('\n\nPySCF Results\n\n')
+start=timer()
+mf = rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf.xc = funcidpyscf
+mf.verbose = 7
+mf.direct_scf = True
+# mf.with_df.max_memory = 25000
+# dmat_init = mf.init_guess_by_1e(molPySCF)
+# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(molPySCF)
+# mf.init_guess = 'atom'
+# dmat_init = mf.init_guess_by_atom(molPySCF)
+mf.max_cycle = 30
+mf.conv_tol = 1e-7
+mf.grids.level = 5
+# print('begin df build')
+# start_df_pyscf=timer()
+# mf.with_df.build()
+# duration_df_pyscf = timer()- start_df_pyscf
+# print('PySCF df time: ', duration_df_pyscf)
+# print('end df build')
+energyPyscf = mf.kernel(dm0=dmat_init)
+print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Linux', node='gpu006.cluster', release='4.18.0-425.13.1.el8_7.x86_64', version='#1 SMP Tue Feb 21 04:20:52 EST 2023', machine='x86_64')  Threads 2
+Python 3.10.13 (tags/v3.10.13-25-g07fbd8e9251-dirty:07fbd8e9251, Sep 27 2023, 23:32:09) [GCC 13.2.0]
+numpy 1.26.3  scipy 1.12.0
+Date: Wed Jan 31 21:19:07 2024
+PySCF version 2.4.0
+PySCF path  /home/lu29vow/.conda/envs/PySCF_GPU/lib/python3.10/site-packages/pyscf
+
+[CONFIG] conf_file None
+[INPUT] verbose = 6
+[INPUT] max_memory = 4000 
+[INPUT] num. atoms = 122
+[INPUT] num. electrons = 322
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 C     -0.624000000000  -0.442600000000   0.000000000000 AA   -1.179189101729  -0.836392782732   0.000000000000 Bohr   0.0
+[INPUT]  2 C     -1.874500000000   0.438900000000   0.000000000000 AA   -3.542291620497   0.829400796072   0.000000000000 Bohr   0.0
+[INPUT]  3 C     -3.122400000000  -0.446400000000   0.000000000000 AA   -5.900480851342  -0.843573742006   0.000000000000 Bohr   0.0
+[INPUT]  4 C     -4.373000000000   0.435100000000   0.000000000000 AA   -8.263772342723   0.822219836798   0.000000000000 Bohr   0.0
+[INPUT]  5 C     -5.620900000000  -0.450100000000   0.000000000000 AA  -10.621961573568  -0.850565728667   0.000000000000 Bohr   0.0
+[INPUT]  6 C     -6.871500000000   0.431400000000   0.000000000000 AA  -12.985253064949   0.815227850137   0.000000000000 Bohr   0.0
+[INPUT]  7 C     -8.119400000000  -0.453900000000   0.000000000000 AA  -15.343442295794  -0.857746687940   0.000000000000 Bohr   0.0
+[INPUT]  8 C     -9.370000000000   0.427600000000   0.000000000000 AA  -17.706733787175   0.808046890864   0.000000000000 Bohr   0.0
+[INPUT]  9 C    -10.617900000000  -0.457600000000   0.000000000000 AA  -20.064923018019  -0.864738674601   0.000000000000 Bohr   0.0
+[INPUT] 10 C    -11.868400000000   0.423800000000   0.000000000000 AA  -22.428025536788   0.800865931591   0.000000000000 Bohr   0.0
+[INPUT] 11 C    -13.116300000000  -0.461400000000   0.000000000000 AA  -24.786214767633  -0.871919633874   0.000000000000 Bohr   0.0
+[INPUT] 12 C    -14.366900000000   0.420100000000   0.000000000000 AA  -27.149506259014   0.793873944930   0.000000000000 Bohr   0.0
+[INPUT] 13 C    -15.614800000000  -0.465100000000   0.000000000000 AA  -29.507695489859  -0.878911620535   0.000000000000 Bohr   0.0
+[INPUT] 14 C    -16.865400000000   0.416300000000   0.000000000000 AA  -31.870986981240   0.786692985656   0.000000000000 Bohr   0.0
+[INPUT] 15 C    -18.113300000000  -0.468900000000   0.000000000000 AA  -34.229176212084  -0.886092579809   0.000000000000 Bohr   0.0
+[INPUT] 16 C    -19.363899000000   0.412600000000   0.000000000000 AA  -36.592465813739   0.779700998996   0.000000000000 Bohr   0.0
+[INPUT] 17 C    -20.611799000000  -0.472600000000   0.000000000000 AA  -38.950655044584  -0.893084566469   0.000000000000 Bohr   0.0
+[INPUT] 18 C    -21.862301000000   0.408800000000   0.000000000000 AA  -41.313761342805   0.772520039722   0.000000000000 Bohr   0.0
+[INPUT] 19 C    -23.110201000000  -0.476400000000   0.000000000000 AA  -43.671950573650  -0.900265525743   0.000000000000 Bohr   0.0
+[INPUT] 20 C    -24.360800000000   0.405100000000   0.000000000000 AA  -46.035240175305   0.765528053061   0.000000000000 Bohr   0.0
+[INPUT] 21 C      0.624000000000   0.442600000000   0.000000000000 AA    1.179189101729   0.836392782732   0.000000000000 Bohr   0.0
+[INPUT] 22 C      1.874500000000  -0.438900000000   0.000000000000 AA    3.542291620497  -0.829400796072   0.000000000000 Bohr   0.0
+[INPUT] 23 C      3.122400000000   0.446400000000   0.000000000000 AA    5.900480851342   0.843573742006   0.000000000000 Bohr   0.0
+[INPUT] 24 C      4.373000000000  -0.435100000000   0.000000000000 AA    8.263772342723  -0.822219836798   0.000000000000 Bohr   0.0
+[INPUT] 25 C      5.620900000000   0.450100000000   0.000000000000 AA   10.621961573568   0.850565728667   0.000000000000 Bohr   0.0
+[INPUT] 26 C      6.871500000000  -0.431400000000   0.000000000000 AA   12.985253064949  -0.815227850137   0.000000000000 Bohr   0.0
+[INPUT] 27 C      8.119400000000   0.453900000000   0.000000000000 AA   15.343442295794   0.857746687940   0.000000000000 Bohr   0.0
+[INPUT] 28 C      9.370000000000  -0.427600000000   0.000000000000 AA   17.706733787175  -0.808046890864   0.000000000000 Bohr   0.0
+[INPUT] 29 C     10.617900000000   0.457600000000   0.000000000000 AA   20.064923018019   0.864738674601   0.000000000000 Bohr   0.0
+[INPUT] 30 C     11.868400000000  -0.423800000000   0.000000000000 AA   22.428025536788  -0.800865931591   0.000000000000 Bohr   0.0
+[INPUT] 31 C     13.116300000000   0.461400000000   0.000000000000 AA   24.786214767633   0.871919633874   0.000000000000 Bohr   0.0
+[INPUT] 32 C     14.366900000000  -0.420100000000   0.000000000000 AA   27.149506259014  -0.793873944930   0.000000000000 Bohr   0.0
+[INPUT] 33 C     15.614800000000   0.465100000000   0.000000000000 AA   29.507695489859   0.878911620535   0.000000000000 Bohr   0.0
+[INPUT] 34 C     16.865400000000  -0.416300000000   0.000000000000 AA   31.870986981240  -0.786692985656   0.000000000000 Bohr   0.0
+[INPUT] 35 C     18.113300000000   0.468900000000   0.000000000000 AA   34.229176212084   0.886092579809   0.000000000000 Bohr   0.0
+[INPUT] 36 C     19.363899000000  -0.412600000000   0.000000000000 AA   36.592465813739  -0.779700998996   0.000000000000 Bohr   0.0
+[INPUT] 37 C     20.611799000000   0.472600000000   0.000000000000 AA   38.950655044584   0.893084566469   0.000000000000 Bohr   0.0
+[INPUT] 38 C     21.862301000000  -0.408800000000   0.000000000000 AA   41.313761342805  -0.772520039722   0.000000000000 Bohr   0.0
+[INPUT] 39 C     23.110201000000   0.476400000000   0.000000000000 AA   43.671950573650   0.900265525743   0.000000000000 Bohr   0.0
+[INPUT] 40 C     24.360800000000  -0.405100000000   0.000000000000 AA   46.035240175305  -0.765528053061   0.000000000000 Bohr   0.0
+[INPUT] 41 H     -0.623000000000  -1.071900000000   0.890000000000 AA   -1.177299375604  -2.025597432921   1.681856250863 Bohr   0.0
+[INPUT] 42 H     -0.623000000000  -1.071900000000  -0.890000000000 AA   -1.177299375604  -2.025597432921  -1.681856250863 Bohr   0.0
+[INPUT] 43 H     -1.875500000000   1.068200000000   0.890000000000 AA   -3.544181346622   2.018605446260   1.681856250863 Bohr   0.0
+[INPUT] 44 H     -1.875500000000   1.068200000000  -0.890000000000 AA   -3.544181346622   2.018605446260  -1.681856250863 Bohr   0.0
+[INPUT] 45 H     -3.121500000000  -1.075700000000  -0.890000000000 AA   -5.898780097830  -2.032778392195  -1.681856250863 Bohr   0.0
+[INPUT] 46 H     -3.121500000000  -1.075700000000   0.890000000000 AA   -5.898780097830  -2.032778392195   1.681856250863 Bohr   0.0
+[INPUT] 47 H     -4.373900000000   1.064400000000   0.890000000000 AA   -8.265473096235   2.011424486987   1.681856250863 Bohr   0.0
+[INPUT] 48 H     -4.373900000000   1.064400000000  -0.890000000000 AA   -8.265473096235   2.011424486987  -1.681856250863 Bohr   0.0
+[INPUT] 49 H     -5.620000000000  -1.079400000000  -0.890000000000 AA  -10.620260820056  -2.039770378856  -1.681856250863 Bohr   0.0
+[INPUT] 50 H     -5.620000000000  -1.079400000000   0.890000000000 AA  -10.620260820056  -2.039770378856   1.681856250863 Bohr   0.0
+[INPUT] 51 H     -6.872400000000   1.060700000000   0.890000000000 AA  -12.986953818461   2.004432500326   1.681856250863 Bohr   0.0
+[INPUT] 52 H     -6.872400000000   1.060700000000  -0.890000000000 AA  -12.986953818461   2.004432500326  -1.681856250863 Bohr   0.0
+[INPUT] 53 H     -8.118400000000  -1.083200000000  -0.890000000000 AA  -15.341552569669  -2.046951338129  -1.681856250863 Bohr   0.0
+[INPUT] 54 H     -8.118400000000  -1.083200000000   0.890000000000 AA  -15.341552569669  -2.046951338129   1.681856250863 Bohr   0.0
+[INPUT] 55 H     -9.370900000000   1.056900000000   0.890000000000 AA  -17.708434540687   1.997251541053   1.681856250863 Bohr   0.0
+[INPUT] 56 H     -9.370900000000   1.056900000000  -0.890000000000 AA  -17.708434540687   1.997251541053  -1.681856250863 Bohr   0.0
+[INPUT] 57 H    -10.616900000000  -1.086900000000  -0.890000000000 AA  -20.063033291895  -2.053943324790  -1.681856250863 Bohr   0.0
+[INPUT] 58 H    -10.616900000000  -1.086900000000   0.890000000000 AA  -20.063033291895  -2.053943324790   1.681856250863 Bohr   0.0
+[INPUT] 59 H    -11.869400000000   1.053200000000   0.890000000000 AA  -22.429915262913   1.990259554392   1.681856250863 Bohr   0.0
+[INPUT] 60 H    -11.869400000000   1.053200000000  -0.890000000000 AA  -22.429915262913   1.990259554392  -1.681856250863 Bohr   0.0
+[INPUT] 61 H    -13.115400000000  -1.090700000000  -0.890000000000 AA  -24.784514014121  -2.061124284063  -1.681856250863 Bohr   0.0
+[INPUT] 62 H    -13.115400000000  -1.090700000000   0.890000000000 AA  -24.784514014121  -2.061124284063   1.681856250863 Bohr   0.0
+[INPUT] 63 H    -14.367800000000   1.049400000000   0.890000000000 AA  -27.151207012526   1.983078595119   1.681856250863 Bohr   0.0
+[INPUT] 64 H    -14.367800000000   1.049400000000  -0.890000000000 AA  -27.151207012526   1.983078595119  -1.681856250863 Bohr   0.0
+[INPUT] 65 H    -15.613900000000  -1.094400000000  -0.890000000000 AA  -29.505994736346  -2.068116270724  -1.681856250863 Bohr   0.0
+[INPUT] 66 H    -15.613900000000  -1.094400000000   0.890000000000 AA  -29.505994736346  -2.068116270724   1.681856250863 Bohr   0.0
+[INPUT] 67 H    -16.866301000000   1.045600000000   0.890000000000 AA  -31.872689624478   1.975897635845   1.681856250863 Bohr   0.0
+[INPUT] 68 H    -16.866301000000   1.045600000000  -0.890000000000 AA  -31.872689624478   1.975897635845  -1.681856250863 Bohr   0.0
+[INPUT] 69 H    -18.112301000000  -1.098200000000  -0.890000000000 AA  -34.227288375686  -2.075297229997  -1.681856250863 Bohr   0.0
+[INPUT] 70 H    -18.112301000000  -1.098200000000   0.890000000000 AA  -34.227288375686  -2.075297229997   1.681856250863 Bohr   0.0
+[INPUT] 71 H    -19.364799000000   1.041900000000   0.890000000000 AA  -36.594166567251   1.968905649184   1.681856250863 Bohr   0.0
+[INPUT] 72 H    -19.364799000000   1.041900000000  -0.890000000000 AA  -36.594166567251   1.968905649184  -1.681856250863 Bohr   0.0
+[INPUT] 73 H    -20.610800000000  -1.102000000000  -0.890000000000 AA  -38.948767208186  -2.082478189271  -1.681856250863 Bohr   0.0
+[INPUT] 74 H    -20.610800000000  -1.101900000000   0.890000000000 AA  -38.948767208186  -2.082289216658   1.681856250863 Bohr   0.0
+[INPUT] 75 H    -21.863300000000   1.038100000000   0.890000000000 AA  -41.315649179203   1.961724689911   1.681856250863 Bohr   0.0
+[INPUT] 76 H    -21.863300000000   1.038100000000  -0.890000000000 AA  -41.315649179203   1.961724689911  -1.681856250863 Bohr   0.0
+[INPUT] 77 H    -23.109301000000  -1.105700000000  -0.890000000000 AA  -43.670249820138  -2.089470175932  -1.681856250863 Bohr   0.0
+[INPUT] 78 H    -23.109301000000  -1.105700000000   0.890000000000 AA  -43.670249820138  -2.089470175932   1.681856250863 Bohr   0.0
+[INPUT] 79 H    -24.361799000000   1.034400000000   0.890000000000 AA  -46.037128011703   1.954732703250   1.681856250863 Bohr   0.0
+[INPUT] 80 H    -24.361799000000   1.034400000000  -0.890000000000 AA  -46.037128011703   1.954732703250  -1.681856250863 Bohr   0.0
+[INPUT] 81 H    -25.249800000000  -0.225600000000   0.000000000000 AA  -47.715206700043  -0.426322213702   0.000000000000 Bohr   0.0
+[INPUT] 82 H      0.623000000000   1.071900000000  -0.890000000000 AA    1.177299375604   2.025597432921  -1.681856250863 Bohr   0.0
+[INPUT] 83 H      0.623000000000   1.071900000000   0.890000000000 AA    1.177299375604   2.025597432921   1.681856250863 Bohr   0.0
+[INPUT] 84 H      1.875500000000  -1.068200000000   0.890000000000 AA    3.544181346622  -2.018605446260   1.681856250863 Bohr   0.0
+[INPUT] 85 H      1.875500000000  -1.068200000000  -0.890000000000 AA    3.544181346622  -2.018605446260  -1.681856250863 Bohr   0.0
+[INPUT] 86 H      3.121500000000   1.075700000000  -0.890000000000 AA    5.898780097830   2.032778392195  -1.681856250863 Bohr   0.0
+[INPUT] 87 H      3.121500000000   1.075700000000   0.890000000000 AA    5.898780097830   2.032778392195   1.681856250863 Bohr   0.0
+[INPUT] 88 H      4.373900000000  -1.064400000000   0.890000000000 AA    8.265473096235  -2.011424486987   1.681856250863 Bohr   0.0
+[INPUT] 89 H      4.373900000000  -1.064400000000  -0.890000000000 AA    8.265473096235  -2.011424486987  -1.681856250863 Bohr   0.0
+[INPUT] 90 H      5.620000000000   1.079400000000  -0.890000000000 AA   10.620260820056   2.039770378856  -1.681856250863 Bohr   0.0
+[INPUT] 91 H      5.620000000000   1.079400000000   0.890000000000 AA   10.620260820056   2.039770378856   1.681856250863 Bohr   0.0
+[INPUT] 92 H      6.872400000000  -1.060700000000   0.890000000000 AA   12.986953818461  -2.004432500326   1.681856250863 Bohr   0.0
+[INPUT] 93 H      6.872400000000  -1.060700000000  -0.890000000000 AA   12.986953818461  -2.004432500326  -1.681856250863 Bohr   0.0
+[INPUT] 94 H      8.118400000000   1.083200000000  -0.890000000000 AA   15.341552569669   2.046951338129  -1.681856250863 Bohr   0.0
+[INPUT] 95 H      8.118400000000   1.083200000000   0.890000000000 AA   15.341552569669   2.046951338129   1.681856250863 Bohr   0.0
+[INPUT] 96 H      9.370900000000  -1.056900000000   0.890000000000 AA   17.708434540687  -1.997251541053   1.681856250863 Bohr   0.0
+[INPUT] 97 H      9.370900000000  -1.056900000000  -0.890000000000 AA   17.708434540687  -1.997251541053  -1.681856250863 Bohr   0.0
+[INPUT] 98 H     10.616900000000   1.086900000000  -0.890000000000 AA   20.063033291895   2.053943324790  -1.681856250863 Bohr   0.0
+[INPUT] 99 H     10.616900000000   1.086900000000   0.890000000000 AA   20.063033291895   2.053943324790   1.681856250863 Bohr   0.0
+[INPUT]100 H     11.869400000000  -1.053200000000   0.890000000000 AA   22.429915262913  -1.990259554392   1.681856250863 Bohr   0.0
+[INPUT]101 H     11.869400000000  -1.053200000000  -0.890000000000 AA   22.429915262913  -1.990259554392  -1.681856250863 Bohr   0.0
+[INPUT]102 H     13.115400000000   1.090700000000  -0.890000000000 AA   24.784514014121   2.061124284063  -1.681856250863 Bohr   0.0
+[INPUT]103 H     13.115400000000   1.090700000000   0.890000000000 AA   24.784514014121   2.061124284063   1.681856250863 Bohr   0.0
+[INPUT]104 H     14.367800000000  -1.049400000000   0.890000000000 AA   27.151207012526  -1.983078595119   1.681856250863 Bohr   0.0
+[INPUT]105 H     14.367800000000  -1.049400000000  -0.890000000000 AA   27.151207012526  -1.983078595119  -1.681856250863 Bohr   0.0
+[INPUT]106 H     15.613900000000   1.094400000000  -0.890000000000 AA   29.505994736346   2.068116270724  -1.681856250863 Bohr   0.0
+[INPUT]107 H     15.613900000000   1.094400000000   0.890000000000 AA   29.505994736346   2.068116270724   1.681856250863 Bohr   0.0
+[INPUT]108 H     16.866301000000  -1.045600000000   0.890000000000 AA   31.872689624478  -1.975897635845   1.681856250863 Bohr   0.0
+[INPUT]109 H     16.866301000000  -1.045600000000  -0.890000000000 AA   31.872689624478  -1.975897635845  -1.681856250863 Bohr   0.0
+[INPUT]110 H     18.112301000000   1.098200000000  -0.890000000000 AA   34.227288375686   2.075297229997  -1.681856250863 Bohr   0.0
+[INPUT]111 H     18.112301000000   1.098200000000   0.890000000000 AA   34.227288375686   2.075297229997   1.681856250863 Bohr   0.0
+[INPUT]112 H     19.364799000000  -1.041900000000   0.890000000000 AA   36.594166567251  -1.968905649184   1.681856250863 Bohr   0.0
+[INPUT]113 H     19.364799000000  -1.041900000000  -0.890000000000 AA   36.594166567251  -1.968905649184  -1.681856250863 Bohr   0.0
+[INPUT]114 H     20.610800000000   1.102000000000  -0.890000000000 AA   38.948767208186   2.082478189271  -1.681856250863 Bohr   0.0
+[INPUT]115 H     20.610800000000   1.101900000000   0.890000000000 AA   38.948767208186   2.082289216658   1.681856250863 Bohr   0.0
+[INPUT]116 H     21.863300000000  -1.038100000000   0.890000000000 AA   41.315649179203  -1.961724689911   1.681856250863 Bohr   0.0
+[INPUT]117 H     21.863300000000  -1.038100000000  -0.890000000000 AA   41.315649179203  -1.961724689911  -1.681856250863 Bohr   0.0
+[INPUT]118 H     23.109301000000   1.105700000000  -0.890000000000 AA   43.670249820138   2.089470175932  -1.681856250863 Bohr   0.0
+[INPUT]119 H     23.109301000000   1.105700000000   0.890000000000 AA   43.670249820138   2.089470175932   1.681856250863 Bohr   0.0
+[INPUT]120 H     24.361799000000  -1.034400000000   0.890000000000 AA   46.037128011703  -1.954732703250   1.681856250863 Bohr   0.0
+[INPUT]121 H     24.361799000000  -1.034400000000  -0.890000000000 AA   46.037128011703  -1.954732703250  -1.681856250863 Bohr   0.0
+[INPUT]122 H     25.249800000000   0.225600000000   0.000000000000 AA   47.715206700043   0.426322213702   0.000000000000 Bohr   0.0
+[INPUT] ---------------- BASIS SET ---------------- 
+[INPUT] l, kappa, [nprim/nctr], expnt,             c_1 c_2 ...
+[INPUT] C
+[INPUT] 0    0    [6    /1   ]  13575.349682      0.00022245814352
+                                2035.233368       0.0017232738252
+                                463.22562359      0.0089255715314
+                                131.20019598      0.035727984502
+                                42.853015891      0.11076259931
+                                15.584185766      0.24295627626
+[INPUT] 0    0    [2    /1   ]  6.2067138508      0.41440263448
+                                2.5764896527      0.23744968655
+[INPUT] 0    0    [1    /1   ]  0.57696339419        1
+[INPUT] 0    0    [1    /1   ]  0.22972831358        1
+[INPUT] 0    0    [1    /1   ]  0.095164440028       1
+[INPUT] 0    0    [1    /1   ]  0.04847540137        1
+[INPUT] 1    0    [4    /1   ]  34.697232244      0.0053333657805
+                                7.9582622826      0.035864109092
+                                2.3780826883      0.14215873329
+                                0.81433208183     0.34270471845
+[INPUT] 1    0    [1    /1   ]  0.28887547253        1
+[INPUT] 1    0    [1    /1   ]  0.10056823671        1
+[INPUT] 2    0    [1    /1   ]  1.097                1
+[INPUT] 2    0    [1    /1   ]  0.318                1
+[INPUT] 2    0    [1    /1   ]  0.090985336424       1
+[INPUT] 3    0    [1    /1   ]  0.761                1
+[INPUT] H
+[INPUT] 0    0    [3    /1   ]  34.061341         0.0060251978
+                                5.1235746         0.045021094
+                                1.1646626         0.20189726
+[INPUT] 0    0    [1    /1   ]  0.32723041           1
+[INPUT] 0    0    [1    /1   ]  0.10307241           1
+[INPUT] 1    0    [1    /1   ]  0.8                  1
+[INPUT] 1    0    [1    /1   ]  0.095774129632       1
+
+nuclear repulsion = 3467.77719833212
+number of shells = 930
+number of NR pGTOs = 2982
+number of NR cGTOs = 2218
+basis = def2-TZVPD
+ecp = {}
+CPU time:         1.83
+
+
+PySCF Results
+
+
+Initial guess from minao.
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /tmp/tmpkkv806t7
+max_memory 4000 MB (current use 1815 MB)
+XC library pyscf.dft.libxc version 6.1.0
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 1,7
+    P. A. M. Dirac.,  Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+    F. Bloch.,  Z. Phys. 57, 545 (1929)
+    S. H. Vosko, L. Wilk, and M. Nusair.,  Can. J. Phys. 58, 1200 (1980)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x14bd7597c8b0>
+grids dens level: 5
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x14bd7597c790>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+num shells = 1010, num cGTOs = 2862
+    CPU time for                                               2c2e      0.46 sec, wall time      0.23 sec, GPU time for    239.95 ms
+Number of shells for each [l, nctr] group
+    [0 1] : 324
+    [0 2] : 40
+    [0 3] : 82
+    [0 6] : 40
+    [1 1] : 244
+    [1 4] : 40
+    [2 1] : 120
+    [3 1] : 40
+Number of shells for each [l, nctr] group
+    [0 1] : 364
+    [0 3] : 82
+    [0 7] : 40
+    [1 1] : 120
+    [1 2] : 122
+    [2 1] : 162
+    [2 2] : 40
+    [3 2] : 40
+    [4 1] : 40
+    CPU time for                                  Initialize q_cond      0.69 sec, wall time      0.35 sec, GPU time for    347.09 ms
+    CPU time for                                        Get pairing      0.02 sec, wall time      0.01 sec, GPU time for      8.11 ms
+    CPU time for                                  AO cart2sph coeff      0.04 sec, wall time      0.02 sec, GPU time for     20.28 ms
+    CPU time for                                 aux cart2sph coeff      0.01 sec, wall time      0.01 sec, GPU time for      5.78 ms
+    CPU time for                                       Get AO pairs      0.10 sec, wall time      0.05 sec, GPU time for     51.41 ms
+    CPU time for                               Initialize GPU cache      0.13 sec, wall time      0.07 sec, GPU time for     68.57 ms
+    CPU time for                                     prepare intopt      1.02 sec, wall time      0.52 sec, GPU time for    511.98 ms
+size of aux basis 2862
+Not enough GPU memory
+atom C rad-grids = 105, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  86  86  86
+  86  86  86  86  86  86  86  86  86  86 590 590 590 590 590 590 590 590
+ 590 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770 770
+ 770 770 770 770 770 770 770 770 770 770 770 590 590 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 590 590]
+atom H rad-grids = 70, ang-grids = [ 50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50  50
+  50  50  86  86  86  86  86 434 434 434 434 434 434 590 590 590 590 590
+ 590 590 590 590 590 590 590 590 590 590 590 590 590 434 434 434 434 434
+ 434 434 434 434 434 434 434 434 434 434 434 434 434 434 434 434]
+Padding 64 grids
+tot grids = 3653760
+    CPU time for                                      solve 0 / 105      2.23 sec, wall time      1.67 sec, GPU time for   1674.85 ms
+Number of shells for each [l, nctr] group
+    [0 1] : 324
+    [0 2] : 40
+    [0 3] : 82
+    [0 6] : 40
+    [1 1] : 244
+    [1 4] : 40
+    [2 1] : 120
+    [3 1] : 40
+Available GPU mem 37015.939686 Mb, block_size 16384
+    CPU time for                                      solve 1 / 105      1.49 sec, wall time      0.91 sec, GPU time for    909.96 ms
+    CPU time for                                           eval rho      2.44 sec, wall time      1.50 sec, GPU time for   1500.57 ms
+    CPU time for                                      solve 2 / 105      1.13 sec, wall time      0.72 sec, GPU time for    718.65 ms
+    CPU time for                                      solve 3 / 105      0.35 sec, wall time      0.18 sec, GPU time for    180.45 ms
+Drop grids 655230
+prune_by_density_: 126 padding grids
+    CPU time for                                   setting up grids      5.20 sec, wall time      3.48 sec, GPU time for   3480.04 ms
+    CPU time for                                      solve 4 / 105      0.34 sec, wall time      0.18 sec, GPU time for    177.90 ms
+    CPU time for                                      solve 5 / 105      0.37 sec, wall time      0.18 sec, GPU time for    184.33 ms
+    CPU time for                                      solve 6 / 105      0.46 sec, wall time      0.23 sec, GPU time for    233.51 ms
+Number of shells for each [l, nctr] group
+    [0 1] : 324
+    [0 2] : 40
+    [0 3] : 82
+    [0 6] : 40
+    [1 1] : 244
+    [1 4] : 40
+    [2 1] : 120
+    [3 1] : 40
+    CPU time for                                      solve 7 / 105      0.40 sec, wall time      0.32 sec, GPU time for    315.46 ms
+    CPU time for                                      solve 8 / 105      0.10 sec, wall time      0.10 sec, GPU time for     98.54 ms
+    CPU time for                                      solve 9 / 105      0.10 sec, wall time      0.10 sec, GPU time for     99.12 ms
+    CPU time for                                     solve 10 / 105      0.12 sec, wall time      0.12 sec, GPU time for    124.04 ms
+    CPU time for                                     solve 11 / 105      0.10 sec, wall time      0.10 sec, GPU time for    100.58 ms
+    CPU time for                                     solve 12 / 105      0.10 sec, wall time      0.10 sec, GPU time for     96.22 ms
+    CPU time for                                     solve 13 / 105      0.10 sec, wall time      0.10 sec, GPU time for     99.89 ms
+    CPU time for                                     solve 14 / 105      0.10 sec, wall time      0.10 sec, GPU time for     97.23 ms
+    CPU time for                                     solve 15 / 105      0.37 sec, wall time      0.37 sec, GPU time for    368.39 ms
+    CPU time for                                     solve 16 / 105      0.16 sec, wall time      0.16 sec, GPU time for    155.95 ms
+    CPU time for                                     solve 17 / 105      0.12 sec, wall time      0.12 sec, GPU time for    121.47 ms
+    CPU time for                                     solve 18 / 105      0.16 sec, wall time      0.16 sec, GPU time for    156.25 ms
+    CPU time for                                     solve 19 / 105      0.12 sec, wall time      0.12 sec, GPU time for    122.93 ms
+    CPU time for                                     solve 20 / 105      0.23 sec, wall time      0.23 sec, GPU time for    231.67 ms
+    CPU time for                                     solve 21 / 105      0.39 sec, wall time      0.39 sec, GPU time for    394.55 ms
+    CPU time for                                     solve 22 / 105      0.10 sec, wall time      0.10 sec, GPU time for    102.57 ms
+    CPU time for                                     solve 23 / 105      0.12 sec, wall time      0.12 sec, GPU time for    116.47 ms
+    CPU time for                                     solve 24 / 105      0.15 sec, wall time      0.15 sec, GPU time for    150.24 ms
+    CPU time for                                     solve 25 / 105      0.12 sec, wall time      0.12 sec, GPU time for    118.28 ms
+    CPU time for                                     solve 26 / 105      0.35 sec, wall time      0.35 sec, GPU time for    349.46 ms
+    CPU time for                                     solve 27 / 105      0.29 sec, wall time      0.29 sec, GPU time for    290.20 ms
+    CPU time for                                     solve 28 / 105      0.26 sec, wall time      0.26 sec, GPU time for    256.99 ms
+    CPU time for                                     solve 29 / 105      0.19 sec, wall time      0.20 sec, GPU time for    195.24 ms
+    CPU time for                                     solve 30 / 105      0.11 sec, wall time      0.11 sec, GPU time for    113.87 ms
+    CPU time for                                     solve 31 / 105      0.14 sec, wall time      0.14 sec, GPU time for    141.10 ms
+    CPU time for                                     solve 32 / 105      0.11 sec, wall time      0.11 sec, GPU time for    113.49 ms
+    CPU time for                                     solve 33 / 105      0.31 sec, wall time      0.31 sec, GPU time for    306.70 ms
+    CPU time for                                     solve 34 / 105      0.14 sec, wall time      0.14 sec, GPU time for    139.84 ms
+    CPU time for                                     solve 35 / 105      0.26 sec, wall time      0.26 sec, GPU time for    262.00 ms
+    CPU time for                                     solve 36 / 105      0.19 sec, wall time      0.19 sec, GPU time for    192.87 ms
+    CPU time for                                     solve 37 / 105      0.12 sec, wall time      0.12 sec, GPU time for    116.17 ms
+    CPU time for                                     solve 38 / 105      0.10 sec, wall time      0.10 sec, GPU time for    100.67 ms
+    CPU time for                                     solve 39 / 105      0.11 sec, wall time      0.11 sec, GPU time for    111.91 ms
+    CPU time for                                     solve 40 / 105      0.10 sec, wall time      0.10 sec, GPU time for    100.86 ms
+    CPU time for                                     solve 41 / 105      0.19 sec, wall time      0.19 sec, GPU time for    191.32 ms
+    CPU time for                                     solve 42 / 105      0.18 sec, wall time      0.18 sec, GPU time for    180.98 ms
+    CPU time for                                     solve 43 / 105      0.17 sec, wall time      0.17 sec, GPU time for    167.69 ms
+    CPU time for                                     solve 44 / 105      0.11 sec, wall time      0.11 sec, GPU time for    108.83 ms
+    CPU time for                                     solve 45 / 105      0.37 sec, wall time      0.37 sec, GPU time for    371.34 ms
+    CPU time for                                     solve 46 / 105      0.10 sec, wall time      0.10 sec, GPU time for    102.85 ms
+    CPU time for                                     solve 47 / 105      0.11 sec, wall time      0.12 sec, GPU time for    115.67 ms
+    CPU time for                                     solve 48 / 105      0.14 sec, wall time      0.14 sec, GPU time for    142.33 ms
+    CPU time for                                     solve 49 / 105      0.12 sec, wall time      0.12 sec, GPU time for    116.69 ms
+    CPU time for                                     solve 50 / 105      0.33 sec, wall time      0.33 sec, GPU time for    328.03 ms
+    CPU time for                                     solve 51 / 105      0.43 sec, wall time      0.43 sec, GPU time for    434.91 ms
+    CPU time for                                     solve 52 / 105      0.14 sec, wall time      0.14 sec, GPU time for    139.52 ms
+    CPU time for                                     solve 53 / 105      0.17 sec, wall time      0.17 sec, GPU time for    170.88 ms
+    CPU time for                                     solve 54 / 105      0.28 sec, wall time      0.28 sec, GPU time for    282.30 ms
+    CPU time for                                     solve 55 / 105      0.30 sec, wall time      0.30 sec, GPU time for    304.47 ms
+    CPU time for                                     solve 56 / 105      0.13 sec, wall time      0.14 sec, GPU time for    135.45 ms
+    CPU time for                                     solve 57 / 105      0.11 sec, wall time      0.11 sec, GPU time for    114.03 ms
+    CPU time for                                     solve 58 / 105      0.14 sec, wall time      0.14 sec, GPU time for    137.76 ms
+    CPU time for                                     solve 59 / 105      0.11 sec, wall time      0.11 sec, GPU time for    114.17 ms
+    CPU time for                                     solve 60 / 105      0.30 sec, wall time      0.30 sec, GPU time for    298.61 ms
+    CPU time for                                     solve 61 / 105      0.29 sec, wall time      0.30 sec, GPU time for    296.10 ms
+    CPU time for                                     solve 62 / 105      0.24 sec, wall time      0.24 sec, GPU time for    241.70 ms
+    CPU time for                                     solve 63 / 105      0.16 sec, wall time      0.16 sec, GPU time for    163.88 ms
+    CPU time for                                     solve 64 / 105      0.25 sec, wall time      0.25 sec, GPU time for    253.13 ms
+    CPU time for                                     solve 65 / 105      0.21 sec, wall time      0.21 sec, GPU time for    211.63 ms
+    CPU time for                                     solve 66 / 105      0.20 sec, wall time      0.21 sec, GPU time for    205.05 ms
+    CPU time for                                     solve 67 / 105      0.19 sec, wall time      0.19 sec, GPU time for    187.02 ms
+    CPU time for                                     solve 68 / 105      0.11 sec, wall time      0.11 sec, GPU time for    110.08 ms
+    CPU time for                                     solve 69 / 105      0.13 sec, wall time      0.13 sec, GPU time for    131.13 ms
+    CPU time for                                     solve 70 / 105      0.11 sec, wall time      0.11 sec, GPU time for    110.95 ms
+    CPU time for                                     solve 71 / 105      0.25 sec, wall time      0.25 sec, GPU time for    249.03 ms
+    CPU time for                                     solve 72 / 105      0.11 sec, wall time      0.11 sec, GPU time for    107.94 ms
+    CPU time for                                     solve 73 / 105      0.38 sec, wall time      0.38 sec, GPU time for    377.85 ms
+    CPU time for                                     solve 74 / 105      0.15 sec, wall time      0.15 sec, GPU time for    151.62 ms
+    CPU time for                                     solve 75 / 105      0.11 sec, wall time      0.11 sec, GPU time for    107.29 ms
+    CPU time for                                     solve 76 / 105      0.18 sec, wall time      0.18 sec, GPU time for    181.19 ms
+    CPU time for                                     solve 77 / 105      0.24 sec, wall time      0.24 sec, GPU time for    240.30 ms
+    CPU time for                                     solve 78 / 105      0.28 sec, wall time      0.28 sec, GPU time for    280.85 ms
+    CPU time for                                     solve 79 / 105      0.11 sec, wall time      0.11 sec, GPU time for    107.13 ms
+    CPU time for                                     solve 80 / 105      0.11 sec, wall time      0.11 sec, GPU time for    107.00 ms
+    CPU time for                                     solve 81 / 105      0.12 sec, wall time      0.12 sec, GPU time for    120.55 ms
+    CPU time for                                     solve 82 / 105      0.11 sec, wall time      0.11 sec, GPU time for    105.65 ms
+    CPU time for                                     solve 83 / 105      0.25 sec, wall time      0.25 sec, GPU time for    251.20 ms
+    CPU time for                                     solve 84 / 105      0.31 sec, wall time      0.31 sec, GPU time for    311.58 ms
+    CPU time for                                     solve 85 / 105      0.14 sec, wall time      0.14 sec, GPU time for    141.34 ms
+    CPU time for                                     solve 86 / 105      0.15 sec, wall time      0.15 sec, GPU time for    147.42 ms
+    CPU time for                                     solve 87 / 105      0.29 sec, wall time      0.29 sec, GPU time for    291.58 ms
+    CPU time for                                     solve 88 / 105      0.23 sec, wall time      0.23 sec, GPU time for    229.09 ms
+    CPU time for                                     solve 89 / 105      0.11 sec, wall time      0.11 sec, GPU time for    113.26 ms
+    CPU time for                                     solve 90 / 105      0.16 sec, wall time      0.16 sec, GPU time for    164.62 ms
+    CPU time for                                     solve 91 / 105      0.16 sec, wall time      0.16 sec, GPU time for    158.35 ms
+    CPU time for                                     solve 92 / 105      0.14 sec, wall time      0.14 sec, GPU time for    142.90 ms
+    CPU time for                                     solve 93 / 105      0.10 sec, wall time      0.10 sec, GPU time for    101.36 ms
+    CPU time for                                     solve 94 / 105      0.11 sec, wall time      0.11 sec, GPU time for    109.83 ms
+    CPU time for                                     solve 95 / 105      0.10 sec, wall time      0.10 sec, GPU time for    100.83 ms
+    CPU time for                                     solve 96 / 105      0.18 sec, wall time      0.18 sec, GPU time for    177.01 ms
+    CPU time for                                     solve 97 / 105      0.10 sec, wall time      0.10 sec, GPU time for    104.88 ms
+    CPU time for                                     solve 98 / 105      0.24 sec, wall time      0.24 sec, GPU time for    240.94 ms
+    CPU time for                                     solve 99 / 105      0.13 sec, wall time      0.13 sec, GPU time for    126.65 ms
+    CPU time for                                    solve 100 / 105      0.10 sec, wall time      0.10 sec, GPU time for    104.63 ms
+    CPU time for                                    solve 101 / 105      0.15 sec, wall time      0.15 sec, GPU time for    148.01 ms
+    CPU time for                                    solve 102 / 105      0.23 sec, wall time      0.23 sec, GPU time for    233.23 ms
+    CPU time for                                    solve 103 / 105      0.11 sec, wall time      0.11 sec, GPU time for    110.60 ms
+    CPU time for                                    solve 104 / 105      0.13 sec, wall time      0.13 sec, GPU time for    132.26 ms
+    CPU time for                                       cholesky_eri     33.67 sec, wall time     29.39 sec, GPU time for  29386.00 ms
+Available GPU mem 37283.576422 Mb, block_size 16384
+    CPU time for                                           eval rho      1.02 sec, wall time      1.02 sec, GPU time for   1023.32 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      3.66 ms
+Available GPU mem 37181.250662 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.14 sec, GPU time for    144.65 ms
+    CPU time for                                            vxc tot      1.17 sec, wall time      1.18 sec, GPU time for   1175.69 ms
+GPU Memory 37.292 GB available, block size = 128
+    CPU time for                                          vj and vk      0.70 sec, wall time      0.70 sec, GPU time for    697.92 ms
+    CPU time for                                           jk total      0.70 sec, wall time      0.70 sec, GPU time for    699.90 ms
+E1 = -8982.450374886437  Ecoul = 4185.102282768441  Exc = -231.04940893672443
+init E= -1560.6203027226
+    CPU time for                                         total prep     36.05 sec, wall time     31.55 sec, GPU time for  31549.80 ms
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      0.09 ms
+    CPU time for                                                eig      0.07 sec, wall time      0.07 sec, GPU time for     66.06 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      3.10 ms
+Available GPU mem 37001.066086 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for    100.15 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.79 ms
+Available GPU mem 36899.114086 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.14 sec, GPU time for    144.67 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    247.36 ms
+GPU Memory 37.016 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.50 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    693.91 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    941.34 ms
+E1 = -9053.886327071477  Ecoul = 4263.635606196821  Exc = -235.940846510794
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.11 ms
+    CPU time for                                              total      1.01 sec, wall time      1.02 sec, GPU time for   1014.68 ms
+cycle= 1 E= -1558.41436905333  delta_E= 2.21  |ddm|= 15.4
+diis-norm(errvec)=7.88141
+diis-c [-62.11662262   1.        ]
+    CPU time for                                               DIIS      0.01 sec, wall time      0.02 sec, GPU time for     16.91 ms
+    CPU time for                                                eig      0.06 sec, wall time      0.06 sec, GPU time for     66.39 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.95 ms
+Available GPU mem 36916.191846 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for     99.91 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.84 ms
+Available GPU mem 36814.239846 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.14 sec, GPU time for    144.65 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    247.13 ms
+GPU Memory 36.931 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.53 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    693.93 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    941.13 ms
+E1 = -8939.82240103812  Ecoul = 4142.305619234751  Exc = -227.2976378943341
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.19 ms
+    CPU time for                                              total      1.02 sec, wall time      1.03 sec, GPU time for   1026.80 ms
+cycle= 2 E= -1557.03722136558  delta_E= 1.38  |ddm|= 17.2
+diis-norm(errvec)=12.8203
+diis-c [-1.07589418  0.62057157  0.37942843]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      4.18 ms
+    CPU time for                                                eig      0.06 sec, wall time      0.06 sec, GPU time for     66.44 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.99 ms
+Available GPU mem 36837.479014 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for     99.79 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.79 ms
+Available GPU mem 36735.527014 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.15 sec, GPU time for    145.04 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    247.34 ms
+GPU Memory 36.852 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    694.17 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    694.68 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    942.09 ms
+E1 = -9011.394555466288  Ecoul = 4216.663424260637  Exc = -232.40350219892287
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.19 ms
+    CPU time for                                              total      1.01 sec, wall time      1.01 sec, GPU time for   1015.11 ms
+cycle= 3 E= -1559.35743507245  delta_E= -2.32  |ddm|= 11.8
+diis-norm(errvec)=0.379197
+diis-c [-0.04900547  0.14477457  0.08822163  0.7670038 ]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      4.29 ms
+    CPU time for                                                eig      0.06 sec, wall time      0.07 sec, GPU time for     66.49 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.95 ms
+Available GPU mem 36758.766182 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for    102.68 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.80 ms
+Available GPU mem 36656.814182 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.14 sec, GPU time for    144.59 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    249.85 ms
+GPU Memory 36.773 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.90 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    694.30 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    944.22 ms
+E1 = -9011.327395776736  Ecoul = 4216.643993312668  Exc = -232.45247380633685
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.08 ms
+    CPU time for                                              total      1.01 sec, wall time      1.02 sec, GPU time for   1017.25 ms
+cycle= 4 E= -1559.35867793828  delta_E= -0.00124  |ddm|= 0.978
+diis-norm(errvec)=0.222514
+diis-c [-0.00604881  0.04730481  0.02812624  0.40002291  0.52454604]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      4.47 ms
+    CPU time for                                                eig      0.06 sec, wall time      0.06 sec, GPU time for     65.61 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.93 ms
+Available GPU mem 36680.053350 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for    100.01 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.85 ms
+Available GPU mem 36578.101350 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.15 sec, GPU time for    144.83 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    247.41 ms
+GPU Memory 36.695 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.77 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    694.18 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    941.67 ms
+E1 = -9011.391274008847  Ecoul = 4216.70625140935  Exc = -232.45148064653398
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.19 ms
+    CPU time for                                              total      1.01 sec, wall time      1.01 sec, GPU time for   1014.10 ms
+cycle= 5 E= -1559.35930491391  delta_E= -0.000627  |ddm|= 0.163
+diis-norm(errvec)=0.0796535
+diis-c [-1.81056618e-04  7.47694181e-03  4.04240736e-03  1.27779870e-01
+  3.02102866e-01  5.58597915e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      4.82 ms
+    CPU time for                                                eig      0.06 sec, wall time      0.06 sec, GPU time for     65.71 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.95 ms
+Available GPU mem 36601.340518 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for    100.03 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.77 ms
+Available GPU mem 36499.388518 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.14 sec, GPU time for    144.60 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    247.12 ms
+GPU Memory 36.616 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.68 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    694.18 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    941.38 ms
+E1 = -9011.399635204989  Ecoul = 4216.712402158853  Exc = -232.44936167402122
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.17 ms
+    CPU time for                                              total      1.01 sec, wall time      1.01 sec, GPU time for   1014.26 ms
+cycle= 6 E= -1559.35939638804  delta_E= -9.15e-05  |ddm|= 0.0598
+diis-norm(errvec)=0.00954755
+diis-c [-2.24964418e-05  2.03642015e-03  1.05568717e-03  4.21228826e-02
+  1.07573708e-01  2.25257797e-01  6.21953506e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      5.15 ms
+    CPU time for                                                eig      0.07 sec, wall time      0.07 sec, GPU time for     66.56 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.97 ms
+Available GPU mem 36522.627686 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for    100.03 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.86 ms
+Available GPU mem 36420.675686 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.14 sec, GPU time for    144.54 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    247.22 ms
+GPU Memory 36.537 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.63 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    694.06 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    941.35 ms
+E1 = -9011.396895392698  Ecoul = 4216.709284716474  Exc = -232.44898498419818
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.10 ms
+    CPU time for                                              total      1.01 sec, wall time      1.02 sec, GPU time for   1015.36 ms
+cycle= 7 E= -1559.3593973283  delta_E= -9.4e-07  |ddm|= 0.0108
+diis-norm(errvec)=0.00500425
+diis-c [-1.48125279e-06  3.15755471e-04  1.46660613e-04  8.19960062e-03
+  2.30221836e-02  5.77754401e-02  3.63131032e-01  5.47409328e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      5.38 ms
+    CPU time for                                                eig      0.06 sec, wall time      0.06 sec, GPU time for     65.82 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.94 ms
+Available GPU mem 36443.914854 Mb, block_size 16384
+    CPU time for                                           eval rho      0.10 sec, wall time      0.10 sec, GPU time for     99.95 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.77 ms
+Available GPU mem 36341.962854 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.15 sec, GPU time for    144.83 ms
+    CPU time for                                            vxc tot      0.25 sec, wall time      0.25 sec, GPU time for    247.27 ms
+GPU Memory 36.459 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.64 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    694.04 ms
+    CPU time for                                               veff      0.94 sec, wall time      0.94 sec, GPU time for    941.38 ms
+E1 = -9011.396737145209  Ecoul = 4216.709063772434  Exc = -232.44892262983728
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.08 ms
+    CPU time for                                              total      1.01 sec, wall time      1.01 sec, GPU time for   1014.82 ms
+cycle= 8 E= -1559.35939767049  delta_E= -3.42e-07  |ddm|= 0.00414
+diis-norm(errvec)=0.00123258
+diis-c [-5.06528317e-08  5.87703926e-05  1.76486629e-05  1.66870501e-03
+  5.25079793e-03  1.59220650e-02  1.51665016e-01  2.93172448e-01
+  5.32244548e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      5.65 ms
+    CPU time for                                                eig      0.07 sec, wall time      0.07 sec, GPU time for     66.79 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.94 ms
+Available GPU mem 36365.202022 Mb, block_size 16384
+    CPU time for                                           eval rho      0.11 sec, wall time      0.11 sec, GPU time for    114.60 ms
+    CPU time for                                           eval vxc      0.00 sec, wall time      0.00 sec, GPU time for      1.81 ms
+Available GPU mem 36263.250022 Mb, block_size 16384
+    CPU time for                                    vxc integration      0.14 sec, wall time      0.14 sec, GPU time for    144.66 ms
+    CPU time for                                            vxc tot      0.26 sec, wall time      0.26 sec, GPU time for    261.79 ms
+GPU Memory 36.380 GB available, block size = 128
+    CPU time for                                          vj and vk      0.69 sec, wall time      0.69 sec, GPU time for    693.77 ms
+    CPU time for                                           jk total      0.69 sec, wall time      0.69 sec, GPU time for    694.21 ms
+    CPU time for                                               veff      0.95 sec, wall time      0.96 sec, GPU time for    956.07 ms
+E1 = -9011.397165249182  Ecoul = 4216.709528826988  Exc = -232.4489596019605
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      1.22 ms
+    CPU time for                                              total      1.03 sec, wall time      1.03 sec, GPU time for   1030.90 ms
+cycle= 9 E= -1559.35939769203  delta_E= -2.15e-08  |ddm|= 0.00114
+    CPU time for                                                SCF     45.26 sec, wall time     40.80 sec, GPU time for  40803.59 ms
+converged SCF energy = -1559.35939769203
+Nuc-Nuc PySCF=  3467.777198332121
+One electron integrals energy -9011.397165249182
+Coulomb energy  4216.709528826988
+EXC  -232.4489596019605
+PySCF time:  42.80355904623866
+PySCF Grid Size:  (2998656,)

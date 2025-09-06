@@ -1,0 +1,6 @@
+AlN.cif
+BN.cif
+filelist.txt
+GaN.cif
+InN.cif
+Si3N4-beta.cif

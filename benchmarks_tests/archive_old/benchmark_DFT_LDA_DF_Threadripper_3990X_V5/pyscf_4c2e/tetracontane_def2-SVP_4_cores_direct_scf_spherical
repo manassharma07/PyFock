@@ -1,0 +1,175 @@
+Operating System: Linux 5.13.0-44-generic
+System Type: 64bit
+CPU Model: AMD Ryzen Threadripper 3990X 64-Core Processor
+Number of Cores: 64
+Number of Threads: 128
+Memory (GB): 125.661865234375
+Number of cores being actually used/requested for the benchmark: 4
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 4
+OPENBLAS_NUM_THREADS = 4
+MKL_NUM_THREADS = 4
+VECLIB_MAXIMUM_THREADS = 4
+NUMEXPR_NUM_THREADS = 4
+PYSCF_MAX_MEMORY = 120000
+
+
+PySCF Results
+
+
+
+
+******** <class 'pyscf.dft.rks.RKS'> ********
+method = RKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = True
+direct_scf_tol = 1e-13
+chkfile to save SCF result = /home/manas/temp_pyfock/PyFock/benchmarks_tests/benchmark_DFT_LDA_DF_Threadripper_3990X_V5/pyscf_4c2e/tmpqglxf4ko
+max_memory 120000 MB (current use 188 MB)
+XC library pyscf.dft.libxc version 5.2.0
+    S. Lehtola, C. Steigemann, M. J. Oliveira, and M. A. Marques, SoftwareX 7, 1 (2018)
+XC functionals = 1,7
+    P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+    F. Bloch, Z. Phys. 57, 545 (1929)
+    S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+init E= -1558.92757268208
+  HOMO = -0.35373239522654  LUMO = -0.0273782115372272
+cycle= 1 E= -1556.83911311452  delta_E= 2.09  |g|= 1.63  |ddm|= 11.1
+  HOMO = -0.08216302453172  LUMO = 0.0691915996417715
+cycle= 2 E= -1555.86308801204  delta_E= 0.976  |g|=  2.5  |ddm|= 5.25
+  HOMO = -0.226728440391982  LUMO = 0.0241660596357851
+cycle= 3 E= -1557.64311205464  delta_E= -1.78  |g|= 0.0781  |ddm|= 3.33
+  HOMO = -0.225589815949032  LUMO = 0.0231029268288602
+cycle= 4 E= -1557.64450117388  delta_E= -0.00139  |g|= 0.029  |ddm|= 0.157
+  HOMO = -0.224773943500617  LUMO = 0.0231763187865273
+cycle= 5 E= -1557.64467587229  delta_E= -0.000175  |g|= 0.0138  |ddm|= 0.0505
+  HOMO = -0.224897351624133  LUMO = 0.0230796426177896
+cycle= 6 E= -1557.6447253434  delta_E= -4.95e-05  |g|= 0.00145  |ddm|= 0.0181
+  HOMO = -0.224918771729636  LUMO = 0.0230610949044409
+cycle= 7 E= -1557.64472575048  delta_E= -4.07e-07  |g|= 0.00078  |ddm|= 0.00291
+  HOMO = -0.224905169417851  LUMO = 0.0230595885374094
+cycle= 8 E= -1557.64472590216  delta_E= -1.52e-07  |g|= 0.000169  |ddm|= 0.00111
+  HOMO = -0.224908199175782  LUMO = 0.02305705863857
+cycle= 9 E= -1557.64472590979  delta_E= -7.63e-09  |g|= 2.39e-05  |ddm|= 0.000271
+  HOMO = -0.224911200705687  LUMO = 0.0230556156204374
+Extra cycle  E= -1557.64472590957  delta_E= 2.24e-10  |g|= 3.82e-05  |ddm|= 8.02e-05
+converged SCF energy = -1557.64472590957
+Nuc-Nuc PySCF=  3467.777198332121
+One electron integrals energy -9008.74840557445
+Coulomb energy  4215.784126392754
+EXC  -232.45764505999148
+PySCF time:  733.1447866819799
+PySCF Grid Size:  (2955080,)
+
+
+NAO : 1010
+
+
+aux NAO : 3424
+Running DFT using 4 threads for Numba.
+
+
+
+Calculating one electron integrals...
+
+
+Core H size in GB  0.0081608
+done!
+Time taken 4.608241114765406 seconds.
+
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+
+
+Performing Schwarz screening...
+Threshold  1e-09
+Size of permanent array storing the significant indices of 3c2e ERI in GB  2.135802492
+No. of elements in the standard three-centered two electron ERI tensor:  3492822400
+No. of elements in the triangular three-centered two electron ERI tensor:  1748140320
+No. of significant triplets based on Schwarz inequality and triangularity: 355967082 or 10.2% of original
+Schwarz screening done!
+Time taken 11.991336390376091 seconds.
+
+Two Center Two electron ERI size in GB  0.093790208
+Three Center Two electron ERI size in GB  2.847736656
+Three-centered two electron evaluation done!
+Time taken 250.15140676125884 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  2955080
+Size (in GB) for storing the coordinates of grid:       0.07092192
+Size (in GB) for storing the weights of grid:           0.02364064
+Size (in GB) for storing the density at gridpoints:     0.02364064
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  5000
+No. of batches:  591
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 5.443020887672901 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    165
+Average no. of basis functions contributing to a batch of grid points:    146
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+XC Functional IDs supplied:  [1, 7]
+
+
+Description of exchange functional: 
+
+The Exchange function belongs to the family: LDA
+Functional ID: 1
+Functional Name: lda_x
+Attributes:
+    Name: Slater exchange
+    Kind: 0
+  Family: 1
+Citations:
+   P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+   F. Bloch, Z. Phys. 57, 545 (1929)
+
+
+Description of correlation functional: 
+
+ The Correlation function belongs to the family: LDA
+Functional ID: 7
+Functional Name: lda_c_vwn
+Attributes:
+    Name: Vosko, Wilk & Nusair (VWN5)
+    Kind: 1
+  Family: 1
+Citations:
+   S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980)
+------------------------------------------------------
+
+
+
+
+Traceback (most recent call last):
+  File "benchmark_DFT_LDA_DF.py", line 140, in <module>
+    energyCrysX, dmat = dftObj.scf(max_itr=30, ncores=ncores, dmat=dmat_init, grids=pyscfGrids, isDF=True, auxbasis=auxbasis, rys=True, DF_algo=6, blocksize=5000, XC_algo=2, debug=False, sortGrids=False, save_ao_values=False)
+  File "/home/manas/.local/lib/python3.8/site-packages/pyfock/DFT.py", line 797, in scf
+    J[indices_dmat_tri] = J_tri
+ValueError: shape mismatch: value array of shape (510555,) could not be broadcast to indexing result of shape (470935,)

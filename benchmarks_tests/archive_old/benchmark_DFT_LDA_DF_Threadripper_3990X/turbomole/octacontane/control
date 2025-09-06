@@ -1,0 +1,35 @@
+$title
+$symmetry c1
+$coord    file=coord
+$optimize
+ internal   off
+ redundant  off
+ cartesian  on
+$atoms
+    basis =def2-SVP
+    jbas  =universal
+$basis    file=basis
+$scfmo    file=mos
+$scfiterlimit       30
+$scfdamp   start=0.300  step=0.050  min=0.100
+$scfdump
+$scfdiis
+$maxcor    500 MiB  per_core
+$scforbitalshift  automatic=.1
+$dft
+   functional libxc 1
+   functional libxc add 1 7
+   gridsize   m5
+$scfconv   7
+$jbas    file=auxbasis
+$ricore      10000
+$rij
+$rundimensions
+   natoms=242
+$closed shells
+ a       1-321                                  ( 2 )
+$energy    file=energy
+$grad    file=gradient
+$last step     riper
+$last SCF energy change = -3114.1404
+$end

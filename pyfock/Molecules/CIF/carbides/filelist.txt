@@ -1,0 +1,8 @@
+filelist.txt
+SiC-2H-Moissanite.cif
+SiC-3C-beta.cif
+SiC-6H-alpha.cif
+SiC-Moissanite.cif
+SiC.cif
+W2C.cif
+WC.cif

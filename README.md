@@ -1,0 +1,116 @@
+<!-- PROJECT SHIELDS -->
+<!--
+*** I'm using markdown "reference style" links for readability.
+*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
+*** See the bottom of this document for the declaration of the reference variables
+*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
+*** https://www.markdownguide.org/basic-syntax/#reference-style-links
+-->
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]
+[![Documentation][docs-shield]][documentation-url]
+
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <!-- <a href="https://github.com/manassharma07/pyfock">
+    <img src="https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.png" alt="Logo" width="320" height="200">
+  </a> -->
+
+<h3 align="center">PyFock</h3>
+
+  <p align="center">
+    An efficient and parallelizable pure Python electronic structure theory code with GPU acceleration, made possible via just-in-time compilation functionalities of Numba.
+    <br />
+    <a href="https://github.com/manassharma07/pyfock/blob/main/Documentation.md"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/manassharma07/pyfock/blob/main/examples/ex13.ipynb">View Demo</a>
+    ·
+    <a href="https://github.com/manassharma07/pyfock/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/manassharma07/pyfock/issues">Request Feature</a>
+  </p>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+    <li><a href="#citation">Citation</a></li>
+  </ol>
+</details>
+
+
+
+<!-- ABOUT THE PROJECT -->
+## About The Project
+
+[![Product Name Screen Shot][product-screenshot]](https://github.com/manassharma07/pyfock)
+
+PyFock is a quantum chemistry package that enables efficient density functional theory (DFT) and related calculations for molecular systems, all using the Python programming language. By utilizing Numba's just-in-time (JIT) compilation, PyFock is able to achieve efficient and parallelizable performance for all the compute-intensive portions of the calculations. Furthermore, PyFock can utilize multiple GPUs to accelerate some of the expensive calculations. This makes PyFock a highly flexible and powerful tool for quantum chemistry simulations, all within a single, easy-to-use package.
+
+Some advantages of this approach include the ability to easily incorporate PyFock into existing Python workflows, the accessibility and versatility of the Python language, and the ability to take advantage of the numerous scientific and numerical libraries available in the Python ecosystem.
+
+* Yes, the code is written completely in Python (even the computationally intensive molecular integrals).
+* Yet, the code is as efficient as PySCF/Psi4 (sometimes even more efficient), because the computationally intensive portions are accelerated via Numba, NumPy, NumExpr, Scipy, Opt_Einsum, Joblib, CuPy, Numba-CUDA, etc.
+* The code employs Gaussian-type Orbitals (GTOs) as basis functions.
+* The calculation of the electron repulsion integrals (ERI) is accelerated via the density fitting method (along with Schwarz screening), resulting in quadratic scaling with respect to the no. of basis functions (Nbf), similar to that of PySCF.
+* The evaluation of the exchange-correlation term is done in batches/blocks and scales approximately linearly with system size as only a fixed amount of basis functions contribute to a given batch which is mostly the same for all batches. Furthermore, the XC term evaluation can be accelerated via multiple GPUs using the CuPy and Numba libraries. (Preliminary tests indicate that an Nvidia RTX 2070 can do the XC evaluations 2X faster than 4 CPU cores and more than 8X faster on a P100.) 
+* Almost all the computationally intensive portions are parallelized via Numba's prange or Joblib (multithreading).
+* KS matrix diagonalization and DIIS can also be accelerated using GPUs.
+
+
+### License and Third-Party Code Acknowledgments:
+- For ERIs using Rys quadrature (roots 1–5), the code was adapted from [MolecularIntegrals.jl](https://github.com/rpmuller/MolecularIntegrals.jl) (MIT License).
+* Some support for molecular integrals, specifically Rys quadrature roots 6–10, was obtained from [PySCF's libcint](https://github.com/sunqm/libcint) (Apache v2 License) by porting the code to Python.
+* The DIIS-based SCF convergence routine was adapted from [McMurchie-Davidson](https://github.com/jjgoings/McMurchie-Davidson) (BSD 3-Clause License).
+* There are also some functions where I have tried to utilize many more of the [McMurchie-Davidson](https://github.com/jjgoings/McMurchie-Davidson)'s code for molecular integrals with JIT compilation, but have been unsuccessful due to their use of recurrence (which is incompatible with Numba). 
+Only the dipole matrix appears to be usable at the moment. But I nonetheless, acknowledge that any integral using the MMD scheme comes from Joshua Going's library with BSD 3-Clause License.
+* For the Boys Function evaluation, the code was adapted from [PyBoys](https://github.com/peter-reinholdt/pyboys) with BSD 3-Clause License. 
+* The PyFock's implementation of exchange-correlation functionals is mainly taken from [eminus](https://github.com/wangenau/eminus) code with Apache v2 License with slight modifications for the GPU versions.
+
+
+
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[contributors-shield]: https://img.shields.io/github/contributors/manassharma07/crysx_nn.svg?style=for-the-badge
+[contributors-url]: https://github.com/manassharma07/PyFock/contributors
+[forks-shield]: https://img.shields.io/github/forks/manassharma07/PyFock.svg?style=for-the-badge
+[forks-url]: https://github.com/manassharma07/PyFock/network/members
+[stars-shield]: https://img.shields.io/github/stars/manassharma07/PyFock.svg?style=for-the-badge
+[stars-url]: https://github.com/manassharma07/PyFock/stargazers
+[issues-shield]: https://img.shields.io/github/issues/manassharma07/PyFock.svg?style=for-the-badge
+[issues-url]: https://github.com/manassharma07/PyFock/issues
+[license-shield]: https://img.shields.io/github/license/manassharma07/PyFock.svg?style=for-the-badge
+[license-url]: https://github.com/manassharma07/PyFock/blob/main/LICENSE
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
+[linkedin-url]: https://www.linkedin.com/in/manassharma07
+[product-screenshot]: https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.png
+[documentation-url]: https://github.com/manassharma07/PyFock/blob/main/Documentation.md
+[docs-shield]: https://img.shields.io/badge/-docs-blue.svg?style=for-the-badge&logo=documentation&colorB=389
+

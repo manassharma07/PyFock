@@ -1,0 +1,367 @@
+
+   OpenMP run-time library returned nthreads =  4
+
+ riper (fat03.cluster) : TURBOMOLE rev. V7-9 compiled 21 Nov 2024 at 16:36:53
+ Copyright (C) 2024 TURBOMOLE GmbH, Karlsruhe
+
+
+    2025-08-18 11:53:16.700 
+
+ Number of MKL threads:      4
+    
+    *************************************************************************
+    *************************************************************************
+    ***            _            _                   _     _               ***
+    ***           | |_ _  _ _ _| |__  ___ _ __  ___| |___( )___           ***
+    ***           |  _| || | '_| '_ \/ _ \ '  \/ _ \ / -_)/(_-<           ***
+    ***            \__|\_,_|_| |_.__/\___/_|_|_\___/_\___| /__/           ***
+    ***                      ___   ___                                    ***
+    ***             //   ) )    / /    //   ) ) //   / /  //   ) )        ***
+    ***            //___/ /    / /    //___/ / //____    //___/ /         ***
+    ***           / ___ (     / /    / ____ / / ____    / ___ (           ***
+    ***          //   | |    / /    //       //        //   | |           ***
+    ***         //    | | __/ /___ //       //____/ / //    | |           ***
+    ***                                                                   ***
+    *************************************************************************
+    *************************************************************************
+    *************************** PROGRAM RIPER *******************************
+    ****** Density Functional Theory with periodic boundary conditions ******
+    ******                                                             ******
+    ****** Developed by the groups in Jena   (M. Sierka)               ******
+    ******                        and Munich (A. Burow)                ******
+    *************************************************************************
+    
+    
+                               References:                                  
+    
+    (1) General implementation:                                             
+        R. Lazarski, A. M. Burow, M. Sierka                                 
+        Density Functional Theory for Molecular and Periodic Systems Using  
+        Density Fitting and Continuous Fast Multipole Methods               
+        J. Chem. Theory Comput. 2015, 11, 3029-3041.                        
+        R. Lazarski, A. M. Burow, L. Grajciar, M. Sierka                    
+        Density Functional Theory for Molecular and Periodic Systems Using  
+        Density Fitting and Continuous Fast Multipole Methods: Analytical   
+        Gradients                                                           
+        J. Comput. Chem. 2016, 57, 2518-2526.                               
+    (2) DFT implementation:                                                 
+        A. M. Burow, M. Sierka                                              
+        Linear Scaling Hierarchical Integration Scheme For the              
+        Exchange-Correlation Term in Molecular and Periodic Systems         
+        J. Chem. Theory Comput. 2011, 7, 3097-3104.                         
+    (3) RI/DF approximation:                                                
+        A. M. Burow, M. Sierka, F. Mohamed                                  
+        Resolution of Identity Approximation for the Coulomb Term in        
+        Molecular and Periodic Systems                                      
+        J. Chem. Phys. 2009, 131, 214101/1-214101/6.                        
+    (4) Low-Memory Iterative Density Fitting (LMIDF) method:                
+        L. Grajciar                                                         
+        Low-Memory Iterative Density Fitting                                
+        J. Comput. Chem. 2015, 36, 1521-1535.                               
+    (5) Hartree-Fock/exact exchange:                                        
+        A. Irmler, A. M. Burow, F. Pauly                                    
+        Robust Periodic Fock Exchange with Atom-Centered Gaussian           
+        Basis Sets                                                          
+        J. Chem. Theory Comput. 2018, 14, 4567-4580.                        
+    (6) Stress tensor and optimization of lattice vectors:                  
+        M. Becker, M. Sierka                                                
+        Low-Memory Iterative Density Fitting                                
+        J. Comput. Chem. 2019, 40, 2563-2570.                               
+    (7) Relativistic two-component ECP-based DFT implementation             
+        Y. J. Franzke, W. M. Schosser, F. Pauly                             
+        Efficient Treatment of Relativistic Effects with Periodic Density   
+        Functional Methods: Energies, Gradients, and Stress Tensors         
+        Phys. Rev. B. 2024, 109, 165144.                                    
+    (8) Current-dependent DFT implementation (CDFT)                         
+        Y. J. Franzke, C. Holzer                                            
+        Current density functional framework for spin-orbit coupling:       
+        Extension to periodic systems                                       
+        J. Chem. Phys. 2024, 160, 184101.                                   
+    
+
+
+              +--------------------------------------------------+
+              | Atomic coordinate, charge and isotop information |
+              +--------------------------------------------------+
+
+                    atomic coordinates            atom    charge  isotop
+        196.54663476  195.06319976  201.68857955    o      8.000     0
+        198.42313281  195.28429771  201.65645420    h      1.000     0
+        195.95326076  194.47171548  199.99538494    h      1.000     0
+        181.95738216  198.83509310  196.32931626    o      8.000     0
+        182.88958406  197.32331220  196.97560259    h      1.000     0
+        182.33135896  199.06752941  194.49250247    h      1.000     0
+        191.12690024  195.08209702  199.74027191    o      8.000     0
+        192.37411948  195.73216280  201.00071924    h      1.000     0
+        192.03207905  194.08810108  198.41368417    h      1.000     0
+        179.56857937  197.29496631  179.80233849    o      8.000     0
+        178.84311351  195.60933061  179.35182778    h      1.000     0
+        181.31619809  197.43669577  179.09728167    h      1.000     0
+        182.64618734  175.48677094  177.95286353    o      8.000     0
+        182.55415767  177.34890706  177.64389331    h      1.000     0
+        180.90801725  174.81308358  178.26296759    h      1.000     0
+        175.84714171  191.15146668  194.99516962    o      8.000     0
+        176.03460254  192.79741813  195.90601761    h      1.000     0
+        176.27762132  191.38957217  193.16969418    h      1.000     0
+        189.07843712  198.10565882  173.44000858    o      8.000     0
+        190.22550088  197.28740740  174.69932207    h      1.000     0
+           .             .             .            .      .         .
+           .             .             .            .      .         .
+           .             .             .            .      .         .
+        192.57065100  187.52470430  185.19693966    h      1.000     0
+        193.17536336  184.51455956  184.88645766    h      1.000     0
+        188.94369965  195.15579634  193.33221063    o      8.000     0
+        188.29363386  194.83832235  195.07831756    h      1.000     0
+        187.49201204  195.49783676  192.17191879    h      1.000     0
+        174.86353927  194.84777098  199.34342943    o      8.000     0
+        174.98315893  194.47171548  201.19158158    h      1.000     0
+        176.02458700  196.27640393  198.91446160    h      1.000     0
+        177.85346394  192.70104210  178.97992968    o      8.000     0
+        176.92825403  191.55964752  177.79053606    h      1.000     0
+        176.86664896  192.87300718  180.58222846    h      1.000     0
+        182.66527357  202.66367823  200.10309933    o      8.000     0
+        182.26238396  201.46559187  198.69903282    h      1.000     0
+        182.10818231  201.91912614  201.74905078    h      1.000     0
+        193.21126815  193.16591473  172.38648626    o      8.000     0
+        193.17914281  194.25817643  170.84409180    h      1.000     0
+        191.44626395  192.90135307  173.00801718    h      1.000     0
+        186.53581062  183.80477842  201.33898022    o      8.000     0
+        187.66907938  184.10297721  202.82241522    h      1.000     0
+        185.49532741  182.25671478  201.64322612    h      1.000     0
+ 
+       center of nuclear mass  :  188.57572825  188.92093712  189.06227006
+       center of nuclear charge:  188.57926175  188.92868299  189.06027304
+
+   * BASIS SET information:
+
+              +--------------------------------------------------+
+              |               basis set information              |
+              +--------------------------------------------------+
+
+              we will work with the 1s 3p 5d 7f 9g ... basis set
+              ...i.e. with spherical basis functions...
+
+   type   atoms  prim   cont   basis
+   ---------------------------------------------------------------------------
+    o      139     24     14   def2-SVP   [3s2p1d|7s4p1d]
+    h      278      7      5   def2-SVP   [2s1p|4s1p]
+   ---------------------------------------------------------------------------
+   total:  417   5282   3336
+   ---------------------------------------------------------------------------
+
+   total number of primitive shells          :   17
+   total number of contracted shells         : 1668
+   total number of cartesian basis functions : 3475
+   total number of SCF-basis functions       : 3336
+
+
+   * AUXILIARY RI-J BASIS SET information:
+
+              +--------------------------------------------------+
+              |               basis set information              |
+              +--------------------------------------------------+
+
+              we will work with the 1s 3p 5d 7f 9g ... basis set
+              ...i.e. with spherical basis functions...
+
+   type   atoms  prim   cont   basis
+   ---------------------------------------------------------------------------
+    o      139     70     49   universal   [6s4p3d1f1g|12s5p4d2f1g]
+    h      278     16     11   universal   [3s1p1d|5s2p1d]
+   ---------------------------------------------------------------------------
+   total:  417  14178   9869
+   ---------------------------------------------------------------------------
+
+   total number of primitive shells          :   32
+   total number of contracted shells         : 3475
+   total number of cartesian basis functions :11815
+   total number of SCF-basis functions       : 9869
+
+ Libxc version: 6.0.0
+ S. Lehtola, C. Steigemann, M.J.T. Oliveira, and M.A.L. Marques, Software X 7, 1 (2018)
+ M.A.L. Marques, M.J.T. Oliveira, and T. Burnus, Comput. Phys. Commun. 183, 2272 (2012)
+ TURBOMOLE integration by Christof Holzer
+
+ Name of XC-Functional: Perdew, Burke & Ernzerhof
+ XC-family: GGA
+ XC-kind:   an exchange functional
+ FLAGS=                         10001111
+ 0th order properties  available
+ 1th order derivatives available
+ 2nd order derivatives available
+ 3rd order derivatives available
+ [1] J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+ [2] J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+
+ Loaded additional XC-Functional: Perdew, Burke & Ernzerhof
+ FLAGS=                         10001111
+ 0th order properties  available
+ 1th order derivatives available
+ 2nd order derivatives available
+ 3rd order derivatives available
+ 3rd order derivatives available
+ [1] J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+ [2] J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+
+
+               
+              +--------------------------------------------------+
+              |       Summary of SCF and related options         |
+              +--------------------------------------------------+
+               
+       Energy calculation only 
+       Diagonalization method set to:                                2
+       Maximum number of SCF iterations included in the DIIS:        4
+       Automatic orbital shift for HOMO-LUMO gap below:           0.1000E+00
+               
+              +--------------------------------------------------+
+              |      SCREENING OF BASIS FUNCTION PRODUCTS        |
+              +--------------------------------------------------+
+               
+         Threshold for shell products neglect:          0.1E-12
+         Tolerance for shell products extents:          0.1E-06
+         The biggest integral is expected to be:        0.2E+01
+         Number of {mu,nu} shell products:               310720
+        
+               
+              +--------------------------------------------------+
+              |             INITIAL ORBITALS/BANDS               |
+              +--------------------------------------------------+
+               
+
+ reading orbital data $scfmo  from file mos
+ orbital characterization : expanded
+  Gamma point orbitals have been orthonormalized
+               
+              +--------------------------------------------------+
+              |           DENSITY FUNCTIONAL THEORY              |
+              +--------------------------------------------------+
+               
+       DFT calculation will be performed
+        
+               
+              +--------------------------------------------------+
+              |              NUMERICAL INTEGRATION               |
+              +--------------------------------------------------+
+               
+       Will use smaller grid during SCF iterations and a grid
+       of size 4 for the last iteration.
+        
+       Integration of exchange-correlation term is performed with
+       Stratmann/Scuseria renormalization.
+       Specified sharpness parameter is .64000D+00.
+       Calculation of weight derivatives is switched OFF
+       Maximum number of grid points per atom:             12256
+       Total number of grid points of the system:          4080259
+               
+              +--------------------------------------------------+
+              |        CONTINUOUS FAST MULTIPOLE METHOD          |
+              +--------------------------------------------------+
+               
+   Continuous Fast Multipole Method for the Coulomb term
+     order of multipole expansions:         20
+     well-separateness criterion:         3.0000
+     total number of centers:           314612
+     number of octree levels:                9
+     number of boxes at all levels:     112018
+     max. number of NF boxes per box:     8555
+     length of the lowest level box:      0.5551
+     length of the highest level box:   142.0948
+ 
+   RI core memory information
+     core memory allocated for RI integrals:       52482 MB
+     maximum memory needed for RI integrals:       52482 MB
+ 
+               
+              +--------------------------------------------------+
+              |                SCF iteration    1                |
+              +--------------------------------------------------+
+  
+          Number of electrons from P*S  =  1390.00000000000273
+           
+          Numerical integration of the XC term:
+          Number of electrons          =  1390.00006408842137
+           
+          SCF energy change             = -1.058D+04
+          new damping factor            =      0.300
+  
+              +--------------------------------------------------+
+              | KINETIC ENERGY       =       10687.7968874023    |
+              | COULOMB ENERGY       =      -19957.5648035214    |
+              | EXCH. & CORR. ENERGY =       -1308.1723939267    |
+              |==================================================|
+              | TOTAL ENERGY         =      -10577.9403100458    |
+              +--------------------------------------------------+
+  
+  
+              SCF HAS NOT converged within      1 cycles.
+  
+              +--------------------------------------------------+
+              |                FINAL ENERGIES                    |
+              +--------------------------------------------------+
+              | KINETIC ENERGY       =       10687.7968874023    |
+              | COULOMB ENERGY       =      -19957.5648035214    |
+              | EXCH. & CORR. ENERGY =       -1308.1723939267    |
+              |==================================================|
+              | TOTAL ENERGY         =      -10577.9403100458    |
+              +--------------------------------------------------+
+  
+  
+         ------------------ Fermi Level Statistics ----------------
+             Lowest unoccupied band =        0.372061
+             Highest occupied band  =       -0.060803
+             Band gap               =        0.432864
+             Band gap middle        =        0.155629
+             Fermi level            =        0.155629
+         ----------------------------------------------------------
+
+    ------------------------------------------------------------------------
+    RIPER profiling                cpu                    wall         ratio
+    ------------------------------------------------------------------------
+    module                         sec     %               sec     %
+    ------------------------------------------------------------------------
+    RIPER                       672.8  100.00          183.0  100.00   3.7
+    Preliminaries                 1.2    0.17            0.5    0.30   2.1
+    BANDS init                    7.0    1.03            2.8    1.53   2.5
+    DFT grid setup              327.8   48.72           82.8   45.24   4.0
+    DFT system grid             326.8   48.58           82.0   44.83   4.0
+    DFT octree                    0.9    0.14            0.8    0.42   1.2
+    CFMM preliminaries           46.7    6.95           15.9    8.71   2.9
+    RI core setup                46.2    6.86           15.4    8.40   3.0
+    PQ matrix                    10.3    1.53            2.6    1.44   3.9
+    PQ CNF                        1.5    0.23            0.4    0.21   4.0
+    PQ Cholesky                   8.7    1.29            2.2    1.19   4.0
+    SCF                         279.8   41.59           78.2   42.76   3.6
+    nuclear energy                1.9    0.29            0.5    0.27   4.0
+    jmat nuclear                  2.6    0.39            0.7    0.36   4.0
+    SCF looop                   268.3   39.87           67.3   36.78   4.0
+    XC matrix                    41.8    6.22           10.5    5.74   4.0
+    Coulomb total               210.9   31.35           52.9   28.91   4.0
+    gamma vector                132.4   19.68           33.2   18.15   4.0
+    gamma CNF FF                  5.5    0.82            1.4    0.76   4.0
+    gamma CNF FF mom              2.4    0.36            0.6    0.33   4.0
+    gamma CNF FF p. 2             2.7    0.39            0.7    0.36   4.0
+    gamma CNF NF                126.5   18.80           31.7   17.34   4.0
+    gamma CNF NF p. 1           126.5   18.80           31.7   17.34   4.0
+    Coulomb matrix               78.3   11.64           19.6   10.73   4.0
+    jmat CNF FF                   8.5    1.27            2.1    1.17   4.0
+    jmat CNF FF p. 2              6.0    0.90            1.5    0.83   4.0
+    jmat CNF NF                  66.9    9.94           16.8    9.17   4.0
+    elec. en. aux                 2.7    0.41            0.7    0.38   4.0
+    DIIS                          3.5    0.53            0.9    0.49   3.9
+    SCF solve                    11.0    1.64            2.8    1.52   4.0
+    MO dump                       0.6    0.09            0.2    0.10   3.2
+    mos dump                      6.0    0.89            9.5    5.20   0.6
+    ------------------------------------------------------------------------
+
+
+    ------------------------------------------------------------------------
+         total  cpu-time : 11 minutes and 13 seconds
+         total wall-time :  3 minutes and  3 seconds
+    ------------------------------------------------------------------------
+
+   ****  riper : all done  ****
+
+
+    2025-08-18 11:56:19.705 
+

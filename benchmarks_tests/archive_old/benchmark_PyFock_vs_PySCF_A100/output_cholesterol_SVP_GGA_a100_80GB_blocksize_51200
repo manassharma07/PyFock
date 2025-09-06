@@ -1,0 +1,1037 @@
+Operating System: Linux 4.18.0-425.13.1.el8_7.x86_64
+System Type: 64bit
+CPU Model: AMD EPYC 73F3 16-Core Processor
+Number of Cores: 32
+Number of Threads: 64
+Memory (GB): 503.74189376831055
+Number of cores being actually used/requested for the benchmark: 2
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 2
+OPENBLAS_NUM_THREADS = 2
+MKL_NUM_THREADS = 2
+VECLIB_MAXIMUM_THREADS = 2
+NUMEXPR_NUM_THREADS = 2
+PYSCF_MAX_MEMORY = 225000
+#INFO: **** input file is /home/lu29vow/GPU_Test/tmp_dir/PyFock/benchmarks_tests/bench_PySCF_vs_PyFock_GPU.py ****
+####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_LDA_DF.py'
+####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
+####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
+####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
+#######
+####### This may be required in some cases when using GPU on WSL
+####### export NUMBA_CUDA_DRIVER="/usr/lib/wsl/lib/libcuda.so.1"
+
+import os
+import platform
+import psutil
+import numba
+numba.config.THREADING_LAYER='omp'
+# Set the number of threads/cores to be used by PyFock and PySCF
+ncores = 2
+os.environ['OMP_NUM_THREADS'] = str(ncores)
+os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
+os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
+# os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=1
+# Set the max memory for PySCF
+os.environ["PYSCF_MAX_MEMORY"] = str(225000) 
+
+# Print system information 
+from pyfock import Utils
+
+Utils.print_sys_info()
+
+# Check if the environment variables are properly set
+print("Number of cores being actually used/requested for the benchmark:", ncores)
+print('Confirming that the environment variables are properly set...')
+print('OMP_NUM_THREADS =', os.environ.get('OMP_NUM_THREADS', None))
+print('OPENBLAS_NUM_THREADS =', os.environ.get('OPENBLAS_NUM_THREADS', None))
+print('MKL_NUM_THREADS =', os.environ.get('MKL_NUM_THREADS', None))
+print('VECLIB_MAXIMUM_THREADS =', os.environ.get('VECLIB_MAXIMUM_THREADS', None))
+print('NUMEXPR_NUM_THREADS =', os.environ.get('NUMEXPR_NUM_THREADS', None))
+print('PYSCF_MAX_MEMORY =', os.environ.get('PYSCF_MAX_MEMORY', None))
+
+
+# Run your tasks here
+from pyfock import Basis
+from pyfock import Mol
+from pyfock import Integrals
+from pyfock import DFT
+from timeit import default_timer as timer
+import numpy as np
+import scipy
+
+from pyscf import gto, dft, df, scf
+from gpu4pyscf import dft as dft_gpu
+
+#DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# LDA_X LDA_C_VWN 
+# funcx = 1
+# funcc = 7
+
+# LDA_X LDA_C_PW 
+# funcx = 1
+# funcc = 12
+
+# LDA_X LDA_C_PW_MOD 
+# funcx = 1
+# funcc = 13
+
+# GGA_X_PBE, GGA_C_PBE (PBE)
+funcx = 101
+funcc = 130
+
+# GGA_X_B88, GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+funcidcrysx = [funcx, funcc]
+funcidpyscf = str(funcx)+','+str(funcc)
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVPD'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-QZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-QZVPP'
+# basis_set_name = 'def2-TZVPD'
+# basis_set_name = 'def2-QZVPD'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-universal-jkfit'
+# auxbasis_name = 'def2-TZVP'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'H2O.xyz'
+
+# xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
+xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'Taxol.xyz'
+# xyzFilename = 'Valinomycin.xyz'
+# xyzFilename = 'Olestra.xyz'
+# xyzFilename = 'Ubiquitin.xyz'
+
+### 1D Carbon Alkanes
+# xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+### 2D Carbon
+# xyzFilename = 'Graphene_C16.xyz'
+# xyzFilename = 'Graphene_C76.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### 3d Carbon Fullerenes
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'C70.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+
+# ---------PySCF---------------
+#Comparison with PySCF
+molPySCF = gto.Mole()
+molPySCF.atom = xyzFilename
+molPySCF.basis = basis_set_name
+molPySCF.cart = False
+molPySCF.verbose = 4
+molPySCF.max_memory=25000
+# molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
+molPySCF.build()
+#print(molPySCF.cart_labels())
+
+print('\n\nPySCF Results\n\n')
+start=timer()
+mf = dft_gpu.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+# mf = scf.RHF(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf.xc = funcidpyscf
+mf.verbose = 6
+# dmat_init = mf.init_guess_by_1e(molPySCF)
+# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(molPySCF)
+# mf.init_guess = 'atom'
+# dmat_init = mf.init_guess_by_atom(molPySCF)
+mf.max_cycle = 30
+mf.conv_tol = 1e-7
+mf.grids.level = 5
+energyPyscf = mf.kernel(dm0=dmat_init)
+print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+mf = 0#None
+
+# Get an initial guess for dmat from PySCF using CAO basis (Need to use CPU pyscf for this as GPU version oesnt support SAO yet)
+molPySCF.cart = True
+molPySCF.build()
+mf2 = dft_gpu.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf2.init_guess = 'minao'
+dmat_init = mf2.init_guess_by_minao(molPySCF)
+import cupy as cp
+cp._default_memory_pool.free_all_blocks()
+
+import psutil
+
+# Get memory information
+memory_info = psutil.virtual_memory()
+
+# Convert bytes to human-readable format
+used_memory = psutil._common.bytes2human(memory_info.used)
+
+
+# If you want to print in a more human-readable format, you can use psutil's utility function
+print(f"Currently Used memory: {used_memory}")
+#--------------------CrysX --------------------------
+
+#Initialize a Mol object with somewhat large geometry
+molCrysX = Mol(coordfile=xyzFilename)
+print('\n\nNatoms :',molCrysX.natoms)
+# print(molCrysX.coordsBohrs)
+
+#Initialize a Basis object with a very large basis set
+basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
+print('\n\nNAO :',basis.bfs_nao)
+
+auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
+print('\n\naux NAO :',auxbasis.bfs_nao)
+
+dftObj = DFT(molCrysX, basis, xc=funcidcrysx)
+# GPU acceleration
+dftObj.use_gpu = True
+dftObj.keep_ao_in_gpu = False
+dftObj.use_libxc = False
+dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
+dftObj.n_gpus = 1 # Specify the number of GPUs
+dftObj.free_gpu_mem = True
+dftObj.threads_x = 32
+dftObj.threads_y = 32
+dftObj.dynamic_precision = False
+dftObj.keep_ints3c2e_in_gpu = True
+# SAO or CAO basis
+dftObj.sao = False
+# print(dmat_init)
+# Using PySCF grids to compare the energies
+energyCrysX, dmat = dftObj.scf(max_itr=35, ncores=ncores, dmat=dmat_init, conv_crit=1.0E-7, grids=pyscfGrids, \
+                               isDF=True, auxbasis=auxbasis, rys=True, DF_algo=10, blocksize=51200, XC_algo=3, debug=False, \
+                                sortGrids=False, save_ao_values=False, xc_bf_screen=True, threshold_schwarz=1e-9, \
+                                strict_schwarz=False, cholesky=True, orthogonalize=True)
+# print(dmat)
+
+# Using CrysX grids 
+# To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
+# radial_precision=1.0e-13
+# level=3
+# pruning by density with threshold = 1e-011
+# alpha_min and alpha_max corresponding to QZVP
+# energyCrysX, dmat = dftObj.scf(max_itr=30, ncores=ncores, dmat=dmat_init, grids=None, gridsLevel=3, isDF=True, auxbasis=auxbasis,
+#                             rys=True, DF_algo=6, blocksize=5000, XC_algo=2, debug=False, sortGrids=False, save_ao_values=True,
+#                             xc_bf_screen=True,threshold_schwarz=1e-9)
+
+
+print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf[0]))
+
+#Print package versions
+import joblib
+import scipy
+import numba
+import threadpoolctl
+import opt_einsum
+import pylibxc
+import llvmlite 
+import cupy
+import numexpr
+import pyscf
+print('\n\n\n Package versions')
+print('pyscf version', pyscf.__version__)
+# print('psi4 version', psi4.__version__)
+print('np version', np.__version__)
+print('joblib version', joblib.__version__)
+print('numba version', numba.__version__)
+print('threadpoolctl version', threadpoolctl.__version__)
+print('opt_einsum version', opt_einsum.__version__)
+# print('pylibxc version', pylibxc.__version__)
+print('llvmlite version', llvmlite.__version__)
+print('cupy version', cupy.__version__)
+print('numexpr version', numexpr.__version__)
+print('scipy version', scipy.__version__)
+
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Linux', node='gpu016.cluster', release='4.18.0-425.13.1.el8_7.x86_64', version='#1 SMP Tue Feb 21 04:20:52 EST 2023', machine='x86_64')  Threads 2
+Python 3.10.13 (tags/v3.10.13-25-g07fbd8e9251-dirty:07fbd8e9251, Sep 27 2023, 23:32:09) [GCC 13.2.0]
+numpy 1.26.3  scipy 1.10.1
+Date: Sun Feb  4 11:43:23 2024
+PySCF version 2.4.0
+PySCF path  /home/lu29vow/.conda/envs/GPU2/lib/python3.10/site-packages/pyscf
+
+[ENV] PYSCF_MAX_MEMORY 225000
+[CONFIG] conf_file None
+[INPUT] verbose = 4
+[INPUT] num. atoms = 74
+[INPUT] num. electrons = 216
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 C     -7.268720000000  -0.018960000000  -2.017150000000 AA  -13.735890076149  -0.035829207322  -3.811861052166 Bohr   0.0
+[INPUT]  2 C     -7.419420000000   0.505640000000  -0.587750000000 AA  -14.020671803121   0.955521117625  -1.110686529713 Bohr   0.0
+[INPUT]  3 C     -8.796320000000   0.117840000000  -0.044750000000 AA  -16.622635704034   0.222685326519  -0.084565244074 Bohr   0.0
+[INPUT]  4 C     -6.331420000000  -0.105860000000   0.297250000000 AA  -11.964649779594  -0.200046407546   0.561721090527 Bohr   0.0
+[INPUT]  5 C     -4.959120000000   0.382640000000  -0.170550000000 AA   -9.371378618853   0.723084804304  -0.322292790545 Bohr   0.0
+[INPUT]  6 C     -3.871120000000  -0.228760000000   0.714450000000 AA   -7.315356595326  -0.432293748256   1.350114829696 Bohr   0.0
+[INPUT]  7 C     -2.498720000000   0.259740000000   0.246650000000 AA   -4.721896461973   0.490837463595   0.466100948624 Bohr   0.0
+[INPUT]  8 H     -2.374720000000   0.034740000000  -0.812650000000 AA   -4.487570422527   0.065649085567  -1.535685935128 Bohr   0.0
+[INPUT]  9 C     -2.394420000000   1.770840000000   0.462650000000 AA   -4.524798027181   3.346402610425   0.874281791530 Bohr   0.0
+[INPUT] 10 C     -1.404820000000  -0.446960000000   1.049650000000 AA   -2.654725054311  -0.844631988636   1.983551026650 Bohr   0.0
+[INPUT] 11 H     -1.524620000000  -0.240260000000   2.113150000000 AA   -2.881114244034  -0.454025598688   3.993274760125 Bohr   0.0
+[INPUT] 12 C     -1.450820000000  -1.973560000000   0.791150000000 AA   -2.741652456041  -3.729487890397   1.495056823450 Bohr   0.0
+[INPUT] 13 C     -0.049320000000  -2.368660000000   0.250750000000 AA   -0.093201292464  -4.476118682212   0.473848825735 Bohr   0.0
+[INPUT] 14 C      0.853980000000  -1.257060000000   0.795950000000 AA    1.613788315856  -2.375499122146   1.504127508848 Bohr   0.0
+[INPUT] 15 H      1.040680000000  -1.407860000000   1.859250000000 AA    1.966600183312  -2.660469821730   3.513473297098 Bohr   0.0
+[INPUT] 16 C      2.162680000000  -1.046860000000   0.055950000000 AA    4.086872895074  -1.978278690762   0.105730176669 Bohr   0.0
+[INPUT] 17 H      1.971580000000  -0.848360000000  -0.998650000000 AA    3.725746232670  -1.603168055036  -1.887174994297 Bohr   0.0
+[INPUT] 18 C      3.043680000000  -2.291560000000   0.209550000000 AA    5.751721610816  -4.330420798008   0.395992109403 Bohr   0.0
+[INPUT] 19 C      4.396680000000  -2.014360000000  -0.378150000000 AA    8.308521057353  -3.806588716279  -0.714599934004 Bohr   0.0
+[INPUT] 20 C      4.901680000000  -0.818360000000  -0.459550000000 AA    9.262832750258  -1.546476271299  -0.868423640544 Bohr   0.0
+[INPUT] 21 C      6.285180000000  -0.661460000000  -1.067950000000 AA   11.877268843594  -1.249978242355  -2.018133014729 Bohr   0.0
+[INPUT] 22 C      7.147280000000   0.156940000000  -0.102150000000 AA   13.506401735581   0.296573617989  -0.193035523624 Bohr   0.0
+[INPUT] 23 H      7.287780000000  -0.402560000000   0.822750000000 AA   13.771908256083  -0.760728148705   1.554772168986 Bohr   0.0
+[INPUT] 24 O      8.418980000000   0.415040000000  -0.700550000000 AA   15.909566448191   0.784311930739  -1.323847636564 Bohr   0.0
+[INPUT] 25 C      6.449880000000   1.483140000000   0.205250000000 AA   12.188506736310   2.802728404387   0.387866287067 Bohr   0.0
+[INPUT] 26 C      5.128580000000   1.216240000000   0.929050000000 AA    9.691611607922   2.298360501741   1.755650056027 Bohr   0.0
+[INPUT] 27 C      4.197980000000   0.420540000000   0.009050000000 AA    7.933032476402   0.794705424425   0.017102021427 Bohr   0.0
+[INPUT] 28 C      3.887180000000   1.284240000000  -1.214950000000 AA    7.345705596887   2.426861878211  -2.295922755040 Bohr   0.0
+[INPUT] 29 C      2.872780000000   0.151040000000   0.701650000000 AA    5.428767416128   0.285424233854   1.325926335301 Bohr   0.0
+[INPUT] 30 H      3.075280000000  -0.116260000000   1.738750000000 AA    5.811436956352  -0.219699559242   3.285761299088 Bohr   0.0
+[INPUT] 31 C      2.017280000000   1.414940000000   0.688350000000 AA    3.812106716563   2.673849082692   1.300792977844 Bohr   0.0
+[INPUT] 32 C      0.632380000000   1.172640000000   1.308350000000 AA    1.195025006652   2.215968442710   2.472423175075 Bohr   0.0
+[INPUT] 33 C     -0.026620000000   0.003540000000   0.575550000000 AA   -0.050304509436   0.006689630481   1.087631870993 Bohr   0.0
+[INPUT] 34 C     -0.054820000000   0.283140000000  -0.928350000000 AA   -0.103594786149   0.535057054909  -1.754327247740 Bohr   0.0
+[INPUT] 35 H     -6.287820000000   0.257340000000  -2.403950000000 AA  -11.882257720563   0.486302120896  -4.542807117148 Bohr   0.0
+[INPUT] 36 H     -7.367120000000  -1.104460000000  -2.018050000000 AA  -13.921839126806  -2.087126915537  -3.813561805679 Bohr   0.0
+[INPUT] 37 H     -8.043820000000   0.416740000000  -2.647650000000 AA  -15.200616795299   0.787524465151  -5.003333373705 Bohr   0.0
+[INPUT] 38 H     -7.321020000000   1.591140000000  -0.586850000000 AA  -13.834722752463   3.006818825840  -1.108985776201 Bohr   0.0
+[INPUT] 39 H     -8.894720000000  -0.967660000000  -0.045650000000 AA  -16.808584754691  -1.828612381697  -0.086265997586 Bohr   0.0
+[INPUT] 40 H     -8.903620000000   0.491540000000   0.973550000000 AA  -16.825403317200   0.928875979269   1.839742868570 Bohr   0.0
+[INPUT] 41 H     -9.571420000000   0.553540000000  -0.675250000000 AA  -18.087362423185   1.046038998992  -1.276037565613 Bohr   0.0
+[INPUT] 42 H     -6.491720000000   0.197340000000   1.331950000000 AA  -12.267572877362   0.372918553422   2.517020711614 Bohr   0.0
+[INPUT] 43 H     -6.373720000000  -1.192760000000   0.226450000000 AA  -12.044585194663  -2.253989732336   0.427928480908 Bohr   0.0
+[INPUT] 44 H     -4.798820000000   0.079440000000  -1.205250000000 AA   -9.068455521085   0.150119843335  -2.277592411632 Bohr   0.0
+[INPUT] 45 H     -4.916820000000   1.469540000000  -0.099750000000 AA   -9.291443203784   2.777028129093  -0.188500180925 Bohr   0.0
+[INPUT] 46 H     -4.031420000000   0.074440000000   1.749150000000 AA   -7.618279693094   0.140671212713   3.305414450783 Bohr   0.0
+[INPUT] 47 H     -3.913420000000  -1.315660000000   0.643650000000 AA   -7.395292010395  -2.486237073045   1.216322220076 Bohr   0.0
+[INPUT] 48 H     -1.416720000000   2.118840000000   0.129350000000 AA   -2.677212795194   4.004027301773   0.244436074212 Bohr   0.0
+[INPUT] 49 H     -3.173820000000   2.274340000000  -0.109350000000 AA   -5.997650568667   4.297879714143  -0.206641551721 Bohr   0.0
+[INPUT] 50 H     -2.518520000000   1.995840000000   1.521950000000 AA   -4.759313039240   3.771590988452   2.876068675282 Bohr   0.0
+[INPUT] 51 H     -1.656620000000  -2.504360000000   1.720650000000 AA   -3.130558092477  -4.732554517316   3.251557256233 Bohr   0.0
+[INPUT] 52 H     -2.216220000000  -2.204760000000   0.050350000000 AA   -4.188048831784  -4.166392570396   0.095147710372 Bohr   0.0
+[INPUT] 53 H      0.255180000000  -3.339560000000   0.641650000000 AA    0.482220312467  -6.310853776552   1.212542767827 Bohr   0.0
+[INPUT] 54 H     -0.042820000000  -2.371160000000  -0.839250000000 AA   -0.080918072654  -4.480842997524  -1.585952650041 Bohr   0.0
+[INPUT] 55 H      3.148780000000  -2.535060000000   1.266750000000 AA    5.950331826508  -4.790569109340   2.393810568293 Bohr   0.0
+[INPUT] 56 H      2.583980000000  -3.129860000000  -0.314050000000 AA    4.883014511354  -5.914578208231  -0.593468489420 Bohr   0.0
+[INPUT] 57 H      4.977080000000  -2.845460000000  -0.750650000000 AA    9.405318100050  -5.377140098405  -1.418522915405 Bohr   0.0
+[INPUT] 58 H      6.733680000000  -1.643460000000  -1.218350000000 AA   12.724811010461  -3.105689296678  -2.302347823864 Bohr   0.0
+[INPUT] 59 H      6.209480000000  -0.141760000000  -2.023050000000 AA   11.734216575964  -0.267887575418  -3.823010436301 Bohr   0.0
+[INPUT] 60 H      8.918280000000  -0.382660000000  -0.922750000000 AA   16.853106702186  -0.723122598826  -1.743744781442 Bohr   0.0
+[INPUT] 61 H      7.093780000000   2.092940000000   0.839050000000 AA   13.405301387917   3.955083395147   1.585574704816 Bohr   0.0
+[INPUT] 62 H      6.252380000000   2.013440000000  -0.726350000000 AA   11.815285826708   3.804850168244  -1.372602570578 Bohr   0.0
+[INPUT] 63 H      5.320080000000   0.643340000000   1.836250000000 AA   10.053494160776   1.215736404978   3.470009596233 Bohr   0.0
+[INPUT] 64 H      4.658580000000   2.164540000000   1.189650000000 AA    8.803440329376   4.090387785666   2.248112684089 Bohr   0.0
+[INPUT] 65 H      4.793180000000   1.415140000000  -1.806750000000 AA    9.057797465743   2.674227027917  -3.414262675558 Bohr   0.0
+[INPUT] 66 H      3.124880000000   0.794640000000  -1.821050000000 AA    5.905167372131   1.501651967624  -3.441285759139 Bohr   0.0
+[INPUT] 67 H      3.522180000000   2.258240000000  -0.889150000000 AA    6.655955561421   4.267455123538  -1.680249983657 Bohr   0.0
+[INPUT] 68 H      2.527580000000   2.195240000000   1.252950000000 AA    4.776433957928   4.148402377690   2.367732347774 Bohr   0.0
+[INPUT] 69 H      1.891880000000   1.748140000000  -0.341850000000 AA    3.575135060542   3.303505827397  -0.646002875683 Bohr   0.0
+[INPUT] 70 H      0.739080000000   0.882640000000   2.353650000000 AA    1.396658784144   1.667947866586   4.447753893083 Bohr   0.0
+[INPUT] 71 H      0.028280000000   2.076740000000   1.232550000000 AA    0.053441454803   3.924469831929   2.329181934833 Bohr   0.0
+[INPUT] 72 H      0.953480000000   0.509540000000  -1.274850000000 AA    1.801816065250   0.962891049511  -2.409117349902 Bohr   0.0
+[INPUT] 73 H     -0.431120000000  -0.594360000000  -1.454150000000 AA   -0.814698726822  -1.123177619396  -2.747945244036 Bohr   0.0
+[INPUT] 74 H     -0.707020000000   1.133540000000  -1.127650000000 AA   -1.336074164590   2.142080151239  -2.130949664366 Bohr   0.0
+
+nuclear repulsion = 2841.48341668081
+number of shells = 306
+number of NR pGTOs = 994
+number of NR cGTOs = 622
+basis = def2-SVP
+ecp = {}
+CPU time:         3.35
+
+
+PySCF Results
+
+
+Initial guess from minao.
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = False
+chkfile to save SCF result = /tmp/tmp6ofrg1m_
+max_memory 25000 MB (current use 1894 MB)
+XC library pyscf.dft.libxc version 6.1.0
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x1461939a5870>
+grids dens level: 5
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x1461939a56c0>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+tot grids = 2287616
+prune_by_density_: 125 padding grids
+    CPU time for                                   setting up grids      1.74 sec, wall time      1.28 sec, GPU time for   1284.03 ms
+    CPU time for                                            vxc tot      0.38 sec, wall time      0.39 sec, GPU time for    385.35 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.01 sec, GPU time for      5.38 ms
+E1 = -7160.354147437754  Ecoul = 3356.9589582078866  Exc = -169.86045973017025
+init E= -1131.77223227923
+    CPU time for                                         total prep      3.34 sec, wall time      2.03 sec, GPU time for   2025.89 ms
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      0.01 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.45 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      2.47 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    143.05 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.33 ms
+    CPU time for                                               veff      0.15 sec, wall time      0.15 sec, GPU time for    146.45 ms
+E1 = -7205.232539234015  Ecoul = 3407.8363586469404  Exc = -173.01709967258182
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.71 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    164.10 ms
+cycle= 1 E= -1128.92986357884  delta_E= 2.84  |ddm|= 9.52
+diis-norm(errvec)=2.83516
+diis-c [-8.03812929  1.        ]
+    CPU time for                                               DIIS      0.01 sec, wall time      0.01 sec, GPU time for     12.12 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.31 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.84 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.30 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.31 ms
+    CPU time for                                               veff      0.14 sec, wall time      0.15 sec, GPU time for    145.68 ms
+E1 = -7137.619570461366  Ecoul = 3336.452561028805  Exc = -168.5763295947858
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.68 ms
+    CPU time for                                              total      0.16 sec, wall time      0.17 sec, GPU time for    170.73 ms
+cycle= 2 E= -1128.25992234653  delta_E= 0.67  |ddm|= 6.09
+diis-norm(errvec)=4.50008
+diis-c [-0.24903526  0.61574961  0.38425039]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.04 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.33 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.82 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.09 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.30 ms
+    CPU time for                                               veff      0.14 sec, wall time      0.15 sec, GPU time for    145.46 ms
+E1 = -7181.034966980635  Ecoul = 3381.290164329348  Exc = -171.11105921704456
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.68 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    159.44 ms
+cycle= 3 E= -1129.37244518752  delta_E= -1.11  |ddm|= 4.58
+diis-norm(errvec)=0.529249
+diis-c [-0.02694935  0.30207331  0.2040728   0.49385389]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.17 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.40 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.83 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.26 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.30 ms
+    CPU time for                                               veff      0.15 sec, wall time      0.15 sec, GPU time for    145.62 ms
+E1 = -7179.981078697676  Ecoul = 3380.2345117000887  Exc = -171.12153234501395
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.69 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    159.81 ms
+cycle= 4 E= -1129.38468266179  delta_E= -0.0122  |ddm|= 0.578
+diis-norm(errvec)=0.188853
+diis-c [-0.00238324  0.10657586  0.07763483  0.2969906   0.51879871]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.32 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.39 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.83 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    143.97 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.33 ms
+    CPU time for                                               veff      0.15 sec, wall time      0.15 sec, GPU time for    147.37 ms
+E1 = -7179.937552619123  Ecoul = 3380.186631445736  Exc = -171.11910712122216
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.69 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    161.70 ms
+cycle= 5 E= -1129.3866116138  delta_E= -0.00193  |ddm|= 0.151
+diis-norm(errvec)=0.0458167
+diis-c [-3.89972191e-04  3.11572370e-02  2.52230248e-02  1.10438727e-01
+  2.62751768e-01  5.70429243e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.48 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.30 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.84 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.34 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.30 ms
+    CPU time for                                               veff      0.15 sec, wall time      0.15 sec, GPU time for    145.71 ms
+E1 = -7179.821569910756  Ecoul = 3380.066616703949  Exc = -171.11513035719742
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.69 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    160.12 ms
+cycle= 6 E= -1129.38666688319  delta_E= -5.53e-05  |ddm|= 0.0438
+diis-norm(errvec)=0.0342185
+diis-c [-3.84940215e-05  6.01104386e-03  6.69982745e-03  3.46992515e-02
+  1.15630468e-01  4.35027530e-01  4.01931880e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.58 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.43 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.84 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.21 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.29 ms
+    CPU time for                                               veff      0.15 sec, wall time      0.15 sec, GPU time for    145.57 ms
+E1 = -7179.858270530005  Ecoul = 3380.1024664915158  Exc = -171.1143453418358
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.69 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    160.21 ms
+cycle= 7 E= -1129.38673269951  delta_E= -6.58e-05  |ddm|= 0.0248
+diis-norm(errvec)=0.00717913
+diis-c [-4.13908999e-06  7.99210544e-04  1.84866099e-03  9.54651600e-03
+  4.17321030e-02  2.00191556e-01  2.35765329e-01  5.10116624e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.70 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.42 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.82 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.23 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.30 ms
+    CPU time for                                               veff      0.14 sec, wall time      0.15 sec, GPU time for    145.60 ms
+E1 = -7179.828919829399  Ecoul = 3380.072067316213  Exc = -171.11329935413332
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.68 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    160.34 ms
+cycle= 8 E= -1129.38673518651  delta_E= -2.49e-06  |ddm|= 0.00622
+diis-norm(errvec)=0.00219458
+diis-c [-3.27528904e-07 -1.77220816e-04  4.09804092e-04  1.82500181e-03
+  1.12710948e-02  6.41075585e-02  8.72782262e-02  2.88631882e-01
+  5.46653653e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.84 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.30 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.82 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.11 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.30 ms
+    CPU time for                                               veff      0.14 sec, wall time      0.15 sec, GPU time for    145.48 ms
+E1 = -7179.829392484394  Ecoul = 3380.0723475707873  Exc = -171.11310720171605
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.70 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    160.24 ms
+cycle= 9 E= -1129.38673543451  delta_E= -2.48e-07  |ddm|= 0.00175
+diis-norm(errvec)=0.000505698
+diis-c [-2.62798168e-08  6.00933329e-01  1.82427707e-04  4.85502579e-04
+  2.72223457e-03  1.56816157e-02  2.37521862e-02  9.86388272e-02
+  2.57603877e-01]
+    CPU time for                                               DIIS      0.00 sec, wall time      0.00 sec, GPU time for      1.87 ms
+    CPU time for                                                eig      0.01 sec, wall time      0.01 sec, GPU time for     11.42 ms
+    CPU time for                                                 dm      0.00 sec, wall time      0.00 sec, GPU time for      0.83 ms
+    CPU time for                                            vxc tot      0.14 sec, wall time      0.14 sec, GPU time for    142.05 ms
+    CPU time for                                           jk total      0.00 sec, wall time      0.00 sec, GPU time for      3.30 ms
+    CPU time for                                               veff      0.14 sec, wall time      0.15 sec, GPU time for    145.41 ms
+E1 = -7179.827935512605  Ecoul = 3380.070797145409  Exc = -171.1130137595967
+    CPU time for                                             energy      0.00 sec, wall time      0.00 sec, GPU time for      0.68 ms
+    CPU time for                                              total      0.16 sec, wall time      0.16 sec, GPU time for    160.32 ms
+cycle= 10 E= -1129.38673544598  delta_E= -1.15e-08  |ddm|= 0.000471
+    CPU time for                                                SCF      4.97 sec, wall time      3.67 sec, GPU time for   3670.89 ms
+converged SCF energy = -1129.38673544598
+Nuc-Nuc PySCF=  2841.4834166808128
+One electron integrals energy -7179.827935512605
+Coulomb energy  3380.070797145409
+EXC  -171.1130137595967
+PySCF time:  3.8811422921717167
+PySCF Grid Size:  (1787008,)
+Initial guess from minao.
+Currently Used memory: 4.5G
+
+
+Natoms : 74
+
+
+NAO : 650
+
+
+aux NAO : 2260
+Running DFT using 2 threads for Numba.
+
+
+GPU acceleration is enabled. Currently this only accelerates AO values and XC term evaluation.
+GPU(s) information:
+Found 2 CUDA devices
+id 0    b'NVIDIA A100-SXM4-80GB'                              [SUPPORTED]
+                      Compute Capability: 8.0
+                           PCI Device ID: 0
+                              PCI Bus ID: 1
+                                    UUID: GPU-17abb6f3-f142-f016-adda-dcf861cdd488
+                                Watchdog: Disabled
+             FP32/FP64 Performance Ratio: 2
+id 1    b'NVIDIA A100-SXM4-80GB'                              [SUPPORTED]
+                      Compute Capability: 8.0
+                           PCI Device ID: 0
+                              PCI Bus ID: 65
+                                    UUID: GPU-cd68b765-b4a5-f2a6-6950-0f2696dd9384
+                                Watchdog: Disabled
+             FP32/FP64 Performance Ratio: 2
+Summary:
+	2/2 devices are supported
+True
+Max threads per block supported by the GPU:  1024
+The user has specified to use 1 GPU(s).
+Threads per block configuration for the XC term:  (32, 32)
+Threads per block configuration for the all other calculations:  (32, 32)
+
+Calculating one electron integrals...
+
+
+Core H size in GB  0.00338
+done!
+Time taken 0.1992331463843584 seconds.
+
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.10536633618175983 seconds.
+
+
+
+Performing Schwarz screening...
+Threshold  1e-09
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.03448767401278019
+Time taken to evaluate the square roots needed:  0.0008214358240365982
+Time for significant indices evaluation:  0.21762076392769814
+Size of permanent array storing the significant indices of 3c2e ERI in GB  0.005077808
+No. of elements in the standard three-centered two electron ERI tensor:  954850000
+No. of elements in the triangular three-centered two electron ERI tensor:  478159500
+No. of significant triplets based on Schwarz inequality and triangularity: 239802290 or 25.1% of original
+Schwarz screening done!
+Total time taken for Schwarz screening 0.25308675318956375 seconds.
+
+Two Center Two electron ERI size in GB  0.0408608
+Three Center Two electron ERI size in GB  1.91841832
+Three-centered two electron evaluation done!
+Time taken for Cholesky factorization fo two-centered two-electron integrals 0.05789915844798088 seconds.
+
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  4.839374290779233 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  1787008
+Size (in GB) for storing the coordinates of grid:       0.042888192
+Size (in GB) for storing the weights of grid:           0.014296064
+Size (in GB) for storing the density at gridpoints:     0.014296064
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  51200
+No. of batches:  35
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.0361221507191658 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    457
+Average no. of basis functions contributing to a batch of grid points:    313
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+XC Functional IDs supplied:  [101, 130]
+
+
+Description of exchange functional: 
+
+The Exchange function belongs to the family: GGA
+Functional ID: 101
+Functional Name: gga_x_pbe
+Attributes:
+    Name: Perdew, Burke & Ernzerhof
+    Kind: 0
+  Family: 2
+Citations:
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+
+
+Description of correlation functional: 
+
+ The Correlation function belongs to the family: GGA
+Functional ID: 130
+Functional Name: gga_c_pbe
+Attributes:
+    Name: Perdew, Burke & Ernzerhof
+    Kind: 1
+  Family: 2
+Citations:
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+   J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+------------------------------------------------------
+
+
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  215.6016678262368
+
+
+
+------Iteration 1--------
+
+
+Energies
+Electron-Nuclear Energy       -8281.337195291497
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1131.2155400159797
+Coulomb Energy                3346.991795709552
+Exchange-Correlation Energy   -169.71452933219845
+-------------------------
+Total Energy  -1131.3609722097308
+-------------------------
+
+
+
+Energy difference :  1131.3609722097308
+
+
+Time taken for the previous iteration: 0.5179347116500139
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.0000298406411
+
+
+
+------Iteration 2--------
+
+
+Energies
+Electron-Nuclear Energy       -8332.624263263078
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1123.7806656105588
+Coulomb Energy                3411.368841225014
+Exchange-Correlation Energy   -172.90466478247896
+-------------------------
+Total Energy  -1128.8960045215536
+-------------------------
+
+
+
+Energy difference :  2.4649676881772393
+
+
+Time taken for the previous iteration: 0.3855864629149437
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.00004215867557
+
+
+
+------Iteration 3--------
+
+
+Energies
+Electron-Nuclear Energy       -8228.059658456606
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1097.1021704525815
+Coulomb Energy                3329.534432415694
+Exchange-Correlation Energy   -168.21716695401287
+-------------------------
+Total Energy  -1128.1568058539124
+-------------------------
+
+
+
+Energy difference :  0.7391986676411761
+
+
+Time taken for the previous iteration: 0.38258659839630127
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.0000359808802
+
+
+
+------Iteration 4--------
+
+
+Energies
+Electron-Nuclear Energy       -8295.717964042768
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.9344833971588
+Coulomb Energy                3381.8332299624158
+Exchange-Correlation Energy   -170.9565132427935
+-------------------------
+Total Energy  -1129.423347237555
+-------------------------
+
+
+
+Energy difference :  1.2665413836425614
+
+
+Time taken for the previous iteration: 0.3839038163423538
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.0000359369267
+
+
+
+------Iteration 5--------
+
+
+Energies
+Electron-Nuclear Energy       -8293.431462408973
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.8692617815025
+Coulomb Energy                3379.5941022893853
+Exchange-Correlation Energy   -170.95368628920474
+-------------------------
+Total Energy  -1129.438367938858
+-------------------------
+
+
+
+Energy difference :  0.01502070130300126
+
+
+Time taken for the previous iteration: 0.38752513751387596
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.00003578558417
+
+
+
+------Iteration 6--------
+
+
+Energies
+Electron-Nuclear Energy       -8293.557914032042
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.8152936703873
+Coulomb Energy                3379.7645631473547
+Exchange-Correlation Energy   -170.94619096273055
+-------------------------
+Total Energy  -1129.4408314885973
+-------------------------
+
+
+
+Energy difference :  0.0024635497393319383
+
+
+Time taken for the previous iteration: 0.38409644551575184
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.00003584541187
+
+
+
+------Iteration 7--------
+
+
+Energies
+Electron-Nuclear Energy       -8293.370104825115
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.7788050632946
+Coulomb Energy                3379.6072114228596
+Exchange-Correlation Energy   -170.94050851832273
+-------------------------
+Total Energy  -1129.4411801688507
+-------------------------
+
+
+
+Energy difference :  0.00034868025340983877
+
+
+Time taken for the previous iteration: 0.38389417715370655
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.00003585631364
+
+
+
+------Iteration 8--------
+
+
+Energies
+Electron-Nuclear Energy       -8293.328757064002
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.753412679881
+Coulomb Energy                3379.587871335117
+Exchange-Correlation Energy   -170.93718669027692
+-------------------------
+Total Energy  -1129.4412430508478
+-------------------------
+
+
+
+Energy difference :  6.288199710979825e-05
+
+
+Time taken for the previous iteration: 0.3855979721993208
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.00003585435994
+
+
+
+------Iteration 9--------
+
+
+Energies
+Electron-Nuclear Energy       -8293.301132887264
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.7479218266496
+Coulomb Energy                3379.564790964296
+Exchange-Correlation Energy   -170.9362420676844
+-------------------------
+Total Energy  -1129.4412454755688
+-------------------------
+
+
+
+Energy difference :  2.4247210603789426e-06
+
+
+Time taken for the previous iteration: 0.3853629659861326
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.00003585432813
+
+
+
+------Iteration 10--------
+
+
+Energies
+Electron-Nuclear Energy       -8293.290735161818
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.7442204650908
+Coulomb Energy                3379.557458618828
+Exchange-Correlation Energy   -170.9356062582841
+-------------------------
+Total Energy  -1129.4412456477517
+-------------------------
+
+
+
+Energy difference :  1.7218280845554546e-07
+
+
+Time taken for the previous iteration: 0.3846965618431568
+
+
+Calculating XC term using GPU and algo 3
+Not using LibXC for XC evaluations
+Number of electrons:  216.00003585538917
+
+
+
+------Iteration 11--------
+
+
+Energies
+Electron-Nuclear Energy       -8293.295549493365
+Nuclear repulsion Energy      2841.4834166884325
+Kinetic Energy                1113.7459704494859
+Coulomb Energy                3379.560804003326
+Exchange-Correlation Energy   -170.93588736698422
+-------------------------
+Total Energy  -1129.4412457191042
+-------------------------
+
+
+
+Energy difference :  7.135258783819154e-08
+
+
+Time taken for the previous iteration: 0.382994307205081
+
+
+
+SCF Converged after 11 iterations!
+
+-------------------------------------
+Total Energy =  -1129.4412457191042
+-------------------------------------
+
+
+
+Time taken : 9.463425803929567 seconds.
+
+
+
+-------------------------------------
+Profiling
+-------------------------------------
+Preprocessing                           0.0361221507191658
+Density Fitting                         0.6501309126615524
+    DF (gamma)                          0.33809299021959305
+    DF (coeff)                          0.08474963717162609
+    DF (Jtri)                           0.12240426614880562
+    DF (Cholesky)                       0.05789915844798088
+DIIS                                    0.029330894351005554
+KS matrix diagonalization               0.2398571316152811
+One electron Integrals (S, T, Vnuc)     0.1992331463843584
+Coulomb Integrals (2c2e + 3c2e)         4.781475132331252
+Grids construction                      0
+Exchange-Correlation Term               3.481224423274398
+Misc.                                   0.04605201259255409
+Complete SCF                            9.463425803929567

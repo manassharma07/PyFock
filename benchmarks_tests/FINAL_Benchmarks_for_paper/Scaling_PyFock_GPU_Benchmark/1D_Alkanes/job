@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+#SBATCH -o output_strict_schwarz_off_def2-SVP_GGA_nosave_ao_gpu-test
+#SBATCH -p gpu-test
+
+##SBATCH --ntasks=1
+##SBATCH --nodes=1
+##SBATCH --ntasks-per-node=4
+#SBATCH --cpus-per-task=1
+###SBATCH --gpus=1
+###SBATCH --gpus-per-task=1
+#SBATCH --gres=gpu:1
+##SBATCH --time=72:00:00
+##SBATCH --nodelist=gpu005
+
+##SBATCH --mail-user=manas.sharma@uni-jena.de
+##SBATCH --mail-type=begin,end,fail
+
+##SBATCH --exclusive
+
+echo 'RUNNING on PART: ' $SLURM_JOB_PARTITION    >  job.info
+echo 'NODE(S):         ' $SLURM_JOB_NODELIST     >> job.info
+echo 'No. TASKS/NODE:  ' $SLURM_NTASKS_PER_NODE  >> job.info
+echo 'No. CORES/TASK:  ' $SLURM_CPUS_PER_TASK    >> job.info
+
+
+nvidia-smi
+
+
+module purge
+module load nvidia/cuda/11.7
+unset LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
+module load tools/python/3.8
+python3 benchmark_DFT_LDA_DF.py
