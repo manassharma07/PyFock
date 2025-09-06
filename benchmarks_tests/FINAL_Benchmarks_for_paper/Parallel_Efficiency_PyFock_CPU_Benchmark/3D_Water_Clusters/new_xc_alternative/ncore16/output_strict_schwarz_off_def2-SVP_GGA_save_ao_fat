@@ -1,0 +1,33 @@
+Cupy is not installed. GPU acceleration is not availble.
+Operating System: Linux 4.18.0-425.13.1.el8_7.x86_64
+System Type: 64bit
+CPU Model: AMD EPYC 9334 32-Core Processor
+Number of Cores: 64
+Number of Threads: 128
+Memory (GB): 2267.59
+Number of cores being actually used/requested for the benchmark: 16
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 16
+OPENBLAS_NUM_THREADS = 16
+MKL_NUM_THREADS = 16
+VECLIB_MAXIMUM_THREADS = 16
+NUMEXPR_NUM_THREADS = 16
+PYSCF_MAX_MEMORY = 1500000
+
+============================================================
+Processing: ../../../Structures/water_cluster_1.xyz
+============================================================
+Traceback (most recent call last):
+  File "benchmark_DFT_LDA_DF.py", line 115, in <module>
+    molPySCF.build()
+  File "/home/lu29vow/.local/lib/python3.8/site-packages/pyscf/gto/mole.py", line 2550, in build
+    self._atom = self.format_atom(self.atom, unit=self.unit)
+  File "/home/lu29vow/.local/lib/python3.8/site-packages/pyscf/gto/mole.py", line 385, in format_atom
+    fmt_atoms = from_zmatrix('\n'.join(fmt_atoms))
+  File "/home/lu29vow/.local/lib/python3.8/site-packages/pyscf/gto/mole.py", line 3962, in from_zmatrix
+    atoms = list(zip([_atom_symbol(x) for x in symbols], coord))
+  File "/home/lu29vow/.local/lib/python3.8/site-packages/pyscf/gto/mole.py", line 3962, in <listcomp>
+    atoms = list(zip([_atom_symbol(x) for x in symbols], coord))
+  File "/home/lu29vow/.local/lib/python3.8/site-packages/pyscf/data/elements.py", line 1218, in _atom_symbol
+    raise RuntimeError('Unsupported atom symbol %s' % a)
+RuntimeError: Unsupported atom symbol ../../../STRUCTURES/WATER_CLUSTER_1.XYZ

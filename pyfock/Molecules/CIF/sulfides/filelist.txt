@@ -1,0 +1,13 @@
+Bi2S3-Bismuthinite.cif
+CdS-Greenockite.cif
+CdS-Hawleyite.cif
+FeS.cif
+FeS2-Pyrite.cif
+filelist.txt
+HgS-Metacinnabar.cif
+PbS-Galena.cif
+Sb2S3-Stibnite.cif
+SnS-Herzenbergite.cif
+ZnS-Sphalerite.cif
+ZnS-Wurtzite-2H.cif
+ZnS-Zincblende.cif

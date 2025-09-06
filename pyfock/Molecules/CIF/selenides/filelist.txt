@@ -1,0 +1,8 @@
+Bi2Se3.cif
+BiSe.cif
+CdSe-Cadmoselite.cif
+filelist.txt
+HgSe-Tiemannite.cif
+PbSe-Clausthalite.cif
+Sb2Se3-Antimonselite.cif
+ZnSe.cif

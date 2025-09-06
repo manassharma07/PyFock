@@ -1,0 +1,23 @@
+--------------------------------------------------------------------------------
+   Original BSE Contributor: Dr. David Feller
+            Original BSE PI: (none)
+ Original BSE Last Modified: Mon, 15 Jan 2007 23:46:01 GMT
+--------------------------------------------------------------------------------
+
+The second set of augmenting functions is formed via alpha*beta, where
+alpha is the smallest exponent for that particular angular momentum, of
+the corresponding aug basis set and beta is the ratio (<1) of the two most
+diffuse functions. This is documented in woon1994a.
+
+
+-------------------------------------------------
+ REFERENCES MENTIONED ABOVE
+ (not necessarily references for the basis sets)
+-------------------------------------------------
+woon1994a
+    Woon, David E., Dunning, Thom H.
+    Gaussian basis sets for use in correlated molecular calculations. IV.
+            Calculation of static electrical response properties
+    J. Chem. Phys., 100, 2975-2988 (1994)
+    10.1063/1.466439
+

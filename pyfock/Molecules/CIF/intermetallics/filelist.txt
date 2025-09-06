@@ -1,0 +1,10 @@
+(Cu0.5Fe0.5)Pt-Tulameenite.cif
+(Ni0.5Fe0.5)Pt-Ferronickelplatinum.cif
+Au3Cu-Bogdanovite.cif
+AuCu-Tetraauricupride.cif
+BiPd-Sobolevskite.cif
+CoFe-Wairauite.cif
+Cu2MnAl-Heusler.cif
+FePt-Tetraferroplatinum.cif
+filelist.txt
+PtBi.cif

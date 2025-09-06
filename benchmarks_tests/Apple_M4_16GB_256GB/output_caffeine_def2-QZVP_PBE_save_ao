@@ -1,0 +1,409 @@
+Cupy is not installed. GPU acceleration is not availble.
+Operating System: Darwin 24.3.0
+System Type: 64bit
+CPU Model: Apple M4
+Number of Cores: 10
+Number of Threads: 10
+Memory (GB): 16.0
+Number of cores being actually used/requested for the benchmark: 1
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 1
+OPENBLAS_NUM_THREADS = 1
+MKL_NUM_THREADS = 1
+VECLIB_MAXIMUM_THREADS = 1
+NUMEXPR_NUM_THREADS = 1
+PYSCF_MAX_MEMORY = 25000
+#INFO: **** input file is /Users/manas/Documents/PyFock/benchmarks_tests/benchmark_DFT_LDA_DF.py ****
+####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_LDA_DF.py'
+####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
+####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
+####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
+#######
+####### This may be required in some cases when using GPU on WSL
+####### export NUMBA_CUDA_DRIVER="/usr/lib/wsl/lib/libcuda.so.1"
+
+import os
+import platform
+import psutil
+import numba
+#numba.config.THREADING_LAYER='tbb'
+# Set the number of threads/cores to be used by PyFock and PySCF
+ncores = 1
+os.environ['OMP_NUM_THREADS'] = str(ncores)
+os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
+os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
+# os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=1
+# Set the max memory for PySCF
+os.environ["PYSCF_MAX_MEMORY"] = str(25000) 
+
+# Print system information 
+from pyfock import Utils
+
+Utils.print_sys_info()
+
+# Check if the environment variables are properly set
+print("Number of cores being actually used/requested for the benchmark:", ncores)
+print('Confirming that the environment variables are properly set...')
+print('OMP_NUM_THREADS =', os.environ.get('OMP_NUM_THREADS', None))
+print('OPENBLAS_NUM_THREADS =', os.environ.get('OPENBLAS_NUM_THREADS', None))
+print('MKL_NUM_THREADS =', os.environ.get('MKL_NUM_THREADS', None))
+print('VECLIB_MAXIMUM_THREADS =', os.environ.get('VECLIB_MAXIMUM_THREADS', None))
+print('NUMEXPR_NUM_THREADS =', os.environ.get('NUMEXPR_NUM_THREADS', None))
+print('PYSCF_MAX_MEMORY =', os.environ.get('PYSCF_MAX_MEMORY', None))
+
+
+# Run your tasks here
+from pyfock import Basis
+from pyfock import Mol
+from pyfock import Integrals
+from pyfock import DFT
+from timeit import default_timer as timer
+import numpy as np
+import scipy
+
+from pyscf import gto, dft, df, scf
+
+#DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# LDA_X LDA_C_VWN 
+# funcx = 1
+# funcc = 7
+
+# LDA_X LDA_C_PW 
+# funcx = 1
+# funcc = 12
+
+# LDA_X LDA_C_PW_MOD 
+# funcx = 1
+# funcc = 13
+
+# GGA_X_PBE, GGA_C_PBE (PBE)
+funcx = 101
+funcc = 130
+
+# GGA_X_B88, GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+funcidcrysx = [funcx, funcc]
+funcidpyscf = str(funcx)+','+str(funcc)
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+# basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVPD'
+# basis_set_name = 'def2-TZVP'
+basis_set_name = 'def2-QZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-QZVPP'
+# basis_set_name = 'def2-TZVPD'
+# basis_set_name = 'def2-QZVPD'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-universal-jkfit'
+# auxbasis_name = 'def2-TZVP'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'H2O.xyz'
+
+xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'Taxol.xyz'
+# xyzFilename = 'Valinomycin.xyz'
+# xyzFilename = 'Olestra.xyz'
+# xyzFilename = 'Ubiquitin.xyz'
+
+### 1D Carbon Alkanes
+# xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+### 2D Carbon
+# xyzFilename = 'Graphene_C16.xyz'
+# xyzFilename = 'Graphene_C76.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### 3d Carbon Fullerenes
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'C70.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+
+# ---------PySCF---------------
+#Comparison with PySCF
+molPySCF = gto.Mole()
+molPySCF.atom = xyzFilename
+molPySCF.basis = basis_set_name
+molPySCF.cart = True
+molPySCF.verbose = 4
+molPySCF.max_memory=5000
+# molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
+molPySCF.build()
+#print(molPySCF.cart_labels())
+
+print('\n\nPySCF Results\n\n')
+start=timer()
+mf = dft.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+# mf = scf.RHF(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf.xc = funcidpyscf
+# mf.verbose = 4
+mf.direct_scf = False
+# mf.with_df.max_memory = 25000
+# dmat_init = mf.init_guess_by_1e(molPySCF)
+# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(molPySCF)
+# mf.init_guess = 'atom'
+# dmat_init = mf.init_guess_by_atom(molPySCF)
+mf.max_cycle = 30
+mf.conv_tol = 1e-7
+mf.grids.level = 3
+# print('begin df build')
+# start_df_pyscf=timer()
+# mf.with_df.build()
+# duration_df_pyscf = timer()- start_df_pyscf
+# print('PySCF df time: ', duration_df_pyscf)
+# print('end df build')
+energyPyscf = mf.kernel(dm0=dmat_init)
+print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+print('\n\n PySCF Dipole moment')
+dmat = mf.make_rdm1()
+mol_dip_pyscf = mf.dip_moment(molPySCF, dmat, unit='AU')
+mf = 0#None
+import psutil
+
+# Get memory information
+memory_info = psutil.virtual_memory()
+
+# Convert bytes to human-readable format
+used_memory = psutil._common.bytes2human(memory_info.used)
+
+
+# If you want to print in a more human-readable format, you can use psutil's utility function
+print(f"Currently Used memory: {used_memory}")
+#--------------------CrysX --------------------------
+
+#Initialize a Mol object with somewhat large geometry
+molCrysX = Mol(coordfile=xyzFilename)
+print('\n\nNatoms :',molCrysX.natoms)
+# print(molCrysX.coordsBohrs)
+
+#Initialize a Basis object with a very large basis set
+basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
+print('\n\nNAO :',basis.bfs_nao)
+
+auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
+print('\n\naux NAO :',auxbasis.bfs_nao)
+
+dftObj = DFT(molCrysX, basis, xc=funcidcrysx)
+# GPU acceleration
+dftObj.use_gpu = False
+dftObj.keep_ao_in_gpu = False
+dftObj.use_libxc = False
+dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
+dftObj.n_gpus = 1 # Specify the number of GPUs
+dftObj.free_gpu_mem = True
+dftObj.threads_x = 32
+dftObj.threads_y = 32
+dftObj.dynamic_precision = False
+dftObj.keep_ints3c2e_in_gpu = True
+# SAO or CAO basis
+dftObj.sao = False
+# print(dmat_init)
+# Using PySCF grids to compare the energies
+energyCrysX, dmat = dftObj.scf(max_itr=35, ncores=ncores, dmat=dmat_init, conv_crit=1.0E-7, grids=pyscfGrids, \
+                               isDF=True, auxbasis=auxbasis, rys=True, DF_algo=10, blocksize=5000, XC_algo=2, debug=False, \
+                                sortGrids=False, save_ao_values=True, xc_bf_screen=True, threshold_schwarz=1e-9, \
+                                strict_schwarz=True, cholesky=True, orthogonalize=True)
+# print(dmat)
+
+# Using CrysX grids 
+# To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
+# radial_precision=1.0e-13
+# level=3
+# pruning by density with threshold = 1e-011
+# alpha_min and alpha_max corresponding to QZVP
+# energyCrysX, dmat = dftObj.scf(max_itr=30, ncores=ncores, dmat=dmat_init, grids=None, gridsLevel=3, isDF=True, auxbasis=auxbasis,
+#                             rys=True, DF_algo=6, blocksize=5000, XC_algo=2, debug=False, sortGrids=False, save_ao_values=True,
+#                             xc_bf_screen=True,threshold_schwarz=1e-9)
+
+
+print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
+
+print('\n\nPyFock Dipole moment')
+M = Integrals.dipole_moment_mat_symm(basis)
+mol_dip = molCrysX.get_dipole_moment(M, dmat)
+print('Dipole moment(X, Y, Z, A.U.):', *mol_dip)
+print('Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
+
+#Print package versions
+import joblib
+import scipy
+import numba
+import threadpoolctl
+import opt_einsum
+import pylibxc
+import llvmlite 
+import cupy
+import numexpr
+import pyscf
+print('\n\n\n Package versions')
+print('pyscf version', pyscf.__version__)
+# print('psi4 version', psi4.__version__)
+print('np version', np.__version__)
+print('joblib version', joblib.__version__)
+print('numba version', numba.__version__)
+print('threadpoolctl version', threadpoolctl.__version__)
+print('opt_einsum version', opt_einsum.__version__)
+# print('pylibxc version', pylibxc.__version__)
+print('llvmlite version', llvmlite.__version__)
+print('cupy version', cupy.__version__)
+print('numexpr version', numexpr.__version__)
+print('scipy version', scipy.__version__)
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Darwin', node='Manass-MacBook-Air.local', release='24.3.0', version='Darwin Kernel Version 24.3.0: Thu Jan  2 20:31:46 PST 2025; root:xnu-11215.81.4~4/RELEASE_ARM64_T8132', machine='arm64')  Threads 1
+Python 3.9.6 (default, Mar 12 2025, 20:22:46) 
+[Clang 17.0.0 (clang-1700.0.13.3)]
+numpy 1.26.4  scipy 1.10.1  h5py 3.13.0
+Date: Mon May 19 20:11:55 2025
+PySCF version 2.9.0
+PySCF path  /Users/manas/Library/Python/3.9/lib/python/site-packages/pyscf
+
+[ENV] PYSCF_MAX_MEMORY 25000
+[CONFIG] conf_file None
+[INPUT] verbose = 4
+[INPUT] num. atoms = 24
+[INPUT] num. electrons = 102
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Cartesian GTO integrals (6d 10f)
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 N      1.580800000000   0.702700000000  -0.227900000000 AA    2.987279057712   1.327910547732  -0.430668583788 Bohr   0.0
+[INPUT]  2 C      1.706200000000  -0.737400000000  -0.212600000000 AA    3.224250713733  -1.393484044254  -0.401755774083 Bohr   0.0
+[INPUT]  3 N      0.534000000000  -1.567100000000  -0.350300000000 AA    1.009113750518  -2.961389809806  -0.661971061435 Bohr   0.0
+[INPUT]  4 C      0.323100000000   1.360000000000   0.027400000000 AA    0.610570510847   2.570027529408   0.051778495813 Bohr   0.0
+[INPUT]  5 C     -0.812300000000   0.455300000000   0.081700000000 AA   -1.535024530984   0.860392304514   0.154390624377 Bohr   0.0
+[INPUT]  6 C     -0.696700000000  -0.932200000000  -0.066200000000 AA   -1.316572190984  -1.761602693320  -0.125099869446 Bohr   0.0
+[INPUT]  7 N     -2.188600000000   0.699000000000   0.278300000000 AA   -4.135854596223   1.320918561071   0.525910780466 Bohr   0.0
+[INPUT]  8 C     -2.851200000000  -0.520500000000   0.253200000000 AA   -5.387987126360  -0.983602447836   0.478478654740 Bohr   0.0
+[INPUT]  9 N     -1.953700000000  -1.518800000000   0.042600000000 AA   -3.691957929563  -2.870116037989   0.080502332906 Bohr   0.0
+[INPUT] 10 C      0.656800000000  -3.027400000000  -0.167500000000 AA    1.241172118614  -5.720956869508  -0.316529125865 Bohr   0.0
+[INPUT] 11 O      2.813600000000  -1.255800000000  -0.169300000000 AA    5.316933424076  -2.373118067229  -0.319930632889 Bohr   0.0
+[INPUT] 12 O      0.284900000000   2.574400000000   0.159100000000 AA    0.538382972889   4.864910935080   0.300655426418 Bohr   0.0
+[INPUT] 13 C     -2.809600000000   2.003100000000   0.503200000000 AA   -5.309374519578   3.785310400116   0.950910185881 Bohr   0.0
+[INPUT] 14 C      2.830100000000   1.500400000000  -0.196800000000 AA    5.348113905132   2.835345077297  -0.371898101314 Bohr   0.0
+[INPUT] 15 H     -3.927100000000  -0.678700000000   0.376200000000 AA   -7.421143463779  -1.282557120742   0.710914968061 Bohr   0.0
+[INPUT] 16 H      1.482300000000  -3.404600000000  -0.786500000000 AA    2.801141034443  -6.433761563694  -1.486269596970 Bohr   0.0
+[INPUT] 17 H     -0.270800000000  -3.520400000000  -0.486800000000 AA   -0.511737834532  -6.652591848919  -0.919918677438 Bohr   0.0
+[INPUT] 18 H      0.856700000000  -3.299000000000   0.878800000000 AA    1.618928370915  -6.234206484940   1.660691318268 Bohr   0.0
+[INPUT] 19 H     -2.412300000000   2.747800000000  -0.201700000000 AA   -4.558586330288   5.192589445080  -0.381157759325 Bohr   0.0
+[INPUT] 20 H     -2.604200000000   2.362100000000   1.522100000000 AA   -4.921224773592   4.463722078835   2.876352134200 Bohr   0.0
+[INPUT] 21 H     -3.897300000000   1.934400000000   0.369500000000 AA   -7.364829625267   3.655486215359   0.698253803027 Bohr   0.0
+[INPUT] 22 H      3.595900000000   1.033300000000  -0.831400000000 AA    6.795266171324   1.952654004513  -1.571118299963 Bohr   0.0
+[INPUT] 23 H      3.224900000000   1.579100000000   0.825500000000 AA    6.094177779110   2.984066523301   1.559968915828 Bohr   0.0
+[INPUT] 24 H      2.643100000000   2.513000000000  -0.579300000000 AA    4.994735119838   4.748881751032  -1.094718343961 Bohr   0.0
+
+nuclear repulsion = 912.858684489473
+number of shells = 338
+number of NR pGTOs = 1668
+number of NR cGTOs = 1358
+basis = def2-QZVP
+ecp = {}
+CPU time:         2.86
+
+
+PySCF Results
+
+
+Initial guess from minao.
+
+
+******** <class 'pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 30
+direct_scf = False
+chkfile to save SCF result = /var/folders/2v/15wx3xrs0tj4bz4kdgj4gfwh0000gn/T/tmpa5hfxx_1
+max_memory 5000 MB (current use 0 MB)
+XC library pyscf.dft.libxc version 7.0.0
+    S. Lehtola, C. Steigemann, M. J.T. Oliveira, and M. A.L. Marques.,  SoftwareX 7, 1–5 (2018)
+XC functionals = 101,130
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x1261dd940>
+grids dens level: 3
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x12610d1f0>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+tot grids = 294800
+init E= -681.615520944675
+  HOMO = -0.237975374868211  LUMO = -0.107137850146523
+cycle= 1 E= -679.493567909828  delta_E= 2.12  |g|= 1.44  |ddm|= 4.45
+  HOMO = -0.0558880558196845  LUMO = -0.0379394882575867
+cycle= 2 E= -674.151333705636  delta_E= 5.34  |g|= 4.64  |ddm|= 5.33
+  HOMO = -0.152688496020245  LUMO = -0.0450170731342729
+cycle= 3 E= -679.692325709095  delta_E= -5.54  |g|= 0.808  |ddm|=    5
+  HOMO = -0.208101495290678  LUMO = -0.0828688926103808
+cycle= 4 E= -679.826524876349  delta_E= -0.134  |g|= 0.487  |ddm|=  1.3
+  HOMO = -0.211392955586851  LUMO = -0.0907047721041618
+cycle= 5 E= -679.856523961508  delta_E= -0.03  |g|= 0.341  |ddm|= 0.537
+  HOMO = -0.203440788329333  LUMO = -0.0767348352528578
+cycle= 6 E= -679.88261291813  delta_E= -0.0261  |g|= 0.101  |ddm|= 0.274
+  HOMO = -0.201319359095619  LUMO = -0.0762404095522857

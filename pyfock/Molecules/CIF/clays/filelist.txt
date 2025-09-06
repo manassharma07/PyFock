@@ -1,0 +1,15 @@
+Al2Si2O9H4-Dickite.cif
+Al2Si2O9H4-Kaolinite.cif
+Al2Si2O9H4-Nacrite.cif
+Al2Si4O12Ca0.5-Montmorillonite.cif
+Al4KSi2O12-Illite.cif
+AlSi2O6H-Pyrophyllite.cif
+Fe2.25Cl0.5H2.75-Fougerite.cif
+FeSi2O6H-Nontronite.cif
+filelist.txt
+Lepidolite.cif
+Mg2Al2SiO9H4-Amesite.cif
+Mg3(O12Si4)H2-Vermiculite.cif
+Mg4Si6O22.82H13.64-Sepiolite.cif
+Mn1.854Fe1.656Mg0.537Si0.953O9H4-Guidottiite.cif
+Zn2SiO5H2-Hemimorphite.cif

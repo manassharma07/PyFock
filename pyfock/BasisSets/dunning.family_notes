@@ -1,0 +1,142 @@
+Notes about Dunning basis sets
+==============================
+
+
+Li,Be,Na,Mg
+-----------
+
+These basis sets (in the BSE and in some programs) were developed
+by David Feller, and usually reference feller1996a and schuchardt2007a
+(see prascher2011a). These were updated by the original Dunning authors
+in prascher2011a - this is what is in version 1.
+
+
+cc-pV6Z for Helium
+--------------------------------
+
+This basis set is referenced to 'Woon, D.E. and Dunning Jr., T. H., unpublished'
+in mourik1999a
+
+cc-pVDZ (and related) for Sc-Zn
+--------------------------------
+
+balabanov2006a forms cc-pVDZ-DK from cc-pVTZ-DK by "removing the last
+atomic natural orbital (ANO) contraction in the s, p, and d shells,
+as well as the single g function. The two f-type functions from the
+triple-zeta set were contracted to one according to...". See paper
+for details.
+
+The cc-pVnZ are then formed from cc-pVnZ-DK
+
+
+cc-pV5Z (and related)
+---------------------
+
+The cc-pV5Z basis set for H,B-Ne and Al-Ar reference literature
+(dunning1989a and woon1993a) which only contain information for
+up to cc-pVQZ. These are still typically cited for cc-pV5Z, which
+as far as I am aware, has not been published, but use the methodology
+from the earlier papers.
+
+This is also true for the diffuse functions for cc-pV5Z for H,B-Ne,
+which are not explicitly given in kendall1992a.
+
+
+Calcium basis sets
+------------------
+
+koput2002a is cited for several basis sets for Ca. The paper only has
+details for cc-PVQZ and cc-PV5Z. The others have not yet been published
+(as of March 2018).  According to Dr. J. Grant Hill, this paper is still
+typically referenced for the other basis sets in the absence of a better
+reference.
+
+
+
+The (aug)-cc-pV(X+d)Z basis sets
+--------------------------------
+
+In the original BSE, these basis sets referred only to Al-Ar. These
+have been updated in v1 to refer to H-K (minus K and sometimes Ca).
+These are the same as the corresponding (aug)-cc-pVXZ basis, except
+for Na-Ar
+
+
+cc-pCV5Z and cc-pwCV5Z
+----------------------
+
+These basis sets for Al-Ar is based of of cc-pV5Z after undergoing some
+optimization/modification of general contractions.
+
+
+-------------------------------------------------
+ REFERENCES MENTIONED ABOVE
+ (not necessarily references for the basis sets)
+-------------------------------------------------
+balabanov2006a
+    Balabanov, Nikolai B., Peterson, Kirk A.
+    Basis set limit electronic excitation energies, ionization potentials,
+            and electron affinities for the 3d transition metal atoms:
+            Coupled cluster and multireference methods
+    J. Chem. Phys., 125, 074110 (2006)
+    10.1063/1.2335444
+
+dunning1989a
+    Dunning, Thom H.
+    Gaussian basis sets for use in correlated molecular calculations. I.
+            The atoms boron through neon and hydrogen
+    J. Chem. Phys., 90, 1007-1023 (1989)
+    10.1063/1.456153
+
+feller1996a
+    Feller, David
+    The role of databases in support of computational chemistry
+            calculations
+    J. Comput. Chem., 17, 1571-1586 (1996)
+    10.1002/(SICI)1096-987X(199610)17:13<1571::AID-JCC9>3.0.CO;2-P
+
+kendall1992a
+    Kendall, Rick A., Dunning, Thom H., Harrison, Robert J.
+    Electron affinities of the first-row atoms revisited. Systematic basis
+            sets and wave functions
+    J. Chem. Phys., 96, 6796-6806 (1992)
+    10.1063/1.462569
+
+koput2002a
+    Koput, Jacek, Peterson, Kirk A.
+    Ab Initio Potential Energy Surface and Vibrational-Rotational Energy
+            Levels of X2Σ+CaOH
+    J. Phys. Chem. A, 106, 9595-9599 (2002)
+    10.1021/jp026283u
+
+mourik1999a
+    van Mourik, Tanja, Wilson, Angela K., Dunning, Jr, Thom H.
+    Benchmark calculations with correlated molecular wavefunctions. XIII.
+            Potential energy curves for He2, Ne2 and Ar2 using correlation
+            consistent basis sets through augmented sextuple zeta
+    Mol. Phys., 96, 529-547 (1999)
+    10.1080/00268979909482990
+
+prascher2011a
+    Prascher, Brian P., Woon, David E., Peterson, Kirk A., Dunning, Thom
+            H., Wilson, Angela K.
+    Gaussian basis sets for use in correlated molecular calculations. VII.
+            Valence, core-valence, and scalar relativistic basis sets for
+            Li, Be, Na, and Mg
+    Theor. Chem. Acc., 128, 69-82 (2011)
+    10.1007/s00214-010-0764-0
+
+schuchardt2007a
+    Schuchardt, Karen L., Didier, Brett T., Elsethagen, Todd, Sun, Lisong,
+            Gurumoorthi, Vidhya, Chase, Jared, Li, Jun, Windus, Theresa L.
+    Basis Set Exchange: A Community Database for Computational Sciences
+    J. Chem. Inf. Model., 47, 1045-1052 (2007)
+    10.1021/ci600510j
+
+woon1993a
+    Woon, David E., Dunning, Thom H.
+    Gaussian basis sets for use in correlated molecular calculations. III.
+            The atoms aluminum through argon
+    J. Chem. Phys., 98, 1358-1371 (1993)
+    10.1063/1.464303
+

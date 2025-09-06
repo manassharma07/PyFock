@@ -1,0 +1,37 @@
+--------------------------------------------------------------------------------
+   Original BSE Contributor: Dr. David Feller
+            Original BSE PI: (none)
+ Original BSE Last Modified: Thu, 25 Aug 2016 17:27:20 GMT
+--------------------------------------------------------------------------------
+
+Caesium
+-------
+3-21G is generally defined (by Gaussian, etc) for H-Xe. However,
+glendening1995a adds a definition for Cs. Like the rest of 3-21G, this is
+also derived from Huzinaga et al (andzelm1984a). However, the structure
+of the basis set is not entirely consistent with the basis sets for H-Xe.
+Nevertheless, the original BSE contained the Cs basis set with the rest.
+We are keeping that nomenclature for historical reasons. As far as I know,
+there are no other 3-21G basis sets developed for Cs.
+
+
+-------------------------------------------------
+ REFERENCES MENTIONED ABOVE
+ (not necessarily references for the basis sets)
+-------------------------------------------------
+andzelm1984a
+    Andzelm, Jan, Huzinaga, Sigeru, Klobukowski, Mariusz, Radzio-Andzelm,
+            Elżbieta, Sakai, Yoshiko, Tatewaki, Hiroshi
+    Gaussian Basis Sets
+    in 'Gaussian Basis Sets for Molecular Calculations'
+    ed. S. Huzinaga
+    Physical Sciences Data, 16, 27-426 (1984)
+    10.1016/B978-0-444-42254-5.50008-0
+
+glendening1995a
+    Glendening, Eric D., Feller, David
+    Cation-Water Interactions: The M+(H2O)n Clusters for Alkali Metals, M
+            = Li, Na, K, Rb, and Cs
+    J. Phys. Chem., 99, 3060-3067 (1995)
+    10.1021/j100010a015
+

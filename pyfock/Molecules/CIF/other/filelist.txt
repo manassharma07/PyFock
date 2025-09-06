@@ -1,0 +1,12 @@
+(NH4)MgPO4-6(H2O)-Struvite.cif
+C10H10Fe-Ferrocene.cif
+Ca2C4O10H2.57-Oxalate-Whewellite.cif
+CaC2O6.375H6-Oxalate-Weddellite.cif
+FeMnO3-Bixbyite.cif
+filelist.txt
+H3N-Ammonia.cif
+LaAlO3.cif
+LiNbO3-LithiumNiobate.cif
+Pb1Ti0.35Zr0.65O3-PZT-cub.cif
+Pb1Ti0.35Zr0.65O3-PZT-rhomb.cif
+YBa2Cu3O6.9-YBCO.cif

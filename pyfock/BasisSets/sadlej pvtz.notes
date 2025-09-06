@@ -1,0 +1,43 @@
+--------------------------------------------------------------------------------
+   Original BSE Contributor: Dr. David Feller
+            Original BSE PI: (none)
+ Original BSE Last Modified: Tue, 01 Jul 2008 19:24:45 GMT
+--------------------------------------------------------------------------------
+
+          Sadlej's Polarized Electric Property Basis Sets
+          -----------------------------------------------
+
+These medium-size basis sets are designed to reproduce molecular electric
+properties, especially polarizabilities.  They were developed using the
+basis set polarization method.  Orbital exponents and contraction coefficients
+were not energy optimized.  They were obtained from an analysis of the
+assumed form of the electric field dependence of Gaussians.
+
+
+NOTES ABOUT CURATION
+--------------------
+
+The original BSE differed slightly from Dalton and Molcas. Molcas was taken
+as the authoritative source, since the original publications mention it being
+available in the Molcas basis set library.
+
+These updated values are also reflected in v1 of Sadlej+
+
+
+f-polarization curation
+---------------------------
+The Molcas library does not include f-polarization on Ge-Br.
+
+The original BSE had the f-polarization on Br, so I have added polarization
+to Ge-Se (these elements were not included in the original BSE). The values
+for the f-polarization were are taken directly from tables in the publications.
+
+Note, that some f-polarization for Sn-I (which were included in Molcas)
+have more significant figures that is printed in the paper. These are of
+unknown origin, but Molcas is taken to be authoritative.
+
+The coefficients for the f-polarization for Br in the original BSE also had
+more significant figures, also of unknown origin.
+
+I have left the values from the original BSE for Br, and used the published
+values for Ge-Se.  For Sn-I, I have left the Molcas values as-is.

@@ -1,0 +1,6 @@
+Bi2Te3.cif
+BiTe.cif
+CdTe.cif
+files.txt
+PbTe-Altaite.cif
+ZnTe.cif

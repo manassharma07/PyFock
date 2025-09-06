@@ -1,0 +1,14 @@
+numba>=0.57.0rc1
+numexpr>=2.7.3
+#numba-scipy>=0.3.1
+numba-scipy @ git+https://github.com/numba/numba-scipy@main
+joblib>=1.2.0
+#scipy==1.7.3
+numpy>=1.21.6
+llvmlite>=0.40.0rc1 
+opt_einsum>=v3.3.0
+threadpoolctl>=3.1.0   
+numgrid
+# pylibxc2
+# pylibxc @ git+https://gitlab.com/libxc/libxc/@master
+ray
