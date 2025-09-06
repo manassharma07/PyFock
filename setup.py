@@ -13,12 +13,15 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 # Read the requirements
-with open('requirements.txt') as f:
+# with open('requirements.txt') as f:
+#     requirements = f.read().splitlines()
+here = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(here, "requirements.txt")) as f:
     requirements = f.read().splitlines()
 
 setup(
     name = "pyfock",
-    version = "0.0.1", # DONT FORGET TO CHANGE THE VERSION IN __INIT__.py
+    version = "0.0.3", # DONT FORGET TO CHANGE THE VERSION IN __INIT__.py
     author = "Manas Sharma",
     author_email = "feedback@bragitoff.com",
     description = ("A simplistic and efficient pure-python quantum chemistry library from Phys Whiz."),
@@ -33,7 +36,8 @@ setup(
     install_requires=requirements,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
-        "Topic :: Scientific/Engineering :: Quantum Chemistry",
+        "Topic :: Scientific/Engineering :: Chemistry",
+        "Topic :: Scientific/Engineering :: Physics",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3 :: Only",
