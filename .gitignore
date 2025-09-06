@@ -1,0 +1,7 @@
+pyfock/Integrals/__pycache__/
+pyfock/__pycache__/
+pyfock/benchmark_tests/__pycache__/
+__pycache__/
+pyfock.egg-info/
+.DS_Store
+dist

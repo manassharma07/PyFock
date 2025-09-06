@@ -1,5 +1,7 @@
+LICENSE
 MANIFEST.in
 README.md
+requirements.txt
 setup.cfg
 setup.py
 pyfock/Basis.py
@@ -7,15 +9,15 @@ pyfock/DFT.py
 pyfock/DFT_Helper_Coulomb.py
 pyfock/Data.py
 pyfock/Graphics.py
+pyfock/Graphics_old.py
 pyfock/Grids.py
 pyfock/HF.py
 pyfock/Integrals_.py
 pyfock/Mol.py
+pyfock/PBC_ring.py
 pyfock/UHF_atoms.py
 pyfock/__init__.py
-pyfock/davidson.py
 pyfock/densfuncs.py
-pyfock/rotate.py
 pyfock.egg-info/PKG-INFO
 pyfock.egg-info/SOURCES.txt
 pyfock.egg-info/dependency_links.txt
@@ -1963,6 +1965,7 @@ pyfock/Integrals/bf_val_helpers.py
 pyfock/Integrals/conv_2c2e_symm.py
 pyfock/Integrals/conv_3c2e_symm.py
 pyfock/Integrals/conv_4c2e_symm.py
+pyfock/Integrals/cross_overlap_mat_symm.py
 pyfock/Integrals/dipole_moment_mat_symm.py
 pyfock/Integrals/dipole_moment_mat_symm_cupy.py
 pyfock/Integrals/eval_xc_1.py
@@ -1976,6 +1979,7 @@ pyfock/Integrals/integral_helpers.py
 pyfock/Integrals/kin_mat_grad_symm.py
 pyfock/Integrals/kin_mat_symm.py
 pyfock/Integrals/kin_mat_symm_cupy.py
+pyfock/Integrals/kin_mat_symm_old.py
 pyfock/Integrals/kin_mat_symm_shell_cupy.py
 pyfock/Integrals/make_taylor.py
 pyfock/Integrals/mmd_4c2e_symm.py
@@ -1999,8 +2003,13 @@ pyfock/Integrals/rys_nuc_mat_symm.py
 pyfock/Integrals/schwarz_helpers.py
 pyfock/Integrals/schwarz_helpers_cupy.py
 pyfock/Integrals/taylor.py
+pyfock/Utils/Cube.py
 pyfock/Utils/__init__.py
+pyfock/Utils/print_logo.py
+pyfock/Utils/rotate.py
 pyfock/Utils/system_information.py
+pyfock/Utils/write_density_cube.py
+pyfock/Utils/write_orbital_cube.py
 pyfock/XC/__init__.py
 pyfock/XC/gga_c_lyp.py
 pyfock/XC/gga_c_pbe.py

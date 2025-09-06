@@ -1,6 +1,6 @@
 numba>=0.57.0rc1
 numexpr>=2.7.3
-numba-scipy@ git+https://github.com/numba/numba-scipy@main
+numba-scipy>=0.3.1
 joblib>=1.2.0
 numpy>=1.21.6
 llvmlite>=0.40.0rc1
