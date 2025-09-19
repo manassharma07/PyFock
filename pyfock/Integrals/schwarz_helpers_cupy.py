@@ -232,10 +232,10 @@ def rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB,
         nb_stream = cuda.external_stream(cp_stream.ptr)
         cp_stream.use()
 
-    thread_x = 32
-    thread_y = 32
+    thread_x = 8
+    thread_y = 8
     blocks_per_grid = ((basis.bfs_nao + (thread_x - 1))//thread_x, (basis.bfs_nao + (thread_y - 1))//thread_y) 
-    # rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda[blocks_per_grid, (thread_x, thread_y), nb_stream](bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
+    #rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda[blocks_per_grid, (thread_x, thread_y), nb_stream](bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
     #             bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], \
     #             aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, 0, basis.bfs_nao, 0, basis.bfs_nao, 0, auxbasis.bfs_nao, DATA_X_cuda, \
     #             DATA_W_cuda, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, offsets, strict_schwarz, threeC2E)
@@ -246,7 +246,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB,
     
     cp_stream.synchronize()
     cp.cuda.Stream.null.synchronize()
-    # cp._default_memory_pool.free_all_blocks()
+    cp._default_memory_pool.free_all_blocks()
     return threeC2E
 
 @cuda.jit(fastmath=True, cache=True, max_registers=50)#(device=True)
@@ -360,7 +360,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda(bfs_coords, bfs_contr_prim_
             out[offsets[linear_index]+index_k] = val
             index_k += 1
 
-@cuda.jit(fastmath=True, cache=True, max_registers=50)#(device=True)
+@cuda.jit(fastmath=True, cache=True, max_registers=800)#(device=True)
 def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda_new(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, DATA_X, DATA_W, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, schwarz_threshold, offsets, strict_schwarz, aux_shell_indices, out):
     
     i, j = cuda.grid(2)

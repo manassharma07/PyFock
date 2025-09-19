@@ -1,0 +1,2 @@
+this was done with threads 8x8 and max registers 800
+no cholesky (with solve done using scipy+CPU)

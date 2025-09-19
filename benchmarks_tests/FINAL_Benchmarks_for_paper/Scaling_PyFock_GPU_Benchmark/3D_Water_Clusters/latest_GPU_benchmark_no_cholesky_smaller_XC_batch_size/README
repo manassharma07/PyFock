@@ -1,0 +1,3 @@
+this was done with threads 8x8 and max registers 800
+no cholesky (with solve done using cupy+GPU)
+XC batch_size = 20480
