@@ -53,7 +53,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
         if not use_gpu:
             ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
         else:
-            ints2c2e = cp.asnumpy(Integrals.rys_2c2e_symm_cupy(auxbasis))
+            ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis)
         duration2c2e = timer() - start2c2e
         print('Time taken for two-centered two-electron integrals '+str(duration2c2e)+' seconds.\n', flush=True)
         if DF_algo==4: #Triangular version
@@ -445,7 +445,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             if not use_gpu:
                 ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             else:
-                ints4c2e_diag = cp.asnumpy(Integrals.schwarz_helpers_cupy.eri_4c2e_diag_cupy(basis))
+                ints4c2e_diag = Integrals.schwarz_helpers_cupy.eri_4c2e_diag_cupy(basis)
             # ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             duration_4c2e_diag = timer() - start_4c2e_diag
             print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', duration_4c2e_diag)
@@ -453,8 +453,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             # Calculate the square roots required for 
             duration_square_roots = 0.0
             start_square_roots = timer()
-            sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-            sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
+            sqrt_ints4c2e_diag = cp.sqrt(np.abs(ints4c2e_diag))
+            sqrt_diag_ints2c2e = cp.sqrt(np.abs(np.diag(ints2c2e)))
             duration_square_roots = timer() - start_square_roots
             print('Time taken to evaluate the square roots needed: ', duration_square_roots)
             
@@ -466,7 +466,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             duration_indices_calc = 0.0
             start_indices_calc = timer()
             indicesA, indicesB = np.tril_indices_from(dmat)
-            offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
+            offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(cp.asnumpy(sqrt_ints4c2e_diag), cp.asnumpy(sqrt_diag_ints2c2e), threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
             nsignificant = np.sum(offsets_3c2e)
             offsets_3c2e = np.cumsum(offsets_3c2e)
             duration_indices_calc += timer() - start_indices_calc
@@ -631,7 +631,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
 
     if cholesky:
         startDF_cholesky = timer()
-        cho_decomp_ints2c2e = scipy.linalg.cho_factor(ints2c2e)
+        cho_decomp_ints2c2e = scipy.linalg.cho_factor(cp.asnumpy(ints2c2e))
         durationDF_cholesky = timer() - startDF_cholesky
         print('Time taken for Cholesky factorization of two-centered two-electron integrals '+str(durationDF_cholesky)+' seconds.\n', flush=True)
 
@@ -753,7 +753,7 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
             sqrt_ints4c2e_diag_cp = cp.array(sqrt_ints4c2e_diag)
             sqrt_diag_ints2c2e_cp = cp.array(sqrt_diag_ints2c2e)
             gamma_alpha = Integrals.schwarz_helpers_cupy.df_coeff_calculator_algo10_cupy(ints3c2e, dmat_tri_cp, basis.bfs_nao, offsets_3c2e_cp, auxbasis.bfs_nao, sqrt_ints4c2e_diag_cp, sqrt_diag_ints2c2e_cp, threshold, strict_schwarz) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-            gamma_alpha = cp.asnumpy(gamma_alpha)
+            # gamma_alpha = cp.asnumpy(gamma_alpha)
         else:
             # df_coeff_1 = contract('pP,p->P', ints3c2e, dmat_tri) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
             # gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_serial(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
@@ -764,12 +764,19 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         with threadpool_limits(limits=ncores, user_api='blas'):
             # print('Density fitting', controller.info())
             if not cholesky:
-                df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, assume_a='pos', overwrite_a=False, overwrite_b=False)
+                if not use_gpu:
+                    df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, assume_a='pos', overwrite_a=False, overwrite_b=False)
+                else:
+                    df_coeff = cp.linalg.solve(ints2c2e, gamma_alpha)
+                    # print(df_coeff[0:10])
             else:
                 df_coeff = scipy.linalg.cho_solve(cho_decomp_ints2c2e, gamma_alpha, overwrite_b=False, check_finite=True)
         durationDF_coeff += timer() - startDF_coeff
-        with threadpool_limits(limits=ncores, user_api='blas'):
-            Ecoul_temp = np.dot(df_coeff, gamma_alpha) # (rho^~|rho^~) Coulomb energy due to interactions b/w auxiliary density
+        if use_gpu:
+            Ecoul_temp = cp.dot(df_coeff, gamma_alpha)
+        else:
+            with threadpool_limits(limits=ncores, user_api='blas'):
+                Ecoul_temp = np.dot(df_coeff, gamma_alpha) # (rho^~|rho^~) Coulomb energy due to interactions b/w auxiliary density
         startDF_Jtri = timer()
         #J_tri = contract('pP,P', ints3c2e, df_coeff)
         if use_gpu:
@@ -800,4 +807,4 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         df_coeff_cp = None
         cp.cuda.Device(0).use()
         cp._default_memory_pool.free_all_blocks()
-    return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
+        return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
