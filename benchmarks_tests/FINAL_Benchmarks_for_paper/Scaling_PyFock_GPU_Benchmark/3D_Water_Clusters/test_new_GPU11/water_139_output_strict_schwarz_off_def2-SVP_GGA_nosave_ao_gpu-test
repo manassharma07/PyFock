@@ -1,0 +1,519 @@
+Fri Sep 19 16:08:13 2025       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 530.30.02              Driver Version: 530.30.02    CUDA Version: 12.1     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                  Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf            Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA A100 80GB PCIe           On | 00000000:81:00.0 Off |                    0 |
+| N/A   54C    P0               50W / 300W|      0MiB / 81920MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|  No running processes found                                                           |
++---------------------------------------------------------------------------------------+
+Operating System: Linux 4.18.0-425.13.1.el8_7.x86_64
+System Type: 64bit
+CPU Model: AMD EPYC 7343 16-Core Processor
+Number of Cores: 32
+Number of Threads: 64
+Memory (GB): 251.74
+Number of cores being actually used/requested for the benchmark: 2
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 2
+OPENBLAS_NUM_THREADS = 2
+MKL_NUM_THREADS = 2
+VECLIB_MAXIMUM_THREADS = 2
+NUMEXPR_NUM_THREADS = 2
+PYSCF_MAX_MEMORY = 1500000
+
+============================================================
+Processing: ../../../Structures/water_cluster_10.xyz
+============================================================
+#INFO: **** input file is /home/lu29vow/PyFock/benchmarks_tests/FINAL_Benchmarks_for_paper/Scaling_PyFock_GPU_Benchmark/3D_Water_Clusters/test_new_GPU11/benchmark_DFT_LDA_DF.py ****
+####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_LDA_DF.py'
+####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
+####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
+####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
+#######
+####### This may be required in some cases when using GPU on WSL
+####### export NUMBA_CUDA_DRIVER="/usr/lib/wsl/lib/libcuda.so.1"
+
+import os
+import platform
+import psutil
+import numba
+#numba.config.THREADING_LAYER='tbb'
+# Set the number of threads/cores to be used by PyFock and PySCF
+ncores = 2
+os.environ['OMP_NUM_THREADS'] = str(ncores)
+os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
+os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
+# os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=1
+# Set the max memory for PySCF
+os.environ["PYSCF_MAX_MEMORY"] = str(1500000) 
+
+# Print system information 
+from pyfock import Utils
+
+Utils.print_sys_info()
+
+# Check if the environment variables are properly set
+print("Number of cores being actually used/requested for the benchmark:", ncores)
+print('Confirming that the environment variables are properly set...')
+print('OMP_NUM_THREADS =', os.environ.get('OMP_NUM_THREADS', None))
+print('OPENBLAS_NUM_THREADS =', os.environ.get('OPENBLAS_NUM_THREADS', None))
+print('MKL_NUM_THREADS =', os.environ.get('MKL_NUM_THREADS', None))
+print('VECLIB_MAXIMUM_THREADS =', os.environ.get('VECLIB_MAXIMUM_THREADS', None))
+print('NUMEXPR_NUM_THREADS =', os.environ.get('NUMEXPR_NUM_THREADS', None))
+print('PYSCF_MAX_MEMORY =', os.environ.get('PYSCF_MAX_MEMORY', None))
+
+
+# Run your tasks here
+from pyfock import Basis
+from pyfock import Mol
+from pyfock import Integrals
+from pyfock import DFT
+from timeit import default_timer as timer
+import numpy as np
+import scipy
+
+from pyscf import gto, dft, df, scf
+
+#DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# LDA_X LDA_C_VWN 
+# funcx = 1
+# funcc = 7
+
+# LDA_X LDA_C_PW 
+# funcx = 1
+# funcc = 12
+
+# LDA_X LDA_C_PW_MOD 
+# funcx = 1
+# funcc = 13
+
+# GGA_X_PBE, GGA_C_PBE (PBE)
+funcx = 101
+funcc = 130
+
+# GGA_X_B88, GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+funcidcrysx = [funcx, funcc]
+funcidpyscf = str(funcx)+','+str(funcc)
+
+
+basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'cc-pVDZ'
+
+
+auxbasis_name = 'def2-universal-jfit'
+
+# List of all molecules to calculate
+xyz_files = [
+#    '../../../Structures/water_cluster_1.xyz',
+#    '../../Structures/water_cluster_5.xyz',
+    '../../../Structures/water_cluster_10.xyz',
+#    '../../Structures/water_cluster_20.xyz',
+    '../../../Structures/water_cluster_32.xyz',
+#    '../../Structures/water_cluster_47.xyz',
+#    '../../Structures/water_cluster_76.xyz',
+#    '../../Structures/water_cluster_100.xyz',
+    '../../../Structures/water_cluster_139.xyz',
+]
+
+
+# Loop through all molecules
+for xyzFilename in xyz_files:
+    print(f"\n{'='*60}")
+    print(f"Processing: {xyzFilename}")
+    print(f"{'='*60}")
+
+    # ---------PySCF---------------
+    #Comparison with PySCF
+    molPySCF = gto.Mole()
+    molPySCF.atom = xyzFilename
+    molPySCF.basis = basis_set_name
+    molPySCF.cart = True
+    molPySCF.verbose = 4
+    molPySCF.max_memory=1500000
+    molPySCF.build()
+
+    print('\n\nPySCF Results\n\n')
+    start=timer()
+    mf = dft.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+    mf.xc = funcidpyscf
+    mf.verbose = 4
+    mf.direct_scf = False
+    mf.init_guess = 'minao'
+    dmat_init = mf.init_guess_by_minao(molPySCF)
+    mf.max_cycle = 1
+    mf.conv_tol = 1e-7
+    mf.grids.level = 3
+    energyPyscf = mf.kernel(dm0=dmat_init)
+    print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+    print('One electron integrals energy',mf.scf_summary['e1'])
+    print('Coulomb energy ',mf.scf_summary['coul'])
+    print('EXC ',mf.scf_summary['exc'])
+    duration = timer()-start
+    print('PySCF time: ', duration)
+    pyscfGrids = mf.grids
+    print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+    print('\n\n PySCF Dipole moment')
+    dmat = mf.make_rdm1()
+    mol_dip_pyscf = mf.dip_moment(molPySCF, dmat, unit='AU')
+    mf = 0
+
+    #--------------------CrysX --------------------------
+
+    #Initialize a Mol object with somewhat large geometry
+    molCrysX = Mol(coordfile=xyzFilename)
+
+    #Initialize a Basis object with a very large basis set
+    basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
+
+    auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
+
+    dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
+    dftObj.dmat = dmat_init
+    dftObj.conv_crit = 1e-7
+    dftObj.max_itr = 50
+    dftObj.ncores = ncores
+    dftObj.save_ao_values = True
+    dftObj.rys = True
+    dftObj.DF_algo = 10
+    dftObj.blocksize = 20480
+    dftObj.XC_algo = 3
+    dftObj.debug = False
+    dftObj.sortGrids = False
+    dftObj.xc_bf_screen = True
+    dftObj.threshold_schwarz = 1e-9
+    dftObj.strict_schwarz = True
+    dftObj.cholesky = False
+    dftObj.orthogonalize = True
+    # SAO or CAO basis
+    dftObj.sao = False
+
+    # GPU acceleration
+    dftObj.use_gpu = True
+    dftObj.keep_ao_in_gpu = False
+    dftObj.use_libxc = False
+    dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
+    dftObj.n_gpus = 1 # Specify the number of GPUs
+    dftObj.free_gpu_mem = True
+    dftObj.threads_x = 32
+    dftObj.threads_y = 32
+    dftObj.dynamic_precision = False
+    dftObj.keep_ints3c2e_in_gpu = True
+
+
+    # Using PySCF grids to compare the energies
+    energyCrysX, dmat = dftObj.scf()
+
+
+    print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
+
+    print('\n\nPyFock Dipole moment')
+    M = Integrals.dipole_moment_mat_symm(basis)
+    mol_dip = molCrysX.get_dipole_moment(M, dmat)
+    print('Dipole moment(X, Y, Z, A.U.):', *mol_dip)
+    print('Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
+
+#Print package versions
+import joblib
+import scipy
+import numba
+import threadpoolctl
+import opt_einsum
+import pylibxc
+import llvmlite 
+# import cupy
+import numexpr
+import pyscf
+print('\n\n\n Package versions')
+print('pyscf version', pyscf.__version__)
+# print('psi4 version', psi4.__version__)
+print('np version', np.__version__)
+print('joblib version', joblib.__version__)
+print('numba version', numba.__version__)
+print('threadpoolctl version', threadpoolctl.__version__)
+print('opt_einsum version', opt_einsum.__version__)
+# print('pylibxc version', pylibxc.__version__)
+print('llvmlite version', llvmlite.__version__)
+# print('cupy version', cupy.__version__)
+print('numexpr version', numexpr.__version__)
+print('scipy version', scipy.__version__)
+#INFO: ******************** input file end ********************
+
+
+System: uname_result(system='Linux', node='gpu012.cluster', release='4.18.0-425.13.1.el8_7.x86_64', version='#1 SMP Tue Feb 21 04:20:52 EST 2023', machine='x86_64', processor='x86_64')  Threads 2
+Python 3.8.6 (default, Oct 28 2021, 14:43:29) 
+[GCC 8.3.1 20191121 (Red Hat 8.3.1-5)]
+numpy 1.22.4  scipy 1.7.1  h5py 3.5.0
+Date: Fri Sep 19 16:08:32 2025
+PySCF version 2.7.0
+PySCF path  /home/lu29vow/.local/lib/python3.8/site-packages/pyscf
+
+[ENV] PYSCF_MAX_MEMORY 1500000
+[CONFIG] conf_file None
+[INPUT] verbose = 4
+[INPUT] num. atoms = 30
+[INPUT] num. electrons = 100
+[INPUT] charge = 0
+[INPUT] spin (= nelec alpha-beta = 2S) = 0
+[INPUT] symmetry False subgroup None
+[INPUT] Mole.unit = angstrom
+[INPUT] Cartesian GTO integrals (6d 10f)
+[INPUT] Symbol           X                Y                Z      unit          X                Y                Z       unit  Magmom
+[INPUT]  1 O     97.873900000000 103.017000000000 100.816000000000 AA  184.954865743068 194.673916174319 190.514628974151 Bohr   0.0
+[INPUT]  2 H     98.128600000000 103.038000000000  99.848800000000 AA  185.436178986995 194.713600422935 188.686885866472 Bohr   0.0
+[INPUT]  3 H     97.173800000000 102.317000000000 100.960000000000 AA  183.631868483260 193.351107887123 190.786749536089 Bohr   0.0
+[INPUT]  4 O     99.814000000000 100.835000000000 101.232000000000 AA  188.621123397337 190.550533770518 191.300755041970 Bohr   0.0
+[INPUT]  5 H     99.329200000000  99.976800000000 101.063000000000 AA  187.704984172148 188.928770810416 190.981391326919 Bohr   0.0
+[INPUT]  6 H     99.151600000000 101.561000000000 101.414000000000 AA  187.369368812425 191.922474936952 191.644685196641 Bohr   0.0
+[INPUT]  7 O     98.804000000000  98.512200000000  97.758100000000 AA  186.712500011526 186.161077928378 184.736035457844 Bohr   0.0
+[INPUT]  8 H     99.782100000000  98.646900000000  97.916700000000 AA  188.560841133963 186.415624037357 185.035746021200 Bohr   0.0
+[INPUT]  9 H     98.421800000000  99.326500000000  97.321300000000 AA  185.990246686718 187.699881911612 183.910603086634 Bohr   0.0
+[INPUT] 10 O    100.747000000000 100.164000000000 103.736000000000 AA  190.384237871556 189.282527540935 196.032629257881 Bohr   0.0
+[INPUT] 11 H    100.658000000000 100.628000000000 102.855000000000 AA  190.216052246470 190.159360462733 194.367780542139 Bohr   0.0
+[INPUT] 12 H    100.105000000000  99.398600000000 103.776000000000 AA  189.171033699586 187.836131165193 196.108218302864 Bohr   0.0
+[INPUT] 13 O     98.070300000000  98.516900000000 100.438000000000 AA  185.326007953933 186.169959641164 189.800312499066 Bohr   0.0
+[INPUT] 14 H     97.172800000000  98.878600000000 100.690000000000 AA  183.629978757136 186.853473580419 190.276523482456 Bohr   0.0
+[INPUT] 15 H     98.194000000000  98.592200000000  99.448100000000 AA  185.559767075542 186.312256018344 187.929672608359 Bohr   0.0
+[INPUT] 16 O     98.548000000000 101.265000000000  97.248600000000 AA  186.228730123638 191.363116004081 183.773219997378 Bohr   0.0
+[INPUT] 17 H     98.688900000000 102.140000000000  97.711000000000 AA  186.494992534589 193.016626363075 184.647029357377 Bohr   0.0
+[INPUT] 18 H     97.919900000000 101.391000000000  96.480800000000 AA  185.041793144798 191.601221495776 182.322288278937 Bohr   0.0
+[INPUT] 19 O    102.891000000000 100.842000000000  97.477600000000 AA  194.435810682624 190.563761853390 184.205967279903 Bohr   0.0
+[INPUT] 20 H    103.837000000000 100.662000000000  97.209700000000 AA  196.223491596462 190.223611150968 183.699709651132 Bohr   0.0
+[INPUT] 21 H    102.868000000000 101.166000000000  98.423400000000 AA  194.392346981759 191.176033117749 185.993270248517 Bohr   0.0
+[INPUT] 22 O    102.360000000000 101.551000000000  99.964500000000 AA  193.432366110480 191.903577675707 188.905527179084 Bohr   0.0
+[INPUT] 23 H    102.675000000000 102.370000000000 100.444000000000 AA  194.027629839718 193.451263371725 189.811650855813 Bohr   0.0
+[INPUT] 24 H    101.556000000000 101.180000000000 100.430000000000 AA  191.913026306329 191.202489283493 189.785194690069 Bohr   0.0
+[INPUT] 25 O    101.836000000000  97.446700000000 102.110000000000 AA  192.442149621208 184.147574742654 192.959934579338 Bohr   0.0
+[INPUT] 26 H    100.860000000000  97.397400000000 101.898000000000 AA  190.597776923632 184.054411244713 192.559312640931 Bohr   0.0
+[INPUT] 27 H    101.991000000000  97.133400000000 103.047000000000 AA  192.735057170515 183.555523547828 194.730607958056 Bohr   0.0
+[INPUT] 28 O    101.665000000000  98.316100000000  98.319400000000 AA  192.119006453907 185.790502635351 185.796738731562 Bohr   0.0
+[INPUT] 29 H    101.904000000000  99.233800000000  98.002000000000 AA  192.570650997678 187.524704299864 185.196939659625 Bohr   0.0
+[INPUT] 30 H    102.224000000000  97.640900000000  97.837700000000 AA  193.175363357539 184.514559556045 184.886457657359 Bohr   0.0
+
+nuclear repulsion = 647.706546115498
+number of shells = 120
+number of NR pGTOs = 390
+number of NR cGTOs = 250
+basis = def2-SVP
+ecp = {}
+CPU time:         2.10
+
+
+PySCF Results
+
+
+Initial guess from minao.
+
+
+******** <class 'pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 1
+direct_scf = False
+chkfile to save SCF result = /tmp/tmpgub6mrmr
+max_memory 1500000 MB (current use 250 MB)
+XC library pyscf.dft.libxc version 6.1.0
+    S. Lehtola, C. Steigemann, M. J.T. Oliveira, and M. A.L. Marques.,  SoftwareX 7, 1–5 (2018)
+XC functionals = 101,130
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 77, 3865 (1996)
+    J. P. Perdew, K. Burke, and M. Ernzerhof.,  Phys. Rev. Lett. 78, 1396 (1997)
+radial grids: 
+    Treutler-Ahlrichs [JCP 102, 346 (1995); DOI:10.1063/1.469408] (M4) radial grids
+    
+becke partition: Becke, JCP 88, 2547 (1988); DOI:10.1063/1.454033
+pruning grids: <function nwchem_prune at 0x154b4e4508b0>
+grids dens level: 3
+symmetrized grids: False
+atomic radii adjust function: <function treutler_atomic_radii_adjust at 0x154b4ea94280>
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 0.000316228
+tot grids = 336984
+init E= -762.171722033873
+  HOMO = -0.394591674872976  LUMO = -0.0757003032566832
+cycle= 1 E= -761.941011762102  delta_E= 0.231  |g|= 2.23  |ddm|= 4.38
+SCF not converged.
+SCF energy = -761.941011762102
+Nuc-Nuc PySCF=  647.7065461154975
+One electron integrals energy -2363.8682457018617
+Coulomb energy  1049.2002255545033
+EXC  -94.97953773024115
+PySCF time:  13.19592660292983
+PySCF Grid Size:  (295424,)
+
+
+ PySCF Dipole moment
+Dipole moment(X, Y, Z, A.U.): -2.79867,  2.06534, -1.64726
+
+============================================================
+PyFock Python Program for Quantum Chemistry Simulations
+                                        by Manas Sharma
+============================================================
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m[38;5;45m█[0m  [38;5;51m█[0m[38;5;51m█[0m    [38;5;87m█[0m[38;5;87m█[0m [38;5;123m█[0m[38;5;123m█[0m[38;5;123m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m  [38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m   [38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m   [38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m█[0m[38;5;45m█[0m [38;5;45m░[0m[38;5;45m█[0m[38;5;51m█[0m  [38;5;51m█[0m[38;5;51m█[0m[38;5;87m░[0m [38;5;87m█[0m[38;5;87m█[0m[38;5;87m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m [38;5;159m█[0m[38;5;159m█[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;219m░[0m [38;5;219m█[0m[38;5;219m█[0m  [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m 
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m   [38;5;45m░[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m░[0m  [38;5;87m█[0m[38;5;87m█[0m[38;5;87m█[0m[38;5;123m█[0m[38;5;123m█[0m   [38;5;159m█[0m[38;5;159m█[0m    [38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m      [38;5;219m█[0m[38;5;219m█[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m  
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m░[0m[38;5;45m░[0m    [38;5;51m░[0m[38;5;51m█[0m[38;5;87m█[0m[38;5;87m░[0m   [38;5;123m█[0m[38;5;123m█[0m[38;5;123m░[0m[38;5;159m░[0m[38;5;159m░[0m   [38;5;195m█[0m[38;5;195m█[0m    [38;5;225m█[0m[38;5;219m█[0m [38;5;219m█[0m[38;5;219m█[0m      [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m 
+[38;5;39m█[0m[38;5;39m█[0m         [38;5;51m█[0m[38;5;87m█[0m    [38;5;123m█[0m[38;5;123m█[0m      [38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;219m░[0m [38;5;219m░[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m  [38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m░[0m[38;5;39m░[0m         [38;5;51m░[0m[38;5;87m░[0m    [38;5;123m░[0m[38;5;123m░[0m       [38;5;195m░[0m[38;5;195m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m   [38;5;219m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m [38;5;213m░[0m[38;5;213m░[0m   [38;5;213m░[0m[38;5;213m░[0m
+
+============================================================
+
+
+Number of atoms: 30
+
+
+Number of basis functions (atomic orbitals): 250
+
+
+Number of auxiliary basis functions: 850
+
+
+================================================================================
+
+
+Operating System: Linux 4.18.0-425.13.1.el8_7.x86_64
+System Type: 64bit
+CPU Model: AMD EPYC 7343 16-Core Processor
+Number of Cores: 32
+Number of Threads: 64
+Memory (GB): 251.74
+Running DFT using 2 threads for Numba.
+
+
+GPU acceleration is enabled. Currently this only accelerates AO values and XC term evaluation.
+GPU(s) information:
+Found 1 CUDA devices
+id 0    b'NVIDIA A100 80GB PCIe'                              [SUPPORTED]
+                      Compute Capability: 8.0
+                           PCI Device ID: 0
+                              PCI Bus ID: 129
+                                    UUID: GPU-0657bf98-84a5-255b-5f52-4a171e32ac82
+                                Watchdog: Disabled
+             FP32/FP64 Performance Ratio: 2
+Summary:
+	1/1 devices are supported
+True
+Max threads per block supported by the GPU:  1024
+The user has specified to use 1 GPU(s).
+Threads per block configuration for the XC term:  (32, 32)
+Threads per block configuration for the all other calculations:  (32, 32)
+
+Calculating overlap and kinetic integrals...
+
+
+Core H size in GB  0.001
+done!
+Time taken 2.153499787906185 seconds.
+
+Stricter version of Schwarz screening:  True
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.08106092805974185 seconds.
+
+
+
+Performing Schwarz screening...
+Threshold  1e-09
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  8.00399431004189
+Time taken to evaluate the square roots needed:  0.08578892680816352
+Time for significant indices evaluation:  0.04503883607685566
+Size of permanent array storing the significant indices of 3c2e ERI in GB  0.0007530079999999999
+No. of elements in the standard three-centered two electron ERI tensor:  53125000
+No. of elements in the triangular three-centered two electron ERI tensor:  26668750
+No. of significant triplets based on Schwarz inequality and triangularity: 11252300 or 21.2% of original
+Schwarz screening done!
+Total time taken for Schwarz screening 8.136293085059151 seconds.
+
+Time taken to evaluate the nuclear potential matrix with strict Schwarz screening:  0.189580308040604
+Two Center Two electron ERI size in GB  0.00578
+Three Center Two electron ERI size in GB  0.0900184
+Three-centered two electron evaluation done!
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  12.40097472909838 seconds.
+
+
+Using the user supplied grids!
+
+
+
+No. of supplied/generated grid points:  295424
+Size (in GB) for storing the coordinates of grid:       0.007090176
+Size (in GB) for storing the weights of grid:           0.002363392
+Size (in GB) for storing the density at gridpoints:     0.002363392
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  20480
+No. of batches:  15
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.14343973994255066 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    237
+Average no. of basis functions contributing to a batch of grid points:    177
+
+You have asked to save the values of significant basis functions and their gradients on grid points so as to avoid recalculation for each SCF cycle.
+Please note: This will require addtional memory that is approximately :1.6 GB
+Calculating the value of significantly contributing basis functions (atomic orbitals)...
+/home/lu29vow/.local/lib/python3.8/site-packages/numba/cuda/dispatcher.py:536: NumbaPerformanceWarning: Grid size 64 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))
+/home/lu29vow/.local/lib/python3.8/site-packages/numba/cuda/dispatcher.py:536: NumbaPerformanceWarning: Grid size 64 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))
+/home/lu29vow/.local/lib/python3.8/site-packages/numba/cuda/dispatcher.py:536: NumbaPerformanceWarning: Grid size 8 will likely result in GPU under-utilization due to low occupancy.
+  warn(NumbaPerformanceWarning(msg))
+Traceback (most recent call last):
+  File "benchmark_DFT_LDA_DF.py", line 186, in <module>
+    energyCrysX, dmat = dftObj.scf()
+  File "/home/lu29vow/PyFock/pyfock/DFT.py", line 1345, in scf
+    ao_values_block, ao_grad_values_block = Integrals.bf_val_helpers.eval_bfs_and_grad(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
+  File "/home/lu29vow/PyFock/pyfock/Integrals/bf_val_helpers.py", line 48, in eval_bfs_and_grad
+    bf_values, bf_grad_values = eval_bfs_and_grad_sparse_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, non_zero_indices)
+  File "/home/lu29vow/.local/lib/python3.8/site-packages/numba/core/dispatcher.py", line 468, in _compile_for_args
+    error_rewrite(e, 'typing')
+  File "/home/lu29vow/.local/lib/python3.8/site-packages/numba/core/dispatcher.py", line 409, in error_rewrite
+    raise e.with_traceback(None)
+numba.core.errors.TypingError: Failed in nopython mode pipeline (step: nopython frontend)
+non-precise type pyobject
+During: typing of argument at /home/lu29vow/PyFock/pyfock/Integrals/bf_val_helpers.py (276)
+
+File "../../../../../pyfock/Integrals/bf_val_helpers.py", line 276:
+def eval_bfs_and_grad_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord):
+    <source elided>
+
+@njit(parallel=True, cache=True, nogil=True, fastmath=True, error_model="numpy")
+^ 
+
+This error may have been caused by the following argument(s):
+- argument 8: Cannot determine Numba type of <class 'cupy._core.core.ndarray'>
+
