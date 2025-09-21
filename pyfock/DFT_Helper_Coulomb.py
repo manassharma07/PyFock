@@ -453,8 +453,12 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             # Calculate the square roots required for 
             duration_square_roots = 0.0
             start_square_roots = timer()
-            sqrt_ints4c2e_diag = cp.sqrt(np.abs(ints4c2e_diag))
-            sqrt_diag_ints2c2e = cp.sqrt(np.abs(np.diag(ints2c2e)))
+            if use_gpu:
+                sqrt_ints4c2e_diag = cp.sqrt(np.abs(ints4c2e_diag))
+                sqrt_diag_ints2c2e = cp.sqrt(np.abs(np.diag(ints2c2e)))
+            else:
+                sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
+                sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
             duration_square_roots = timer() - start_square_roots
             print('Time taken to evaluate the square roots needed: ', duration_square_roots)
             
@@ -466,7 +470,10 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             duration_indices_calc = 0.0
             start_indices_calc = timer()
             indicesA, indicesB = np.tril_indices_from(dmat)
-            offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(cp.asnumpy(sqrt_ints4c2e_diag), cp.asnumpy(sqrt_diag_ints2c2e), threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
+            if use_gpu:
+                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(cp.asnumpy(sqrt_ints4c2e_diag), cp.asnumpy(sqrt_diag_ints2c2e), threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
+            else:
+                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
             nsignificant = np.sum(offsets_3c2e)
             offsets_3c2e = np.cumsum(offsets_3c2e)
             duration_indices_calc += timer() - start_indices_calc
@@ -631,7 +638,10 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
 
     if cholesky:
         startDF_cholesky = timer()
-        cho_decomp_ints2c2e = scipy.linalg.cho_factor(cp.asnumpy(ints2c2e))
+        if use_gpu:
+            cho_decomp_ints2c2e = scipy.linalg.cho_factor(cp.asnumpy(ints2c2e))
+        else:
+            cho_decomp_ints2c2e = scipy.linalg.cho_factor(ints2c2e)
         durationDF_cholesky = timer() - startDF_cholesky
         print('Time taken for Cholesky factorization of two-centered two-electron integrals '+str(durationDF_cholesky)+' seconds.\n', flush=True)
 
@@ -807,4 +817,4 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         df_coeff_cp = None
         cp.cuda.Device(0).use()
         cp._default_memory_pool.free_all_blocks()
-        return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
+    return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
