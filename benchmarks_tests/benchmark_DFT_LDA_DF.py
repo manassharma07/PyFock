@@ -119,8 +119,8 @@ auxbasis_name = 'def2-universal-jfit'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
-xyzFilename = 'Icosane_C20H42.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
 # xyzFilename = 'Octacontane_C80H162.xyz'
