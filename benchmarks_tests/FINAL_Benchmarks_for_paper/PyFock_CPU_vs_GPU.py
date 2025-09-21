@@ -4,19 +4,22 @@ import numpy as np
 # ==== CONFIG FLAGS ====
 x_axis_choice = "water"  # "water" or "basis"
 log_scale = False        # True for log scale, False for linear
-plot_total_only = False  # True for just total times, False for breakdown
+plot_total_only = True  # True for just total times, False for breakdown
 
 # ==== DATA ====
 water_molecules = np.array([47, 76, 100, 139])
 basis_functions = np.array([1175, 1900, 2500, 3475])
 
-total_gpu = np.array([1.815790464, 4.110073972, 7.665055265, 14.48421162])
+total_gpu_old = np.array([1.815790464, 4.110073972, 7.665055265, 14.48421162])
+total_gpu = np.array([1.53661779, 3.292493198, 5.90542049, 10.71981104])
 total_cpu = np.array([17.15226698, 41.32841003, 82.38475342, 154.2059581])
 
-j_gpu = np.array([0.896369033, 2.172111774, 4.52707693, 8.54460349])
+j_gpu_old = np.array([0.896369033, 2.172111774, 4.52707693, 8.54460349])
+j_gpu = np.array([0.784328794, 1.87488702, 3.823785722, 7.140085827])
 j_cpu = np.array([10.75980461, 24.7638173, 54.06537282, 97.10462831])
 
-xc_gpu = np.array([0.48043671, 0.991713577, 1.396709837, 2.243173538])
+xc_gpu_old = np.array([0.48043671, 0.991713577, 1.396709837, 2.243173538])
+xc_gpu = np.array([0.413739246, 0.780230838, 1.078757818, 1.639881885])
 xc_cpu = np.array([3.76085967, 8.61741557, 12.6850703, 21.373439])
 
 # Derived values for "Other" = Total - (J + XC)
