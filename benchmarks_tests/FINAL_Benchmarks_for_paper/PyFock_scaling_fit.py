@@ -38,7 +38,7 @@ def nonlinear_fit(N, t):
 
 # Fit for each quantity
 results = {}
-for label, data in zip(["Total", "J", "XC"], [total_time, j_time, xc_time]):
+for label, data in zip(["Total", "ERI", "XC"], [total_time, j_time, xc_time]):
     a_log, p_log = loglog_fit(nbf, data)
     a_nonlin, p_nonlin = nonlinear_fit(nbf, data)
     results[label] = {
@@ -58,7 +58,7 @@ for label, vals in results.items():
 # -----------------
 def plot_fit(method_name):
     plt.figure(figsize=(7,5))
-    for label, data, color in zip(["Total", "J", "XC"], 
+    for label, data, color in zip(["Total", "ERI", "XC"], 
                                   [total_time, j_time, xc_time],
                                   ["tab:blue", "tab:orange", "tab:green"]):
         a, p = results[label][method_name]
