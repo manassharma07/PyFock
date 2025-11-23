@@ -4,7 +4,7 @@ import numpy as np
 # ==== CONFIG FLAGS ====
 x_axis_choice = "water"  # "water" or "basis"
 log_scale = False        # True for log scale, False for linear
-plot_total_only = True  # True for just total times, False for breakdown
+plot_total_only = False  # True for just total times, False for breakdown
 
 # ==== DATA ====
 water_molecules = np.array([47, 76, 100, 139])
@@ -50,11 +50,11 @@ if plot_total_only:
     bars_gpu = ax.bar(x_values + width/2, total_gpu, width, label="GPU", color="tab:blue", edgecolor='black', linewidth=1.2)
 else:
     # Stacked bars: J, XC, Other
-    bars_cpu = ax.bar(x_values - width/2, j_cpu, width, label="J (CPU)", color="tab:orange", edgecolor='black', linewidth=1.2)
+    bars_cpu = ax.bar(x_values - width/2, j_cpu, width, label="ERI (CPU)", color="tab:orange", edgecolor='black', linewidth=1.2)
     ax.bar(x_values - width/2, xc_cpu, width, bottom=j_cpu, label="XC (CPU)", color="tab:green", edgecolor='black', linewidth=1.2)
     ax.bar(x_values - width/2, other_cpu, width, bottom=j_cpu+xc_cpu, label="Other (CPU)", color="tab:gray", edgecolor='black', linewidth=1.2)
 
-    bars_gpu = ax.bar(x_values + width/2, j_gpu, width, label="J (GPU)", color="tab:orange", alpha=0.6, edgecolor='black', linewidth=1.2)
+    bars_gpu = ax.bar(x_values + width/2, j_gpu, width, label="ERI (GPU)", color="tab:orange", alpha=0.6, edgecolor='black', linewidth=1.2)
     ax.bar(x_values + width/2, xc_gpu, width, bottom=j_gpu, label="XC (GPU)", color="tab:green", alpha=0.6, edgecolor='black', linewidth=1.2)
     ax.bar(x_values + width/2, other_gpu, width, bottom=j_gpu+xc_gpu, label="Other (GPU)", color="tab:gray", alpha=0.6, edgecolor='black', linewidth=1.2)
 

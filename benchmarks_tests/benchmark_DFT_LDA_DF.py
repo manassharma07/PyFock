@@ -119,8 +119,8 @@ auxbasis_name = 'def2-universal-jfit'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
-# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
+xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
 # xyzFilename = 'Octacontane_C80H162.xyz'
@@ -222,7 +222,7 @@ dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35
 dftObj.ncores = ncores
-dftObj.save_ao_values = False
+dftObj.save_ao_values = True
 dftObj.rys = True
 dftObj.DF_algo = 10
 dftObj.blocksize = 5000

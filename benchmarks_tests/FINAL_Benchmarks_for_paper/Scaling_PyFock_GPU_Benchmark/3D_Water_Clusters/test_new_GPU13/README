@@ -1,0 +1,4 @@
+this was done with threads 8x8 and max registers 800
+no cholesky (with solve done using cupy+GPU)
+strict_schwarz = True
+save_ao_values = True
