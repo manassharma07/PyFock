@@ -49,6 +49,11 @@
                    pattern=".+" required>
 
 
+            <h2>Submodules</h2>
+            <ul>
+                    <li><a href="Utils/write_density_cube.html">write_density_cube</a></li>
+                    <li><a href="Utils/write_orbital_cube.html">write_orbital_cube</a></li>
+            </ul>
 
             <h2>API Documentation</h2>
                 <ul class="memberlist">
@@ -60,6 +65,12 @@
             </li>
             <li>
                     <a class="function" href="#print_pyfock_logo">print_pyfock_logo</a>
+            </li>
+            <li>
+                    <a class="function" href="#write_density_cube">write_density_cube</a>
+            </li>
+            <li>
+                    <a class="function" href="#write_orbital_cube">write_orbital_cube</a>
             </li>
     </ul>
 
@@ -85,9 +96,11 @@
                         <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.system_information</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_sys_info</span>
 </span><span id="L-2"><a href="#L-2"><span class="linenos">2</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.system_information</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cpu_model</span>
 </span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.print_logo</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_pyfock_logo</span>
-</span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a>
-</span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a>
-</span><span id="L-6"><a href="#L-6"><span class="linenos">6</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;print_sys_info&#39;</span><span class="p">,</span> <span class="s1">&#39;get_cpu_model&#39;</span><span class="p">,</span> <span class="s1">&#39;print_pyfock_logo&#39;</span><span class="p">]</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.write_density_cube</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_density_cube</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.write_orbital_cube</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_orbital_cube</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos">6</span></a>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">7</span></a>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">8</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;print_sys_info&#39;</span><span class="p">,</span> <span class="s1">&#39;get_cpu_model&#39;</span><span class="p">,</span> <span class="s1">&#39;print_pyfock_logo&#39;</span><span class="p">,</span> <span class="s1">&#39;write_density_cube&#39;</span><span class="p">,</span> <span class="s1">&#39;write_orbital_cube&#39;</span><span class="p">]</span>
 </span></pre></div>
 
 
@@ -371,6 +384,83 @@ labeled key-value pairs.</p>
 
 
             <div class="docstring"><p>Print PyFock logo with gradient colors using ANSI escape codes.</p>
+</div>
+
+
+                </section>
+                <section id="write_density_cube">
+                            <input id="write_density_cube-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">write_density_cube</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">mol</span>, </span><span class="param"><span class="n">basis</span>, </span><span class="param"><span class="n">dmat</span>, </span><span class="param"><span class="n">cube_file</span>, </span><span class="param"><span class="n">nx</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">ny</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">nz</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">ncores</span><span class="o">=</span><span class="mi">1</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="write_density_cube-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#write_density_cube"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="write_density_cube-9"><a href="#write_density_cube-9"><span class="linenos"> 9</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_density_cube</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">dmat</span><span class="p">,</span> <span class="n">cube_file</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ncores</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+</span><span id="write_density_cube-10"><a href="#write_density_cube-10"><span class="linenos">10</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Write the electron density of a molecule as a cube file.&quot;&quot;&quot;</span>
+</span><span id="write_density_cube-11"><a href="#write_density_cube-11"><span class="linenos">11</span></a>    <span class="n">numba</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="write_density_cube-12"><a href="#write_density_cube-12"><span class="linenos">12</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;OMP_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="write_density_cube-13"><a href="#write_density_cube-13"><span class="linenos">13</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OPENBLAS_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export OPENBLAS_NUM_THREADS=4 </span>
+</span><span id="write_density_cube-14"><a href="#write_density_cube-14"><span class="linenos">14</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MKL_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export MKL_NUM_THREADS=4</span>
+</span><span id="write_density_cube-15"><a href="#write_density_cube-15"><span class="linenos">15</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;VECLIB_MAXIMUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export VECLIB_MAXIMUM_THREADS=4</span>
+</span><span id="write_density_cube-16"><a href="#write_density_cube-16"><span class="linenos">16</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;NUMEXPR_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export NUMEXPR_NUM_THREADS=4</span>
+</span><span id="write_density_cube-17"><a href="#write_density_cube-17"><span class="linenos">17</span></a>
+</span><span id="write_density_cube-18"><a href="#write_density_cube-18"><span class="linenos">18</span></a>
+</span><span id="write_density_cube-19"><a href="#write_density_cube-19"><span class="linenos">19</span></a>    <span class="c1"># Generate a grid of coordinates for the cube file</span>
+</span><span id="write_density_cube-20"><a href="#write_density_cube-20"><span class="linenos">20</span></a>    <span class="n">coords</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span> <span class="o">=</span> <span class="n">generate_cube_coords</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="n">nz</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>  <span class="c1"># shape: (ncoord, 3)</span>
+</span><span id="write_density_cube-21"><a href="#write_density_cube-21"><span class="linenos">21</span></a>    <span class="c1"># Calculate ao and density values at these coordinates</span>
+</span><span id="write_density_cube-22"><a href="#write_density_cube-22"><span class="linenos">22</span></a>    <span class="n">bf_values</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">bf_val_helpers</span><span class="o">.</span><span class="n">eval_bfs</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">non_zero_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="c1"># shape: (ncoord, nao)</span>
+</span><span id="write_density_cube-23"><a href="#write_density_cube-23"><span class="linenos">23</span></a>    <span class="n">dens_values</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">bf_val_helpers</span><span class="o">.</span><span class="n">eval_rho</span><span class="p">(</span><span class="n">bf_values</span><span class="p">,</span> <span class="n">dmat</span><span class="p">)</span> <span class="c1"># shape: (ncoord, 1)</span>
+</span><span id="write_density_cube-24"><a href="#write_density_cube-24"><span class="linenos">24</span></a>    <span class="c1"># dens_values = contract(&#39;mj,mj-&gt;m&#39;, bf_values @ dmat, bf_values)</span>
+</span><span id="write_density_cube-25"><a href="#write_density_cube-25"><span class="linenos">25</span></a>
+</span><span id="write_density_cube-26"><a href="#write_density_cube-26"><span class="linenos">26</span></a>    <span class="c1"># Write the cube file</span>
+</span><span id="write_density_cube-27"><a href="#write_density_cube-27"><span class="linenos">27</span></a>    <span class="n">write_cube_file</span><span class="p">(</span><span class="n">cube_file</span><span class="p">,</span> <span class="n">mol</span><span class="p">,</span> <span class="n">dens_values</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Write the electron density of a molecule as a cube file.</p>
+</div>
+
+
+                </section>
+                <section id="write_orbital_cube">
+                            <input id="write_orbital_cube-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">write_orbital_cube</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">mol</span>, </span><span class="param"><span class="n">basis</span>, </span><span class="param"><span class="n">mo_coeffs</span>, </span><span class="param"><span class="n">cube_file</span>, </span><span class="param"><span class="n">nx</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">ny</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">nz</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">ncores</span><span class="o">=</span><span class="mi">1</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="write_orbital_cube-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#write_orbital_cube"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="write_orbital_cube-9"><a href="#write_orbital_cube-9"><span class="linenos"> 9</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_orbital_cube</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">mo_coeffs</span><span class="p">,</span> <span class="n">cube_file</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ncores</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+</span><span id="write_orbital_cube-10"><a href="#write_orbital_cube-10"><span class="linenos">10</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Write the molecular orbital of a molecule as a cube file.&quot;&quot;&quot;</span>
+</span><span id="write_orbital_cube-11"><a href="#write_orbital_cube-11"><span class="linenos">11</span></a>    <span class="n">numba</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="write_orbital_cube-12"><a href="#write_orbital_cube-12"><span class="linenos">12</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;OMP_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="write_orbital_cube-13"><a href="#write_orbital_cube-13"><span class="linenos">13</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OPENBLAS_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export OPENBLAS_NUM_THREADS=4 </span>
+</span><span id="write_orbital_cube-14"><a href="#write_orbital_cube-14"><span class="linenos">14</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MKL_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export MKL_NUM_THREADS=4</span>
+</span><span id="write_orbital_cube-15"><a href="#write_orbital_cube-15"><span class="linenos">15</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;VECLIB_MAXIMUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export VECLIB_MAXIMUM_THREADS=4</span>
+</span><span id="write_orbital_cube-16"><a href="#write_orbital_cube-16"><span class="linenos">16</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;NUMEXPR_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export NUMEXPR_NUM_THREADS=4</span>
+</span><span id="write_orbital_cube-17"><a href="#write_orbital_cube-17"><span class="linenos">17</span></a>
+</span><span id="write_orbital_cube-18"><a href="#write_orbital_cube-18"><span class="linenos">18</span></a>
+</span><span id="write_orbital_cube-19"><a href="#write_orbital_cube-19"><span class="linenos">19</span></a>    <span class="c1"># Generate a grid of coordinates for the cube file</span>
+</span><span id="write_orbital_cube-20"><a href="#write_orbital_cube-20"><span class="linenos">20</span></a>    <span class="n">coords</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span> <span class="o">=</span> <span class="n">generate_cube_coords</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="n">nz</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>  <span class="c1"># shape: (ncoord, 3)</span>
+</span><span id="write_orbital_cube-21"><a href="#write_orbital_cube-21"><span class="linenos">21</span></a>    <span class="c1"># Calculate ao and density values at these coordinates</span>
+</span><span id="write_orbital_cube-22"><a href="#write_orbital_cube-22"><span class="linenos">22</span></a>    <span class="n">bf_values</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">bf_val_helpers</span><span class="o">.</span><span class="n">eval_bfs</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">non_zero_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="c1"># shape: (ncoord, nao)</span>
+</span><span id="write_orbital_cube-23"><a href="#write_orbital_cube-23"><span class="linenos">23</span></a>    <span class="c1"># compute all MO values on the grid (G x N)</span>
+</span><span id="write_orbital_cube-24"><a href="#write_orbital_cube-24"><span class="linenos">24</span></a>    <span class="n">psi_grid</span> <span class="o">=</span> <span class="n">bf_values</span> <span class="o">@</span> <span class="n">mo_coeffs</span>    <span class="c1"># matrix multiply</span>
+</span><span id="write_orbital_cube-25"><a href="#write_orbital_cube-25"><span class="linenos">25</span></a>
+</span><span id="write_orbital_cube-26"><a href="#write_orbital_cube-26"><span class="linenos">26</span></a>
+</span><span id="write_orbital_cube-27"><a href="#write_orbital_cube-27"><span class="linenos">27</span></a>    <span class="c1"># Write the cube file</span>
+</span><span id="write_orbital_cube-28"><a href="#write_orbital_cube-28"><span class="linenos">28</span></a>    <span class="n">write_cube_file</span><span class="p">(</span><span class="n">cube_file</span><span class="p">,</span> <span class="n">mol</span><span class="p">,</span> <span class="n">psi_grid</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Write the molecular orbital of a molecule as a cube file.</p>
 </div>
 
 

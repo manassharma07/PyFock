@@ -321,6 +321,12 @@ class DFT:
         self.Nuc_energy = None
         """ Nuclear potential energy contribution. Will be computed during SCF. """
 
+        self.converged = False
+        """ Whether the SCF has converged or not. Will be updated during SCF. """
+        self.niter = 0
+        """ Number of SCF iterations performed. Will be updated during SCF. """
+        self.scf_energies = []
+        """ List of SCF energies at each iteration. """
 
         # CAO or SAO
         self.sao = False
@@ -1518,6 +1524,7 @@ class DFT:
                 Ecoul = Ecoul*2 - 0.5*Ecoul_temp # This is the correct formula for Coulomb energy with DF
 
             Etot_new = Exc + Enuc + Ekin + Enn + Ecoul
+            self.scf_energies.append(Etot_new)
             self.Total_energy = Etot_new
             self.XC_energy = Exc
             self.Kinetic_energy = Ekin
@@ -1638,24 +1645,10 @@ class DFT:
             durationItr = timer() - startIter
             print('\n\nTime taken for the previous iteration: '+str(durationItr)+'\n\n', flush=True)
 
-        #     # Check convergence criteria
-        #     if abs(Etot_new-Etot)<conv_crit:
-        #         scf_converged = True
-        #         print('\nSCF Converged after '+str(itr) +' iterations!', flush=True)
-        #         Etot = Etot_new
-        #         print('\n-------------------------------------', flush=True)
-        #         print('Total Energy = ', Etot, flush=True)
-        #         print('-------------------------------------\n\n', flush=True)
-        #         break
-
-        #     Etot = Etot_new
-        #     itr = itr + 1
-            
-
-        # if itr>=max_itr and not scf_converged:
-        #     print('\nSCF NOT Converged after '+str(itr-1) +' iterations!', flush=True)
         
-
+        self.converged = scf_converged
+        self.niter = itr-1
+        
 
         durationSCF = timer() - startSCF
         # print(dmat)

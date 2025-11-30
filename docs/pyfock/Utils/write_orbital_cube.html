@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="pdoc 15.0.4"/>
-    <title>pyfock API documentation</title>
+    <title>pyfock.Utils.write_orbital_cube API documentation</title>
 
     <style>/*! * Bootstrap Reboot v5.0.0 (https://getbootstrap.com/) * Copyright 2011-2021 The Bootstrap Authors * Copyright 2011-2021 Twitter, Inc. * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE) * Forked from Normalize.css, licensed MIT (https://github.com/necolas/normalize.css/blob/master/LICENSE.md) */*,::after,::before{box-sizing:border-box}@media (prefers-reduced-motion:no-preference){:root{scroll-behavior:smooth}}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","Liberation Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";font-size:1rem;font-weight:400;line-height:1.5;color:#212529;background-color:#fff;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}hr{margin:1rem 0;color:inherit;background-color:currentColor;border:0;opacity:.25}hr:not([size]){height:1px}h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:.5rem;font-weight:500;line-height:1.2}h1{font-size:calc(1.375rem + 1.5vw)}@media (min-width:1200px){h1{font-size:2.5rem}}h2{font-size:calc(1.325rem + .9vw)}@media (min-width:1200px){h2{font-size:2rem}}h3{font-size:calc(1.3rem + .6vw)}@media (min-width:1200px){h3{font-size:1.75rem}}h4{font-size:calc(1.275rem + .3vw)}@media (min-width:1200px){h4{font-size:1.5rem}}h5{font-size:1.25rem}h6{font-size:1rem}p{margin-top:0;margin-bottom:1rem}abbr[data-bs-original-title],abbr[title]{-webkit-text-decoration:underline dotted;text-decoration:underline dotted;cursor:help;-webkit-text-decoration-skip-ink:none;text-decoration-skip-ink:none}address{margin-bottom:1rem;font-style:normal;line-height:inherit}ol,ul{padding-left:2rem}dl,ol,ul{margin-top:0;margin-bottom:1rem}ol ol,ol ul,ul ol,ul ul{margin-bottom:0}dt{font-weight:700}dd{margin-bottom:.5rem;margin-left:0}blockquote{margin:0 0 1rem}b,strong{font-weight:bolder}small{font-size:.875em}mark{padding:.2em;background-color:#fcf8e3}sub,sup{position:relative;font-size:.75em;line-height:0;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}a{color:#0d6efd;text-decoration:underline}a:hover{color:#0a58ca}a:not([href]):not([class]),a:not([href]):not([class]):hover{color:inherit;text-decoration:none}code,kbd,pre,samp{font-family:SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:1em;direction:ltr;unicode-bidi:bidi-override}pre{display:block;margin-top:0;margin-bottom:1rem;overflow:auto;font-size:.875em}pre code{font-size:inherit;color:inherit;word-break:normal}code{font-size:.875em;color:#d63384;word-wrap:break-word}a>code{color:inherit}kbd{padding:.2rem .4rem;font-size:.875em;color:#fff;background-color:#212529;border-radius:.2rem}kbd kbd{padding:0;font-size:1em;font-weight:700}figure{margin:0 0 1rem}img,svg{vertical-align:middle}table{caption-side:bottom;border-collapse:collapse}caption{padding-top:.5rem;padding-bottom:.5rem;color:#6c757d;text-align:left}th{text-align:inherit;text-align:-webkit-match-parent}tbody,td,tfoot,th,thead,tr{border-color:inherit;border-style:solid;border-width:0}label{display:inline-block}button{border-radius:0}button:focus:not(:focus-visible){outline:0}button,input,optgroup,select,textarea{margin:0;font-family:inherit;font-size:inherit;line-height:inherit}button,select{text-transform:none}[role=button]{cursor:pointer}select{word-wrap:normal}select:disabled{opacity:1}[list]::-webkit-calendar-picker-indicator{display:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button}[type=button]:not(:disabled),[type=reset]:not(:disabled),[type=submit]:not(:disabled),button:not(:disabled){cursor:pointer}::-moz-focus-inner{padding:0;border-style:none}textarea{resize:vertical}fieldset{min-width:0;padding:0;margin:0;border:0}legend{float:left;width:100%;padding:0;margin-bottom:.5rem;font-size:calc(1.275rem + .3vw);line-height:inherit}@media (min-width:1200px){legend{font-size:1.5rem}}legend+*{clear:left}::-webkit-datetime-edit-day-field,::-webkit-datetime-edit-fields-wrapper,::-webkit-datetime-edit-hour-field,::-webkit-datetime-edit-minute,::-webkit-datetime-edit-month-field,::-webkit-datetime-edit-text,::-webkit-datetime-edit-year-field{padding:0}::-webkit-inner-spin-button{height:auto}[type=search]{outline-offset:-2px;-webkit-appearance:textfield}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-color-swatch-wrapper{padding:0}::file-selector-button{font:inherit}::-webkit-file-upload-button{font:inherit;-webkit-appearance:button}output{display:inline-block}iframe{border:0}summary{display:list-item;cursor:pointer}progress{vertical-align:baseline}[hidden]{display:none!important}</style>
     <style>/*! syntax-highlighting.css */pre{line-height:125%;}span.linenos{color:inherit; background-color:transparent; padding-left:5px; padding-right:20px;}.pdoc-code .hll{background-color:#ffffcc}.pdoc-code{background:#f8f8f8;}.pdoc-code .c{color:#3D7B7B; font-style:italic}.pdoc-code .err{border:1px solid #FF0000}.pdoc-code .k{color:#008000; font-weight:bold}.pdoc-code .o{color:#666666}.pdoc-code .ch{color:#3D7B7B; font-style:italic}.pdoc-code .cm{color:#3D7B7B; font-style:italic}.pdoc-code .cp{color:#9C6500}.pdoc-code .cpf{color:#3D7B7B; font-style:italic}.pdoc-code .c1{color:#3D7B7B; font-style:italic}.pdoc-code .cs{color:#3D7B7B; font-style:italic}.pdoc-code .gd{color:#A00000}.pdoc-code .ge{font-style:italic}.pdoc-code .gr{color:#E40000}.pdoc-code .gh{color:#000080; font-weight:bold}.pdoc-code .gi{color:#008400}.pdoc-code .go{color:#717171}.pdoc-code .gp{color:#000080; font-weight:bold}.pdoc-code .gs{font-weight:bold}.pdoc-code .gu{color:#800080; font-weight:bold}.pdoc-code .gt{color:#0044DD}.pdoc-code .kc{color:#008000; font-weight:bold}.pdoc-code .kd{color:#008000; font-weight:bold}.pdoc-code .kn{color:#008000; font-weight:bold}.pdoc-code .kp{color:#008000}.pdoc-code .kr{color:#008000; font-weight:bold}.pdoc-code .kt{color:#B00040}.pdoc-code .m{color:#666666}.pdoc-code .s{color:#BA2121}.pdoc-code .na{color:#687822}.pdoc-code .nb{color:#008000}.pdoc-code .nc{color:#0000FF; font-weight:bold}.pdoc-code .no{color:#880000}.pdoc-code .nd{color:#AA22FF}.pdoc-code .ni{color:#717171; font-weight:bold}.pdoc-code .ne{color:#CB3F38; font-weight:bold}.pdoc-code .nf{color:#0000FF}.pdoc-code .nl{color:#767600}.pdoc-code .nn{color:#0000FF; font-weight:bold}.pdoc-code .nt{color:#008000; font-weight:bold}.pdoc-code .nv{color:#19177C}.pdoc-code .ow{color:#AA22FF; font-weight:bold}.pdoc-code .w{color:#bbbbbb}.pdoc-code .mb{color:#666666}.pdoc-code .mf{color:#666666}.pdoc-code .mh{color:#666666}.pdoc-code .mi{color:#666666}.pdoc-code .mo{color:#666666}.pdoc-code .sa{color:#BA2121}.pdoc-code .sb{color:#BA2121}.pdoc-code .sc{color:#BA2121}.pdoc-code .dl{color:#BA2121}.pdoc-code .sd{color:#BA2121; font-style:italic}.pdoc-code .s2{color:#BA2121}.pdoc-code .se{color:#AA5D1F; font-weight:bold}.pdoc-code .sh{color:#BA2121}.pdoc-code .si{color:#A45A77; font-weight:bold}.pdoc-code .sx{color:#008000}.pdoc-code .sr{color:#A45A77}.pdoc-code .s1{color:#BA2121}.pdoc-code .ss{color:#19177C}.pdoc-code .bp{color:#008000}.pdoc-code .fm{color:#0000FF}.pdoc-code .vc{color:#19177C}.pdoc-code .vg{color:#19177C}.pdoc-code .vi{color:#19177C}.pdoc-code .vm{color:#19177C}.pdoc-code .il{color:#666666}</style>
@@ -38,33 +38,23 @@
     <nav class="pdoc">
         <label id="navtoggle" for="togglestate" class="pdoc-button"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'><path stroke-linecap='round' stroke="currentColor" stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/></svg></label>
         <input id="togglestate" type="checkbox" aria-hidden="true" tabindex="-1">
-        <div>
+        <div>            <a class="pdoc-button module-list-button" href="../Utils.html">
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-left" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M10 3.5a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 1 1 0v2A1.5 1.5 0 0 1 9.5 14h-8A1.5 1.5 0 0 1 0 12.5v-9A1.5 1.5 0 0 1 1.5 2h8A1.5 1.5 0 0 1 11 3.5v2a.5.5 0 0 1-1 0v-2z"/>
+  <path fill-rule="evenodd" d="M4.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H14.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3z"/>
+</svg>                &nbsp;pyfock.Utils</a>
+
 
             <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
                    pattern=".+" required>
 
-            <h2>Contents</h2>
-            <ul>
-  <li><a href="#about-the-project">About The Project</a></li>
-</ul>
 
-
-            <h2>Submodules</h2>
-            <ul>
-                    <li><a href="pyfock/Basis.html">Basis</a></li>
-                    <li><a href="pyfock/DFT.html">DFT</a></li>
-                    <li><a href="pyfock/Data.html">Data</a></li>
-                    <li><a href="pyfock/Graphics.html">Graphics</a></li>
-                    <li><a href="pyfock/Grids.html">Grids</a></li>
-                    <li><a href="pyfock/Integrals.html">Integrals</a></li>
-                    <li><a href="pyfock/Mol.html">Mol</a></li>
-                    <li><a href="pyfock/PBC_ring.html">PBC_ring</a></li>
-                    <li><a href="pyfock/Utils.html">Utils</a></li>
-                    <li><a href="pyfock/XC.html">XC</a></li>
-            </ul>
 
             <h2>API Documentation</h2>
                 <ul class="memberlist">
+            <li>
+                    <a class="function" href="#write_orbital_cube">write_orbital_cube</a>
+            </li>
     </ul>
 
 
@@ -79,172 +69,86 @@
     <main class="pdoc">
             <section class="module-info">
                     <h1 class="modulename">
-pyfock    </h1>
+<a href="./../../pyfock.html">pyfock</a><wbr>.<a href="./../Utils.html">Utils</a><wbr>.write_orbital_cube    </h1>
 
-                        <div class="docstring"><p><!-- PROJECT SHIELDS -->
-<!--
-<strong>* I'm using markdown "reference style" links for readability.
-<em></strong> Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-<strong></em> See the bottom of this document for the declaration of the reference variables
-<em></strong> for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*</em>* <a href="https://www.markdownguide.org/basic-syntax/#reference-style-links">https://www.markdownguide.org/basic-syntax/#reference-style-links</a>
--->
-<a href="https://github.com/manassharma07/PyFock/contributors"><img src="https://img.shields.io/github/contributors/manassharma07/crysx_nn.svg?style=for-the-badge" alt="Contributors" /></a>
-<a href="https://github.com/manassharma07/PyFock/network/members"><img src="https://img.shields.io/github/forks/manassharma07/PyFock.svg?style=for-the-badge" alt="Forks" /></a>
-<a href="https://github.com/manassharma07/PyFock/stargazers"><img src="https://img.shields.io/github/stars/manassharma07/PyFock.svg?style=for-the-badge" alt="Stargazers" /></a>
-<a href="https://github.com/manassharma07/PyFock/issues"><img src="https://img.shields.io/github/issues/manassharma07/PyFock.svg?style=for-the-badge" alt="Issues" /></a>
-<a href="https://github.com/manassharma07/PyFock/blob/main/LICENSE"><img src="https://img.shields.io/github/license/manassharma07/PyFock.svg?style=for-the-badge" alt="MIT License" /></a>
-<a href="https://www.linkedin.com/in/manassharma07"><img src="https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&amp;logo=linkedin&amp;colorB=555" alt="LinkedIn" /></a>
-<a href="https://github.com/manassharma07/PyFock/blob/main/Documentation.md"><img src="https://img.shields.io/badge/-docs-blue.svg?style=for-the-badge&amp;logo=documentation&amp;colorB=389" alt="Documentation" /></a></p>
+                
+                        <input id="mod-write_orbital_cube-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 
-<p><!-- PROJECT LOGO -->
-<br /></p>
+                        <label class="view-source-button" for="mod-write_orbital_cube-view-source"><span>View Source</span></label>
 
-<div align="center">
-  <!-- <a href="https://github.com/manassharma07/pyfock">
-    <img src="https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.png" alt="Logo" width="320" height="200">
-  </a> -->
-
-<h3 align="center">PyFock</h3>
-
-  <p align="center">
-    An efficient and parallelizable pure Python electronic structure theory code with GPU acceleration, made possible via just-in-time compilation functionalities of Numba.
-    <br />
-    <a href="https://github.com/manassharma07/pyfock/blob/main/Documentation.md"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/manassharma07/pyfock/blob/main/examples/ex13.ipynb">View Demo</a>
-    ·
-    <a href="https://github.com/manassharma07/pyfock/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/manassharma07/pyfock/issues">Request Feature</a>
-  </p>
-</div>
-
-<p><!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary></p>
-
-<p><ol>
-  <li>
-    <a href="#about-the-project">About The Project</a>
-    <ul>
-      <li><a href="#built-with">Built With</a></li>
-    </ul>
-  </li>
-  <li>
-    <a href="#getting-started">Getting Started</a>
-    <ul>
-      <li><a href="#prerequisites">Prerequisites</a></li>
-      <li><a href="#installation">Installation</a></li>
-    </ul>
-  </li>
-  <li><a href="#usage">Usage</a></li>
-  <li><a href="#features">Features</a></li>
-  <li><a href="#roadmap">Roadmap</a></li>
-  <li><a href="#contributing">Contributing</a></li>
-  <li><a href="#license">License</a></li>
-  <li><a href="#contact">Contact</a></li>
-  <li><a href="#acknowledgments">Acknowledgments</a></li>
-  <li><a href="#citation">Citation</a></li>
-</ol></p>
-
-<p></details></p>
-
-<p><!-- ABOUT THE PROJECT --></p>
-
-<h2 id="about-the-project">About The Project</h2>
-
-<p><a href="https://github.com/manassharma07/pyfock"><img src="https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.png" alt="Product Name Screen Shot" /></a></p>
-
-<p>PyFock is a quantum chemistry package that enables efficient density functional theory (DFT) and related calculations for molecular systems, all using the Python programming language. By utilizing Numba's just-in-time (JIT) compilation, PyFock is able to achieve efficient and parallelizable performance for all the compute-intensive portions of the calculations. Furthermore, PyFock can utilize multiple GPUs to accelerate some of the expensive calculations. This makes PyFock a highly flexible and powerful tool for quantum chemistry simulations, all within a single, easy-to-use package.</p>
-
-<p>Some advantages of this approach include the ability to easily incorporate PyFock into existing Python workflows, the accessibility and versatility of the Python language, and the ability to take advantage of the numerous scientific and numerical libraries available in the Python ecosystem.</p>
-
-<ul>
-<li>Yes, the code is written completely in Python (even the computationally intensive molecular integrals).</li>
-<li>Yet, the code is as efficient as PySCF/Psi4 (sometimes even more efficient), because the computationally intensive portions are accelerated via Numba, NumPy, NumExpr, Scipy, Opt_Einsum, Joblib, CuPy, Numba-CUDA, etc.</li>
-<li>The code employs Gaussian-type Orbitals (GTOs) as basis functions.</li>
-<li>The calculation of the electron repulsion integrals (ERI) is accelerated via the density fitting method (along with Schwarz screening), resulting in quadratic scaling with respect to the no. of basis functions (Nbf), similar to that of PySCF.</li>
-<li>The evaluation of the exchange-correlation term is done in batches/blocks and scales approximately linearly with system size as only a fixed amount of basis functions contribute to a given batch which is mostly the same for all batches. Furthermore, the XC term evaluation can be accelerated via multiple GPUs using the CuPy and Numba libraries. (Preliminary tests indicate that an Nvidia RTX 2070 can do the XC evaluations 2X faster than 4 CPU cores and more than 8X faster on a P100.) </li>
-<li>Almost all the computationally intensive portions are parallelized via Numba's prange or Joblib (multithreading).</li>
-<li>KS matrix diagonalization and DIIS can also be accelerated using GPUs.</li>
-</ul>
-
-<h3 id="license-and-third-party-code-acknowledgments">License and Third-Party Code Acknowledgments:</h3>
-
-<ul>
-<li>For ERIs using Rys quadrature (roots 1–5), the code was adapted from <a href="https://github.com/rpmuller/MolecularIntegrals.jl">MolecularIntegrals.jl</a> (MIT License).</li>
-<li>Some support for molecular integrals, specifically Rys quadrature roots 6–10, was obtained from <a href="https://github.com/sunqm/libcint">PySCF's libcint</a> (Apache v2 License) by porting the code to Python.</li>
-<li>The DIIS-based SCF convergence routine was adapted from <a href="https://github.com/jjgoings/McMurchie-Davidson">McMurchie-Davidson</a> (BSD 3-Clause License).</li>
-<li>There are also some functions where I have tried to utilize many more of the <a href="https://github.com/jjgoings/McMurchie-Davidson">McMurchie-Davidson</a>'s code for molecular integrals with JIT compilation, but have been unsuccessful due to their use of recurrence (which is incompatible with Numba). 
-Only the dipole matrix appears to be usable at the moment. But I nonetheless, acknowledge that any integral using the MMD scheme comes from Joshua Going's library with BSD 3-Clause License.</li>
-<li>For the Boys Function evaluation, the code was adapted from <a href="https://github.com/peter-reinholdt/pyboys">PyBoys</a> with BSD 3-Clause License. </li>
-<li>The PyFock's implementation of exchange-correlation functionals is mainly taken from <a href="https://github.com/wangenau/eminus">eminus</a> code with Apache v2 License with slight modifications for the GPU versions.</li>
-</ul>
-
-<p><!-- MARKDOWN LINKS &amp; IMAGES -->
-<!-- <a href="https://www.markdownguide.org/basic-syntax/#reference-style-links">https://www.markdownguide.org/basic-syntax/#reference-style-links</a> -->
-Modules:</p>
-
-<ul>
-<li><code>Mol</code>: Molecular properties</li>
-<li><code>Basis</code>: Basis set management</li>
-<li><code>Integrals</code>: 1e/2e integral routines</li>
-<li><code>XC</code>, <code>Grids</code>: Exchange-correlation and grid definitions</li>
-<li><code>Utils</code>, <code>Graphics</code>: Helper utilities and visualization</li>
-</ul>
-
-<p>This project benefits from the Python scientific stack: NumPy, SciPy, Opt_Einsum, NumExpr, Joblib, and more.  </p>
-
-<p>Repository: <a href="https://github.com/manassharma07/PyFock">https://github.com/manassharma07/PyFock</a><br />
-License: MIT<br />
-Author: Manas Sharma  </p>
-
-<p>For usage examples, demos, and API documentation, refer to the online documentation or example notebooks.</p>
-</div>
-
-                        <input id="mod-pyfock-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-
-                        <label class="view-source-button" for="mod-pyfock-view-source"><span>View Source</span></label>
-
-                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a><span class="sd">.. include:: ../README.md</span>
-</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a>
-</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="sd">Modules:</span>
-</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="sd">- `Mol`: Molecular properties</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="sd">- `Basis`: Basis set management</span>
-</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a><span class="sd">- `Integrals`: 1e/2e integral routines</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="sd">- `XC`, `Grids`: Exchange-correlation and grid definitions</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="sd">- `Utils`, `Graphics`: Helper utilities and visualization</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a>
-</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a><span class="sd">This project benefits from the Python scientific stack: NumPy, SciPy, Opt_Einsum, NumExpr, Joblib, and more.  </span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a><span class="sd">  </span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a><span class="sd">Repository: https://github.com/manassharma07/PyFock  </span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a><span class="sd">License: MIT  </span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a><span class="sd">Author: Manas Sharma  </span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a><span class="sd">  </span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a><span class="sd">For usage examples, demos, and API documentation, refer to the online documentation or example notebooks.  </span>
-</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.0.3&quot;</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Manas Sharma&#39;</span>
-</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a><span class="n">__credits__</span> <span class="o">=</span> <span class="s1">&#39;Phys Whiz (bragitoff.com)&#39;</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>
+                        <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos"> 1</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numba</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos"> 2</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="L-3"><a href="#L-3"><span class="linenos"> 3</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">opt_einsum</span><span class="w"> </span><span class="kn">import</span> <span class="n">contract</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos"> 4</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyfock</span><span class="w"> </span><span class="kn">import</span> <span class="n">Integrals</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos"> 5</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.Cube</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_cube_coords</span><span class="p">,</span> <span class="n">write_cube_file</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos"> 6</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos"> 7</span></a>
+</span><span id="L-8"><a href="#L-8"><span class="linenos"> 8</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_orbital_cube</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">mo_coeffs</span><span class="p">,</span> <span class="n">cube_file</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ncores</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos"> 9</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Write the molecular orbital of a molecule as a cube file.&quot;&quot;&quot;</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos">10</span></a>    <span class="n">numba</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos">11</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;OMP_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos">12</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OPENBLAS_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export OPENBLAS_NUM_THREADS=4 </span>
+</span><span id="L-13"><a href="#L-13"><span class="linenos">13</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MKL_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export MKL_NUM_THREADS=4</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos">14</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;VECLIB_MAXIMUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export VECLIB_MAXIMUM_THREADS=4</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos">15</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;NUMEXPR_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export NUMEXPR_NUM_THREADS=4</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos">16</span></a>
+</span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a>
+</span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a>    <span class="c1"># Generate a grid of coordinates for the cube file</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a>    <span class="n">coords</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span> <span class="o">=</span> <span class="n">generate_cube_coords</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="n">nz</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>  <span class="c1"># shape: (ncoord, 3)</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a>    <span class="c1"># Calculate ao and density values at these coordinates</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a>    <span class="n">bf_values</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">bf_val_helpers</span><span class="o">.</span><span class="n">eval_bfs</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">non_zero_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="c1"># shape: (ncoord, nao)</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a>    <span class="c1"># compute all MO values on the grid (G x N)</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>    <span class="n">psi_grid</span> <span class="o">=</span> <span class="n">bf_values</span> <span class="o">@</span> <span class="n">mo_coeffs</span>    <span class="c1"># matrix multiply</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>
-</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a><span class="c1">#NOTE: The order in which these statements appear is very important.</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="c1"># The Data import comes before Basis import because Basis requires stuff from</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a><span class="c1"># Data, therefore it should be imported first.</span>
-</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.Data</span><span class="w"> </span><span class="kn">import</span> <span class="n">Data</span>
-</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.Basis</span><span class="w"> </span><span class="kn">import</span> <span class="n">Basis</span>
-</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.Mol</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mol</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.Grids</span><span class="w"> </span><span class="kn">import</span> <span class="n">Grids</span>
-</span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.DFT</span><span class="w"> </span><span class="kn">import</span> <span class="n">DFT</span>
-</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a><span class="c1"># from .PBC_ring import ring</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>
+</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a>    <span class="c1"># Write the cube file</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a>    <span class="n">write_cube_file</span><span class="p">(</span><span class="n">cube_file</span><span class="p">,</span> <span class="n">mol</span><span class="p">,</span> <span class="n">psi_grid</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">)</span>
+</span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>
+</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a>
+</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a>    
 </span></pre></div>
 
 
             </section>
+                <section id="write_orbital_cube">
+                            <input id="write_orbital_cube-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">write_orbital_cube</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">mol</span>, </span><span class="param"><span class="n">basis</span>, </span><span class="param"><span class="n">mo_coeffs</span>, </span><span class="param"><span class="n">cube_file</span>, </span><span class="param"><span class="n">nx</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">ny</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">nz</span><span class="o">=</span><span class="mi">100</span>, </span><span class="param"><span class="n">ncores</span><span class="o">=</span><span class="mi">1</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="write_orbital_cube-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#write_orbital_cube"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="write_orbital_cube-9"><a href="#write_orbital_cube-9"><span class="linenos"> 9</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_orbital_cube</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">mo_coeffs</span><span class="p">,</span> <span class="n">cube_file</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ncores</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+</span><span id="write_orbital_cube-10"><a href="#write_orbital_cube-10"><span class="linenos">10</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Write the molecular orbital of a molecule as a cube file.&quot;&quot;&quot;</span>
+</span><span id="write_orbital_cube-11"><a href="#write_orbital_cube-11"><span class="linenos">11</span></a>    <span class="n">numba</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="write_orbital_cube-12"><a href="#write_orbital_cube-12"><span class="linenos">12</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;OMP_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+</span><span id="write_orbital_cube-13"><a href="#write_orbital_cube-13"><span class="linenos">13</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OPENBLAS_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export OPENBLAS_NUM_THREADS=4 </span>
+</span><span id="write_orbital_cube-14"><a href="#write_orbital_cube-14"><span class="linenos">14</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;MKL_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export MKL_NUM_THREADS=4</span>
+</span><span id="write_orbital_cube-15"><a href="#write_orbital_cube-15"><span class="linenos">15</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;VECLIB_MAXIMUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export VECLIB_MAXIMUM_THREADS=4</span>
+</span><span id="write_orbital_cube-16"><a href="#write_orbital_cube-16"><span class="linenos">16</span></a>    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;NUMEXPR_NUM_THREADS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span> <span class="c1"># export NUMEXPR_NUM_THREADS=4</span>
+</span><span id="write_orbital_cube-17"><a href="#write_orbital_cube-17"><span class="linenos">17</span></a>
+</span><span id="write_orbital_cube-18"><a href="#write_orbital_cube-18"><span class="linenos">18</span></a>
+</span><span id="write_orbital_cube-19"><a href="#write_orbital_cube-19"><span class="linenos">19</span></a>    <span class="c1"># Generate a grid of coordinates for the cube file</span>
+</span><span id="write_orbital_cube-20"><a href="#write_orbital_cube-20"><span class="linenos">20</span></a>    <span class="n">coords</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span> <span class="o">=</span> <span class="n">generate_cube_coords</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">nx</span><span class="o">=</span><span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="o">=</span><span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="o">=</span><span class="n">nz</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>  <span class="c1"># shape: (ncoord, 3)</span>
+</span><span id="write_orbital_cube-21"><a href="#write_orbital_cube-21"><span class="linenos">21</span></a>    <span class="c1"># Calculate ao and density values at these coordinates</span>
+</span><span id="write_orbital_cube-22"><a href="#write_orbital_cube-22"><span class="linenos">22</span></a>    <span class="n">bf_values</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">bf_val_helpers</span><span class="o">.</span><span class="n">eval_bfs</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">coords</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">non_zero_indices</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="c1"># shape: (ncoord, nao)</span>
+</span><span id="write_orbital_cube-23"><a href="#write_orbital_cube-23"><span class="linenos">23</span></a>    <span class="c1"># compute all MO values on the grid (G x N)</span>
+</span><span id="write_orbital_cube-24"><a href="#write_orbital_cube-24"><span class="linenos">24</span></a>    <span class="n">psi_grid</span> <span class="o">=</span> <span class="n">bf_values</span> <span class="o">@</span> <span class="n">mo_coeffs</span>    <span class="c1"># matrix multiply</span>
+</span><span id="write_orbital_cube-25"><a href="#write_orbital_cube-25"><span class="linenos">25</span></a>
+</span><span id="write_orbital_cube-26"><a href="#write_orbital_cube-26"><span class="linenos">26</span></a>
+</span><span id="write_orbital_cube-27"><a href="#write_orbital_cube-27"><span class="linenos">27</span></a>    <span class="c1"># Write the cube file</span>
+</span><span id="write_orbital_cube-28"><a href="#write_orbital_cube-28"><span class="linenos">28</span></a>    <span class="n">write_cube_file</span><span class="p">(</span><span class="n">cube_file</span><span class="p">,</span> <span class="n">mol</span><span class="p">,</span> <span class="n">psi_grid</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nz</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Write the molecular orbital of a molecule as a cube file.</p>
+</div>
+
+
+                </section>
     </main>
 <script>
     function escapeHTML(html) {
@@ -298,7 +202,7 @@ Author: Manas Sharma  </p>
                 script.async = true;
                 script.onload = () => resolve(window.pdocSearch);
                 script.onerror = (e) => reject(e);
-                script.src = "search.js";
+                script.src = "../../search.js";
                 document.getElementsByTagName("head")[0].appendChild(script);
             });
         } catch (e) {
@@ -340,7 +244,7 @@ Author: Manas Sharma  </p>
             }
             for (let result of results.slice(0, 10)) {
                 let doc = result.doc;
-                let url = `${doc.modulename.replaceAll(".", "/")}.html`;
+                let url = `../../${doc.modulename.replaceAll(".", "/")}.html`;
                 if (doc.qualname) {
                     url += `#${doc.qualname}`;
                 }
