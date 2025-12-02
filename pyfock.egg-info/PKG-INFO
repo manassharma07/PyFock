@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: pyfock
-Version: 0.0.4
+Version: 0.0.5
 Summary: A simplistic and efficient pure-python quantum chemistry library from Phys Whiz.
 Home-page: https://github.com/manassharma07/crysx_nn
 Download-URL: 
