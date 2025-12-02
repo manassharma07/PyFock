@@ -21,13 +21,13 @@ with open(os.path.join(here, "requirements.txt")) as f:
 
 setup(
     name = "pyfock",
-    version = "0.0.5", # DONT FORGET TO CHANGE THE VERSION IN __INIT__.py
+    version = "0.0.6", # DONT FORGET TO CHANGE THE VERSION IN __INIT__.py
     author = "Manas Sharma",
     author_email = "feedback@bragitoff.com",
     description = ("A simplistic and efficient pure-python quantum chemistry library from Phys Whiz."),
     license = "MIT",
-    keywords = ["dft", "pure python", "crysx", "numba dft", "density functional theory", "phys whiz","manas sharma","bragitoff","quantum chemistry", "pyfock", "fock"],
-    url = "https://github.com/manassharma07/crysx_nn",
+    keywords = ["dft", "pure python", "numba dft", "density functional theory", "manas sharma", "bragitoff","quantum chemistry", "pyfock", "molecular integrals"],
+    url = "https://github.com/manassharma07/pyfock",
     download_url = '',
     packages=find_packages(),#['pyfock'],
     include_package_data=True,
