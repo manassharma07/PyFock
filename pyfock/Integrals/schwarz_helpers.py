@@ -407,6 +407,8 @@ def calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold,
             #         count += 1
             if sqrt_ij*sqrt_diag_ints2c2e[k]>threshold:
                 count += 1
+            # else:
+            #     print("yes")
         offsets[ij+1] = count 
     return offsets
 
@@ -1393,9 +1395,8 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
     #Loop over BFs
     for itemp in prange(indicesA.shape[0]):
         # id_thrd = get_thread_id()
-
         
-
+        
         i = indicesA[itemp]
         j = indicesB[itemp]
         
@@ -1428,20 +1429,31 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
         
         IJsq = IJsq_arr[i,j]
         tempcoeff1 = Ni*Nj
-        gammaP = np.zeros((maxprims, maxprims), dtype=np.float64) # Should be Hoisted out
-        screenfactorAB = np.zeros((maxprims, maxprims), dtype=np.float64) # Should be Hoisted out
-        # Ap = np.zeros((bfs_coeffs.shape[1], bfs_coeffs.shape[1]), dtype=np.float64) # Should be Hoisted out
-        
-        # kshell = aux_shell_indices[k]
+
+        ## This screening is not useful for def2-SVP kind of basis sets
+        ## But useful for diffuse basis sets like def2-TZVP
+        alphaik_min = np.min(alphaik[:nprimi])
+        alphajk_min = np.min(alphajk[:nprimj])
+        gammaP_min = alphaik_min + alphajk_min
+        rho_min = alphaik_min * alphajk_min / gammaP_min
+        arg = rho_min * IJsq
+        if arg > 18.42:  # exp(-18.42) ≈ 1e-8
+            continue
+        # screening_AB_min = np.exp(-rho_min * IJsq)
+        # if abs(screening_AB_min)<1.0e-8:
+        #     continue
+        # P_min = (alphaik_min*I + alphajk_min*J)/gammaP_min
         index_k = 0
         for k in range(naux):
+            if sqrt_ij*sqrt_diag_ints2c2e[k]<threshold:
+                continue
             lmnk = aux_bfs_lmn[k]
             lc, mc, nc = lmnk
             # if strict_schwarz:
             #     max_val = sqrt_ij*sqrt_diag_ints2c2e[k]
             #     if max_val>threshold:
             #         if max_val<1e-8:
-            #             if (lc+mc+nc)>=1: # s aux functions
+            #             if (lc+mc+nc)>=1: # s aux function
             #                 continue
             #         elif max_val<1e-7:
             #             if (lc+mc+nc)>=2: # s, p aux functions
@@ -1455,8 +1467,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
             # else:  
             #     if sqrt_ij*sqrt_diag_ints2c2e[k]<threshold:
             #         continue
-            if sqrt_ij*sqrt_diag_ints2c2e[k]<threshold:
-                continue
+            
             Nk = aux_bfs_contr_prim_norms[k]
             nprimk = aux_bfs_nprim[k]
             alphakk = np.zeros(maxprims_aux, dtype=np.float64) # Should be Hoisted out
@@ -1466,6 +1477,24 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
             K = aux_bfs_coords[k]
             Q = K   
 
+            # NEW SCREENING
+            # PQ_min = P_min - Q
+            # PQsq_min = np.sum(PQ_min**2)
+
+            # alphakk_min = np.min(alphakk[:nprimk])
+            # rho_abP_min = gammaP_min * alphakk_min / (gammaP_min + alphakk_min)
+            # screening_ABP_min = np.exp(-rho_abP_min * PQsq_min)
+            # print('screening_ABP_min:', screening_ABP_min)
+            # if rho_abP_min*PQsq_min > 1300.0:  # Try even lower threshold
+            #     index_k += 1
+            #     continue
+            # if abs(screening_ABP_min)<1.0e-8:
+            #     index_k += 1
+            #     continue
+            # geometric prescreen ONLY
+            # if rho_abP_min * PQsq_min > np.log(1.0 / 1e-6):
+            #     continue
+                
             
             tempcoeff2 = tempcoeff1*Nk
             norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1 ) 
@@ -1497,25 +1526,26 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
                         alphajk_ = alphajk[jk]
                         # gammaP[ik,jk] = alphaik_ + alphajk_
                         gammaP_ = alphaik_ + alphajk_
-                        gamma_inv = 1/gammaP_
-                        # Ap[ik,jk] = alphaik[ik]*alphajk[jk]
-                        # screenfactorAB[ik,jk] = np.exp(-Ap[ik,jk]/gammaP[ik,jk]*IJsq)
-                        screenfactorAB = np.exp(-alphaik_*alphajk_/gammaP_*IJsq)
+                        # gamma_inv = 1/gammaP_
+                        arg = alphaik_*alphajk_/gammaP_*IJsq
+                        if arg > 18.42:  # exp(-18.42) ≈ 1e-8
+                            continue
+                        # screenfactorAB = np.exp(-alphaik_*alphajk_/gammaP_*IJsq)
                             
-                        if abs(screenfactorAB)<1.0e-8:   
+                        # if abs(screenfactorAB)<1.0e-8:   
                             #Although this value of screening threshold seems very large
                             # it actually gives the best consistency with PySCF. Reducing it to 1e-15,
                             # actually worsened the agreement.
                             # I suspect that this is caused due to an error cancellation
                             # that happens with the nucmat calculation, as the same screening is 
                             # used there as well
-                            continue
-
-                        djk = bfs_coeffs[j,jk] 
-                        Njk = bfs_prim_norms[j,jk]     
+                            # continue
                         P = (alphaik_*I + alphajk_*J)/gammaP_
                         PQ = P - Q
                         PQsq = np.sum(PQ**2)
+                        djk = bfs_coeffs[j,jk] 
+                        Njk = bfs_prim_norms[j,jk]     
+
                         tempcoeff4 = tempcoeff3_*djk*Njk  
 
                         # screenfactor_2 = tempcoeff4/Nk*screenfactorAB*gamma_inv*np.sqrt(gamma_inv)*15.5031383401
@@ -1533,19 +1563,34 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
                                 
                             gammaQ = alphakk[kk]
                             rho = gammaP_*gammaQ/(gammaP_ + gammaQ)
-                                    
+
+                            # NEW SCREENING
+                            # More aggressive early exit
+                            # if rho*PQsq > 15.0:  # Try even lower threshold
+                            #     continue
+
+                            # screenfactorAB_P = np.exp(-rho*PQsq)
+                            # if abs(screenfactorAB_P) < 1.0e-8: 
+                            #     continue
+
+                            # # Additional check: if the combined screening is too small
+                            # combined_screening = screenfactorAB * screenfactorAB_P
+                            # if abs(combined_screening) < 1.0e-10:
+                            #     continue
+                            
                             # ABsrt = np.sqrt(gammaP[ik,jk]*alphakk[kk])
                             # X = PQsq*rho
                             # factor = 2*np.sqrt(rho/pi)
                             # print('s')
                             val += tempcoeff5*coulomb_rys_3c2e(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L,P)
+                            
                             # The following should have been faster but isnt somehow
                             # val += tempcoeff5*coulomb_rys_new(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L)
                             # The following should have been faster but isnt
                             # val += tempcoeff5*coulomb_rys_fast(roots,weights,G,norder,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik[ik], alphajk[jk], alphakk[kk], alphalk,I,J,K,L,X,gammaP[ik,jk],alphakk[kk],Ap[ik,jk],0.0,ABsrt,factor,P,Q)
                             
             
-            threeC2E[offsets[itemp]+index_k] = val
+            threeC2E[offsets[itemp] + index_k] = val
             index_k += 1
                                  
 

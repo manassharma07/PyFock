@@ -231,7 +231,7 @@ dftObj.debug = False
 dftObj.sortGrids = False
 dftObj.xc_bf_screen = True
 dftObj.threshold_schwarz = 1e-9
-dftObj.strict_schwarz = True
+dftObj.strict_schwarz = False
 dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
