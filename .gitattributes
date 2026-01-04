@@ -1,0 +1,5 @@
+*.bib linguist-detectable=false
+*.tm linguist-detectable=false
+*.notes linguist-detectable=false
+*.nbc linguist-detectable=false
+*.nbi linguist-detectable=false

@@ -4,4 +4,6 @@ pyfock/benchmark_tests/__pycache__/
 __pycache__/
 pyfock.egg-info/
 .DS_Store
+pyfock/.DS_Store
+docs/.DS_Store
 dist
