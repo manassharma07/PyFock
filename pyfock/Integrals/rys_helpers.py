@@ -68,6 +68,12 @@ def coulomb_rys_3c2e(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,
     tot_ang = la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd
     pi = 3.141592653589793
 
+    if tot_ang==1 and (la+ma+na==1):
+        ooopt = 1/(1+roots[0])
+        G00_x = pi*math.exp(-Ap*(IJ[0])**2/A)/ABsrt
+        G00_y = pi*math.exp(-Ap*(IJ[1])**2/A)/ABsrt
+        G00_z = pi*math.exp(-Ap*(IJ[2])**2/A)/ABsrt
+
     
     for i in range(norder):
         if tot_ang==0:
@@ -79,30 +85,32 @@ def coulomb_rys_3c2e(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,
             Gz = Ap/A*(IJ[2]**2)
             Iz = math.exp(-Gz)*G00
             ijkl += (Ix*Iy*Iz)*weights[0]
+            return 2*np.sqrt(rho/pi)*ijkl
         elif ((tot_ang==1) and (la+ma+na==1)): #(ps|s) # Doesn't seem give any speeed advantage whatsoever
-            ooopt = 1/(1+roots[0])
-            G[0,0] = pi*math.exp(-Ap*(IJ[0])**2/A)/ABsrt
+            # ooopt = 1/(1+roots[0])
+            # G00_x = pi*math.exp(-Ap*(IJ[0])**2/A)/ABsrt
             if la==1:
                 C = (P[0]-I[0])*ooopt + (B*(K[0]-I[0])+A*(P[0]-I[0]))*roots[0]*ooopt/(A+B)
-                G[1,0] = C*G[0,0]
-                Ix = G[1,0]
+                G10_x = C*G00_x
+                Ix = G10_x
             else:
-                Ix = G[0,0]
-            G[0,0] = pi*math.exp(-Ap*(IJ[1])**2/A)/ABsrt
+                Ix = G00_x
+            # G00_y = pi*math.exp(-Ap*(IJ[1])**2/A)/ABsrt
             if ma==1:
                 C = (P[1]-I[1])*ooopt + (B*(K[1]-I[1])+A*(P[1]-I[1]))*roots[0]*ooopt/(A+B)
-                G[1,0] = C*G[0,0]
-                Iy = G[1,0]
+                G10_y = C*G00_y
+                Iy = G10_y 
             else:
-                Iy = G[0,0]
-            G[0,0] = pi*math.exp(-Ap*(IJ[2])**2/A)/ABsrt
+                Iy = G00_y
+            # G00_z = pi*math.exp(-Ap*(IJ[2])**2/A)/ABsrt
             if na==1:
                 C = (P[2]-I[2])*ooopt + (B*(K[2]-I[2])+A*(P[2]-I[2]))*roots[0]*ooopt/(A+B)
-                G[1,0] = C*G[0,0]
-                Iz = G[1,0]
+                G10_z = C*G00_z
+                Iz = G10_z
             else:
-                Iz = G[0,0]
+                Iz = G00_z
             ijkl += (Ix*Iy*Iz)*weights[0]
+            return 2*np.sqrt(rho/pi)*ijkl
         else:
             G = Recur_3c2e(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],alphaik,alphajk,alphakk,alphalk,A,B,Ap,ABsrt)
             # Ix = Int1d(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],
@@ -758,7 +766,7 @@ def Rootn(X,n,roots,weights):
     weights = clenshaw_d1(weights, dataw[offset:], tt, n)
     return roots, weights
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Root1(X,n,roots,weights):
     if X < 3.0E-7:
         roots0 = 0.5E+00-X/5.0E+00
@@ -822,7 +830,7 @@ def Root1(X,n,roots,weights):
 R12,PIE4 = 2.75255128608411E-01, 7.85398163397448E-01
 R22,W22 =  2.72474487139158E+00, 9.17517095361369E-02
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Root2(X,n, roots, weights):
 
   if X < 3.E-7:

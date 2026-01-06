@@ -1494,14 +1494,12 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
             # if rho_abP_min * PQsq_min > np.log(1.0 / 1e-6):
             #     continue
                 
-            
             tempcoeff2 = tempcoeff1*Nk
             norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1 ) 
             tempcoeff3 = np.zeros(maxprims, dtype=np.float64) # Should be Hoisted out 
             tempcoeff3[:] = tempcoeff2*bfs_coeffs[i,:]*bfs_prim_norms[i,:]
             # PQsq = np.zeros((bfs_coeffs.shape[1], bfs_coeffs.shape[1], aux_bfs_coeffs.shape[1]), dtype=np.float64)
             # rho = np.zeros((bfs_coeffs.shape[1], bfs_coeffs.shape[1], aux_bfs_coeffs.shape[1]), dtype=np.float64)
-                
                 
                 
             val = 0.0
