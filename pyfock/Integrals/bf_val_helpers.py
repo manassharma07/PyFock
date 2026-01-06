@@ -101,7 +101,7 @@ def eval_bfs(basis, coord, parallel=True, non_zero_indices=None):
     
     return bf_values
 
-@njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
+@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", inline='always', nogil=True)
 def eval_rho(bf_values, densmat):
     # Evaluates the value of density on a grid using the values of the basis functions 
     # at those grid points and the density matrix.
@@ -134,7 +134,7 @@ def eval_rho(bf_values, densmat):
         rho[m] = rho_temp
     return rho 
 
-@njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True)
+@njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def eval_gto(alpha, coeff, lmn, x, y, z, exponent_dist_sq):
     # This function evaluates the value of a given Gaussian primitive 
     # with given values of alpha (exponent), coefficient, and angular momentum.
@@ -146,7 +146,7 @@ def eval_gto(alpha, coeff, lmn, x, y, z, exponent_dist_sq):
     xl = x**lmn[0]
     ym = y**lmn[1]
     zn = z**lmn[2]
-    exp = np.exp(-alpha*exponent_dist_sq)
+    exp = math.exp(-alpha*exponent_dist_sq)
     value = coeff*xl*ym*zn*exp
     
     return value
@@ -362,7 +362,7 @@ def eval_bfs_and_grad_sparse_internal_serial(bfs_coords, bfs_contr_prim_norms, b
     return result1, result2
 
 
-@njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True)
+@njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def eval_gto_and_grad(alpha, coeff, lmn, x, y, z, exponent_dist_sq):
     # https://www.wolframalpha.com/input?i=dy%2FdA+for+y%3D%28x-A%29%5E%28l%29*%28y-B%29%5E%28m%29*%28z-C%29%5E%28n%29*exp%28-alpha*%28%28x-A%29%5E%282%29%2B%28y-B%29%5E%282%29%2B%28z-C%29%5E%282%29%29+
     # https://www.wolframalpha.com/input?i=derivative+of+%28x-A%29%5E%28l%29*%28y-B%29%5E%28m%29*%28z-C%29%5E%28n%29*exp%28-alpha*%28%28x-A%29%5E%282%29%2B%28y-B%29%5E%282%29%2B%28z-C%29%5E%282%29%29
@@ -376,7 +376,7 @@ def eval_gto_and_grad(alpha, coeff, lmn, x, y, z, exponent_dist_sq):
     xl = x**lmn[0]
     ym = y**lmn[1]
     zn = z**lmn[2]
-    exp = np.exp(-alpha*(exponent_dist_sq))
+    exp = math.exp(-alpha*(exponent_dist_sq))
     factor2 = coeff*exp
 
     # AO Value
@@ -445,7 +445,7 @@ def eval_bfs_sparse_vectorized_internal(bfs_coords, bfs_contr_prim_norms, bfs_np
 
     return result
 
-@njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True)
+@njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def eval_gto_vectorize(alpha, coeff, exp_sq_term, xl, ym, zn):
     # This function evaluates the value of a given Gaussian primitive 
     # with given values of alpha (exponent), coefficient, and angular momentum.
@@ -689,7 +689,7 @@ def eval_gto_vectorize_cupy(alpha, coeff, exp_sq_term, xlymzn):
 # eval_bfs_and_grad_internal_serial = njit(parallel=False, cache=True, nogil=True, fastmath=True, error_model="numpy")(eval_bfs_and_grad_internal_)
 
 
-@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True)
+@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def nonzero_ao_indices_batch(coords, bfs_coords, bfs_radius_cutoff):
     nbfs = bfs_coords.shape[0]
     ncoords = coords.shape[0]

@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit 
 from .integral_helpers import comb
+import math
 
 '''
 Most of the functions here are adapted from the following repository (MIT license) using Julia language
@@ -72,29 +73,29 @@ def coulomb_rys_3c2e(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,
         if tot_ang==0:
             Gx = Ap/A*(IJ[0]**2)
             G00 = np.pi / ABsrt
-            Ix = np.exp(-Gx)*G00
+            Ix = math.exp(-Gx)*G00
             Gy = Ap/A*(IJ[1]**2)
-            Iy = np.exp(-Gy)*G00
+            Iy = math.exp(-Gy)*G00
             Gz = Ap/A*(IJ[2]**2)
-            Iz = np.exp(-Gz)*G00
+            Iz = math.exp(-Gz)*G00
             ijkl += (Ix*Iy*Iz)*weights[0]
         elif ((tot_ang==1) and (la+ma+na==1)): #(ps|s) # Doesn't seem give any speeed advantage whatsoever
             ooopt = 1/(1+roots[0])
-            G[0,0] = pi*np.exp(-Ap*(IJ[0])**2/A)/ABsrt
+            G[0,0] = pi*math.exp(-Ap*(IJ[0])**2/A)/ABsrt
             if la==1:
                 C = (P[0]-I[0])*ooopt + (B*(K[0]-I[0])+A*(P[0]-I[0]))*roots[0]*ooopt/(A+B)
                 G[1,0] = C*G[0,0]
                 Ix = G[1,0]
             else:
                 Ix = G[0,0]
-            G[0,0] = pi*np.exp(-Ap*(IJ[1])**2/A)/ABsrt
+            G[0,0] = pi*math.exp(-Ap*(IJ[1])**2/A)/ABsrt
             if ma==1:
                 C = (P[1]-I[1])*ooopt + (B*(K[1]-I[1])+A*(P[1]-I[1]))*roots[0]*ooopt/(A+B)
                 G[1,0] = C*G[0,0]
                 Iy = G[1,0]
             else:
                 Iy = G[0,0]
-            G[0,0] = pi*np.exp(-Ap*(IJ[2])**2/A)/ABsrt
+            G[0,0] = pi*math.exp(-Ap*(IJ[2])**2/A)/ABsrt
             if na==1:
                 C = (P[2]-I[2])*ooopt + (B*(K[2]-I[2])+A*(P[2]-I[2]))*roots[0]*ooopt/(A+B)
                 G[1,0] = C*G[0,0]

@@ -1396,7 +1396,6 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
     for itemp in prange(indicesA.shape[0]):
         # id_thrd = get_thread_id()
         
-        
         i = indicesA[itemp]
         j = indicesB[itemp]
         
