@@ -82,8 +82,8 @@ funcidpyscf = str(funcx)+','+str(funcc)
 # basis_set_name = '6-31G'
 # basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
-# basis_set_name = 'def2-TZVP'
-basis_set_name = 'def2-QZVP'
+basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-QZVP'
 # basis_set_name = 'def2-TZVPP'
 # basis_set_name = 'def2-QZVPP'
 # basis_set_name = 'def2-TZVPD'
@@ -101,7 +101,7 @@ auxbasis_name = 'def2-universal-jfit'
 # auxbasis_name = '6-31G'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
-# xyzFilename = 'Adenine-Thymine.xyz'
+xyzFilename = 'Adenine-Thymine.xyz'
 # xyzFilename = 'Zn.xyz'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
@@ -119,7 +119,7 @@ auxbasis_name = 'def2-universal-jfit'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -170,7 +170,7 @@ mf.init_guess = 'minao'
 dmat_init = mf.init_guess_by_minao(molPySCF)
 # mf.init_guess = 'atom'
 # dmat_init = mf.init_guess_by_atom(molPySCF)
-mf.max_cycle = 1
+mf.max_cycle = 30
 mf.conv_tol = 1e-7
 mf.grids.level = 3
 # print('begin df build')

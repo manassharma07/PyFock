@@ -1501,7 +1501,6 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
             # PQsq = np.zeros((bfs_coeffs.shape[1], bfs_coeffs.shape[1], aux_bfs_coeffs.shape[1]), dtype=np.float64)
             # rho = np.zeros((bfs_coeffs.shape[1], bfs_coeffs.shape[1], aux_bfs_coeffs.shape[1]), dtype=np.float64)
                 
-                
             val = 0.0
             if norder<=10: # Use rys quadrature
                 

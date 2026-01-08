@@ -76,59 +76,49 @@ def coulomb_rys_3c2e(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,
 
     
     for i in range(norder):
+        root_i = roots[i]
+        weight_i = weights[i]
         if tot_ang==0:
-            Gx = Ap/A*(IJ[0]**2)
             G00 = np.pi / ABsrt
-            Ix = math.exp(-Gx)*G00
-            Gy = Ap/A*(IJ[1]**2)
-            Iy = math.exp(-Gy)*G00
-            Gz = Ap/A*(IJ[2]**2)
-            Iz = math.exp(-Gz)*G00
-            ijkl += (Ix*Iy*Iz)*weights[0]
+            Ap_over_A = Ap / A
+            exp_factor = math.exp(-Ap_over_A * (IJ[0]*IJ[0] + IJ[1]*IJ[1] + IJ[2]*IJ[2]))
+            ijkl += G00 * G00 * G00 * exp_factor * weights[0]
             return 2*np.sqrt(rho/pi)*ijkl
-        elif ((tot_ang==1) and (la+ma+na==1)): #(ps|s) # Doesn't seem give any speeed advantage whatsoever
-            # ooopt = 1/(1+roots[0])
-            # G00_x = pi*math.exp(-Ap*(IJ[0])**2/A)/ABsrt
-            if la==1:
+        elif tot_ang == 1 and la + ma + na == 1:
+            ooopt = 1.0 / (1.0 + roots[0])
+            G00_base = pi / ABsrt
+            
+            # Vectorize the exponential calculations
+            Ap_IJ2 = Ap * (IJ * IJ) / A  # Element-wise for all 3 components
+            G00_vec = G00_base * np.exp(-Ap_IJ2)  # [G00_x, G00_y, G00_z]
+            
+            # Compute C factor for the dimension with l=1
+            if la == 1:
                 C = (P[0]-I[0])*ooopt + (B*(K[0]-I[0])+A*(P[0]-I[0]))*roots[0]*ooopt/(A+B)
-                G10_x = C*G00_x
-                Ix = G10_x
-            else:
-                Ix = G00_x
-            # G00_y = pi*math.exp(-Ap*(IJ[1])**2/A)/ABsrt
-            if ma==1:
+                Ix = C * G00_vec[0]
+                Iy = G00_vec[1]
+                Iz = G00_vec[2]
+            elif ma == 1:
                 C = (P[1]-I[1])*ooopt + (B*(K[1]-I[1])+A*(P[1]-I[1]))*roots[0]*ooopt/(A+B)
-                G10_y = C*G00_y
-                Iy = G10_y 
-            else:
-                Iy = G00_y
-            # G00_z = pi*math.exp(-Ap*(IJ[2])**2/A)/ABsrt
-            if na==1:
+                Ix = G00_vec[0]
+                Iy = C * G00_vec[1]
+                Iz = G00_vec[2]
+            else:  # na == 1
                 C = (P[2]-I[2])*ooopt + (B*(K[2]-I[2])+A*(P[2]-I[2]))*roots[0]*ooopt/(A+B)
-                G10_z = C*G00_z
-                Iz = G10_z
-            else:
-                Iz = G00_z
-            ijkl += (Ix*Iy*Iz)*weights[0]
+                Ix = G00_vec[0]
+                Iy = G00_vec[1]
+                Iz = C * G00_vec[2]
+            
+            ijkl += Ix * Iy * Iz * weights[0]
             return 2*np.sqrt(rho/pi)*ijkl
         else:
-            G = Recur_3c2e(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],alphaik,alphajk,alphakk,alphalk,A,B,Ap,ABsrt)
-            # Ix = Int1d(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],
-            #          alphaik,alphajk,alphakk,alphalk)
+            G = Recur_3c2e(G,root_i,la,lb,lc,ld,I[0],J[0],K[0],L[0],alphaik,alphajk,alphakk,alphalk,A,B,Ap,ABsrt)
             Ix = Shift_3c2e(G,la,lb,lc,ld,IJ[0])
-            # print('reached here5')
-            G = Recur_3c2e(G,roots[i],ma,mb,mc,md,I[1],J[1],K[1],L[1],alphaik,alphajk,alphakk,alphalk,A,B,Ap,ABsrt)
-            # print(G)
-            # print('reached here6')
-            # Iy = Int1d(G,roots[i],ma,mb,mc,md,I[1],J[1],K[1],L[1],
-            #          alphaik,alphajk,alphakk,alphalk)
+            G = Recur_3c2e(G,root_i,ma,mb,mc,md,I[1],J[1],K[1],L[1],alphaik,alphajk,alphakk,alphalk,A,B,Ap,ABsrt)
             Iy = Shift_3c2e(G,ma,mb,mc,md,IJ[1])
-            # print('reached here7')
-            G = Recur_3c2e(G,roots[i],na,nb,nc,nd,I[2],J[2],K[2],L[2],alphaik,alphajk,alphakk,alphalk,A,B,Ap,ABsrt)
-            # Iz = Int1d(G,roots[i],na,nb,nc,nd,I[2],J[2],K[2],L[2],
-            #          alphaik,alphajk,alphakk,alphalk)
+            G = Recur_3c2e(G,root_i,na,nb,nc,nd,I[2],J[2],K[2],L[2],alphaik,alphajk,alphakk,alphalk,A,B,Ap,ABsrt)
             Iz = Shift_3c2e(G,na,nb,nc,nd,IJ[2])
-            ijkl += Ix*Iy*Iz*weights[i] # ABD eq 5 & 9
+            ijkl += Ix*Iy*Iz*weight_i # ABD eq 5 & 9
         
         
     val = 2*np.sqrt(rho/pi)*ijkl # ABD eq 5 & 9
@@ -264,13 +254,9 @@ def Recur(G,t,i,j,k,l,xi,xj,xk,xl,alphai,alphaj,alphak,alphal,A,B,Ap,Bp,ABsrt):
 
 @njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Recur_3c2e(G,t,i,j,k,l,xi,xj,xk,xl,alphai,alphaj,alphak,alphal,A,B,Ap,ABsrt):
-    # print('RecurNumba1', G[0,0])
-    # G1 = np.zeros((n1+1,m1+1))
     
     n = i+j
     m = k+l        
-    # A = alphai+alphaj 
-    # B = alphak+alphal 
     Px = (alphai*xi+alphaj*xj)/A
     Qx = (alphak*xk+alphal*xl)/B
     pi = 3.141592653589793
@@ -456,32 +442,78 @@ def Shift(G,i,j,k,l,xij,xkl):
         ijkl += comb_2_*xkl**(l-m)*ijm0 # I(i,j,k,l)<-I(i,j,m,0)  
     return ijkl
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)#, locals=dict(ijkl=np.float32)
-def Shift_3c2e(G,i,j,k,l,xij, inline='always'):
+# @njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')#, locals=dict(ijkl=np.float32)
+# def Shift_3c2e(G,i,j,k,l,xij):
     
-    ijm0 = 0.0
-    for n in range(j+1):
-        if n<=5 and j<=10:
-            comb_1_ = LOOKUP_TABLE_COMB[j,n]
-        else:
-            comb_1_ = comb(j,n)
-        ijm0 += comb_1_*xij**(j-n)*G[n+i,k]
+#     ijm0 = 0.0
+#     for n in range(j+1):
+#         if n<=10 and j<=10:
+#             comb_1_ = LOOKUP_TABLE_COMB[j,n]
+#         else:
+#             comb_1_ = comb(j,n)
+#         ijm0 += comb_1_*xij**(j-n)*G[n+i,k]
     
-    ijkl = ijm0 # I(i,j,k,l)<-I(i,j,m,0)  
-    return ijkl
+#     ijkl = ijm0 # I(i,j,k,l)<-I(i,j,m,0)  
+#     return ijkl
+@njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')
+def Shift_3c2e(G, i, j, k, l, xij):
+    if j == 0:  # Common case - early exit
+        return G[i, k]
+    
+    else:
+        ijm0 = 0.0
+        for n in range(j + 1):
+            if n < 10 and j < 10:
+                comb_1_ = LOOKUP_TABLE_COMB[j, n]
+            else:
+                comb_1_ = comb(j, n)
+            ijm0 += comb_1_ * xij**(j - n) * G[n + i, k]
+    
+    return ijm0
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
-def RecurFactors(t,A,B,Px,Qx,xi,xk, inline='always'):
-    ooopt = 1/(1+t)
-    fact = t*ooopt/(A+B)
-    B0 = 0.5*fact
-    # B1 = 0.5*ooopt/A + 0.5*fact
-    # B1p = 0.5*ooopt/B + 0.5*fact
-    B1 = 0.5*ooopt/A + B0
-    B1p = 0.5*ooopt/B + B0
-    C = (Px-xi)*ooopt + (B*(Qx-xi)+A*(Px-xi))*fact
-    Cp = (Qx-xk)*ooopt + (B*(Qx-xk)+A*(Px-xk))*fact
-    return C,Cp,B0,B1,B1p
+# @njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
+# def RecurFactors(t,A,B,Px,Qx,xi,xk):
+#     ooopt = 1/(1+t)
+#     fact = t*ooopt/(A+B)
+#     B0 = 0.5*fact
+#     B1 = 0.5*ooopt/A + B0
+#     B1p = 0.5*ooopt/B + B0
+#     C = (Px-xi)*ooopt + (B*(Qx-xi)+A*(Px-xi))*fact
+#     Cp = (Qx-xk)*ooopt + (B*(Qx-xk)+A*(Px-xk))*fact
+#     return C,Cp,B0,B1,B1p
+@njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')
+def RecurFactors(t, A, B, Px, Qx, xi, xk):
+    t_plus_1_inv = 1.0 / (1.0 + t)
+    A_plus_B_inv = 1.0 / (A + B)
+    fact = t * t_plus_1_inv * A_plus_B_inv
+    
+    half_t_plus_1_inv = 0.5 * t_plus_1_inv
+    B0 = 0.5 * fact
+    
+    # Combine divisions
+    A_inv = 1.0 / A
+    B_inv = 1.0 / B
+    B1 = half_t_plus_1_inv * A_inv + B0
+    B1p = half_t_plus_1_inv * B_inv + B0
+    
+    # Pre-compute differences
+    Px_xi = Px - xi
+    Qx_xi = Qx - xi
+    Qx_xk = Qx - xk
+    Px_xk = Px - xk
+    
+    # Algebraically simplified (factor out common terms)
+    # C = Px_xi * ooopt + (B*Qx_xi + A*Px_xi) * fact
+    #   = Px_xi * (ooopt + A*fact) + B*Qx_xi*fact
+    C_factor = t_plus_1_inv + A * fact  # ooopt + A*fact
+    C = Px_xi * C_factor + B * Qx_xi * fact
+    
+    # Cp = Qx_xk * ooopt + (B*Qx_xk + A*Px_xk) * fact
+    #    = Qx_xk * (ooopt + B*fact) + A*Px_xk*fact
+    Cp_factor = t_plus_1_inv + B * fact  # ooopt + B*fact
+    Cp = Qx_xk * Cp_factor + A * Px_xk * fact
+    
+    return C, Cp, B0, B1, B1p
 
 # @njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
 # def RecurFactors_3c2e(t,A,B,Px,Qx,xi,xk):
