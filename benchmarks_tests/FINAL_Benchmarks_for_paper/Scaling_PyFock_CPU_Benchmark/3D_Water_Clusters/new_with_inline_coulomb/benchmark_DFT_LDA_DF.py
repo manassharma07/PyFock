@@ -79,6 +79,7 @@ funcidpyscf = str(funcx)+','+str(funcc)
 
 #basis_set_name = 'def2-SVP'
 basis_set_name = 'def2-TZVP'
+#basis_set_name = 'def2-QZVP'
 # basis_set_name = 'cc-pVDZ'
 
 
@@ -154,7 +155,7 @@ for xyzFilename in xyz_files:
     dftObj.conv_crit = 1e-7
     dftObj.max_itr = 50
     dftObj.ncores = ncores
-    dftObj.save_ao_values = True
+    dftObj.save_ao_values = False
     dftObj.rys = True
     dftObj.DF_algo = 10
     dftObj.blocksize = 5000
