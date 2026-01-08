@@ -1,5 +1,0 @@
-filelist.txt
-KH.cif
-LiH.cif
-NaH.cif
-PdH.cif

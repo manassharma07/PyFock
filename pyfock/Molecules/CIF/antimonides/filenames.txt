@@ -1,4 +1,0 @@
-AlSb.cif
-filenames.txt
-GaSb.cif
-InSb.cif

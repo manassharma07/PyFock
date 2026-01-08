@@ -1,2 +1,0 @@
-Be3Al2(SiO3)6-Beryl.cif
-filelist.txt
