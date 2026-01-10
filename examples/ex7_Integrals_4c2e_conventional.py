@@ -19,12 +19,17 @@ xyzFilename = 'h2o.xyz'
 # xyzFilename = 'Hectane_C100H202.xyz'
 # xyzFilename = 'Icosahectane_C120H242.xyz'
 
+# basisName = 'sto-3g'
+# basisName = 'sto-6g'
+basisName = '6-31G'
+# basisName = 'def2-SVP'
+
 #First of all we need a mol object with some geometry
 mol = Mol(coordfile = xyzFilename)
 
 # Next we need to specify some basis
 # The basis set can then be used to calculate things like Overlap, KE, integrals/matrices.
-basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='sto-3g')})
+basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basisName)})
 #basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-svp')})
 
 #Now we can calculate integrals.
@@ -82,7 +87,7 @@ from pyscf import gto, dft
 from timeit import default_timer as timer
 molPySCF = gto.Mole()
 molPySCF.atom = 'h2o.xyz'
-molPySCF.basis = 'sto-3g'
+molPySCF.basis = basisName
 molPySCF.cart = True
 molPySCF.build()
 #print(molPySCF.cart_labels())

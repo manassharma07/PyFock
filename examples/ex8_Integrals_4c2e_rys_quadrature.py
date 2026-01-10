@@ -21,15 +21,15 @@ xyzFilename = 'h2o.xyz'
 
 # basisName = 'sto-3g'
 # basisName = 'sto-6g'
-basisName = '6-31G'
-# basisName = 'def2-SVP'
+small_basisName = '6-31G'
+big_basisName = 'def2-SVP'
 
 #First of all we need a mol object with some geometry
 mol = Mol(coordfile = xyzFilename)
 
 # Next we need to specify some basis
 # The basis set can then be used to calculate things like Overlap, KE, integrals/matrices.
-basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basisName)})
+basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=small_basisName)})
 #basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-svp')})
 
 #Now we can calculate integrals.
@@ -74,7 +74,7 @@ print('abs(ERI[indx_startA:indx_endA, indx_startB:indx_endB, indx_startC:indx_en
 print(abs(ERI_subset - ERI[indx_startA:indx_endA, indx_startB:indx_endB, indx_startC:indx_endC, indx_startD:indx_endD]).max())  
 
 #Let's try for a larger basis set like def2-svp
-basisBig = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-svp')})
+basisBig = Basis(mol, {'all':Basis.load(mol=mol, basis_name=big_basisName)})
 print('\n\n\n')
 print('Integrals')
 print('\n4c2e ERI array in def2-SVP basis\n')
@@ -87,7 +87,7 @@ from pyscf import gto, dft
 from timeit import default_timer as timer
 molPySCF = gto.Mole()
 molPySCF.atom = 'h2o.xyz'
-molPySCF.basis = basisName
+molPySCF.basis = basis_name
 molPySCF.cart = True
 molPySCF.build()
 #print(molPySCF.cart_labels())
