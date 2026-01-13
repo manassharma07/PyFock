@@ -87,7 +87,7 @@ from pyscf import gto, dft
 from timeit import default_timer as timer
 molPySCF = gto.Mole()
 molPySCF.atom = 'h2o.xyz'
-molPySCF.basis = basis_name
+molPySCF.basis = small_basisName
 molPySCF.cart = True
 molPySCF.build()
 #print(molPySCF.cart_labels())

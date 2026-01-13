@@ -7,7 +7,7 @@ from pyfock import Integrals
 from opt_einsum import contract
 from threadpoolctl import ThreadpoolController, threadpool_info, threadpool_limits
 import numba
-import ray
+# import ray
 
 # funcx_global = pylibxc.LibXCFunctional(1, "unpolarized")
 # funcc_global = pylibxc.LibXCFunctional(7, "unpolarized")
@@ -30,7 +30,13 @@ def eval_xc_3(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, bloc
     # LibXC code list: https://github.com/pyscf/pyscf/blob/master/pyscf/dft/libxc.py
     # PySCF nr_rks code: https://github.com/pyscf/pyscf/blob/master/pyscf/dft/numint.py
     # https://www.osti.gov/pages/servlets/purl/1650078
-
+    try:
+        import ray
+    except ImportError:
+        raise ImportError(
+            "The 'ray' dependency is required for this feature.\n"
+            "Install it with: pip install ray"
+        )
     # Start Ray.
     if not ray.is_initialized():
         ray.init(num_cpus = ncores-1)
@@ -157,236 +163,238 @@ def eval_xc_3(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, bloc
 
     return efunc, v
 
+try:
+    import ray
+    @ray.remote(num_cpus=1)
+    def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, ao_grad_values=None, funcx=None, funcc=None, x_family_code=None, c_family_code=None, xc_family_dict=None, debug=False):
+        numba.set_num_threads(1)
+        with threadpool_limits(limits=1, user_api='blas'):
+            ### Use threadpoolctl https://github.com/numpy/numpy/issues/11826
+            # to set the number of threads to 1
+            # https://github.com/joblib/threadpoolctl
+            # https://stackoverflow.com/questions/29559338/set-max-number-of-threads-at-runtime-on-numpy-openblas
+            
+            # global funcx_global
+            # global funcc_global
+            durationLibxc = 0.0
+            durationE = 0.0
+            durationF = 0.0
+            durationZ = 0.0
+            durationV = 0.0
+            durationRho = 0.0
+            durationAO = 0.0
+            
 
-@ray.remote(num_cpus=1)
-def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, ao_grad_values=None, funcx=None, funcc=None, x_family_code=None, c_family_code=None, xc_family_dict=None, debug=False):
-    numba.set_num_threads(1)
-    with threadpool_limits(limits=1, user_api='blas'):
-        ### Use threadpoolctl https://github.com/numpy/numpy/issues/11826
-        # to set the number of threads to 1
-        # https://github.com/joblib/threadpoolctl
-        # https://stackoverflow.com/questions/29559338/set-max-number-of-threads-at-runtime-on-numpy-openblas
-        
-        # global funcx_global
-        # global funcc_global
-        durationLibxc = 0.0
-        durationE = 0.0
-        durationF = 0.0
-        durationZ = 0.0
-        durationV = 0.0
-        durationRho = 0.0
-        durationAO = 0.0
-        
+            if funcx is None:
+                # xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'}
+                funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+                funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+                # funcx = funcx_global
+                # funcc = funcc_global
+                # x_family_code = funcx.get_family()
+                # c_family_code = funcc.get_family()
 
-        if funcx is None:
-            # xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'}
-            funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-            funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-            # funcx = funcx_global
-            # funcc = funcc_global
-            # x_family_code = funcx.get_family()
-            # c_family_code = funcc.get_family()
+            
+            bfs_coords = bfs_data_as_np_arrays[0]
+            bfs_contr_prim_norms = bfs_data_as_np_arrays[1]
+            bfs_nprim = bfs_data_as_np_arrays[2]
+            bfs_lmn = bfs_data_as_np_arrays[3]
+            bfs_coeffs = bfs_data_as_np_arrays[4]
+            bfs_prim_norms = bfs_data_as_np_arrays[5]
+            bfs_expnts = bfs_data_as_np_arrays[6]
+            bfs_radius_cutoff = bfs_data_as_np_arrays[7]
 
-        
-        bfs_coords = bfs_data_as_np_arrays[0]
-        bfs_contr_prim_norms = bfs_data_as_np_arrays[1]
-        bfs_nprim = bfs_data_as_np_arrays[2]
-        bfs_lmn = bfs_data_as_np_arrays[3]
-        bfs_coeffs = bfs_data_as_np_arrays[4]
-        bfs_prim_norms = bfs_data_as_np_arrays[5]
-        bfs_expnts = bfs_data_as_np_arrays[6]
-        bfs_radius_cutoff = bfs_data_as_np_arrays[7]
-
-        if debug:
-            startAO = timer()
-        # AO and Grad values
-        # LDA
-        if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
-            if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
-                ao_value_block = ao_values
-            else:
-                # ao_value_block = Integrals.evalBFsNumbawrap(basis, coords_block, parallel=False)
-                if non_zero_indices is not None:
-                    ao_value_block = Integrals.bf_val_helpers.eval_bfs_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
+            if debug:
+                startAO = timer()
+            # AO and Grad values
+            # LDA
+            if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
+                if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
+                    ao_value_block = ao_values
                 else:
-                    ao_value_block = Integrals.bf_val_helpers.eval_bfs_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block)
-        # GGA/MGGA (# If either x or c functional is of GGA/MGGA type we need ao_grad_values)
-        # If either x or c functional is of GGA/MGGA type we need ao_grad_values
-        if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
-            if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
-                ao_value_block, ao_values_grad_block = ao_values, ao_grad_values
-            else:
-                # ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad(basis, coords_block, deriv=1, parallel=True, non_zero_indices=non_zero_indices)
-                if non_zero_indices is not None:
-                    # Calculating ao values and gradients together, didn't really do much improvement in computational speed
-                    ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
+                    # ao_value_block = Integrals.evalBFsNumbawrap(basis, coords_block, parallel=False)
+                    if non_zero_indices is not None:
+                        ao_value_block = Integrals.bf_val_helpers.eval_bfs_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
+                    else:
+                        ao_value_block = Integrals.bf_val_helpers.eval_bfs_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block)
+            # GGA/MGGA (# If either x or c functional is of GGA/MGGA type we need ao_grad_values)
+            # If either x or c functional is of GGA/MGGA type we need ao_grad_values
+            if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+                if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
+                    ao_value_block, ao_values_grad_block = ao_values, ao_grad_values
                 else:
-                    ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block) 
-        if debug:
-            durationAO = durationAO + timer() - startAO
-        # print('Duration for AO values: ', durationAO) 
+                    # ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad(basis, coords_block, deriv=1, parallel=True, non_zero_indices=non_zero_indices)
+                    if non_zero_indices is not None:
+                        # Calculating ao values and gradients together, didn't really do much improvement in computational speed
+                        ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
+                    else:
+                        ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block) 
+            if debug:
+                durationAO = durationAO + timer() - startAO
+            # print('Duration for AO values: ', durationAO) 
 
-        if debug:
-            startRho = timer()
-        if non_zero_indices is not None:
-            rho_block = contract('ij,mi,mj->m', dmat, ao_value_block, ao_value_block) # Original (pretty fast)
-        else:
-            rho_block = Integrals.bf_val_helpers.eval_rho(ao_value_block, dmat) # This is by-far the fastest now (when not using non_zero_indices) <-----
-        # If either x or c functional is of GGA/MGGA type we need rho_grad_values too
-        if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
-            # rho_grad_block_x = contract('ij,mi,mj->m',dmat,ao_values_grad_block[0],ao_value_block)+\
-            #                         contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[0])
-            # rho_grad_block_y = contract('ij,mi,mj->m',dmat,ao_values_grad_block[1],ao_value_block)+\
-            #                         contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[1])
-            # rho_grad_block_z = contract('ij,mi,mj->m',dmat,ao_values_grad_block[2],ao_value_block)+\
-            #                         contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[2])
-            # Condense all of the above einsum calls into just two calls
-            rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = ( contract('ij,kmi,mj->km',dmat,ao_values_grad_block,ao_value_block)+\
-                                    contract('ij,mi,kmj->km',dmat,ao_value_block,ao_values_grad_block) )[:]
-            sigma_block = numexpr.evaluate('(rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2)')
-        if debug:
-            durationRho = timer() - startRho
-        # print('Duration for Rho at grid points: ',durationRho)
+            if debug:
+                startRho = timer()
+            if non_zero_indices is not None:
+                rho_block = contract('ij,mi,mj->m', dmat, ao_value_block, ao_value_block) # Original (pretty fast)
+            else:
+                rho_block = Integrals.bf_val_helpers.eval_rho(ao_value_block, dmat) # This is by-far the fastest now (when not using non_zero_indices) <-----
+            # If either x or c functional is of GGA/MGGA type we need rho_grad_values too
+            if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+                # rho_grad_block_x = contract('ij,mi,mj->m',dmat,ao_values_grad_block[0],ao_value_block)+\
+                #                         contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[0])
+                # rho_grad_block_y = contract('ij,mi,mj->m',dmat,ao_values_grad_block[1],ao_value_block)+\
+                #                         contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[1])
+                # rho_grad_block_z = contract('ij,mi,mj->m',dmat,ao_values_grad_block[2],ao_value_block)+\
+                #                         contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[2])
+                # Condense all of the above einsum calls into just two calls
+                rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = ( contract('ij,kmi,mj->km',dmat,ao_values_grad_block,ao_value_block)+\
+                                        contract('ij,mi,kmj->km',dmat,ao_value_block,ao_values_grad_block) )[:]
+                sigma_block = numexpr.evaluate('(rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2)')
+            if debug:
+                durationRho = timer() - startRho
+            # print('Duration for Rho at grid points: ',durationRho)
 
 
-        
-        #LibXC stuff
-        # Exchange
-        if debug:
-            startLibxc = timer()
-        
-        # Input dictionary for libxc
-        inp = {}
-        # Input dictionary needs density values at grid points
-        inp['rho'] = rho_block
-        if xc_family_dict[x_family_code]!='LDA':
-            # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
-            inp['sigma'] = sigma_block
-        # Calculate the necessary quantities using LibXC
-        retx = funcx.compute(inp)
-        # durationLibxc = durationLibxc + timer() - startLibxc
-        # print('Duration for LibXC computations at grid points: ',durationLibxc)
+            
+            #LibXC stuff
+            # Exchange
+            if debug:
+                startLibxc = timer()
+            
+            # Input dictionary for libxc
+            inp = {}
+            # Input dictionary needs density values at grid points
+            inp['rho'] = rho_block
+            if xc_family_dict[x_family_code]!='LDA':
+                # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
+                inp['sigma'] = sigma_block
+            # Calculate the necessary quantities using LibXC
+            retx = funcx.compute(inp)
+            # durationLibxc = durationLibxc + timer() - startLibxc
+            # print('Duration for LibXC computations at grid points: ',durationLibxc)
 
-        # Correlation
-        # startLibxc = timer()
-        
-        # Input dictionary for libxc
-        inp = {}
-        # Input dictionary needs density values at grid points
-        inp['rho'] = rho_block
-        if xc_family_dict[c_family_code]!='LDA':
-            # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
-            inp['sigma'] = sigma_block
-        # Calculate the necessary quantities using LibXC
-        retc = funcc.compute(inp)
-        if debug:
-            durationLibxc = durationLibxc + timer() - startLibxc
-        # print('Duration for LibXC computations at grid points: ',durationLibxc)
+            # Correlation
+            # startLibxc = timer()
+            
+            # Input dictionary for libxc
+            inp = {}
+            # Input dictionary needs density values at grid points
+            inp['rho'] = rho_block
+            if xc_family_dict[c_family_code]!='LDA':
+                # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
+                inp['sigma'] = sigma_block
+            # Calculate the necessary quantities using LibXC
+            retc = funcc.compute(inp)
+            if debug:
+                durationLibxc = durationLibxc + timer() - startLibxc
+            # print('Duration for LibXC computations at grid points: ',durationLibxc)
 
-        if debug:
-            startE = timer()
-        #ENERGY-----------
-        e = retx['zk'] + retc['zk'] # Functional values at grid points
-        # Testing CrysX's own implmentation
-        #e = densfuncs.lda_x(rho)
+            if debug:
+                startE = timer()
+            #ENERGY-----------
+            e = retx['zk'] + retc['zk'] # Functional values at grid points
+            # Testing CrysX's own implmentation
+            #e = densfuncs.lda_x(rho)
 
-        # Calculate the total energy 
-        # Multiply the density at grid points by weights
-        den = numexpr.evaluate('(rho_block*weights_block)') #elementwise multiply
-        # den = rho_block*weights_block #elementwise multiply
-        efunc = np.dot(den, e) #Multiply with functional values at grid points and sum
-        nelec = np.sum(den)
-        if debug:
-            durationE = durationE + timer() - startE
-        # print('Duration for calculation of total density functional energy: ',durationE)
+            # Calculate the total energy 
+            # Multiply the density at grid points by weights
+            den = numexpr.evaluate('(rho_block*weights_block)') #elementwise multiply
+            # den = rho_block*weights_block #elementwise multiply
+            efunc = np.dot(den, e) #Multiply with functional values at grid points and sum
+            nelec = np.sum(den)
+            if debug:
+                durationE = durationE + timer() - startE
+            # print('Duration for calculation of total density functional energy: ',durationE)
 
-        #POTENTIAL----------
-        # The derivative of functional wrt density is vrho
-        vrho = retx['vrho'] + retc['vrho']
-        vsigma = 0
-        # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-        if xc_family_dict[x_family_code]!='LDA':
-            # The derivative of functional wrt grad \rho square.
-            vsigma = retx['vsigma']
-        if xc_family_dict[c_family_code]!='LDA':
-            # The derivative of functional wrt grad \rho square.
-            vsigma += retc['vsigma']
-        retx = 0
-        retc = 0
-        func = 0
-        
-        if debug:
-            startF = timer()
-        v_rho_temp = vrho[:,0]
-        # F = weights_block*v_rho_temp
-        F = numexpr.evaluate('(weights_block*v_rho_temp)')
-        # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-        if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
-            vsigma_temp = vsigma[:,0]
-            Ftemp = numexpr.evaluate('(2*weights_block*vsigma_temp)')
-            # Ftemp = 2*weights_block*vsigma[:,0]
-            Fx = numexpr.evaluate('(Ftemp*rho_grad_block_x)')
-            Fy = numexpr.evaluate('(Ftemp*rho_grad_block_y)')
-            Fz = numexpr.evaluate('(Ftemp*rho_grad_block_z)')
-            # Fx = Ftemp*rho_grad_block_x
-            # Fy = Ftemp*rho_grad_block_y
-            # Fz = Ftemp*rho_grad_block_z
-        if debug:
-            durationF = durationF + timer() - startF
-        # print('Duration for calculation of F: ',durationF)
-        
-        if debug:
-            startZ = timer()
-        ao_value_block_T = ao_value_block.T
-        # z = 0.5*F*ao_value_block_T
-        z = numexpr.evaluate('(0.5*F*ao_value_block_T)')
-        # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-        if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
-            ao_value_gradx_block_T = ao_values_grad_block[0].T
-            ao_value_grady_block_T = ao_values_grad_block[1].T
-            ao_value_gradz_block_T = ao_values_grad_block[2].T
-            z = numexpr.evaluate('(z + Fx*ao_value_gradx_block_T + Fy*ao_value_grady_block_T + Fz*ao_value_gradz_block_T)')
-            # z = z + Fx*ao_values_grad_block[0].T + Fy*ao_values_grad_block[1].T + Fz*ao_values_grad_block[2].T
-        if debug:
-            durationZ = durationZ + timer() - startZ
-        # Free memory
-        F = 0
-        v_rho_temp = 0
-        Fx = 0
-        Fy = 0
-        Fz = 0
-        Ftemp = 0
-        vsigma_temp = 0
-        if debug:
-            startV = timer()
-        v_temp = z @ ao_value_block  # The fastest uptil now
-        # v_temp = np.dot(z, ao_value_block)  
-        v_temp_T = v_temp.T
-        # v = v_temp + v_temp_T
-        v = numexpr.evaluate('(v_temp + v_temp_T)')
-        
-        
-        if debug:
-            durationV = durationV + timer() - startV
-        z = 0
-        ao_value_block = 0
-        rho_block = 0
-        temp = 0
-        vrho = 0 
-        weights_block=0
-        coords_block=0
-        func = 0
-        dmat = 0
-        v_temp_T = 0
-        v_temp = 0
-        
-        
-        
-        profiling_timings = {'durationLibxc':durationLibxc, 'durationE':durationE, 'durationF':durationF, 'durationZ':durationZ, 'durationV':durationV, 'durationRho':durationRho, 'durationAO':durationAO}
+            #POTENTIAL----------
+            # The derivative of functional wrt density is vrho
+            vrho = retx['vrho'] + retc['vrho']
+            vsigma = 0
+            # If either x or c functional is of GGA/MGGA type we need rho_grad_values
+            if xc_family_dict[x_family_code]!='LDA':
+                # The derivative of functional wrt grad \rho square.
+                vsigma = retx['vsigma']
+            if xc_family_dict[c_family_code]!='LDA':
+                # The derivative of functional wrt grad \rho square.
+                vsigma += retc['vsigma']
+            retx = 0
+            retc = 0
+            func = 0
+            
+            if debug:
+                startF = timer()
+            v_rho_temp = vrho[:,0]
+            # F = weights_block*v_rho_temp
+            F = numexpr.evaluate('(weights_block*v_rho_temp)')
+            # If either x or c functional is of GGA/MGGA type we need rho_grad_values
+            if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+                vsigma_temp = vsigma[:,0]
+                Ftemp = numexpr.evaluate('(2*weights_block*vsigma_temp)')
+                # Ftemp = 2*weights_block*vsigma[:,0]
+                Fx = numexpr.evaluate('(Ftemp*rho_grad_block_x)')
+                Fy = numexpr.evaluate('(Ftemp*rho_grad_block_y)')
+                Fz = numexpr.evaluate('(Ftemp*rho_grad_block_z)')
+                # Fx = Ftemp*rho_grad_block_x
+                # Fy = Ftemp*rho_grad_block_y
+                # Fz = Ftemp*rho_grad_block_z
+            if debug:
+                durationF = durationF + timer() - startF
+            # print('Duration for calculation of F: ',durationF)
+            
+            if debug:
+                startZ = timer()
+            ao_value_block_T = ao_value_block.T
+            # z = 0.5*F*ao_value_block_T
+            z = numexpr.evaluate('(0.5*F*ao_value_block_T)')
+            # If either x or c functional is of GGA/MGGA type we need rho_grad_values
+            if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+                ao_value_gradx_block_T = ao_values_grad_block[0].T
+                ao_value_grady_block_T = ao_values_grad_block[1].T
+                ao_value_gradz_block_T = ao_values_grad_block[2].T
+                z = numexpr.evaluate('(z + Fx*ao_value_gradx_block_T + Fy*ao_value_grady_block_T + Fz*ao_value_gradz_block_T)')
+                # z = z + Fx*ao_values_grad_block[0].T + Fy*ao_values_grad_block[1].T + Fz*ao_values_grad_block[2].T
+            if debug:
+                durationZ = durationZ + timer() - startZ
+            # Free memory
+            F = 0
+            v_rho_temp = 0
+            Fx = 0
+            Fy = 0
+            Fz = 0
+            Ftemp = 0
+            vsigma_temp = 0
+            if debug:
+                startV = timer()
+            v_temp = z @ ao_value_block  # The fastest uptil now
+            # v_temp = np.dot(z, ao_value_block)  
+            v_temp_T = v_temp.T
+            # v = v_temp + v_temp_T
+            v = numexpr.evaluate('(v_temp + v_temp_T)')
+            
+            
+            if debug:
+                durationV = durationV + timer() - startV
+            z = 0
+            ao_value_block = 0
+            rho_block = 0
+            temp = 0
+            vrho = 0 
+            weights_block=0
+            coords_block=0
+            func = 0
+            dmat = 0
+            v_temp_T = 0
+            v_temp = 0
+            
+            
+            
+            profiling_timings = {'durationLibxc':durationLibxc, 'durationE':durationE, 'durationF':durationF, 'durationZ':durationZ, 'durationV':durationV, 'durationRho':durationRho, 'durationAO':durationAO}
 
-    # print(durationRho)
-    return efunc, v, nelec, profiling_timings
-
+        # print(durationRho)
+        return efunc, v, nelec, profiling_timings
+except ImportError:
+    pass
 # Extremely slow
 # @njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True)
 # def symmetric_matrix_product(A, B):
