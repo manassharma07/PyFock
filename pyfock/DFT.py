@@ -16,6 +16,7 @@
 #                     "Y88P"                                         "Y88P"                                       
 from re import T
 from pyfock.Utils import print_pyfock_logo
+from pyfock.Utils import print_scientist
 # Print system information 
 from pyfock.Utils import print_sys_info
 import pyfock.Mol as Mol
@@ -895,13 +896,14 @@ class DFT:
         orthogonalize = self.orthogonalize
 
         print_pyfock_logo()
+        print_scientist()
         print('\n\nNumber of atoms:', mol.natoms)
         print('\n\nNumber of basis functions (atomic orbitals):', basis.bfs_nao)
         print('\n\nNumber of auxiliary basis functions:', auxbasis.bfs_nao)
-        print('\n\n================================================================================\n\n')
+        print("\n" + "="*70 + "\n")
 
         print_sys_info()
-
+        print("\n" + "="*70 + "\n")
         #### Set number of cores
         numba.set_num_threads(ncores)
         os.environ['RAYON_NUM_THREADS'] = str(ncores)
@@ -1048,7 +1050,7 @@ class DFT:
             print('Core H size in GB ',H.nbytes/1e9, flush=True)
             print('done!', flush=True)
             duration1e = timer() - start1e
-            print('Time taken '+str(duration1e)+' seconds.\n', flush=True)
+            print('Time taken '+str(round(duration1e, 2))+' seconds.\n', flush=True)
         else:
             start1e = timer()
             print('\nCalculating overlap and kinetic integrals...\n\n', flush=True)
@@ -1067,7 +1069,7 @@ class DFT:
             print('Core H size in GB ',(H.nbytes/1e9)*2, flush=True) # Factor of 2 because nuclear matrix will also be included here later
             print('done!', flush=True)
             duration1e = timer() - start1e
-            print('Time taken '+str(duration1e)+' seconds.\n', flush=True)
+            print('Time taken '+str(round(duration1e, 2))+' seconds.\n', flush=True)
 
 
         if dmat is None:
@@ -1109,13 +1111,13 @@ class DFT:
                 # Diagonal elements of ERI 4c2e array
                 ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
                 duration_4c2e_diag = timer() - start_4c2e_diag
-                print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', duration_4c2e_diag)
+                print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
                 # Calculate the square roots required for 
                 duration_square_roots = 0.0
                 start_square_roots = timer()
                 sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
                 duration_square_roots = timer() - start_square_roots
-                print('Time taken to evaluate the square roots needed: ', duration_square_roots)
+                print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
                 chunksize = int(1e9) # Results in 2 GB chunks
                 duration_indices_calc = 0.0
                 duration_concatenation = 0.0
@@ -1151,7 +1153,7 @@ class DFT:
                         break
                 
                 duration_indices_calc += timer() - start_indices_calc
-                print('Time for significant indices evaluation: ', duration_indices_calc)
+                print('Time for significant indices evaluation: ', round(duration_indices_calc, 2))
                 # print('Time for array concatenation: ', duration_concatenation)
 
                 # Get rid of temp variables
@@ -1166,7 +1168,7 @@ class DFT:
                 print('No. of significant quadruplets based on Schwarz inequality and 8-fold symmetry: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints4c2e*100,1)) + '% of original', flush=True)
                 print('Schwarz screening done!')
                 durationSchwarz = timer() - startSchwarz
-                print('Total time taken for Schwarz screening '+str(durationSchwarz)+' seconds.\n', flush=True)
+                print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
 
                 ints4c2e = Integrals.schwarz_helpers.rys_4c2e_tri_schwarz_sparse(basis, auxbasis, indicesA, indicesB, indicesC, indicesD)
 
@@ -1201,7 +1203,7 @@ class DFT:
 
             print('done!', flush=True)
             durationgrids = timer() - startGrids
-            print('Time taken '+str(durationgrids)+' seconds.\n', flush=True)
+            print('Time taken '+str(round(durationgrids, 2))+' seconds.\n', flush=True)
 
             # Begin pruning the grids based on density (rho)
             # Evaluate ao_values to calculate rho
@@ -1236,7 +1238,7 @@ class DFT:
             grids.weights = weightsNew
             print('done!', flush=True)
             durationgrids_prune_rho = timer() - startGrids_prune_rho
-            print('Time taken '+str(durationgrids_prune_rho)+' seconds.\n', flush=True)
+            print('Time taken '+str(round(durationgrids_prune_rho, 2))+' seconds.\n', flush=True)
             print('\nDeleted '+ str(ndeleted) + ' grid points.', flush=True)
             
         else:
@@ -1311,7 +1313,7 @@ class DFT:
                 list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices_cupy(basis, grids.coords, blocksize, nblocks, ngrids, streams[0])
             print('done!', flush=True)
             durationXCpreprocessing = timer() - startXCpreprocessing
-            print('Time taken '+str(durationXCpreprocessing)+' seconds.\n', flush=True)
+            print('Time taken '+str(round(durationXCpreprocessing, 2))+' seconds.\n', flush=True)
             print('Maximum no. of basis functions contributing to a batch of grid points:   ', max(count_nonzero_indices))
             print('Average no. of basis functions contributing to a batch of grid points:   ', int(np.mean(count_nonzero_indices)))
 
@@ -1339,7 +1341,7 @@ class DFT:
                 if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
                     print('\nYou have asked to save the values of significant basis functions and their gradients on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
                     memory_required = 4*sum(count_nonzero_indices*blocksize)*8/1024/1024/1024
-                    print('Please note: This will require addtional memory that is approximately :'+ str(np.round(memory_required,1))+ ' GB', flush=True)
+                    print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
                     print('Calculating the value of significantly contributing basis functions (atomic orbitals)...', flush=True)
                     list_ao_values = []
                     list_ao_grad_values = []
@@ -1360,7 +1362,7 @@ class DFT:
                     ao_grad_values_block =0
                 print('done!', flush=True)
                 durationAO_values = timer() - startAO_values
-                print('Time taken '+str(durationAO_values)+' seconds.\n', flush=True)
+                print('Time taken '+str(round(durationAO_values, 2))+' seconds.\n', flush=True)
         
         if self.use_gpu:
             grids.coords = cp.asarray(grids.coords, dtype=cp.float64)
@@ -1537,7 +1539,7 @@ class DFT:
             num_fmt = "{:>20.13f}"  # 20-wide, 10 decimal places
 
             print(f"\n\n\n------Iteration {itr}--------\n\n", flush=True)
-            print("Energies\n")
+            print("Energies (in Hartrees)\n")
             print(f"{'Electron-Nuclear Energy':<{label_w}}{num_fmt.format(Enuc)}")
             print(f"{'Nuclear repulsion Energy':<{label_w}}{num_fmt.format(Enn)}")
             print(f"{'Kinetic Energy':<{label_w}}{num_fmt.format(Ekin)}")
@@ -1643,7 +1645,7 @@ class DFT:
 
 
             durationItr = timer() - startIter
-            print('\n\nTime taken for the previous iteration: '+str(durationItr)+'\n\n', flush=True)
+            print('\n\nTime taken for the previous iteration: '+str(round(durationItr, 2))+' seconds \n\n', flush=True)
 
         
         self.converged = scf_converged
@@ -1652,33 +1654,33 @@ class DFT:
 
         durationSCF = timer() - startSCF
         # print(dmat)
-        print('\nTime taken : '+str(durationSCF) +' seconds.', flush=True)
+        print('\nTime taken : '+str(round(durationSCF, 2)) +' seconds.', flush=True)
         print('\n\n', flush=True)
-        print('-------------------------------------', flush=True)
-        print('Profiling', flush=True)
-        print('-------------------------------------', flush=True)
-        print('Preprocessing                          ', durationXCpreprocessing + durationAO_values + durationgrids_prune_rho + durationSchwarz)
+        print('-------------------------------------------------------------', flush=True)
+        print('Profiling (Wall times in seconds)', flush=True)
+        print('-------------------------------------------------------------', flush=True)
+        print('Preprocessing                          ', round(durationXCpreprocessing + durationAO_values + durationgrids_prune_rho + durationSchwarz, 2), flush=True)
         if isDF:
-            print('Density Fitting                        ', durationDF, flush=True)
+            print('Density Fitting                        ', round(durationDF, 2), flush=True)
             if DF_algo==6 or DF_algo==10:
-                print('    DF (gamma)                         ', durationDF_gamma, flush=True)
-                print('    DF (coeff)                         ', durationDF_coeff, flush=True)
-                print('    DF (Jtri)                          ', durationDF_Jtri, flush=True)
+                print('    DF (gamma)                         ', round(durationDF_gamma, 2), flush=True)
+                print('    DF (coeff)                         ', round(durationDF_coeff, 2), flush=True)
+                print('    DF (Jtri)                          ', round(durationDF_Jtri, 2), flush=True)
                 if cholesky:
-                    print('    DF (Cholesky)                      ', durationDF_cholesky, flush=True)
-        print('DIIS                                   ', durationDIIS, flush=True)
-        print('KS matrix diagonalization              ', durationKS, flush=True)
-        print('One electron Integrals (S, T, Vnuc)    ', duration1e, flush=True)
+                    print('    DF (Cholesky)                      ', round(durationDF_cholesky, 2), flush=True)
+        print('DIIS                                   ', round(durationDIIS, 2), flush=True)
+        print('KS matrix diagonalization              ', round(durationKS, 2), flush=True)
+        print('One electron Integrals (S, T, Vnuc)    ', round(duration1e, 2), flush=True)
         if isDF:
-            print('Coulomb Integrals (2c2e + 3c2e)        ', durationCoulomb-durationSchwarz-durationDF_cholesky, flush=True)
+            print('Coulomb Integrals (2c2e + 3c2e)        ', round(durationCoulomb-durationSchwarz-durationDF_cholesky, 2), flush=True)
         if not isDF:
-            print('Coulomb Integrals (4c2e)               ', durationCoulomb-durationSchwarz, flush=True)
-        print('Grids construction                     ', durationgrids, flush=True)
-        print('Exchange-Correlation Term              ', durationxc, flush=True)
-        totalTime = durationXCpreprocessing + durationAO_values + duration1e + durationCoulomb - durationDF_cholesky + \
-            durationgrids + durationxc + durationDF + durationKS + durationDIIS + durationgrids_prune_rho 
-        print('Misc.                                  ', durationSCF - totalTime, flush=True)
-        print('Complete SCF                           ', durationSCF, flush=True)
+            print('Coulomb Integrals (4c2e)               ', round(durationCoulomb-durationSchwarz, 2), flush=True)
+        print('Grids construction                     ', round(durationgrids, 2), flush=True)
+        print('Exchange-Correlation Term              ', round(durationxc, 2), flush=True)
+        totalTime = round(durationXCpreprocessing + durationAO_values + duration1e + durationCoulomb - durationDF_cholesky + \
+            durationgrids + durationxc + durationDF + durationKS + durationDIIS + durationgrids_prune_rho, 2)
+        print('Misc.                                  ', round(durationSCF - totalTime, 2), flush=True)
+        print('Complete SCF                           ', round(durationSCF, 2), flush=True)
 
         if self.use_gpu:
             # Free memory of all GPUs
@@ -1688,7 +1690,6 @@ class DFT:
 
             # Switch back to main GPU
             cp.cuda.Device(0).use()
-        
         return Etot, dmat
         
 

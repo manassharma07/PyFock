@@ -45,7 +45,23 @@
 
             <h2>Contents</h2>
             <ul>
-  <li><a href="#about-the-project">About The Project</a></li>
+  <li><a href="#pyfock">PyFock</a>
+  <ul>
+    <li><a href="#about-the-project">About The Project</a></li>
+    <li><a href="#key-features">Key Features</a></li>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#quick-start">Quick Start</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#graphical-user-interface">Graphical User Interface</a></li>
+    <li><a href="#tutorials">Tutorials</a></li>
+    <li><a href="#documentation">Documentation</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#citation">Citation</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ul></li>
 </ul>
 
 
@@ -81,39 +97,33 @@
                     <h1 class="modulename">
 pyfock    </h1>
 
-                        <div class="docstring"><p><!-- PROJECT SHIELDS -->
-<!--
-<strong>* I'm using markdown "reference style" links for readability.
-<em></strong> Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-<strong></em> See the bottom of this document for the declaration of the reference variables
-<em></strong> for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*</em>* <a href="https://www.markdownguide.org/basic-syntax/#reference-style-links">https://www.markdownguide.org/basic-syntax/#reference-style-links</a>
--->
-<a href="https://github.com/manassharma07/PyFock/contributors"><img src="https://img.shields.io/github/contributors/manassharma07/crysx_nn.svg?style=for-the-badge" alt="Contributors" /></a>
+                        <div class="docstring"><h1 id="pyfock">PyFock</h1>
+
+<p><a href="https://github.com/manassharma07/PyFock/contributors"><img src="https://img.shields.io/github/contributors/manassharma07/crysx_nn.svg?style=for-the-badge" alt="Contributors" /></a>
 <a href="https://github.com/manassharma07/PyFock/network/members"><img src="https://img.shields.io/github/forks/manassharma07/PyFock.svg?style=for-the-badge" alt="Forks" /></a>
 <a href="https://github.com/manassharma07/PyFock/stargazers"><img src="https://img.shields.io/github/stars/manassharma07/PyFock.svg?style=for-the-badge" alt="Stargazers" /></a>
 <a href="https://github.com/manassharma07/PyFock/issues"><img src="https://img.shields.io/github/issues/manassharma07/PyFock.svg?style=for-the-badge" alt="Issues" /></a>
 <a href="https://github.com/manassharma07/PyFock/blob/main/LICENSE"><img src="https://img.shields.io/github/license/manassharma07/PyFock.svg?style=for-the-badge" alt="MIT License" /></a>
 <a href="https://www.linkedin.com/in/manassharma07"><img src="https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&amp;logo=linkedin&amp;colorB=555" alt="LinkedIn" /></a>
-<a href="https://github.com/manassharma07/PyFock/blob/main/Documentation.md"><img src="https://img.shields.io/badge/-docs-blue.svg?style=for-the-badge&amp;logo=documentation&amp;colorB=389" alt="Documentation" /></a></p>
+<a href="https://pyfock-docs.bragitoff.com"><img src="https://img.shields.io/badge/-docs-blue.svg?style=for-the-badge&amp;logo=documentation&amp;colorB=389" alt="Documentation" /></a>
+<a href="https://pypi.org/project/pyfock/"><img src="https://img.shields.io/pypi/v/pyfock.svg?style=for-the-badge" alt="PyPI version" /></a></p>
 
-<p><!-- PROJECT LOGO -->
-<br /></p>
+<p><br /></p>
 
 <div align="center">
-  <!-- <a href="https://github.com/manassharma07/pyfock">
-    <img src="https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.png" alt="Logo" width="320" height="200">
-  </a> -->
-
-<h3 align="center">PyFock</h3>
+  <h3 align="center">PyFock</h3>
 
   <p align="center">
-    An efficient and parallelizable pure Python electronic structure theory code with GPU acceleration, made possible via just-in-time compilation functionalities of Numba.
+    A pure Python Gaussian basis DFT code with GPU acceleration for efficient quantum chemistry calculations
     <br />
-    <a href="https://github.com/manassharma07/pyfock/blob/main/Documentation.md"><strong>Explore the docs »</strong></a>
+    <a href="https://pyfock-docs.bragitoff.com"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/manassharma07/pyfock/blob/main/examples/ex13.ipynb">View Demo</a>
+    <a href="https://pyfock.bragitoff.com">Homepage</a>
+    ·
+    <a href="https://pyfock-gui.bragitoff.com">Try the GUI</a>
+    ·
+    <a href="https://www.kaggle.com/code/ducktape07/pyfock-tutorial">View Demo</a>
     ·
     <a href="https://github.com/manassharma07/pyfock/issues">Report Bug</a>
     ·
@@ -126,65 +136,428 @@ pyfock    </h1>
   <summary>Table of Contents</summary></p>
 
 <p><ol>
-  <li>
-    <a href="#about-the-project">About The Project</a>
-    <ul>
-      <li><a href="#built-with">Built With</a></li>
-    </ul>
-  </li>
-  <li>
-    <a href="#getting-started">Getting Started</a>
-    <ul>
-      <li><a href="#prerequisites">Prerequisites</a></li>
-      <li><a href="#installation">Installation</a></li>
-    </ul>
-  </li>
+  <li><a href="#about-the-project">About The Project</a></li>
+  <li><a href="#key-features">Key Features</a></li>
+  <li><a href="#installation">Installation</a></li>
+  <li><a href="#quick-start">Quick Start</a></li>
   <li><a href="#usage">Usage</a></li>
-  <li><a href="#features">Features</a></li>
+  <li><a href="#graphical-user-interface">Graphical User Interface</a></li>
+  <li><a href="#tutorials">Tutorials</a></li>
+  <li><a href="#documentation">Documentation</a></li>
   <li><a href="#roadmap">Roadmap</a></li>
   <li><a href="#contributing">Contributing</a></li>
   <li><a href="#license">License</a></li>
+  <li><a href="#citation">Citation</a></li>
   <li><a href="#contact">Contact</a></li>
   <li><a href="#acknowledgments">Acknowledgments</a></li>
-  <li><a href="#citation">Citation</a></li>
 </ol></p>
 
 <p></details></p>
 
-<p><!-- ABOUT THE PROJECT --></p>
-
 <h2 id="about-the-project">About The Project</h2>
 
-<p><a href="https://github.com/manassharma07/pyfock"><img src="https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.png" alt="Product Name Screen Shot" /></a></p>
+<p><a href="https://github.com/manassharma07/pyfock"><img src="https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.png" alt="PyFock Screenshot" /></a></p>
 
-<p>PyFock is a quantum chemistry package that enables efficient density functional theory (DFT) and related calculations for molecular systems, all using the Python programming language. By utilizing Numba's just-in-time (JIT) compilation, PyFock is able to achieve efficient and parallelizable performance for all the compute-intensive portions of the calculations. Furthermore, PyFock can utilize multiple GPUs to accelerate some of the expensive calculations. This makes PyFock a highly flexible and powerful tool for quantum chemistry simulations, all within a single, easy-to-use package.</p>
+<p><strong>PyFock</strong> is a pure Python quantum chemistry package that enables efficient Kohn-Sham density functional theory (DFT) calculations for molecular systems. Unlike traditional quantum chemistry codes written in Fortran or C/C++, PyFock is written entirely in Python—including all performance-critical molecular integral evaluations—while achieving computational efficiency comparable to established codes like PySCF and Psi4.</p>
 
-<p>Some advantages of this approach include the ability to easily incorporate PyFock into existing Python workflows, the accessibility and versatility of the Python language, and the ability to take advantage of the numerous scientific and numerical libraries available in the Python ecosystem.</p>
+<h3 id="what-makes-pyfock-different">What Makes PyFock Different?</h3>
 
 <ul>
-<li>Yes, the code is written completely in Python (even the computationally intensive molecular integrals).</li>
-<li>Yet, the code is as efficient as PySCF/Psi4 (sometimes even more efficient), because the computationally intensive portions are accelerated via Numba, NumPy, NumExpr, Scipy, Opt_Einsum, Joblib, CuPy, Numba-CUDA, etc.</li>
-<li>The code employs Gaussian-type Orbitals (GTOs) as basis functions.</li>
-<li>The calculation of the electron repulsion integrals (ERI) is accelerated via the density fitting method (along with Schwarz screening), resulting in quadratic scaling with respect to the no. of basis functions (Nbf), similar to that of PySCF.</li>
-<li>The evaluation of the exchange-correlation term is done in batches/blocks and scales approximately linearly with system size as only a fixed amount of basis functions contribute to a given batch which is mostly the same for all batches. Furthermore, the XC term evaluation can be accelerated via multiple GPUs using the CuPy and Numba libraries. (Preliminary tests indicate that an Nvidia RTX 2070 can do the XC evaluations 2X faster than 4 CPU cores and more than 8X faster on a P100.) </li>
-<li>Almost all the computationally intensive portions are parallelized via Numba's prange or Joblib (multithreading).</li>
-<li>KS matrix diagonalization and DIIS can also be accelerated using GPUs.</li>
+<li><strong>100% Pure Python</strong>: All code, including computationally intensive molecular integrals, is written in Python</li>
+<li><strong>High Performance</strong>: Achieves efficiency comparable to C/C++ backends through Numba JIT compilation, NumPy, NumExpr, SciPy, and CuPy</li>
+<li><strong>GPU Acceleration</strong>: Leverages CUDA via Numba and CuPy for up to 14× speedup on large systems</li>
+<li><strong>Easy Installation</strong>: Simple <code>pip install</code> on all major operating systems (Linux, macOS, Windows)</li>
+<li><strong>Accessible</strong>: Designed for education, prototyping, and community development</li>
+<li><strong>Near-Quadratic Scaling</strong>: ~O(N²·⁰⁵) scaling through density fitting with Cauchy-Schwarz screening</li>
+<li><strong>Gaussian-Type Orbitals</strong>: Employs GTOs as basis functions for molecular calculations</li>
+<li><strong>Efficient Parallelization</strong>: Multi-core CPU support and multi-GPU acceleration capabilities</li>
 </ul>
 
-<h3 id="license-and-third-party-code-acknowledgments">License and Third-Party Code Acknowledgments:</h3>
+<h3 id="performance-highlights">Performance Highlights</h3>
 
 <ul>
-<li>For ERIs using Rys quadrature (roots 1–5), the code was adapted from <a href="https://github.com/rpmuller/MolecularIntegrals.jl">MolecularIntegrals.jl</a> (MIT License).</li>
-<li>Some support for molecular integrals, specifically Rys quadrature roots 6–10, was obtained from <a href="https://github.com/sunqm/libcint">PySCF's libcint</a> (Apache v2 License) by porting the code to Python.</li>
-<li>The DIIS-based SCF convergence routine was adapted from <a href="https://github.com/jjgoings/McMurchie-Davidson">McMurchie-Davidson</a> (BSD 3-Clause License).</li>
-<li>There are also some functions where I have tried to utilize many more of the <a href="https://github.com/jjgoings/McMurchie-Davidson">McMurchie-Davidson</a>'s code for molecular integrals with JIT compilation, but have been unsuccessful due to their use of recurrence (which is incompatible with Numba). 
-Only the dipole matrix appears to be usable at the moment. But I nonetheless, acknowledge that any integral using the MMD scheme comes from Joshua Going's library with BSD 3-Clause License.</li>
-<li>For the Boys Function evaluation, the code was adapted from <a href="https://github.com/peter-reinholdt/pyboys">PyBoys</a> with BSD 3-Clause License. </li>
-<li>The PyFock's implementation of exchange-correlation functionals is mainly taken from <a href="https://github.com/wangenau/eminus">eminus</a> code with Apache v2 License with slight modifications for the GPU versions.</li>
+<li><strong>Numerical accuracy</strong>: Consistent with PySCF (&lt; 10⁻⁷ Ha)</li>
+<li><strong>Parallel efficiency</strong>: Comparable to state-of-the-art C++ backends on multicore CPUs</li>
+<li><strong>GPU speedup</strong>: Up to 14× faster than 4-core CPU execution for large systems</li>
+<li><strong>Scaling</strong>: Near-quadratic ~O(N²·⁰⁵) for electron repulsion integrals (Coulomb term)</li>
+<li><strong>XC evaluation</strong>: Sub-quadratic scaling ~O(N¹·²⁵⁻¹·⁵) for exchange-correlation contributions</li>
+</ul>
+
+<h2 id="key-features">Key Features</h2>
+
+<ul>
+<li>✅ <strong>Pure Python Implementation</strong>: Including molecular integral evaluations (overlap, kinetic, nuclear attraction, electron repulsion integrals)</li>
+<li>✅ <strong>Density Fitting</strong>: Efficient density fitting approximation with Cauchy-Schwarz screening</li>
+<li>✅ <strong>GPU Acceleration</strong>: Full GPU support for integral evaluation, XC term, and matrix operations</li>
+<li>✅ <strong>Multiple Integration Schemes</strong>: 
+<ul>
+<li>Classical Taketa-Huzinaga-O-ohata scheme</li>
+<li>Rys quadrature method (roots 1–10) for efficient ERI evaluation</li>
+</ul></li>
+<li>✅ <strong>XC Functionals</strong>: Support for LDA and GGA functionals via LibXC integration</li>
+<li>✅ <strong>DIIS Convergence</strong>: Direct inversion of iterative subspace for SCF acceleration</li>
+<li>✅ <strong>Parallel Execution</strong>: Multi-core CPU and multi-GPU support via Numba and Joblib</li>
+<li>✅ <strong>Modular Design</strong>: Standalone integral modules for benchmarking and embedding</li>
+<li>✅ <strong>Web-based GUI</strong>: Interactive interface for visualization and input generation</li>
+<li>✅ <strong>Cartesian and Spherical Basis</strong>: Support for both CAO and SAO representations</li>
+<li>✅ <strong>Cross-Platform</strong>: Works on Linux, macOS, and Windows</li>
+</ul>
+
+<h2 id="installation">Installation</h2>
+
+<h3 id="basic-installation">Basic Installation</h3>
+
+<p>PyFock can be easily installed via pip:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>pyfock
+</code></pre>
+</div>
+
+<h3 id="installing-from-github-latest-development-version">Installing from GitHub (Latest Development Version)</h3>
+
+<p>To get the latest development version directly from GitHub:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>git+https://github.com/manassharma07/pyfock.git
+</code></pre>
+</div>
+
+<p>Or clone the repository and install locally:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/manassharma07/pyfock.git
+<span class="nb">cd</span><span class="w"> </span>pyfock
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</code></pre>
+</div>
+
+<h3 id="installing-libxc-required-dependency">Installing LibXC (Required Dependency)</h3>
+
+<p>PyFock requires LibXC for exchange-correlation functionals. The installation method depends on your system:</p>
+
+<h4 id="using-conda-recommended-easiest-method">Using Conda (Recommended - Easiest Method)</h4>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>pylibxc<span class="w"> </span>-y
+</code></pre>
+</div>
+
+<h4 id="on-ubuntudebian">On Ubuntu/Debian</h4>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>libxc-dev
+pip<span class="w"> </span>install<span class="w"> </span>pylibxc2
+</code></pre>
+</div>
+
+<h4 id="on-macos">On macOS</h4>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>brew<span class="w"> </span>install<span class="w"> </span>libxc
+pip<span class="w"> </span>install<span class="w"> </span>pylibxc2
+</code></pre>
+</div>
+
+<p><strong>Note</strong>: The conda method is recommended as it works reliably across all platforms.</p>
+
+<h3 id="optional-dependencies">Optional Dependencies</h3>
+
+<p>For GPU acceleration:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>cupy-cuda11x<span class="w">  </span><span class="c1"># Replace 11x with your CUDA version</span>
+</code></pre>
+</div>
+
+<h2 id="quick-start">Quick Start</h2>
+
+<p>Here's a minimal example to get you started with PyFock:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyfock</span><span class="w"> </span><span class="kn">import</span> <span class="n">Basis</span><span class="p">,</span> <span class="n">Mol</span><span class="p">,</span> <span class="n">DFT</span>
+
+<span class="c1"># Define molecule from XYZ file</span>
+<span class="n">mol</span> <span class="o">=</span> <span class="n">Mol</span><span class="p">(</span><span class="n">coordfile</span><span class="o">=</span><span class="s1">&#39;h2o.xyz&#39;</span><span class="p">)</span>
+
+<span class="c1"># Set up basis sets</span>
+<span class="n">basis</span> <span class="o">=</span> <span class="n">Basis</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;all&#39;</span><span class="p">:</span> <span class="n">Basis</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mol</span><span class="o">=</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis_name</span><span class="o">=</span><span class="s1">&#39;def2-SVP&#39;</span><span class="p">)})</span>
+<span class="n">auxbasis</span> <span class="o">=</span> <span class="n">Basis</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;all&#39;</span><span class="p">:</span> <span class="n">Basis</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mol</span><span class="o">=</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis_name</span><span class="o">=</span><span class="s1">&#39;def2-universal-jfit&#39;</span><span class="p">)})</span>
+
+<span class="c1"># Configure DFT calculation (PBE functional)</span>
+<span class="n">funcx</span> <span class="o">=</span> <span class="mi">101</span>  <span class="c1"># PBE exchange (LibXC code)</span>
+<span class="n">funcc</span> <span class="o">=</span> <span class="mi">130</span>  <span class="c1"># PBE correlation (LibXC code)</span>
+<span class="n">dftObj</span> <span class="o">=</span> <span class="n">DFT</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">auxbasis</span><span class="p">,</span> <span class="n">xc</span><span class="o">=</span><span class="p">[</span><span class="n">funcx</span><span class="p">,</span> <span class="n">funcc</span><span class="p">])</span>
+
+<span class="c1"># Set calculation parameters</span>
+<span class="n">dftObj</span><span class="o">.</span><span class="n">conv_crit</span> <span class="o">=</span> <span class="mf">1e-7</span>
+<span class="n">dftObj</span><span class="o">.</span><span class="n">max_itr</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">dftObj</span><span class="o">.</span><span class="n">ncores</span> <span class="o">=</span> <span class="mi">4</span>
+
+<span class="c1"># Run SCF calculation</span>
+<span class="n">energy</span><span class="p">,</span> <span class="n">dmat</span> <span class="o">=</span> <span class="n">dftObj</span><span class="o">.</span><span class="n">scf</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total Energy: </span><span class="si">{</span><span class="n">energy</span><span class="si">}</span><span class="s2"> Ha&quot;</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h2 id="usage">Usage</h2>
+
+<h3 id="computing-molecular-integrals">Computing Molecular Integrals</h3>
+
+<p>PyFock provides standalone access to all molecular integrals:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyfock</span><span class="w"> </span><span class="kn">import</span> <span class="n">Integrals</span><span class="p">,</span> <span class="n">Basis</span><span class="p">,</span> <span class="n">Mol</span>
+
+<span class="n">mol</span> <span class="o">=</span> <span class="n">Mol</span><span class="p">(</span><span class="n">coordfile</span><span class="o">=</span><span class="s1">&#39;h2o.xyz&#39;</span><span class="p">)</span>
+<span class="n">basis</span> <span class="o">=</span> <span class="n">Basis</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;all&#39;</span><span class="p">:</span> <span class="n">Basis</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mol</span><span class="o">=</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis_name</span><span class="o">=</span><span class="s1">&#39;def2-SVP&#39;</span><span class="p">)})</span>
+
+<span class="c1"># One-electron integrals</span>
+<span class="n">S_ovlp</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">overlap_mat_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="n">V_kin</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">kin_mat_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="n">V_nuc</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">nuc_mat_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">mol</span><span class="p">)</span>
+
+<span class="c1"># Two-electron integrals (classical scheme)</span>
+<span class="n">ERI_slow</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">conv_4c2e_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+
+<span class="c1"># Two-electron integrals (Rys quadrature - faster)</span>
+<span class="n">ERI_fast</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">rys_4c2e_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+
+<span class="c1"># Three-center integrals for density fitting</span>
+<span class="n">ERI_3c2e</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">rys_3c2e_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+
+<span class="c1"># Two-center integrals</span>
+<span class="n">ERI_2c2e</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">rys_2c2e_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h3 id="gpu-accelerated-integrals">GPU-Accelerated Integrals</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="c1"># GPU versions (returns CuPy arrays in device memory)</span>
+<span class="n">S_ovlp_gpu</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">overlap_mat_symm_cupy</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="n">V_kin_gpu</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">kin_mat_symm_cupy</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="n">V_nuc_gpu</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">nuc_mat_symm_cupy</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="n">mol</span><span class="p">)</span>
+<span class="n">ERI_3c2e_gpu</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">rys_3c2e_symm_cupy</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h3 id="converting-between-cartesian-and-spherical-basis">Converting Between Cartesian and Spherical Basis</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="c1"># Convert from Cartesian to Spherical atomic orbitals</span>
+<span class="n">V_kin_CAO</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">kin_mat_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="n">c2sph_mat</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">cart2sph_basis</span><span class="p">()</span>
+<span class="n">V_kin_SAO</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">c2sph_mat</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">V_kin_CAO</span><span class="p">,</span> <span class="n">c2sph_mat</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+</code></pre>
+</div>
+
+<h3 id="subset-evaluation">Subset Evaluation</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="c1"># Evaluate integrals for a subset of basis functions</span>
+<span class="n">S_ovlp_subset</span> <span class="o">=</span> <span class="n">Integrals</span><span class="o">.</span><span class="n">overlap_mat_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="nb">slice</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">])</span>
+<span class="c1"># slice = [row_start, row_end, col_start, col_end]</span>
+</code></pre>
+</div>
+
+<h3 id="full-dft-calculation-example">Full DFT Calculation Example</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyfock</span><span class="w"> </span><span class="kn">import</span> <span class="n">Basis</span><span class="p">,</span> <span class="n">Mol</span><span class="p">,</span> <span class="n">DFT</span>
+
+<span class="c1"># Initialize molecule</span>
+<span class="n">xyzFilename</span> <span class="o">=</span> <span class="s1">&#39;benzene.xyz&#39;</span>
+<span class="n">mol</span> <span class="o">=</span> <span class="n">Mol</span><span class="p">(</span><span class="n">coordfile</span><span class="o">=</span><span class="n">xyzFilename</span><span class="p">)</span>
+
+<span class="c1"># Set up basis sets</span>
+<span class="n">basis_set_name</span> <span class="o">=</span> <span class="s1">&#39;def2-SVP&#39;</span>
+<span class="n">auxbasis_name</span> <span class="o">=</span> <span class="s1">&#39;def2-universal-jfit&#39;</span>
+<span class="n">basis</span> <span class="o">=</span> <span class="n">Basis</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;all&#39;</span><span class="p">:</span> <span class="n">Basis</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mol</span><span class="o">=</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis_name</span><span class="o">=</span><span class="n">basis_set_name</span><span class="p">)})</span>
+<span class="n">auxbasis</span> <span class="o">=</span> <span class="n">Basis</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;all&#39;</span><span class="p">:</span> <span class="n">Basis</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">mol</span><span class="o">=</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis_name</span><span class="o">=</span><span class="n">auxbasis_name</span><span class="p">)})</span>
+
+<span class="c1"># Configure XC functional (PBE)</span>
+<span class="n">funcx</span> <span class="o">=</span> <span class="mi">101</span>  <span class="c1"># Exchange</span>
+<span class="n">funcc</span> <span class="o">=</span> <span class="mi">130</span>  <span class="c1"># Correlation</span>
+<span class="n">funcidcrysx</span> <span class="o">=</span> <span class="p">[</span><span class="n">funcx</span><span class="p">,</span> <span class="n">funcc</span><span class="p">]</span>
+
+<span class="c1"># Initialize DFT object</span>
+<span class="n">dftObj</span> <span class="o">=</span> <span class="n">DFT</span><span class="p">(</span><span class="n">mol</span><span class="p">,</span> <span class="n">basis</span><span class="p">,</span> <span class="n">auxbasis</span><span class="p">,</span> <span class="n">xc</span><span class="o">=</span><span class="n">funcidcrysx</span><span class="p">)</span>
+
+<span class="c1"># Configure convergence and parallelization</span>
+<span class="n">dftObj</span><span class="o">.</span><span class="n">conv_crit</span> <span class="o">=</span> <span class="mf">1e-7</span>
+<span class="n">dftObj</span><span class="o">.</span><span class="n">max_itr</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">dftObj</span><span class="o">.</span><span class="n">ncores</span> <span class="o">=</span> <span class="mi">4</span>
+
+<span class="c1"># Run calculation</span>
+<span class="n">energyCrysX</span><span class="p">,</span> <span class="n">dmat</span> <span class="o">=</span> <span class="n">dftObj</span><span class="o">.</span><span class="n">scf</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SCF Energy: </span><span class="si">{</span><span class="n">energyCrysX</span><span class="si">}</span><span class="s2"> Ha&quot;</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h3 id="generating-visualization-files">Generating Visualization Files</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pyfock</span><span class="w"> </span><span class="kn">import</span> <span class="n">Utils</span>
+
+<span class="c1"># Generate cube files for molecular orbitals and density</span>
+<span class="n">Utils</span><span class="o">.</span><span class="n">write_density_cube</span><span class="p">(</span><span class="n">dftObj</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;benzene_density.cube&#39;</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h2 id="graphical-user-interface">Graphical User Interface</h2>
+
+<p>PyFock includes a web-based GUI for interactive calculations and visualization:</p>
+
+<p>🌐 <strong>Try it online</strong>: <a href="https://pyfock-gui.bragitoff.com">https://pyfock-gui.bragitoff.com</a></p>
+
+<h3 id="gui-features">GUI Features</h3>
+
+<ul>
+<li><strong>Interactive 3D Visualization</strong>: View molecules and molecular orbitals using Py3Dmol</li>
+<li><strong>Easy Configuration</strong>: Select basis sets, functionals, and calculation parameters</li>
+<li><strong>Automatic Cube File Generation</strong>: HOMO, LUMO, and density visualizations</li>
+<li><strong>Input Script Generator</strong>: Export Python code for local execution</li>
+<li><strong>PySCF Validation</strong>: Built-in comparison with PySCF for accuracy verification</li>
+<li><strong>Molecule Library</strong>: Pre-loaded common molecules or custom XYZ input</li>
+</ul>
+
+<h3 id="running-gui-locally">Running GUI Locally</h3>
+
+<p>The GUI source code is available on GitHub and can be run locally:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/manassharma07/PyFock-GUI.git
+<span class="nb">cd</span><span class="w"> </span>PyFock-GUI
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+streamlit<span class="w"> </span>run<span class="w"> </span>app.py
+</code></pre>
+</div>
+
+<h2 id="tutorials">Tutorials</h2>
+
+<h3 id="interactive-jupyter-notebooks">Interactive Jupyter Notebooks</h3>
+
+<p>🚀 <strong>Coming Soon</strong>: Interactive tutorials on Kaggle and Google Colab</p>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" checked disabled> <a href="https://www.kaggle.com/code/ducktape07/pyfock-tutorial">Kaggle Notebook: Introduction to PyFock</a> </li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Google Colab: GPU-Accelerated DFT with PyFock</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Kaggle Notebook: Molecular Orbital Visualization</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Google Colab: Advanced Features and Benchmarking</li>
+</ul>
+
+<h2 id="documentation">Documentation</h2>
+
+<p>📚 <strong>Full Documentation</strong>: <a href="https://pyfock-docs.bragitoff.com">https://pyfock-docs.bragitoff.com</a></p>
+
+<ul>
+<li><a href="https://pyfock-docs.bragitoff.com">Getting Started Guide</a></li>
+<li><a href="https://pyfock-docs.bragitoff.com">API Reference</a></li>
+<li><a href="https://github.com/manassharma07/pyfock/blob/main/Documentation.md">Theory and Implementation</a></li>
+<li><a href="https://github.com/manassharma07/pyfock/tree/main/examples">Examples and Tutorials</a></li>
+</ul>
+
+<h2 id="roadmap">Roadmap</h2>
+
+<ul>
+<li><input type="checkbox" class="task-list-item-checkbox" checked disabled> Density Fitting with Cauchy-Schwarz screening</li>
+<li><input type="checkbox" class="task-list-item-checkbox" checked disabled> GPU acceleration for integrals and XC evaluation</li>
+<li><input type="checkbox" class="task-list-item-checkbox" checked disabled> DIIS convergence acceleration</li>
+<li><input type="checkbox" class="task-list-item-checkbox" checked disabled> Web-based GUI</li>
+<li><input type="checkbox" class="task-list-item-checkbox" checked disabled> Rys quadrature (roots 1–10)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Analytical gradients (in progress)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Electron dynamics &amp; Excited state calculations (RT-TDDFT)</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Periodic boundary conditions</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Hybrid functionals with exact exchange</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Multi-GPU parallelization</li>
+<li><input type="checkbox" class="task-list-item-checkbox" disabled> Basis set optimization tools</li>
+</ul>
+
+<p>See the <a href="https://github.com/manassharma07/pyfock/issues">open issues</a> for a full list of proposed features and known issues.</p>
+
+<h2 id="contributing">Contributing</h2>
+
+<p>Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are <strong>greatly appreciated</strong>.</p>
+
+<p>If you have a suggestion that would make PyFock better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".</p>
+
+<ol>
+<li>Fork the Project</li>
+<li>Create your Feature Branch (<code>git checkout -b feature/AmazingFeature</code>)</li>
+<li>Commit your Changes (<code>git commit -m 'Add some AmazingFeature'</code>)</li>
+<li>Push to the Branch (<code>git push origin feature/AmazingFeature</code>)</li>
+<li>Open a Pull Request</li>
+</ol>
+
+<p>Don't forget to give the project a star! ⭐ Thanks!</p>
+
+<h2 id="license">License</h2>
+
+<p>Distributed under the <strong>MIT License</strong>. See <code>LICENSE</code> file for more information.</p>
+
+<h3 id="third-party-code-acknowledgments">Third-Party Code Acknowledgments</h3>
+
+<p>PyFock incorporates code adapted from several open-source projects:</p>
+
+<ul>
+<li><strong>Rys quadrature (roots 1–5)</strong>: Adapted from <a href="https://github.com/rpmuller/MolecularIntegrals.jl">MolecularIntegrals.jl</a> (MIT License)</li>
+<li><strong>Rys quadrature (roots 6–10)</strong>: Ported from <a href="https://github.com/sunqm/libcint">PySCF's libcint</a> (Apache v2 License)</li>
+<li><strong>DIIS-based SCF</strong>: Adapted from <a href="https://github.com/jjgoings/McMurchie-Davidson">McMurchie-Davidson</a> (BSD 3-Clause License)</li>
+<li><strong>Dipole matrix integrals</strong>: Based on <a href="https://github.com/jjgoings/McMurchie-Davidson">McMurchie-Davidson</a> (BSD 3-Clause License)</li>
+<li><strong>Boys Function</strong>: Adapted from <a href="https://github.com/peter-reinholdt/pyboys">PyBoys</a> (BSD 3-Clause License)</li>
+<li><strong>XC functionals</strong>: Implementation based on <a href="https://github.com/wangenau/eminus">eminus</a> (Apache v2 License)</li>
+</ul>
+
+<h2 id="citation">Citation</h2>
+
+<p>If you use PyFock in your research, please cite:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="nc">@article</span><span class="p">{</span><span class="nl">sharma2025pyfock</span><span class="p">,</span>
+<span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{PyFock: A Pure Python Gaussian Basis DFT Code for CPU and GPU}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Sharma, Manas}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">journal</span><span class="p">=</span><span class="s">{[Journal Name]}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2025}</span><span class="p">,</span>
+<span class="w">  </span><span class="na">note</span><span class="p">=</span><span class="s">{Manuscript in preparation}</span>
+<span class="p">}</span>
+</code></pre>
+</div>
+
+<p><strong>PyPI Package</strong>: <a href="https://pypi.org/project/pyfock/">https://pypi.org/project/pyfock/</a></p>
+
+<h2 id="contact">Contact</h2>
+
+<p><strong>Manas Sharma</strong></p>
+
+<ul>
+<li>Email: manassharma07@live.com</li>
+<li>Website: <a href="https://manas.bragitoff.com">manas.bragitoff.com</a></li>
+<li>LinkedIn: <a href="https://www.linkedin.com/in/manassharma07">linkedin.com/in/manassharma07</a></li>
+<li>Project Homepage: <a href="https://pyfock.bragitoff.com">https://pyfock.bragitoff.com</a></li>
+<li>Project Link: <a href="https://github.com/manassharma07/pyfock">https://github.com/manassharma07/pyfock</a></li>
+</ul>
+
+<h2 id="acknowledgments">Acknowledgments</h2>
+
+<ul>
+<li>Prof. Dr. Marek Sierka and Friedrich Schiller University Jena for HPC access</li>
+<li>The open-source quantum chemistry community</li>
+</ul>
+
+<hr />
+
+<p><strong>Built With</strong></p>
+
+<ul>
+<li><a href="https://python.org"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&amp;logo=python&amp;logoColor=white" alt="Python" /></a></li>
+<li><a href="https://numba.pydata.org"><img src="https://img.shields.io/badge/Numba-00A3E0?style=for-the-badge&amp;logo=numba&amp;logoColor=white" alt="Numba" /></a></li>
+<li><a href="https://numpy.org"><img src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&amp;logo=numpy&amp;logoColor=white" alt="NumPy" /></a></li>
+<li><a href="https://cupy.dev"><img src="https://img.shields.io/badge/CuPy-76B900?style=for-the-badge&amp;logo=nvidia&amp;logoColor=white" alt="CuPy" /></a></li>
+<li><a href="https://scipy.org"><img src="https://img.shields.io/badge/SciPy-8CAAE6?style=for-the-badge&amp;logo=scipy&amp;logoColor=white" alt="SciPy" /></a></li>
 </ul>
 
 <p><!-- MARKDOWN LINKS &amp; IMAGES -->
-<!-- <a href="https://www.markdownguide.org/basic-syntax/#reference-style-links">https://www.markdownguide.org/basic-syntax/#reference-style-links</a> -->
 Modules:</p>
 
 <ul>
@@ -227,7 +600,7 @@ Author: Manas Sharma  </p>
 </span><span id="L-17"><a href="#L-17"><span class="linenos">17</span></a><span class="sd">For usage examples, demos, and API documentation, refer to the online documentation or example notebooks.  </span>
 </span><span id="L-18"><a href="#L-18"><span class="linenos">18</span></a><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="L-19"><a href="#L-19"><span class="linenos">19</span></a>
-</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.0.3&quot;</span>
+</span><span id="L-20"><a href="#L-20"><span class="linenos">20</span></a><span class="n">__version__</span> <span class="o">=</span> <span class="s2">&quot;0.0.9&quot;</span>
 </span><span id="L-21"><a href="#L-21"><span class="linenos">21</span></a><span class="n">__author__</span> <span class="o">=</span> <span class="s1">&#39;Manas Sharma&#39;</span>
 </span><span id="L-22"><a href="#L-22"><span class="linenos">22</span></a><span class="n">__credits__</span> <span class="o">=</span> <span class="s1">&#39;Phys Whiz (bragitoff.com)&#39;</span>
 </span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a>

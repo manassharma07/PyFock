@@ -53,6 +53,7 @@
             <ul>
                     <li><a href="Utils/write_density_cube.html">write_density_cube</a></li>
                     <li><a href="Utils/write_orbital_cube.html">write_orbital_cube</a></li>
+                    <li><a href="Utils/print_scientist.html">print_scientist</a></li>
             </ul>
 
             <h2>API Documentation</h2>
@@ -71,6 +72,21 @@
             </li>
             <li>
                     <a class="function" href="#write_orbital_cube">write_orbital_cube</a>
+            </li>
+            <li>
+                    <a class="function" href="#print_scientist">print_scientist</a>
+            </li>
+            <li>
+                    <a class="function" href="#display_scientist_profile">display_scientist_profile</a>
+            </li>
+            <li>
+                    <a class="function" href="#get_stylish_name">get_stylish_name</a>
+            </li>
+            <li>
+                    <a class="function" href="#get_random_scientist">get_random_scientist</a>
+            </li>
+            <li>
+                    <a class="function" href="#print_aesthetic_quote">print_aesthetic_quote</a>
             </li>
     </ul>
 
@@ -98,9 +114,10 @@
 </span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.print_logo</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_pyfock_logo</span>
 </span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.write_density_cube</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_density_cube</span>
 </span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.write_orbital_cube</span><span class="w"> </span><span class="kn">import</span> <span class="n">write_orbital_cube</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos">6</span></a>
+</span><span id="L-6"><a href="#L-6"><span class="linenos">6</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.print_scientist</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_scientist</span><span class="p">,</span> <span class="n">display_scientist_profile</span><span class="p">,</span> <span class="n">get_stylish_name</span><span class="p">,</span> <span class="n">get_random_scientist</span><span class="p">,</span> <span class="n">print_aesthetic_quote</span>
 </span><span id="L-7"><a href="#L-7"><span class="linenos">7</span></a>
-</span><span id="L-8"><a href="#L-8"><span class="linenos">8</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;print_sys_info&#39;</span><span class="p">,</span> <span class="s1">&#39;get_cpu_model&#39;</span><span class="p">,</span> <span class="s1">&#39;print_pyfock_logo&#39;</span><span class="p">,</span> <span class="s1">&#39;write_density_cube&#39;</span><span class="p">,</span> <span class="s1">&#39;write_orbital_cube&#39;</span><span class="p">]</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">8</span></a>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">9</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;print_sys_info&#39;</span><span class="p">,</span> <span class="s1">&#39;get_cpu_model&#39;</span><span class="p">,</span> <span class="s1">&#39;print_pyfock_logo&#39;</span><span class="p">,</span> <span class="s1">&#39;write_density_cube&#39;</span><span class="p">,</span> <span class="s1">&#39;write_orbital_cube&#39;</span><span class="p">,</span> <span class="s1">&#39;print_scientist&#39;</span><span class="p">,</span> <span class="s1">&#39;display_scientist_profile&#39;</span><span class="p">,</span> <span class="s1">&#39;get_stylish_name&#39;</span><span class="p">,</span> <span class="s1">&#39;get_random_scientist&#39;</span><span class="p">,</span> <span class="s1">&#39;print_aesthetic_quote&#39;</span><span class="p">]</span>
 </span></pre></div>
 
 
@@ -151,22 +168,23 @@
 </span><span id="print_sys_info-85"><a href="#print_sys_info-85"><span class="linenos"> 85</span></a><span class="sd">    Dependencies:</span>
 </span><span id="print_sys_info-86"><a href="#print_sys_info-86"><span class="linenos"> 86</span></a><span class="sd">        Requires psutil, platform modules and the get_cpu_model() function.</span>
 </span><span id="print_sys_info-87"><a href="#print_sys_info-87"><span class="linenos"> 87</span></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="print_sys_info-88"><a href="#print_sys_info-88"><span class="linenos"> 88</span></a>    <span class="c1"># Get system specifications</span>
-</span><span id="print_sys_info-89"><a href="#print_sys_info-89"><span class="linenos"> 89</span></a>    <span class="n">system_info</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">uname</span><span class="p">()</span>
-</span><span id="print_sys_info-90"><a href="#print_sys_info-90"><span class="linenos"> 90</span></a>    <span class="n">os</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">system_info</span><span class="o">.</span><span class="n">system</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">system_info</span><span class="o">.</span><span class="n">release</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="print_sys_info-91"><a href="#print_sys_info-91"><span class="linenos"> 91</span></a>    <span class="n">system_type</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">architecture</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="print_sys_info-92"><a href="#print_sys_info-92"><span class="linenos"> 92</span></a>    <span class="n">num_cores</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">(</span><span class="n">logical</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;Unavailable&quot;</span>
-</span><span id="print_sys_info-93"><a href="#print_sys_info-93"><span class="linenos"> 93</span></a>    <span class="n">num_threads</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">(</span><span class="n">logical</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;Unavailable&quot;</span>
-</span><span id="print_sys_info-94"><a href="#print_sys_info-94"><span class="linenos"> 94</span></a>    <span class="n">memory</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span><span class="o">.</span><span class="n">total</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1024</span> <span class="o">**</span> <span class="mi">3</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># in GB</span>
-</span><span id="print_sys_info-95"><a href="#print_sys_info-95"><span class="linenos"> 95</span></a>    <span class="n">cpu_model</span> <span class="o">=</span> <span class="n">get_cpu_model</span><span class="p">()</span>
-</span><span id="print_sys_info-96"><a href="#print_sys_info-96"><span class="linenos"> 96</span></a>
-</span><span id="print_sys_info-97"><a href="#print_sys_info-97"><span class="linenos"> 97</span></a>    <span class="c1"># Print system specifications</span>
-</span><span id="print_sys_info-98"><a href="#print_sys_info-98"><span class="linenos"> 98</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Operating System:&#39;</span><span class="p">,</span> <span class="n">os</span><span class="p">)</span>
-</span><span id="print_sys_info-99"><a href="#print_sys_info-99"><span class="linenos"> 99</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;System Type:&#39;</span><span class="p">,</span> <span class="n">system_type</span><span class="p">)</span>
-</span><span id="print_sys_info-100"><a href="#print_sys_info-100"><span class="linenos">100</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;CPU Model:&#39;</span><span class="p">,</span> <span class="n">cpu_model</span><span class="p">)</span>
-</span><span id="print_sys_info-101"><a href="#print_sys_info-101"><span class="linenos">101</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of Cores:&#39;</span><span class="p">,</span> <span class="n">num_cores</span><span class="p">)</span>
-</span><span id="print_sys_info-102"><a href="#print_sys_info-102"><span class="linenos">102</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of Threads:&#39;</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">)</span>
-</span><span id="print_sys_info-103"><a href="#print_sys_info-103"><span class="linenos">103</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Memory (GB):&#39;</span><span class="p">,</span> <span class="n">memory</span><span class="p">)</span>
+</span><span id="print_sys_info-88"><a href="#print_sys_info-88"><span class="linenos"> 88</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">============= System Information =============&quot;</span><span class="p">)</span>
+</span><span id="print_sys_info-89"><a href="#print_sys_info-89"><span class="linenos"> 89</span></a>    <span class="c1"># Get system specifications</span>
+</span><span id="print_sys_info-90"><a href="#print_sys_info-90"><span class="linenos"> 90</span></a>    <span class="n">system_info</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">uname</span><span class="p">()</span>
+</span><span id="print_sys_info-91"><a href="#print_sys_info-91"><span class="linenos"> 91</span></a>    <span class="n">os</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">system_info</span><span class="o">.</span><span class="n">system</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">system_info</span><span class="o">.</span><span class="n">release</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="print_sys_info-92"><a href="#print_sys_info-92"><span class="linenos"> 92</span></a>    <span class="n">system_type</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">architecture</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="print_sys_info-93"><a href="#print_sys_info-93"><span class="linenos"> 93</span></a>    <span class="n">num_cores</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">(</span><span class="n">logical</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;Unavailable&quot;</span>
+</span><span id="print_sys_info-94"><a href="#print_sys_info-94"><span class="linenos"> 94</span></a>    <span class="n">num_threads</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">(</span><span class="n">logical</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;Unavailable&quot;</span>
+</span><span id="print_sys_info-95"><a href="#print_sys_info-95"><span class="linenos"> 95</span></a>    <span class="n">memory</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span><span class="o">.</span><span class="n">total</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1024</span> <span class="o">**</span> <span class="mi">3</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># in GB</span>
+</span><span id="print_sys_info-96"><a href="#print_sys_info-96"><span class="linenos"> 96</span></a>    <span class="n">cpu_model</span> <span class="o">=</span> <span class="n">get_cpu_model</span><span class="p">()</span>
+</span><span id="print_sys_info-97"><a href="#print_sys_info-97"><span class="linenos"> 97</span></a>
+</span><span id="print_sys_info-98"><a href="#print_sys_info-98"><span class="linenos"> 98</span></a>    <span class="c1"># Print system specifications</span>
+</span><span id="print_sys_info-99"><a href="#print_sys_info-99"><span class="linenos"> 99</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Operating System:&#39;</span><span class="p">,</span> <span class="n">os</span><span class="p">)</span>
+</span><span id="print_sys_info-100"><a href="#print_sys_info-100"><span class="linenos">100</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;System Type:&#39;</span><span class="p">,</span> <span class="n">system_type</span><span class="p">)</span>
+</span><span id="print_sys_info-101"><a href="#print_sys_info-101"><span class="linenos">101</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;CPU Model:&#39;</span><span class="p">,</span> <span class="n">cpu_model</span><span class="p">)</span>
+</span><span id="print_sys_info-102"><a href="#print_sys_info-102"><span class="linenos">102</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of Cores:&#39;</span><span class="p">,</span> <span class="n">num_cores</span><span class="p">)</span>
+</span><span id="print_sys_info-103"><a href="#print_sys_info-103"><span class="linenos">103</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Number of Threads:&#39;</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">)</span>
+</span><span id="print_sys_info-104"><a href="#print_sys_info-104"><span class="linenos">104</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Memory (GB):&#39;</span><span class="p">,</span> <span class="n">memory</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -321,65 +339,78 @@ labeled key-value pairs.</p>
 
     </div>
     <a class="headerlink" href="#print_pyfock_logo"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="print_pyfock_logo-2"><a href="#print_pyfock_logo-2"><span class="linenos"> 2</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_pyfock_logo</span><span class="p">():</span>
-</span><span id="print_pyfock_logo-3"><a href="#print_pyfock_logo-3"><span class="linenos"> 3</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Print PyFock logo with gradient colors using ANSI escape codes.&quot;&quot;&quot;</span>
-</span><span id="print_pyfock_logo-4"><a href="#print_pyfock_logo-4"><span class="linenos"> 4</span></a>    
-</span><span id="print_pyfock_logo-5"><a href="#print_pyfock_logo-5"><span class="linenos"> 5</span></a>    <span class="c1"># ANSI color codes for gradient (blue to purple to pink)</span>
-</span><span id="print_pyfock_logo-6"><a href="#print_pyfock_logo-6"><span class="linenos"> 6</span></a>    <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="print_pyfock_logo-7"><a href="#print_pyfock_logo-7"><span class="linenos"> 7</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;39m&#39;</span><span class="p">,</span>   <span class="c1"># Bright blue</span>
-</span><span id="print_pyfock_logo-8"><a href="#print_pyfock_logo-8"><span class="linenos"> 8</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;45m&#39;</span><span class="p">,</span>   <span class="c1"># Cyan blue</span>
-</span><span id="print_pyfock_logo-9"><a href="#print_pyfock_logo-9"><span class="linenos"> 9</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;51m&#39;</span><span class="p">,</span>   <span class="c1"># Light cyan</span>
-</span><span id="print_pyfock_logo-10"><a href="#print_pyfock_logo-10"><span class="linenos">10</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;87m&#39;</span><span class="p">,</span>   <span class="c1"># Light blue</span>
-</span><span id="print_pyfock_logo-11"><a href="#print_pyfock_logo-11"><span class="linenos">11</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;123m&#39;</span><span class="p">,</span>  <span class="c1"># Light purple</span>
-</span><span id="print_pyfock_logo-12"><a href="#print_pyfock_logo-12"><span class="linenos">12</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;159m&#39;</span><span class="p">,</span>  <span class="c1"># Very light blue</span>
-</span><span id="print_pyfock_logo-13"><a href="#print_pyfock_logo-13"><span class="linenos">13</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;195m&#39;</span><span class="p">,</span>  <span class="c1"># Light cyan-white</span>
-</span><span id="print_pyfock_logo-14"><a href="#print_pyfock_logo-14"><span class="linenos">14</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;225m&#39;</span><span class="p">,</span>  <span class="c1"># Light pink</span>
-</span><span id="print_pyfock_logo-15"><a href="#print_pyfock_logo-15"><span class="linenos">15</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;219m&#39;</span><span class="p">,</span>  <span class="c1"># Pink</span>
-</span><span id="print_pyfock_logo-16"><a href="#print_pyfock_logo-16"><span class="linenos">16</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;213m&#39;</span><span class="p">,</span>  <span class="c1"># Magenta pink</span>
-</span><span id="print_pyfock_logo-17"><a href="#print_pyfock_logo-17"><span class="linenos">17</span></a>    <span class="p">]</span>
-</span><span id="print_pyfock_logo-18"><a href="#print_pyfock_logo-18"><span class="linenos">18</span></a>    
-</span><span id="print_pyfock_logo-19"><a href="#print_pyfock_logo-19"><span class="linenos">19</span></a>    <span class="n">reset</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span>  <span class="c1"># Reset color</span>
-</span><span id="print_pyfock_logo-20"><a href="#print_pyfock_logo-20"><span class="linenos">20</span></a>    
-</span><span id="print_pyfock_logo-21"><a href="#print_pyfock_logo-21"><span class="linenos">21</span></a>    <span class="c1"># ASCII art for PyFock</span>
-</span><span id="print_pyfock_logo-22"><a href="#print_pyfock_logo-22"><span class="linenos">22</span></a>
-</span><span id="print_pyfock_logo-23"><a href="#print_pyfock_logo-23"><span class="linenos">23</span></a>    <span class="n">logo_lines</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="print_pyfock_logo-24"><a href="#print_pyfock_logo-24"><span class="linenos">24</span></a>        <span class="s2">&quot;██████  ██    ██ ███████  ██████   ██████ ██   ██&quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-25"><a href="#print_pyfock_logo-25"><span class="linenos">25</span></a>        <span class="s2">&quot;██░░░██ ░██  ██░ ██░░░░░ ██░░░░██ ██░░░░░ ██  ██░ &quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-26"><a href="#print_pyfock_logo-26"><span class="linenos">26</span></a>        <span class="s2">&quot;██████   ░████░  █████   ██    ██ ██      █████░  &quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-27"><a href="#print_pyfock_logo-27"><span class="linenos">27</span></a>        <span class="s2">&quot;██░░░░    ░██░   ██░░░   ██    ██ ██      ██░░██ &quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-28"><a href="#print_pyfock_logo-28"><span class="linenos">28</span></a>        <span class="s2">&quot;██         ██    ██      ░██████░ ░██████ ██  ░██&quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-29"><a href="#print_pyfock_logo-29"><span class="linenos">29</span></a>        <span class="s2">&quot;░░         ░░    ░░       ░░░░░░   ░░░░░░ ░░   ░░&quot;</span>
-</span><span id="print_pyfock_logo-30"><a href="#print_pyfock_logo-30"><span class="linenos">30</span></a>    <span class="p">]</span>
-</span><span id="print_pyfock_logo-31"><a href="#print_pyfock_logo-31"><span class="linenos">31</span></a>    
-</span><span id="print_pyfock_logo-32"><a href="#print_pyfock_logo-32"><span class="linenos">32</span></a>    <span class="c1"># Alternative block-style logo</span>
-</span><span id="print_pyfock_logo-33"><a href="#print_pyfock_logo-33"><span class="linenos">33</span></a>    <span class="n">block_logo</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="print_pyfock_logo-34"><a href="#print_pyfock_logo-34"><span class="linenos">34</span></a>        <span class="s2">&quot;████████  ██    ██  ███████   ████████    ████████  ██    ██&quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-35"><a href="#print_pyfock_logo-35"><span class="linenos">35</span></a>        <span class="s2">&quot;██     ██  ██  ██   ██       ██      ██  ██        ██  ██  &quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-36"><a href="#print_pyfock_logo-36"><span class="linenos">36</span></a>        <span class="s2">&quot;████████    ████    ██████   ██      ██  ██        █████   &quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-37"><a href="#print_pyfock_logo-37"><span class="linenos">37</span></a>        <span class="s2">&quot;██           ██     ██       ██      ██  ██        ██  ██  &quot;</span><span class="p">,</span>
-</span><span id="print_pyfock_logo-38"><a href="#print_pyfock_logo-38"><span class="linenos">38</span></a>        <span class="s2">&quot;██           ██     ██        ████████    ████████  ██    ██&quot;</span>
-</span><span id="print_pyfock_logo-39"><a href="#print_pyfock_logo-39"><span class="linenos">39</span></a>    <span class="p">]</span>
-</span><span id="print_pyfock_logo-40"><a href="#print_pyfock_logo-40"><span class="linenos">40</span></a>    
-</span><span id="print_pyfock_logo-41"><a href="#print_pyfock_logo-41"><span class="linenos">41</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">60</span><span class="p">)</span>
-</span><span id="print_pyfock_logo-42"><a href="#print_pyfock_logo-42"><span class="linenos">42</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PyFock Python Program for Quantum Chemistry Simulations&quot;</span><span class="p">)</span>
-</span><span id="print_pyfock_logo-43"><a href="#print_pyfock_logo-43"><span class="linenos">43</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;                                        by Manas Sharma&quot;</span><span class="p">)</span>
-</span><span id="print_pyfock_logo-44"><a href="#print_pyfock_logo-44"><span class="linenos">44</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">60</span><span class="p">)</span>
-</span><span id="print_pyfock_logo-45"><a href="#print_pyfock_logo-45"><span class="linenos">45</span></a>    
-</span><span id="print_pyfock_logo-46"><a href="#print_pyfock_logo-46"><span class="linenos">46</span></a>    <span class="c1"># Print the logo with gradient colors</span>
-</span><span id="print_pyfock_logo-47"><a href="#print_pyfock_logo-47"><span class="linenos">47</span></a>    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">logo_lines</span><span class="p">:</span>
-</span><span id="print_pyfock_logo-48"><a href="#print_pyfock_logo-48"><span class="linenos">48</span></a>        <span class="n">colored_line</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-</span><span id="print_pyfock_logo-49"><a href="#print_pyfock_logo-49"><span class="linenos">49</span></a>        <span class="n">chars_per_color</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
-</span><span id="print_pyfock_logo-50"><a href="#print_pyfock_logo-50"><span class="linenos">50</span></a>        
-</span><span id="print_pyfock_logo-51"><a href="#print_pyfock_logo-51"><span class="linenos">51</span></a>        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
-</span><span id="print_pyfock_logo-52"><a href="#print_pyfock_logo-52"><span class="linenos">52</span></a>            <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s1">&#39; &#39;</span><span class="p">:</span>
-</span><span id="print_pyfock_logo-53"><a href="#print_pyfock_logo-53"><span class="linenos">53</span></a>                <span class="n">colored_line</span> <span class="o">+=</span> <span class="n">char</span>
-</span><span id="print_pyfock_logo-54"><a href="#print_pyfock_logo-54"><span class="linenos">54</span></a>            <span class="k">else</span><span class="p">:</span>
-</span><span id="print_pyfock_logo-55"><a href="#print_pyfock_logo-55"><span class="linenos">55</span></a>                <span class="n">color_index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">//</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">chars_per_color</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-</span><span id="print_pyfock_logo-56"><a href="#print_pyfock_logo-56"><span class="linenos">56</span></a>                <span class="n">colored_line</span> <span class="o">+=</span> <span class="n">colors</span><span class="p">[</span><span class="n">color_index</span><span class="p">]</span> <span class="o">+</span> <span class="n">char</span> <span class="o">+</span> <span class="n">reset</span>
-</span><span id="print_pyfock_logo-57"><a href="#print_pyfock_logo-57"><span class="linenos">57</span></a>        
-</span><span id="print_pyfock_logo-58"><a href="#print_pyfock_logo-58"><span class="linenos">58</span></a>        <span class="nb">print</span><span class="p">(</span><span class="n">colored_line</span><span class="p">)</span>
-</span><span id="print_pyfock_logo-59"><a href="#print_pyfock_logo-59"><span class="linenos">59</span></a>    
-</span><span id="print_pyfock_logo-60"><a href="#print_pyfock_logo-60"><span class="linenos">60</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">60</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="print_pyfock_logo-3"><a href="#print_pyfock_logo-3"><span class="linenos"> 3</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_pyfock_logo</span><span class="p">():</span>
+</span><span id="print_pyfock_logo-4"><a href="#print_pyfock_logo-4"><span class="linenos"> 4</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Print PyFock logo with gradient colors using ANSI escape codes.&quot;&quot;&quot;</span>
+</span><span id="print_pyfock_logo-5"><a href="#print_pyfock_logo-5"><span class="linenos"> 5</span></a>    
+</span><span id="print_pyfock_logo-6"><a href="#print_pyfock_logo-6"><span class="linenos"> 6</span></a>    <span class="c1"># ANSI color codes for gradient (blue to purple to pink)</span>
+</span><span id="print_pyfock_logo-7"><a href="#print_pyfock_logo-7"><span class="linenos"> 7</span></a>    <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="print_pyfock_logo-8"><a href="#print_pyfock_logo-8"><span class="linenos"> 8</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;39m&#39;</span><span class="p">,</span>   <span class="c1"># Bright blue</span>
+</span><span id="print_pyfock_logo-9"><a href="#print_pyfock_logo-9"><span class="linenos"> 9</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;45m&#39;</span><span class="p">,</span>   <span class="c1"># Cyan blue</span>
+</span><span id="print_pyfock_logo-10"><a href="#print_pyfock_logo-10"><span class="linenos">10</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;51m&#39;</span><span class="p">,</span>   <span class="c1"># Light cyan</span>
+</span><span id="print_pyfock_logo-11"><a href="#print_pyfock_logo-11"><span class="linenos">11</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;87m&#39;</span><span class="p">,</span>   <span class="c1"># Light blue</span>
+</span><span id="print_pyfock_logo-12"><a href="#print_pyfock_logo-12"><span class="linenos">12</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;123m&#39;</span><span class="p">,</span>  <span class="c1"># Light purple</span>
+</span><span id="print_pyfock_logo-13"><a href="#print_pyfock_logo-13"><span class="linenos">13</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;159m&#39;</span><span class="p">,</span>  <span class="c1"># Very light blue</span>
+</span><span id="print_pyfock_logo-14"><a href="#print_pyfock_logo-14"><span class="linenos">14</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;195m&#39;</span><span class="p">,</span>  <span class="c1"># Light cyan-white</span>
+</span><span id="print_pyfock_logo-15"><a href="#print_pyfock_logo-15"><span class="linenos">15</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;225m&#39;</span><span class="p">,</span>  <span class="c1"># Light pink</span>
+</span><span id="print_pyfock_logo-16"><a href="#print_pyfock_logo-16"><span class="linenos">16</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;219m&#39;</span><span class="p">,</span>  <span class="c1"># Pink</span>
+</span><span id="print_pyfock_logo-17"><a href="#print_pyfock_logo-17"><span class="linenos">17</span></a>        <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[38;5;213m&#39;</span><span class="p">,</span>  <span class="c1"># Magenta pink</span>
+</span><span id="print_pyfock_logo-18"><a href="#print_pyfock_logo-18"><span class="linenos">18</span></a>    <span class="p">]</span>
+</span><span id="print_pyfock_logo-19"><a href="#print_pyfock_logo-19"><span class="linenos">19</span></a>    
+</span><span id="print_pyfock_logo-20"><a href="#print_pyfock_logo-20"><span class="linenos">20</span></a>    <span class="n">reset</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span>  <span class="c1"># Reset color</span>
+</span><span id="print_pyfock_logo-21"><a href="#print_pyfock_logo-21"><span class="linenos">21</span></a>    
+</span><span id="print_pyfock_logo-22"><a href="#print_pyfock_logo-22"><span class="linenos">22</span></a>    <span class="c1"># ASCII art for PyFock</span>
+</span><span id="print_pyfock_logo-23"><a href="#print_pyfock_logo-23"><span class="linenos">23</span></a>
+</span><span id="print_pyfock_logo-24"><a href="#print_pyfock_logo-24"><span class="linenos">24</span></a>    <span class="n">logo_lines</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="print_pyfock_logo-25"><a href="#print_pyfock_logo-25"><span class="linenos">25</span></a>        <span class="s2">&quot;██████  ██    ██ ███████  ██████   ██████ ██   ██&quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-26"><a href="#print_pyfock_logo-26"><span class="linenos">26</span></a>        <span class="s2">&quot;██░░░██ ░██  ██░ ██░░░░░ ██░░░░██ ██░░░░░ ██  ██░ &quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-27"><a href="#print_pyfock_logo-27"><span class="linenos">27</span></a>        <span class="s2">&quot;██████   ░████░  █████   ██    ██ ██      █████░  &quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-28"><a href="#print_pyfock_logo-28"><span class="linenos">28</span></a>        <span class="s2">&quot;██░░░░    ░██░   ██░░░   ██    ██ ██      ██░░██ &quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-29"><a href="#print_pyfock_logo-29"><span class="linenos">29</span></a>        <span class="s2">&quot;██         ██    ██      ░██████░ ░██████ ██  ░██&quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-30"><a href="#print_pyfock_logo-30"><span class="linenos">30</span></a>        <span class="s2">&quot;░░         ░░    ░░       ░░░░░░   ░░░░░░ ░░   ░░&quot;</span>
+</span><span id="print_pyfock_logo-31"><a href="#print_pyfock_logo-31"><span class="linenos">31</span></a>    <span class="p">]</span>
+</span><span id="print_pyfock_logo-32"><a href="#print_pyfock_logo-32"><span class="linenos">32</span></a>    
+</span><span id="print_pyfock_logo-33"><a href="#print_pyfock_logo-33"><span class="linenos">33</span></a>    <span class="c1"># Alternative block-style logo</span>
+</span><span id="print_pyfock_logo-34"><a href="#print_pyfock_logo-34"><span class="linenos">34</span></a>    <span class="n">block_logo</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="print_pyfock_logo-35"><a href="#print_pyfock_logo-35"><span class="linenos">35</span></a>        <span class="s2">&quot;████████  ██    ██  ███████   ████████    ████████  ██    ██&quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-36"><a href="#print_pyfock_logo-36"><span class="linenos">36</span></a>        <span class="s2">&quot;██     ██  ██  ██   ██       ██      ██  ██        ██  ██  &quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-37"><a href="#print_pyfock_logo-37"><span class="linenos">37</span></a>        <span class="s2">&quot;████████    ████    ██████   ██      ██  ██        █████   &quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-38"><a href="#print_pyfock_logo-38"><span class="linenos">38</span></a>        <span class="s2">&quot;██           ██     ██       ██      ██  ██        ██  ██  &quot;</span><span class="p">,</span>
+</span><span id="print_pyfock_logo-39"><a href="#print_pyfock_logo-39"><span class="linenos">39</span></a>        <span class="s2">&quot;██           ██     ██        ████████    ████████  ██    ██&quot;</span>
+</span><span id="print_pyfock_logo-40"><a href="#print_pyfock_logo-40"><span class="linenos">40</span></a>    <span class="p">]</span>
+</span><span id="print_pyfock_logo-41"><a href="#print_pyfock_logo-41"><span class="linenos">41</span></a>    
+</span><span id="print_pyfock_logo-42"><a href="#print_pyfock_logo-42"><span class="linenos">42</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">70</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-43"><a href="#print_pyfock_logo-43"><span class="linenos">43</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PyFock Python Program for Quantum Chemistry Simulations&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-44"><a href="#print_pyfock_logo-44"><span class="linenos">44</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;                                        by Manas Sharma&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-45"><a href="#print_pyfock_logo-45"><span class="linenos">45</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">70</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-46"><a href="#print_pyfock_logo-46"><span class="linenos">46</span></a>    
+</span><span id="print_pyfock_logo-47"><a href="#print_pyfock_logo-47"><span class="linenos">47</span></a>    <span class="c1"># Print the logo with gradient colors</span>
+</span><span id="print_pyfock_logo-48"><a href="#print_pyfock_logo-48"><span class="linenos">48</span></a>    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">logo_lines</span><span class="p">:</span>
+</span><span id="print_pyfock_logo-49"><a href="#print_pyfock_logo-49"><span class="linenos">49</span></a>        <span class="n">colored_line</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</span><span id="print_pyfock_logo-50"><a href="#print_pyfock_logo-50"><span class="linenos">50</span></a>        <span class="n">chars_per_color</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">//</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-51"><a href="#print_pyfock_logo-51"><span class="linenos">51</span></a>        
+</span><span id="print_pyfock_logo-52"><a href="#print_pyfock_logo-52"><span class="linenos">52</span></a>        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">char</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+</span><span id="print_pyfock_logo-53"><a href="#print_pyfock_logo-53"><span class="linenos">53</span></a>            <span class="k">if</span> <span class="n">char</span> <span class="o">==</span> <span class="s1">&#39; &#39;</span><span class="p">:</span>
+</span><span id="print_pyfock_logo-54"><a href="#print_pyfock_logo-54"><span class="linenos">54</span></a>                <span class="n">colored_line</span> <span class="o">+=</span> <span class="n">char</span>
+</span><span id="print_pyfock_logo-55"><a href="#print_pyfock_logo-55"><span class="linenos">55</span></a>            <span class="k">else</span><span class="p">:</span>
+</span><span id="print_pyfock_logo-56"><a href="#print_pyfock_logo-56"><span class="linenos">56</span></a>                <span class="n">color_index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">//</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">chars_per_color</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-57"><a href="#print_pyfock_logo-57"><span class="linenos">57</span></a>                <span class="n">colored_line</span> <span class="o">+=</span> <span class="n">colors</span><span class="p">[</span><span class="n">color_index</span><span class="p">]</span> <span class="o">+</span> <span class="n">char</span> <span class="o">+</span> <span class="n">reset</span>
+</span><span id="print_pyfock_logo-58"><a href="#print_pyfock_logo-58"><span class="linenos">58</span></a>        
+</span><span id="print_pyfock_logo-59"><a href="#print_pyfock_logo-59"><span class="linenos">59</span></a>        <span class="nb">print</span><span class="p">(</span><span class="n">colored_line</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-60"><a href="#print_pyfock_logo-60"><span class="linenos">60</span></a>    
+</span><span id="print_pyfock_logo-61"><a href="#print_pyfock_logo-61"><span class="linenos">61</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">70</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-62"><a href="#print_pyfock_logo-62"><span class="linenos">62</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Version: &quot;</span><span class="p">,</span> <span class="n">pyfock</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-63"><a href="#print_pyfock_logo-63"><span class="linenos">63</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Citation: M. Sharma, PyFock: A Pure Python Gaussian Basis</span><span class="se">\n</span><span class="s2">DFT Code for CPU and GPU&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-64"><a href="#print_pyfock_logo-64"><span class="linenos">64</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">70</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-65"><a href="#print_pyfock_logo-65"><span class="linenos">65</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">📧 Contact Information:&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-66"><a href="#print_pyfock_logo-66"><span class="linenos">66</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;   Developer: Dr. Manas Sharma (PhD Physics)&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-67"><a href="#print_pyfock_logo-67"><span class="linenos">67</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;   Email: manassharma07@live.com&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-68"><a href="#print_pyfock_logo-68"><span class="linenos">68</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;   Website: https://manas.bragitoff.com/&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-69"><a href="#print_pyfock_logo-69"><span class="linenos">69</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">📚 Resources:&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-70"><a href="#print_pyfock_logo-70"><span class="linenos">70</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;   Documentation: https://pyfock-docs.bragitoff.com&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-71"><a href="#print_pyfock_logo-71"><span class="linenos">71</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;   Official Website: https://pyfock.bragitoff.com/&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-72"><a href="#print_pyfock_logo-72"><span class="linenos">72</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;   GitHub Repo: https://github.com/manassharma07/pyfock&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-73"><a href="#print_pyfock_logo-73"><span class="linenos">73</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;   Web GUI: https://pyfock-gui.bragitoff.com/&quot;</span><span class="p">)</span>
+</span><span id="print_pyfock_logo-74"><a href="#print_pyfock_logo-74"><span class="linenos">74</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">70</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -461,6 +492,464 @@ labeled key-value pairs.</p>
 
 
             <div class="docstring"><p>Write the molecular orbital of a molecule as a cube file.</p>
+</div>
+
+
+                </section>
+                <section id="print_scientist">
+                            <input id="print_scientist-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">print_scientist</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="print_scientist-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#print_scientist"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="print_scientist-209"><a href="#print_scientist-209"><span class="linenos">209</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_scientist</span><span class="p">():</span>
+</span><span id="print_scientist-210"><a href="#print_scientist-210"><span class="linenos">210</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="print_scientist-211"><a href="#print_scientist-211"><span class="linenos">211</span></a><span class="sd">    Main execution function for scientist profile display.</span>
+</span><span id="print_scientist-212"><a href="#print_scientist-212"><span class="linenos">212</span></a><span class="sd">    </span>
+</span><span id="print_scientist-213"><a href="#print_scientist-213"><span class="linenos">213</span></a><span class="sd">    1. Randomly selects a scientist from the predefined list</span>
+</span><span id="print_scientist-214"><a href="#print_scientist-214"><span class="linenos">214</span></a><span class="sd">    2. Calls display_scientist_profile() to show complete profile</span>
+</span><span id="print_scientist-215"><a href="#print_scientist-215"><span class="linenos">215</span></a><span class="sd">    </span>
+</span><span id="print_scientist-216"><a href="#print_scientist-216"><span class="linenos">216</span></a><span class="sd">    Returns:</span>
+</span><span id="print_scientist-217"><a href="#print_scientist-217"><span class="linenos">217</span></a><span class="sd">        None: Prints directly to stdout</span>
+</span><span id="print_scientist-218"><a href="#print_scientist-218"><span class="linenos">218</span></a><span class="sd">    </span>
+</span><span id="print_scientist-219"><a href="#print_scientist-219"><span class="linenos">219</span></a><span class="sd">    Examples:</span>
+</span><span id="print_scientist-220"><a href="#print_scientist-220"><span class="linenos">220</span></a><span class="sd">        &gt;&gt;&gt; print_scientist()</span>
+</span><span id="print_scientist-221"><a href="#print_scientist-221"><span class="linenos">221</span></a><span class="sd">        Randomly selected: bohr...</span>
+</span><span id="print_scientist-222"><a href="#print_scientist-222"><span class="linenos">222</span></a><span class="sd">        [1 second pause]</span>
+</span><span id="print_scientist-223"><a href="#print_scientist-223"><span class="linenos">223</span></a><span class="sd">        [Displays complete Bohr profile with banner, portrait, and quote]</span>
+</span><span id="print_scientist-224"><a href="#print_scientist-224"><span class="linenos">224</span></a><span class="sd">    </span>
+</span><span id="print_scientist-225"><a href="#print_scientist-225"><span class="linenos">225</span></a><span class="sd">    Note:</span>
+</span><span id="print_scientist-226"><a href="#print_scientist-226"><span class="linenos">226</span></a><span class="sd">        - Includes 1-second delay for suspense effect</span>
+</span><span id="print_scientist-227"><a href="#print_scientist-227"><span class="linenos">227</span></a><span class="sd">        - Can be called directly as entry point for the module</span>
+</span><span id="print_scientist-228"><a href="#print_scientist-228"><span class="linenos">228</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="print_scientist-229"><a href="#print_scientist-229"><span class="linenos">229</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2"> Time to get inspired by a great quantum chemist :)</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="print_scientist-230"><a href="#print_scientist-230"><span class="linenos">230</span></a>    <span class="n">selected_name</span> <span class="o">=</span> <span class="n">get_random_scientist</span><span class="p">()</span>
+</span><span id="print_scientist-231"><a href="#print_scientist-231"><span class="linenos">231</span></a>    <span class="n">display_scientist_profile</span><span class="p">(</span><span class="n">selected_name</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Main execution function for scientist profile display.</p>
+
+<ol>
+<li>Randomly selects a scientist from the predefined list</li>
+<li>Calls display_scientist_profile() to show complete profile</li>
+</ol>
+
+<p>Returns:
+    None: Prints directly to stdout</p>
+
+<p>Examples:</p>
+
+<blockquote>
+  <blockquote>
+    <blockquote>
+      <p>print_scientist()
+          Randomly selected: bohr...
+          [1 second pause]
+          [Displays complete Bohr profile with banner, portrait, and quote]</p>
+    </blockquote>
+  </blockquote>
+</blockquote>
+
+<p>Note:
+    - Includes 1-second delay for suspense effect
+    - Can be called directly as entry point for the module</p>
+</div>
+
+
+                </section>
+                <section id="display_scientist_profile">
+                            <input id="display_scientist_profile-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">display_scientist_profile</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">name</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="display_scientist_profile-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#display_scientist_profile"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="display_scientist_profile-119"><a href="#display_scientist_profile-119"><span class="linenos">119</span></a><span class="k">def</span><span class="w"> </span><span class="nf">display_scientist_profile</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+</span><span id="display_scientist_profile-120"><a href="#display_scientist_profile-120"><span class="linenos">120</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="display_scientist_profile-121"><a href="#display_scientist_profile-121"><span class="linenos">121</span></a><span class="sd">    Display complete scientist profile with banner, portrait, and quote.</span>
+</span><span id="display_scientist_profile-122"><a href="#display_scientist_profile-122"><span class="linenos">122</span></a><span class="sd">    </span>
+</span><span id="display_scientist_profile-123"><a href="#display_scientist_profile-123"><span class="linenos">123</span></a><span class="sd">    Orchestrates the display of a scientist&#39;s profile by:</span>
+</span><span id="display_scientist_profile-124"><a href="#display_scientist_profile-124"><span class="linenos">124</span></a><span class="sd">    1. Printing a stylish ASCII art name banner</span>
+</span><span id="display_scientist_profile-125"><a href="#display_scientist_profile-125"><span class="linenos">125</span></a><span class="sd">    2. Reading and displaying ASCII portrait from file (ascii_{name}.txt)</span>
+</span><span id="display_scientist_profile-126"><a href="#display_scientist_profile-126"><span class="linenos">126</span></a><span class="sd">    3. Printing an inspirational quote in decorative format</span>
+</span><span id="display_scientist_profile-127"><a href="#display_scientist_profile-127"><span class="linenos">127</span></a><span class="sd">    </span>
+</span><span id="display_scientist_profile-128"><a href="#display_scientist_profile-128"><span class="linenos">128</span></a><span class="sd">    Args:</span>
+</span><span id="display_scientist_profile-129"><a href="#display_scientist_profile-129"><span class="linenos">129</span></a><span class="sd">        name (str): Lowercase scientist name (e.g., &#39;dalton&#39;, &#39;bohr&#39;, &#39;rutherford&#39;)</span>
+</span><span id="display_scientist_profile-130"><a href="#display_scientist_profile-130"><span class="linenos">130</span></a><span class="sd">    </span>
+</span><span id="display_scientist_profile-131"><a href="#display_scientist_profile-131"><span class="linenos">131</span></a><span class="sd">    Returns:</span>
+</span><span id="display_scientist_profile-132"><a href="#display_scientist_profile-132"><span class="linenos">132</span></a><span class="sd">        None: Prints directly to stdout</span>
+</span><span id="display_scientist_profile-133"><a href="#display_scientist_profile-133"><span class="linenos">133</span></a><span class="sd">    </span>
+</span><span id="display_scientist_profile-134"><a href="#display_scientist_profile-134"><span class="linenos">134</span></a><span class="sd">    Examples:</span>
+</span><span id="display_scientist_profile-135"><a href="#display_scientist_profile-135"><span class="linenos">135</span></a><span class="sd">        &gt;&gt;&gt; display_scientist_profile(&#39;bohr&#39;)</span>
+</span><span id="display_scientist_profile-136"><a href="#display_scientist_profile-136"><span class="linenos">136</span></a><span class="sd">        ================================================================</span>
+</span><span id="display_scientist_profile-137"><a href="#display_scientist_profile-137"><span class="linenos">137</span></a><span class="sd">         ____       _          </span>
+</span><span id="display_scientist_profile-138"><a href="#display_scientist_profile-138"><span class="linenos">138</span></a><span class="sd">        | __ )  ___| |__  _ __ </span>
+</span><span id="display_scientist_profile-139"><a href="#display_scientist_profile-139"><span class="linenos">139</span></a><span class="sd">        |  _ \ / _ \ &#39;_ \| &#39;__|</span>
+</span><span id="display_scientist_profile-140"><a href="#display_scientist_profile-140"><span class="linenos">140</span></a><span class="sd">        | |_) | (_) | | | | |   </span>
+</span><span id="display_scientist_profile-141"><a href="#display_scientist_profile-141"><span class="linenos">141</span></a><span class="sd">        |____/ \___/|_| |_|_|</span>
+</span><span id="display_scientist_profile-142"><a href="#display_scientist_profile-142"><span class="linenos">142</span></a><span class="sd">        ================================================================</span>
+</span><span id="display_scientist_profile-143"><a href="#display_scientist_profile-143"><span class="linenos">143</span></a><span class="sd">        </span>
+</span><span id="display_scientist_profile-144"><a href="#display_scientist_profile-144"><span class="linenos">144</span></a><span class="sd">           [ASCII portrait from ascii_bohr.txt]</span>
+</span><span id="display_scientist_profile-145"><a href="#display_scientist_profile-145"><span class="linenos">145</span></a><span class="sd">        </span>
+</span><span id="display_scientist_profile-146"><a href="#display_scientist_profile-146"><span class="linenos">146</span></a><span class="sd">           ╔════════════════════════════════════════════════════════════╗</span>
+</span><span id="display_scientist_profile-147"><a href="#display_scientist_profile-147"><span class="linenos">147</span></a><span class="sd">           ║  An expert is a person who has made all the mistakes...   ║</span>
+</span><span id="display_scientist_profile-148"><a href="#display_scientist_profile-148"><span class="linenos">148</span></a><span class="sd">           ╠════════════════════════════════════════════════════════════╣</span>
+</span><span id="display_scientist_profile-149"><a href="#display_scientist_profile-149"><span class="linenos">149</span></a><span class="sd">           ║                                                 ~ bohr     ║</span>
+</span><span id="display_scientist_profile-150"><a href="#display_scientist_profile-150"><span class="linenos">150</span></a><span class="sd">           ╚════════════════════════════════════════════════════════════╝</span>
+</span><span id="display_scientist_profile-151"><a href="#display_scientist_profile-151"><span class="linenos">151</span></a><span class="sd">    </span>
+</span><span id="display_scientist_profile-152"><a href="#display_scientist_profile-152"><span class="linenos">152</span></a><span class="sd">    Note:</span>
+</span><span id="display_scientist_profile-153"><a href="#display_scientist_profile-153"><span class="linenos">153</span></a><span class="sd">        - Requires ASCII portrait file named &#39;ascii_{name}.txt&#39; in current directory</span>
+</span><span id="display_scientist_profile-154"><a href="#display_scientist_profile-154"><span class="linenos">154</span></a><span class="sd">        - If portrait file not found, displays error message</span>
+</span><span id="display_scientist_profile-155"><a href="#display_scientist_profile-155"><span class="linenos">155</span></a><span class="sd">        - Supported scientists: dalton, bohr, rutherford, dirac, schrodinger</span>
+</span><span id="display_scientist_profile-156"><a href="#display_scientist_profile-156"><span class="linenos">156</span></a><span class="sd">    </span>
+</span><span id="display_scientist_profile-157"><a href="#display_scientist_profile-157"><span class="linenos">157</span></a><span class="sd">    Raises:</span>
+</span><span id="display_scientist_profile-158"><a href="#display_scientist_profile-158"><span class="linenos">158</span></a><span class="sd">        FileNotFoundError: Caught internally and displays error message if portrait file missing</span>
+</span><span id="display_scientist_profile-159"><a href="#display_scientist_profile-159"><span class="linenos">159</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="display_scientist_profile-160"><a href="#display_scientist_profile-160"><span class="linenos">160</span></a>    <span class="c1"># Data definition</span>
+</span><span id="display_scientist_profile-161"><a href="#display_scientist_profile-161"><span class="linenos">161</span></a>    <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="display_scientist_profile-162"><a href="#display_scientist_profile-162"><span class="linenos">162</span></a>        <span class="s2">&quot;dalton&quot;</span><span class="p">:</span> <span class="s2">&quot;If I have succeeded better than many who surround me, it has been chiefly - nay, I may say, almost solely - by universal assiduity.&quot;</span><span class="p">,</span>
+</span><span id="display_scientist_profile-163"><a href="#display_scientist_profile-163"><span class="linenos">163</span></a>        <span class="s2">&quot;bohr&quot;</span><span class="p">:</span> <span class="s2">&quot;An expert is a person who has made all the mistakes that can be made in a very narrow field.&quot;</span><span class="p">,</span>
+</span><span id="display_scientist_profile-164"><a href="#display_scientist_profile-164"><span class="linenos">164</span></a>        <span class="s2">&quot;rutherford&quot;</span><span class="p">:</span> <span class="s2">&quot;All science is either physics or stamp collecting.&quot;</span><span class="p">,</span>
+</span><span id="display_scientist_profile-165"><a href="#display_scientist_profile-165"><span class="linenos">165</span></a>        <span class="s2">&quot;dirac&quot;</span><span class="p">:</span> <span class="s2">&quot;God used beautiful mathematics in creating the world.&quot;</span><span class="p">,</span>
+</span><span id="display_scientist_profile-166"><a href="#display_scientist_profile-166"><span class="linenos">166</span></a>        <span class="s2">&quot;schrodinger&quot;</span><span class="p">:</span> <span class="s2">&quot;The task is not so much to see what no one has yet seen, but to think what nobody has yet thought about that which everybody sees.&quot;</span>
+</span><span id="display_scientist_profile-167"><a href="#display_scientist_profile-167"><span class="linenos">167</span></a>    <span class="p">}</span>
+</span><span id="display_scientist_profile-168"><a href="#display_scientist_profile-168"><span class="linenos">168</span></a>    
+</span><span id="display_scientist_profile-169"><a href="#display_scientist_profile-169"><span class="linenos">169</span></a>    <span class="c1"># Print Stylish Name</span>
+</span><span id="display_scientist_profile-170"><a href="#display_scientist_profile-170"><span class="linenos">170</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">70</span><span class="p">)</span>
+</span><span id="display_scientist_profile-171"><a href="#display_scientist_profile-171"><span class="linenos">171</span></a>    <span class="nb">print</span><span class="p">(</span><span class="n">get_stylish_name</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+</span><span id="display_scientist_profile-172"><a href="#display_scientist_profile-172"><span class="linenos">172</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">70</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="display_scientist_profile-173"><a href="#display_scientist_profile-173"><span class="linenos">173</span></a>    <span class="n">portrait</span> <span class="o">=</span> <span class="n">ASCII_ART</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+</span><span id="display_scientist_profile-174"><a href="#display_scientist_profile-174"><span class="linenos">174</span></a>    <span class="c1"># Indent the portrait slightly for looks</span>
+</span><span id="display_scientist_profile-175"><a href="#display_scientist_profile-175"><span class="linenos">175</span></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;   &quot;</span> <span class="o">+</span> <span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">portrait</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)]))</span>
+</span><span id="display_scientist_profile-176"><a href="#display_scientist_profile-176"><span class="linenos">176</span></a>
+</span><span id="display_scientist_profile-177"><a href="#display_scientist_profile-177"><span class="linenos">177</span></a>    <span class="c1"># Print Quote</span>
+</span><span id="display_scientist_profile-178"><a href="#display_scientist_profile-178"><span class="linenos">178</span></a>    <span class="n">quote</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;Science is beautiful.&quot;</span><span class="p">)</span>
+</span><span id="display_scientist_profile-179"><a href="#display_scientist_profile-179"><span class="linenos">179</span></a>    <span class="n">print_aesthetic_quote</span><span class="p">(</span><span class="n">quote</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Display complete scientist profile with banner, portrait, and quote.</p>
+
+<p>Orchestrates the display of a scientist's profile by:</p>
+
+<ol>
+<li>Printing a stylish ASCII art name banner</li>
+<li>Reading and displaying ASCII portrait from file (ascii_{name}.txt)</li>
+<li>Printing an inspirational quote in decorative format</li>
+</ol>
+
+<p>Args:
+    name (str): Lowercase scientist name (e.g., 'dalton', 'bohr', 'rutherford')</p>
+
+<p>Returns:
+    None: Prints directly to stdout</p>
+
+<p>Examples:</p>
+
+<blockquote>
+  <blockquote>
+    <blockquote>
+      <p>display_scientist_profile('bohr')
+          ================================================================
+           ____       _<br />
+          | __ )  ___| |__  _ __ 
+          |  _ \ / _ \ '_ \| '__|
+          | |_) | (_) | | | | |<br />
+          |____/ ___/|_| |_|_|
+          ================================================================</p>
+
+<pre><code>   [ASCII portrait from ascii_bohr.txt]
+
+   ╔════════════════════════════════════════════════════════════╗
+   ║  An expert is a person who has made all the mistakes...   ║
+   ╠════════════════════════════════════════════════════════════╣
+   ║                                                 ~ bohr     ║
+   ╚════════════════════════════════════════════════════════════╝
+</code></pre>
+      
+      <p>Note:
+          - Requires ASCII portrait file named 'ascii_{name}.txt' in current directory
+          - If portrait file not found, displays error message
+          - Supported scientists: dalton, bohr, rutherford, dirac, schrodinger</p>
+    </blockquote>
+  </blockquote>
+</blockquote>
+
+<p>Raises:
+    FileNotFoundError: Caught internally and displays error message if portrait file missing</p>
+</div>
+
+
+                </section>
+                <section id="get_stylish_name">
+                            <input id="get_stylish_name-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_stylish_name</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">name</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="get_stylish_name-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#get_stylish_name"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="get_stylish_name-29"><a href="#get_stylish_name-29"><span class="linenos">29</span></a><span class="k">def</span><span class="w"> </span><span class="nf">get_stylish_name</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+</span><span id="get_stylish_name-30"><a href="#get_stylish_name-30"><span class="linenos">30</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="get_stylish_name-31"><a href="#get_stylish_name-31"><span class="linenos">31</span></a><span class="sd">    Return ASCII art banner for a scientist&#39;s name.</span>
+</span><span id="get_stylish_name-32"><a href="#get_stylish_name-32"><span class="linenos">32</span></a><span class="sd">    </span>
+</span><span id="get_stylish_name-33"><a href="#get_stylish_name-33"><span class="linenos">33</span></a><span class="sd">    Provides pre-generated ASCII art banners for supported scientist names.</span>
+</span><span id="get_stylish_name-34"><a href="#get_stylish_name-34"><span class="linenos">34</span></a><span class="sd">    If the name is not found in the banner dictionary, returns the name in uppercase.</span>
+</span><span id="get_stylish_name-35"><a href="#get_stylish_name-35"><span class="linenos">35</span></a><span class="sd">    </span>
+</span><span id="get_stylish_name-36"><a href="#get_stylish_name-36"><span class="linenos">36</span></a><span class="sd">    Args:</span>
+</span><span id="get_stylish_name-37"><a href="#get_stylish_name-37"><span class="linenos">37</span></a><span class="sd">        name (str): Lowercase scientist name (e.g., &#39;dalton&#39;, &#39;bohr&#39;, &#39;rutherford&#39;)</span>
+</span><span id="get_stylish_name-38"><a href="#get_stylish_name-38"><span class="linenos">38</span></a><span class="sd">    </span>
+</span><span id="get_stylish_name-39"><a href="#get_stylish_name-39"><span class="linenos">39</span></a><span class="sd">    Returns:</span>
+</span><span id="get_stylish_name-40"><a href="#get_stylish_name-40"><span class="linenos">40</span></a><span class="sd">        str: Multi-line ASCII art string representing the name, or uppercase name if not found</span>
+</span><span id="get_stylish_name-41"><a href="#get_stylish_name-41"><span class="linenos">41</span></a><span class="sd">    </span>
+</span><span id="get_stylish_name-42"><a href="#get_stylish_name-42"><span class="linenos">42</span></a><span class="sd">    Examples:</span>
+</span><span id="get_stylish_name-43"><a href="#get_stylish_name-43"><span class="linenos">43</span></a><span class="sd">        &gt;&gt;&gt; banner = get_stylish_name(&#39;bohr&#39;)</span>
+</span><span id="get_stylish_name-44"><a href="#get_stylish_name-44"><span class="linenos">44</span></a><span class="sd">        &gt;&gt;&gt; print(banner)</span>
+</span><span id="get_stylish_name-45"><a href="#get_stylish_name-45"><span class="linenos">45</span></a><span class="sd">         ____       _          </span>
+</span><span id="get_stylish_name-46"><a href="#get_stylish_name-46"><span class="linenos">46</span></a><span class="sd">        | __ )  ___| |__  _ __ </span>
+</span><span id="get_stylish_name-47"><a href="#get_stylish_name-47"><span class="linenos">47</span></a><span class="sd">        |  _ \ / _ \ &#39;_ \| &#39;__|</span>
+</span><span id="get_stylish_name-48"><a href="#get_stylish_name-48"><span class="linenos">48</span></a><span class="sd">        | |_) | (_) | | | | |   </span>
+</span><span id="get_stylish_name-49"><a href="#get_stylish_name-49"><span class="linenos">49</span></a><span class="sd">        |____/ \___/|_| |_|_|</span>
+</span><span id="get_stylish_name-50"><a href="#get_stylish_name-50"><span class="linenos">50</span></a><span class="sd">        </span>
+</span><span id="get_stylish_name-51"><a href="#get_stylish_name-51"><span class="linenos">51</span></a><span class="sd">        &gt;&gt;&gt; banner = get_stylish_name(&#39;unknown&#39;)</span>
+</span><span id="get_stylish_name-52"><a href="#get_stylish_name-52"><span class="linenos">52</span></a><span class="sd">        &gt;&gt;&gt; print(banner)</span>
+</span><span id="get_stylish_name-53"><a href="#get_stylish_name-53"><span class="linenos">53</span></a><span class="sd">        UNKNOWN</span>
+</span><span id="get_stylish_name-54"><a href="#get_stylish_name-54"><span class="linenos">54</span></a><span class="sd">    </span>
+</span><span id="get_stylish_name-55"><a href="#get_stylish_name-55"><span class="linenos">55</span></a><span class="sd">    Note:</span>
+</span><span id="get_stylish_name-56"><a href="#get_stylish_name-56"><span class="linenos">56</span></a><span class="sd">        Supported scientists: dalton, bohr, rutherford, dirac, schrodinger</span>
+</span><span id="get_stylish_name-57"><a href="#get_stylish_name-57"><span class="linenos">57</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="get_stylish_name-58"><a href="#get_stylish_name-58"><span class="linenos">58</span></a>    <span class="n">banners</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="get_stylish_name-59"><a href="#get_stylish_name-59"><span class="linenos">59</span></a>        <span class="s2">&quot;dalton&quot;</span><span class="p">:</span>  <span class="s2">&quot; ____        _ _              </span><span class="se">\n</span><span class="s2">|  _ \  __ _| | |_ ___  _ __  </span><span class="se">\n</span><span class="s2">| | | |/ _` | | __/ _ \| &#39;_ \ </span><span class="se">\n</span><span class="s2">| |_| | (_| | | || (_) | | | |</span><span class="se">\n</span><span class="s2">|____/ \__,_|_|\__\___/|_| |_|&quot;</span><span class="p">,</span>
+</span><span id="get_stylish_name-60"><a href="#get_stylish_name-60"><span class="linenos">60</span></a>        <span class="s2">&quot;bohr&quot;</span><span class="p">:</span>    <span class="s2">&quot; ____       _          </span><span class="se">\n</span><span class="s2">| __ )  ___| |__  _ __ </span><span class="se">\n</span><span class="s2">|  _ \ / _ \ &#39;_ \| &#39;__|</span><span class="se">\n</span><span class="s2">| |_) | (_) | | | | |   </span><span class="se">\n</span><span class="s2">|____/ \___/|_| |_|_|   &quot;</span><span class="p">,</span>
+</span><span id="get_stylish_name-61"><a href="#get_stylish_name-61"><span class="linenos">61</span></a>        <span class="s2">&quot;rutherford&quot;</span><span class="p">:</span> <span class="s2">&quot; ____        _   _               __               _ </span><span class="se">\n</span><span class="s2">|  _ \ _   _| |_| |__   ___ _ __ / _| ___  _ __ __| |</span><span class="se">\n</span><span class="s2">| |_) | | | | __| &#39;_ \ / _ \ &#39;__| |_ / _ \| &#39;__/ _` |</span><span class="se">\n</span><span class="s2">|  _ &lt;| |_| | |_| | | |  __/ |  |  _| (_) | | | (_| |</span><span class="se">\n</span><span class="s2">|_| \_</span><span class="se">\\\\</span><span class="s2">__,_|\__|_| |_|\___|_|  |_|  \___/|_|  \__,_|&quot;</span><span class="p">,</span>
+</span><span id="get_stylish_name-62"><a href="#get_stylish_name-62"><span class="linenos">62</span></a>        <span class="s2">&quot;dirac&quot;</span><span class="p">:</span>   <span class="s2">&quot; ____  _                  </span><span class="se">\n</span><span class="s2">|  _ \(_)_ __ __ _  ___   </span><span class="se">\n</span><span class="s2">| | | | | &#39;__/ _` |/ __|  </span><span class="se">\n</span><span class="s2">| |_| | | | | (_| | (__   </span><span class="se">\n</span><span class="s2">|____/|_|_|  \__,_|\___|  &quot;</span><span class="p">,</span>
+</span><span id="get_stylish_name-63"><a href="#get_stylish_name-63"><span class="linenos">63</span></a>        <span class="s2">&quot;schrodinger&quot;</span><span class="p">:</span> <span class="s2">&quot;  ____       _                     _ _                       </span><span class="se">\n</span><span class="s2"> / ___|  ___| |__  _ __ ___   __| (_)_ __   __ _  ___ _ __ </span><span class="se">\n</span><span class="s2"> \___ \ / __| &#39;_ \| &#39;__/ _ \ / _` | | &#39;_ \ / _` |/ _ \ &#39;__|</span><span class="se">\n</span><span class="s2">  ___) | (__| | | | | | (_) | (_| | | | | | (_| |  __/ |   </span><span class="se">\n</span><span class="s2"> |____/ \___|_| |_|_|  \___/ \__,_|_|_| |_|\__, |\___|_|   </span><span class="se">\n</span><span class="s2">                                           |___/            &quot;</span><span class="p">,</span>
+</span><span id="get_stylish_name-64"><a href="#get_stylish_name-64"><span class="linenos">64</span></a>    <span class="p">}</span>
+</span><span id="get_stylish_name-65"><a href="#get_stylish_name-65"><span class="linenos">65</span></a>    <span class="k">return</span> <span class="n">banners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Return ASCII art banner for a scientist's name.</p>
+
+<p>Provides pre-generated ASCII art banners for supported scientist names.
+If the name is not found in the banner dictionary, returns the name in uppercase.</p>
+
+<p>Args:
+    name (str): Lowercase scientist name (e.g., 'dalton', 'bohr', 'rutherford')</p>
+
+<p>Returns:
+    str: Multi-line ASCII art string representing the name, or uppercase name if not found</p>
+
+<p>Examples:</p>
+
+<blockquote>
+  <blockquote>
+    <blockquote>
+      <p>banner = get_stylish_name('bohr')
+      print(banner)
+           ____       _<br />
+          | __ )  ___| |__  _ __ 
+          |  _ \ / _ \ '_ \| '__|
+          | |_) | (_) | | | | |<br />
+          |____/ ___/|_| |_|_|</p>
+
+<pre><code>&gt;&gt;&gt; banner = get_stylish_name('unknown')
+&gt;&gt;&gt; print(banner)
+UNKNOWN
+</code></pre>
+      
+      <p>Note:
+          Supported scientists: dalton, bohr, rutherford, dirac, schrodinger</p>
+    </blockquote>
+  </blockquote>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="get_random_scientist">
+                            <input id="get_random_scientist-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_random_scientist</span><span class="signature pdoc-code condensed">(<span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="get_random_scientist-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#get_random_scientist"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="get_random_scientist-182"><a href="#get_random_scientist-182"><span class="linenos">182</span></a><span class="k">def</span><span class="w"> </span><span class="nf">get_random_scientist</span><span class="p">():</span>
+</span><span id="get_random_scientist-183"><a href="#get_random_scientist-183"><span class="linenos">183</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="get_random_scientist-184"><a href="#get_random_scientist-184"><span class="linenos">184</span></a><span class="sd">    Return a randomly selected scientist name from predefined list.</span>
+</span><span id="get_random_scientist-185"><a href="#get_random_scientist-185"><span class="linenos">185</span></a><span class="sd">    </span>
+</span><span id="get_random_scientist-186"><a href="#get_random_scientist-186"><span class="linenos">186</span></a><span class="sd">    Selects and returns one scientist name from a weighted list where</span>
+</span><span id="get_random_scientist-187"><a href="#get_random_scientist-187"><span class="linenos">187</span></a><span class="sd">    some scientists may appear multiple times to increase selection probability.</span>
+</span><span id="get_random_scientist-188"><a href="#get_random_scientist-188"><span class="linenos">188</span></a><span class="sd">    </span>
+</span><span id="get_random_scientist-189"><a href="#get_random_scientist-189"><span class="linenos">189</span></a><span class="sd">    Returns:</span>
+</span><span id="get_random_scientist-190"><a href="#get_random_scientist-190"><span class="linenos">190</span></a><span class="sd">        str: Lowercase scientist name (e.g., &#39;dalton&#39;, &#39;bohr&#39;, &#39;rutherford&#39;)</span>
+</span><span id="get_random_scientist-191"><a href="#get_random_scientist-191"><span class="linenos">191</span></a><span class="sd">    </span>
+</span><span id="get_random_scientist-192"><a href="#get_random_scientist-192"><span class="linenos">192</span></a><span class="sd">    Examples:</span>
+</span><span id="get_random_scientist-193"><a href="#get_random_scientist-193"><span class="linenos">193</span></a><span class="sd">        &gt;&gt;&gt; scientist = get_random_scientist()</span>
+</span><span id="get_random_scientist-194"><a href="#get_random_scientist-194"><span class="linenos">194</span></a><span class="sd">        &gt;&gt;&gt; print(scientist)</span>
+</span><span id="get_random_scientist-195"><a href="#get_random_scientist-195"><span class="linenos">195</span></a><span class="sd">        bohr</span>
+</span><span id="get_random_scientist-196"><a href="#get_random_scientist-196"><span class="linenos">196</span></a><span class="sd">        </span>
+</span><span id="get_random_scientist-197"><a href="#get_random_scientist-197"><span class="linenos">197</span></a><span class="sd">        &gt;&gt;&gt; scientist = get_random_scientist()</span>
+</span><span id="get_random_scientist-198"><a href="#get_random_scientist-198"><span class="linenos">198</span></a><span class="sd">        &gt;&gt;&gt; print(scientist)</span>
+</span><span id="get_random_scientist-199"><a href="#get_random_scientist-199"><span class="linenos">199</span></a><span class="sd">        dalton</span>
+</span><span id="get_random_scientist-200"><a href="#get_random_scientist-200"><span class="linenos">200</span></a><span class="sd">    </span>
+</span><span id="get_random_scientist-201"><a href="#get_random_scientist-201"><span class="linenos">201</span></a><span class="sd">    Note:</span>
+</span><span id="get_random_scientist-202"><a href="#get_random_scientist-202"><span class="linenos">202</span></a><span class="sd">        - List includes: dalton (appears twice), bohr, rutherford, dirac, schrodinger</span>
+</span><span id="get_random_scientist-203"><a href="#get_random_scientist-203"><span class="linenos">203</span></a><span class="sd">        - Each call returns a new random selection</span>
+</span><span id="get_random_scientist-204"><a href="#get_random_scientist-204"><span class="linenos">204</span></a><span class="sd">        - Uses random.choice() for uniform distribution among list items</span>
+</span><span id="get_random_scientist-205"><a href="#get_random_scientist-205"><span class="linenos">205</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="get_random_scientist-206"><a href="#get_random_scientist-206"><span class="linenos">206</span></a>    <span class="n">names_list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;dalton&quot;</span><span class="p">,</span> <span class="s2">&quot;bohr&quot;</span><span class="p">,</span> <span class="s2">&quot;rutherford&quot;</span><span class="p">,</span> <span class="s2">&quot;dirac&quot;</span><span class="p">,</span> <span class="s2">&quot;dalton&quot;</span><span class="p">,</span> <span class="s2">&quot;schrodinger&quot;</span><span class="p">]</span>
+</span><span id="get_random_scientist-207"><a href="#get_random_scientist-207"><span class="linenos">207</span></a>    <span class="k">return</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">names_list</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Return a randomly selected scientist name from predefined list.</p>
+
+<p>Selects and returns one scientist name from a weighted list where
+some scientists may appear multiple times to increase selection probability.</p>
+
+<p>Returns:
+    str: Lowercase scientist name (e.g., 'dalton', 'bohr', 'rutherford')</p>
+
+<p>Examples:</p>
+
+<blockquote>
+  <blockquote>
+    <blockquote>
+      <p>scientist = get_random_scientist()
+      print(scientist)
+          bohr</p>
+
+<pre><code>&gt;&gt;&gt; scientist = get_random_scientist()
+&gt;&gt;&gt; print(scientist)
+dalton
+</code></pre>
+      
+      <p>Note:
+          - List includes: dalton (appears twice), bohr, rutherford, dirac, schrodinger
+          - Each call returns a new random selection
+          - Uses random.choice() for uniform distribution among list items</p>
+    </blockquote>
+  </blockquote>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="print_aesthetic_quote">
+                            <input id="print_aesthetic_quote-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">print_aesthetic_quote</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">quote</span>, </span><span class="param"><span class="n">author</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="print_aesthetic_quote-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#print_aesthetic_quote"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="print_aesthetic_quote-68"><a href="#print_aesthetic_quote-68"><span class="linenos"> 68</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_aesthetic_quote</span><span class="p">(</span><span class="n">quote</span><span class="p">,</span> <span class="n">author</span><span class="p">):</span>
+</span><span id="print_aesthetic_quote-69"><a href="#print_aesthetic_quote-69"><span class="linenos"> 69</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="print_aesthetic_quote-70"><a href="#print_aesthetic_quote-70"><span class="linenos"> 70</span></a><span class="sd">    Print a quote in a decorative boxed format with centered text.</span>
+</span><span id="print_aesthetic_quote-71"><a href="#print_aesthetic_quote-71"><span class="linenos"> 71</span></a><span class="sd">    </span>
+</span><span id="print_aesthetic_quote-72"><a href="#print_aesthetic_quote-72"><span class="linenos"> 72</span></a><span class="sd">    Creates a visually appealing bordered box using Unicode box-drawing characters</span>
+</span><span id="print_aesthetic_quote-73"><a href="#print_aesthetic_quote-73"><span class="linenos"> 73</span></a><span class="sd">    and centers the quote text within it. The quote is word-wrapped to fit within</span>
+</span><span id="print_aesthetic_quote-74"><a href="#print_aesthetic_quote-74"><span class="linenos"> 74</span></a><span class="sd">    a fixed width of 60 characters.</span>
+</span><span id="print_aesthetic_quote-75"><a href="#print_aesthetic_quote-75"><span class="linenos"> 75</span></a><span class="sd">    </span>
+</span><span id="print_aesthetic_quote-76"><a href="#print_aesthetic_quote-76"><span class="linenos"> 76</span></a><span class="sd">    Args:</span>
+</span><span id="print_aesthetic_quote-77"><a href="#print_aesthetic_quote-77"><span class="linenos"> 77</span></a><span class="sd">        quote (str): The quote text to display</span>
+</span><span id="print_aesthetic_quote-78"><a href="#print_aesthetic_quote-78"><span class="linenos"> 78</span></a><span class="sd">        author (str): The name of the quote&#39;s author</span>
+</span><span id="print_aesthetic_quote-79"><a href="#print_aesthetic_quote-79"><span class="linenos"> 79</span></a><span class="sd">    </span>
+</span><span id="print_aesthetic_quote-80"><a href="#print_aesthetic_quote-80"><span class="linenos"> 80</span></a><span class="sd">    Returns:</span>
+</span><span id="print_aesthetic_quote-81"><a href="#print_aesthetic_quote-81"><span class="linenos"> 81</span></a><span class="sd">        None: Prints directly to stdout</span>
+</span><span id="print_aesthetic_quote-82"><a href="#print_aesthetic_quote-82"><span class="linenos"> 82</span></a><span class="sd">    </span>
+</span><span id="print_aesthetic_quote-83"><a href="#print_aesthetic_quote-83"><span class="linenos"> 83</span></a><span class="sd">    Examples:</span>
+</span><span id="print_aesthetic_quote-84"><a href="#print_aesthetic_quote-84"><span class="linenos"> 84</span></a><span class="sd">        &gt;&gt;&gt; print_aesthetic_quote(&quot;Science is beautiful.&quot;, &quot;Einstein&quot;)</span>
+</span><span id="print_aesthetic_quote-85"><a href="#print_aesthetic_quote-85"><span class="linenos"> 85</span></a><span class="sd">        </span>
+</span><span id="print_aesthetic_quote-86"><a href="#print_aesthetic_quote-86"><span class="linenos"> 86</span></a><span class="sd">           ╔════════════════════════════════════════════════════════════╗</span>
+</span><span id="print_aesthetic_quote-87"><a href="#print_aesthetic_quote-87"><span class="linenos"> 87</span></a><span class="sd">           ║                   Science is beautiful.                    ║</span>
+</span><span id="print_aesthetic_quote-88"><a href="#print_aesthetic_quote-88"><span class="linenos"> 88</span></a><span class="sd">           ╠════════════════════════════════════════════════════════════╣</span>
+</span><span id="print_aesthetic_quote-89"><a href="#print_aesthetic_quote-89"><span class="linenos"> 89</span></a><span class="sd">           ║                                              ~ Einstein    ║</span>
+</span><span id="print_aesthetic_quote-90"><a href="#print_aesthetic_quote-90"><span class="linenos"> 90</span></a><span class="sd">           ╚════════════════════════════════════════════════════════════╝</span>
+</span><span id="print_aesthetic_quote-91"><a href="#print_aesthetic_quote-91"><span class="linenos"> 91</span></a><span class="sd">    </span>
+</span><span id="print_aesthetic_quote-92"><a href="#print_aesthetic_quote-92"><span class="linenos"> 92</span></a><span class="sd">    Note:</span>
+</span><span id="print_aesthetic_quote-93"><a href="#print_aesthetic_quote-93"><span class="linenos"> 93</span></a><span class="sd">        - Box width is fixed at 60 characters</span>
+</span><span id="print_aesthetic_quote-94"><a href="#print_aesthetic_quote-94"><span class="linenos"> 94</span></a><span class="sd">        - Long quotes are automatically word-wrapped</span>
+</span><span id="print_aesthetic_quote-95"><a href="#print_aesthetic_quote-95"><span class="linenos"> 95</span></a><span class="sd">        - Author name is right-aligned at the bottom</span>
+</span><span id="print_aesthetic_quote-96"><a href="#print_aesthetic_quote-96"><span class="linenos"> 96</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="print_aesthetic_quote-97"><a href="#print_aesthetic_quote-97"><span class="linenos"> 97</span></a>    <span class="n">width</span> <span class="o">=</span> <span class="mi">70</span>
+</span><span id="print_aesthetic_quote-98"><a href="#print_aesthetic_quote-98"><span class="linenos"> 98</span></a>    <span class="n">horizontal_line</span> <span class="o">=</span> <span class="s2">&quot;═&quot;</span> <span class="o">*</span> <span class="n">width</span>
+</span><span id="print_aesthetic_quote-99"><a href="#print_aesthetic_quote-99"><span class="linenos"> 99</span></a>    
+</span><span id="print_aesthetic_quote-100"><a href="#print_aesthetic_quote-100"><span class="linenos">100</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">   ╔</span><span class="si">{</span><span class="n">horizontal_line</span><span class="si">}</span><span class="s2">╗&quot;</span><span class="p">)</span>
+</span><span id="print_aesthetic_quote-101"><a href="#print_aesthetic_quote-101"><span class="linenos">101</span></a>    
+</span><span id="print_aesthetic_quote-102"><a href="#print_aesthetic_quote-102"><span class="linenos">102</span></a>    <span class="c1"># Wrap text simply for display</span>
+</span><span id="print_aesthetic_quote-103"><a href="#print_aesthetic_quote-103"><span class="linenos">103</span></a>    <span class="n">words</span> <span class="o">=</span> <span class="n">quote</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+</span><span id="print_aesthetic_quote-104"><a href="#print_aesthetic_quote-104"><span class="linenos">104</span></a>    <span class="n">line</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</span><span id="print_aesthetic_quote-105"><a href="#print_aesthetic_quote-105"><span class="linenos">105</span></a>    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">words</span><span class="p">:</span>
+</span><span id="print_aesthetic_quote-106"><a href="#print_aesthetic_quote-106"><span class="linenos">106</span></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;</span> <span class="n">width</span> <span class="o">-</span> <span class="mi">4</span><span class="p">:</span>
+</span><span id="print_aesthetic_quote-107"><a href="#print_aesthetic_quote-107"><span class="linenos">107</span></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   ║ </span><span class="si">{</span><span class="n">line</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="n">width</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="si">}</span><span class="s2">   ║&quot;</span><span class="p">)</span>
+</span><span id="print_aesthetic_quote-108"><a href="#print_aesthetic_quote-108"><span class="linenos">108</span></a>            <span class="n">line</span> <span class="o">=</span> <span class="n">word</span>
+</span><span id="print_aesthetic_quote-109"><a href="#print_aesthetic_quote-109"><span class="linenos">109</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="print_aesthetic_quote-110"><a href="#print_aesthetic_quote-110"><span class="linenos">110</span></a>            <span class="n">line</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">line</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">word</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">line</span> <span class="k">else</span> <span class="n">word</span>
+</span><span id="print_aesthetic_quote-111"><a href="#print_aesthetic_quote-111"><span class="linenos">111</span></a>    <span class="k">if</span> <span class="n">line</span><span class="p">:</span>
+</span><span id="print_aesthetic_quote-112"><a href="#print_aesthetic_quote-112"><span class="linenos">112</span></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   ║ </span><span class="si">{</span><span class="n">line</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="n">width</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="si">}</span><span class="s2">   ║&quot;</span><span class="p">)</span>
+</span><span id="print_aesthetic_quote-113"><a href="#print_aesthetic_quote-113"><span class="linenos">113</span></a>        
+</span><span id="print_aesthetic_quote-114"><a href="#print_aesthetic_quote-114"><span class="linenos">114</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   ╠</span><span class="si">{</span><span class="n">horizontal_line</span><span class="si">}</span><span class="s2">╣&quot;</span><span class="p">)</span>
+</span><span id="print_aesthetic_quote-115"><a href="#print_aesthetic_quote-115"><span class="linenos">115</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   ║ </span><span class="si">{</span><span class="sa">f</span><span class="s1">&#39;~ </span><span class="si">{</span><span class="n">author</span><span class="si">}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="n">width</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">4</span><span class="p">)</span><span class="si">}</span><span class="s2">   ║&quot;</span><span class="p">)</span>
+</span><span id="print_aesthetic_quote-116"><a href="#print_aesthetic_quote-116"><span class="linenos">116</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   ╚</span><span class="si">{</span><span class="n">horizontal_line</span><span class="si">}</span><span class="s2">╝</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Print a quote in a decorative boxed format with centered text.</p>
+
+<p>Creates a visually appealing bordered box using Unicode box-drawing characters
+and centers the quote text within it. The quote is word-wrapped to fit within
+a fixed width of 60 characters.</p>
+
+<p>Args:
+    quote (str): The quote text to display
+    author (str): The name of the quote's author</p>
+
+<p>Returns:
+    None: Prints directly to stdout</p>
+
+<p>Examples:</p>
+
+<blockquote>
+  <blockquote>
+    <blockquote>
+      <p>print_aesthetic_quote("Science is beautiful.", "Einstein")</p>
+
+<pre><code>   ╔════════════════════════════════════════════════════════════╗
+   ║                   Science is beautiful.                    ║
+   ╠════════════════════════════════════════════════════════════╣
+   ║                                              ~ Einstein    ║
+   ╚════════════════════════════════════════════════════════════╝
+</code></pre>
+      
+      <p>Note:
+          - Box width is fixed at 60 characters
+          - Long quotes are automatically word-wrapped
+          - Author name is right-aligned at the bottom</p>
+    </blockquote>
+  </blockquote>
+</blockquote>
 </div>
 
 

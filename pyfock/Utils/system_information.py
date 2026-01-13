@@ -84,6 +84,7 @@ def print_sys_info():
     Dependencies:
         Requires psutil, platform modules and the get_cpu_model() function.
     """
+    print("\n============= System Information =============")
     # Get system specifications
     system_info = platform.uname()
     os = f"{system_info.system} {system_info.release}"

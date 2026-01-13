@@ -23,7 +23,7 @@
     ·
     <a href="https://pyfock-gui.bragitoff.com">Try the GUI</a>
     ·
-    <a href="https://github.com/manassharma07/pyfock/blob/main/examples/ex13.ipynb">View Demo</a>
+    <a href="https://www.kaggle.com/code/ducktape07/pyfock-tutorial">View Demo</a>
     ·
     <a href="https://github.com/manassharma07/pyfock/issues">Report Bug</a>
     ·

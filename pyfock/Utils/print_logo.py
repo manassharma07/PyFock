@@ -1,3 +1,4 @@
+import pyfock
 def print_pyfock_logo():
     """Print PyFock logo with gradient colors using ANSI escape codes."""
     
@@ -37,10 +38,10 @@ def print_pyfock_logo():
         "██           ██     ██        ████████    ████████  ██    ██"
     ]
     
-    print("\n" + "="*60)
+    print("\n" + "="*70)
     print("PyFock Python Program for Quantum Chemistry Simulations")
     print("                                        by Manas Sharma")
-    print("="*60)
+    print("="*70)
     
     # Print the logo with gradient colors
     for line in logo_lines:
@@ -56,4 +57,17 @@ def print_pyfock_logo():
         
         print(colored_line)
     
-    print("\n" + "="*60)
+    print("\n" + "="*70)
+    print("\nVersion: ", pyfock.__version__)
+    print("Citation: M. Sharma, PyFock: A Pure Python Gaussian Basis\nDFT Code for CPU and GPU")
+    print("\n" + "="*70)
+    print("\n📧 Contact Information:")
+    print("   Developer: Dr. Manas Sharma (PhD Physics)")
+    print("   Email: manassharma07@live.com")
+    print("   Website: https://manas.bragitoff.com/")
+    print("\n📚 Resources:")
+    print("   Documentation: https://pyfock-docs.bragitoff.com")
+    print("   Official Website: https://pyfock.bragitoff.com/")
+    print("   GitHub Repo: https://github.com/manassharma07/pyfock")
+    print("   Web GUI: https://pyfock-gui.bragitoff.com/")
+    print("\n" + "="*70 + "\n")

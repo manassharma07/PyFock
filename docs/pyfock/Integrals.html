@@ -1253,7 +1253,7 @@ symmetry reduces the number of computations drastically.</li>
 </span><span id="rys_4c2e_symm-19"><a href="#rys_4c2e_symm-19"><span class="linenos"> 19</span></a><span class="sd">    --------------------</span>
 </span><span id="rys_4c2e_symm-20"><a href="#rys_4c2e_symm-20"><span class="linenos"> 20</span></a><span class="sd">    The 4c2e integrals obey the following permutational symmetry relations:</span>
 </span><span id="rys_4c2e_symm-21"><a href="#rys_4c2e_symm-21"><span class="linenos"> 21</span></a>
-</span><span id="rys_4c2e_symm-22"><a href="#rys_4c2e_symm-22"><span class="linenos"> 22</span></a><span class="sd">        (A B | C D) = (B A | C D)   # exchange within bra</span>
+</span><span id="rys_4c2e_symm-22"><a href="#rys_4c2e_symm-22"><span class="linenos"> 22</span></a><span class="sd">        (A B | C D) = (B A | C D)  # exchange within bra</span>
 </span><span id="rys_4c2e_symm-23"><a href="#rys_4c2e_symm-23"><span class="linenos"> 23</span></a><span class="sd">                    = (A B | D C)  # exchange within ket</span>
 </span><span id="rys_4c2e_symm-24"><a href="#rys_4c2e_symm-24"><span class="linenos"> 24</span></a><span class="sd">                    = (B A | D C)  </span>
 </span><span id="rys_4c2e_symm-25"><a href="#rys_4c2e_symm-25"><span class="linenos"> 25</span></a><span class="sd">                    = (C D | A B)  # bra ↔ ket exchange</span>
@@ -1336,34 +1336,250 @@ symmetry reduces the number of computations drastically.</li>
 </span><span id="rys_4c2e_symm-102"><a href="#rys_4c2e_symm-102"><span class="linenos">102</span></a>    <span class="n">bfs_coeffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
 </span><span id="rys_4c2e_symm-103"><a href="#rys_4c2e_symm-103"><span class="linenos">103</span></a>    <span class="n">bfs_expnts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
 </span><span id="rys_4c2e_symm-104"><a href="#rys_4c2e_symm-104"><span class="linenos">104</span></a>    <span class="n">bfs_prim_norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-105"><a href="#rys_4c2e_symm-105"><span class="linenos">105</span></a>    <span class="n">shell_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_shell_index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm-106"><a href="#rys_4c2e_symm-106"><span class="linenos">106</span></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">):</span>
-</span><span id="rys_4c2e_symm-107"><a href="#rys_4c2e_symm-107"><span class="linenos">107</span></a>        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
-</span><span id="rys_4c2e_symm-108"><a href="#rys_4c2e_symm-108"><span class="linenos">108</span></a>            <span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm-109"><a href="#rys_4c2e_symm-109"><span class="linenos">109</span></a>            <span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm-110"><a href="#rys_4c2e_symm-110"><span class="linenos">110</span></a>            <span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm-111"><a href="#rys_4c2e_symm-111"><span class="linenos">111</span></a>        
+</span><span id="rys_4c2e_symm-105"><a href="#rys_4c2e_symm-105"><span class="linenos">105</span></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">):</span>
+</span><span id="rys_4c2e_symm-106"><a href="#rys_4c2e_symm-106"><span class="linenos">106</span></a>        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+</span><span id="rys_4c2e_symm-107"><a href="#rys_4c2e_symm-107"><span class="linenos">107</span></a>            <span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm-108"><a href="#rys_4c2e_symm-108"><span class="linenos">108</span></a>            <span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm-109"><a href="#rys_4c2e_symm-109"><span class="linenos">109</span></a>            <span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm-110"><a href="#rys_4c2e_symm-110"><span class="linenos">110</span></a>        
+</span><span id="rys_4c2e_symm-111"><a href="#rys_4c2e_symm-111"><span class="linenos">111</span></a>
 </span><span id="rys_4c2e_symm-112"><a href="#rys_4c2e_symm-112"><span class="linenos">112</span></a>
-</span><span id="rys_4c2e_symm-113"><a href="#rys_4c2e_symm-113"><span class="linenos">113</span></a>
-</span><span id="rys_4c2e_symm-114"><a href="#rys_4c2e_symm-114"><span class="linenos">114</span></a>    
-</span><span id="rys_4c2e_symm-115"><a href="#rys_4c2e_symm-115"><span class="linenos">115</span></a>    <span class="k">if</span> <span class="nb">slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="rys_4c2e_symm-116"><a href="#rys_4c2e_symm-116"><span class="linenos">116</span></a>        <span class="nb">slice</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm-117"><a href="#rys_4c2e_symm-117"><span class="linenos">117</span></a>        
-</span><span id="rys_4c2e_symm-118"><a href="#rys_4c2e_symm-118"><span class="linenos">118</span></a>    <span class="c1">#Limits for the calculation of 4c2e integrals</span>
-</span><span id="rys_4c2e_symm-119"><a href="#rys_4c2e_symm-119"><span class="linenos">119</span></a>    <span class="n">indx_startA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-120"><a href="#rys_4c2e_symm-120"><span class="linenos">120</span></a>    <span class="n">indx_endA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-121"><a href="#rys_4c2e_symm-121"><span class="linenos">121</span></a>    <span class="n">indx_startB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-122"><a href="#rys_4c2e_symm-122"><span class="linenos">122</span></a>    <span class="n">indx_endB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-123"><a href="#rys_4c2e_symm-123"><span class="linenos">123</span></a>    <span class="n">indx_startC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-124"><a href="#rys_4c2e_symm-124"><span class="linenos">124</span></a>    <span class="n">indx_endC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-125"><a href="#rys_4c2e_symm-125"><span class="linenos">125</span></a>    <span class="n">indx_startD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-126"><a href="#rys_4c2e_symm-126"><span class="linenos">126</span></a>    <span class="n">indx_endD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm-127"><a href="#rys_4c2e_symm-127"><span class="linenos">127</span></a>
-</span><span id="rys_4c2e_symm-128"><a href="#rys_4c2e_symm-128"><span class="linenos">128</span></a>
-</span><span id="rys_4c2e_symm-129"><a href="#rys_4c2e_symm-129"><span class="linenos">129</span></a>    <span class="n">ints4c2e</span> <span class="o">=</span> <span class="n">rys_4c2e_symm_internal</span><span class="p">(</span><span class="n">bfs_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_contr_prim_norms</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_lmn</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_nprim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_coeffs</span><span class="p">,</span> <span class="n">bfs_prim_norms</span><span class="p">,</span> <span class="n">bfs_expnts</span><span class="p">,</span> <span class="n">shell_indices</span><span class="p">,</span>\
-</span><span id="rys_4c2e_symm-130"><a href="#rys_4c2e_symm-130"><span class="linenos">130</span></a>        <span class="n">indx_startA</span><span class="p">,</span><span class="n">indx_endA</span><span class="p">,</span> <span class="n">indx_startB</span><span class="p">,</span> <span class="n">indx_endB</span><span class="p">,</span> <span class="n">indx_startC</span><span class="p">,</span> <span class="n">indx_endC</span><span class="p">,</span> <span class="n">indx_startD</span><span class="p">,</span><span class="n">indx_endD</span><span class="p">)</span>
-</span><span id="rys_4c2e_symm-131"><a href="#rys_4c2e_symm-131"><span class="linenos">131</span></a>
-</span><span id="rys_4c2e_symm-132"><a href="#rys_4c2e_symm-132"><span class="linenos">132</span></a>    <span class="k">return</span> <span class="n">ints4c2e</span>
+</span><span id="rys_4c2e_symm-113"><a href="#rys_4c2e_symm-113"><span class="linenos">113</span></a>    
+</span><span id="rys_4c2e_symm-114"><a href="#rys_4c2e_symm-114"><span class="linenos">114</span></a>    <span class="k">if</span> <span class="nb">slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="rys_4c2e_symm-115"><a href="#rys_4c2e_symm-115"><span class="linenos">115</span></a>        <span class="nb">slice</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm-116"><a href="#rys_4c2e_symm-116"><span class="linenos">116</span></a>        
+</span><span id="rys_4c2e_symm-117"><a href="#rys_4c2e_symm-117"><span class="linenos">117</span></a>    <span class="c1">#Limits for the calculation of 4c2e integrals</span>
+</span><span id="rys_4c2e_symm-118"><a href="#rys_4c2e_symm-118"><span class="linenos">118</span></a>    <span class="n">indx_startA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-119"><a href="#rys_4c2e_symm-119"><span class="linenos">119</span></a>    <span class="n">indx_endA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-120"><a href="#rys_4c2e_symm-120"><span class="linenos">120</span></a>    <span class="n">indx_startB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-121"><a href="#rys_4c2e_symm-121"><span class="linenos">121</span></a>    <span class="n">indx_endB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-122"><a href="#rys_4c2e_symm-122"><span class="linenos">122</span></a>    <span class="n">indx_startC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-123"><a href="#rys_4c2e_symm-123"><span class="linenos">123</span></a>    <span class="n">indx_endC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-124"><a href="#rys_4c2e_symm-124"><span class="linenos">124</span></a>    <span class="n">indx_startD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-125"><a href="#rys_4c2e_symm-125"><span class="linenos">125</span></a>    <span class="n">indx_endD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm-126"><a href="#rys_4c2e_symm-126"><span class="linenos">126</span></a>
+</span><span id="rys_4c2e_symm-127"><a href="#rys_4c2e_symm-127"><span class="linenos">127</span></a>    <span class="n">ints4c2e</span> <span class="o">=</span> <span class="n">rys_4c2e_symm_internal</span><span class="p">(</span><span class="n">bfs_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_contr_prim_norms</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_lmn</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_nprim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_coeffs</span><span class="p">,</span> <span class="n">bfs_prim_norms</span><span class="p">,</span> <span class="n">bfs_expnts</span><span class="p">,</span>\
+</span><span id="rys_4c2e_symm-128"><a href="#rys_4c2e_symm-128"><span class="linenos">128</span></a>        <span class="n">indx_startA</span><span class="p">,</span><span class="n">indx_endA</span><span class="p">,</span> <span class="n">indx_startB</span><span class="p">,</span> <span class="n">indx_endB</span><span class="p">,</span> <span class="n">indx_startC</span><span class="p">,</span> <span class="n">indx_endC</span><span class="p">,</span> <span class="n">indx_startD</span><span class="p">,</span><span class="n">indx_endD</span><span class="p">)</span>
+</span><span id="rys_4c2e_symm-129"><a href="#rys_4c2e_symm-129"><span class="linenos">129</span></a>
+</span><span id="rys_4c2e_symm-130"><a href="#rys_4c2e_symm-130"><span class="linenos">130</span></a>    <span class="k">return</span> <span class="n">ints4c2e</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Compute four-center two-electron (4c2e) electron repulsion integrals (ERIs) 
+using the Rys quadrature method with exploitation of 8-fold permutational 
+symmetry.</p>
+
+<p>This function evaluates integrals of the form (A B | C D), where A, B, C, D 
+are basis functions from the same primary basis set. It uses Numba-accelerated 
+backends and symmetry-aware optimizations to reduce computational cost.</p>
+
+<h2 id="symmetries-exploited">Symmetries exploited</h2>
+
+<p>The 4c2e integrals obey the following permutational symmetry relations:</p>
+
+<pre><code>(A B | C D) = (B A | C D)  # exchange within bra
+            = (A B | D C)  # exchange within ket
+            = (B A | D C)  
+            = (C D | A B)  # bra ↔ ket exchange
+            = (D C | A B)
+            = (C D | B A)
+            = (D C | B A)
+</code></pre>
+
+<p>These 8 equivalent permutations mean that only a subset of integrals 
+needs to be explicitly computed; the rest can be obtained by symmetry.</p>
+
+<p>This reduces the number of independent integrals from:
+    N_bf^4   →   N_bf<em>(N_bf+1)/2 * N_bf</em>(N_bf+1)/2
+when computing the full tensor.</p>
+
+<h2 id="parameters">Parameters</h2>
+
+<p>basis : object
+    Primary basis set object containing:
+    - bfs_coords : Cartesian coordinates of basis function centers.
+    - bfs_coeffs : Contraction coefficients.
+    - bfs_expnts : Gaussian exponents.
+    - bfs_prim_norms : Primitive normalization constants.
+    - bfs_contr_prim_norms : Contraction normalization factors.
+    - bfs_lmn : Angular momentum quantum numbers (ℓ, m, n).
+    - bfs_nprim : Number of primitives per basis function.
+    - bfs_shell_index : Index of the shell each basis function belongs to.
+    - bfs_nao : Total number of atomic orbitals.</p>
+
+<p>slice : list of int, optional
+    An 8-element list specifying a sub-block of integrals to compute:
+    [start_A, end_A, start_B, end_B, start_C, end_C, start_D, end_D]
+    If None (default), computes the full (Nbf, Nbf, Nbf, Nbf) block.</p>
+
+<pre><code>**Note:** When slices are used, not all 8-fold symmetries may be 
+available because the requested block may not contain all 
+symmetric permutations. In such cases, only the applicable 
+symmetries are used.
+</code></pre>
+
+<h2 id="returns">Returns</h2>
+
+<p>ints4c2e : ndarray
+    The computed 4-center 2-electron integrals for the requested range.</p>
+
+<h2 id="notes">Notes</h2>
+
+<ul>
+<li>Precomputes and stores basis set data in NumPy arrays for Numba efficiency.</li>
+<li>Exploits all possible symmetry permutations when the full tensor is 
+computed (no slice) to reduce redundant work.</li>
+<li>If a slice is specified, symmetry exploitation is limited to the 
+permutations that fall within the slice's index ranges.</li>
+</ul>
+
+<h2 id="examples">Examples</h2>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">eri_full</span> <span class="o">=</span> <span class="n">rys_4c2e_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">eri_block</span> <span class="o">=</span> <span class="n">rys_4c2e_symm</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="nb">slice</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span>
+</code></pre>
+</div>
+</div>
+
+
+                </section>
+                <section id="rys_4c2e_symm_old">
+                            <input id="rys_4c2e_symm_old-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">rys_4c2e_symm_old</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">basis</span>, </span><span class="param"><span class="nb">slice</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="rys_4c2e_symm_old-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#rys_4c2e_symm_old"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="rys_4c2e_symm_old-357"><a href="#rys_4c2e_symm_old-357"><span class="linenos">357</span></a><span class="k">def</span><span class="w"> </span><span class="nf">rys_4c2e_symm_old</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="nb">slice</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+</span><span id="rys_4c2e_symm_old-358"><a href="#rys_4c2e_symm_old-358"><span class="linenos">358</span></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="rys_4c2e_symm_old-359"><a href="#rys_4c2e_symm_old-359"><span class="linenos">359</span></a><span class="sd">    Compute four-center two-electron (4c2e) electron repulsion integrals (ERIs) </span>
+</span><span id="rys_4c2e_symm_old-360"><a href="#rys_4c2e_symm_old-360"><span class="linenos">360</span></a><span class="sd">    using the Rys quadrature method with exploitation of 8-fold permutational </span>
+</span><span id="rys_4c2e_symm_old-361"><a href="#rys_4c2e_symm_old-361"><span class="linenos">361</span></a><span class="sd">    symmetry.</span>
+</span><span id="rys_4c2e_symm_old-362"><a href="#rys_4c2e_symm_old-362"><span class="linenos">362</span></a>
+</span><span id="rys_4c2e_symm_old-363"><a href="#rys_4c2e_symm_old-363"><span class="linenos">363</span></a><span class="sd">    This function evaluates integrals of the form (A B | C D), where A, B, C, D </span>
+</span><span id="rys_4c2e_symm_old-364"><a href="#rys_4c2e_symm_old-364"><span class="linenos">364</span></a><span class="sd">    are basis functions from the same primary basis set. It uses Numba-accelerated </span>
+</span><span id="rys_4c2e_symm_old-365"><a href="#rys_4c2e_symm_old-365"><span class="linenos">365</span></a><span class="sd">    backends and symmetry-aware optimizations to reduce computational cost.</span>
+</span><span id="rys_4c2e_symm_old-366"><a href="#rys_4c2e_symm_old-366"><span class="linenos">366</span></a>
+</span><span id="rys_4c2e_symm_old-367"><a href="#rys_4c2e_symm_old-367"><span class="linenos">367</span></a><span class="sd">    Symmetries exploited</span>
+</span><span id="rys_4c2e_symm_old-368"><a href="#rys_4c2e_symm_old-368"><span class="linenos">368</span></a><span class="sd">    --------------------</span>
+</span><span id="rys_4c2e_symm_old-369"><a href="#rys_4c2e_symm_old-369"><span class="linenos">369</span></a><span class="sd">    The 4c2e integrals obey the following permutational symmetry relations:</span>
+</span><span id="rys_4c2e_symm_old-370"><a href="#rys_4c2e_symm_old-370"><span class="linenos">370</span></a>
+</span><span id="rys_4c2e_symm_old-371"><a href="#rys_4c2e_symm_old-371"><span class="linenos">371</span></a><span class="sd">        (A B | C D) = (B A | C D)   # exchange within bra</span>
+</span><span id="rys_4c2e_symm_old-372"><a href="#rys_4c2e_symm_old-372"><span class="linenos">372</span></a><span class="sd">                    = (A B | D C)  # exchange within ket</span>
+</span><span id="rys_4c2e_symm_old-373"><a href="#rys_4c2e_symm_old-373"><span class="linenos">373</span></a><span class="sd">                    = (B A | D C)  </span>
+</span><span id="rys_4c2e_symm_old-374"><a href="#rys_4c2e_symm_old-374"><span class="linenos">374</span></a><span class="sd">                    = (C D | A B)  # bra ↔ ket exchange</span>
+</span><span id="rys_4c2e_symm_old-375"><a href="#rys_4c2e_symm_old-375"><span class="linenos">375</span></a><span class="sd">                    = (D C | A B)</span>
+</span><span id="rys_4c2e_symm_old-376"><a href="#rys_4c2e_symm_old-376"><span class="linenos">376</span></a><span class="sd">                    = (C D | B A)</span>
+</span><span id="rys_4c2e_symm_old-377"><a href="#rys_4c2e_symm_old-377"><span class="linenos">377</span></a><span class="sd">                    = (D C | B A)</span>
+</span><span id="rys_4c2e_symm_old-378"><a href="#rys_4c2e_symm_old-378"><span class="linenos">378</span></a>
+</span><span id="rys_4c2e_symm_old-379"><a href="#rys_4c2e_symm_old-379"><span class="linenos">379</span></a><span class="sd">    These 8 equivalent permutations mean that only a subset of integrals </span>
+</span><span id="rys_4c2e_symm_old-380"><a href="#rys_4c2e_symm_old-380"><span class="linenos">380</span></a><span class="sd">    needs to be explicitly computed; the rest can be obtained by symmetry.</span>
+</span><span id="rys_4c2e_symm_old-381"><a href="#rys_4c2e_symm_old-381"><span class="linenos">381</span></a><span class="sd">    </span>
+</span><span id="rys_4c2e_symm_old-382"><a href="#rys_4c2e_symm_old-382"><span class="linenos">382</span></a><span class="sd">    This reduces the number of independent integrals from:</span>
+</span><span id="rys_4c2e_symm_old-383"><a href="#rys_4c2e_symm_old-383"><span class="linenos">383</span></a><span class="sd">        N_bf^4   →   N_bf*(N_bf+1)/2 * N_bf*(N_bf+1)/2</span>
+</span><span id="rys_4c2e_symm_old-384"><a href="#rys_4c2e_symm_old-384"><span class="linenos">384</span></a><span class="sd">    when computing the full tensor.</span>
+</span><span id="rys_4c2e_symm_old-385"><a href="#rys_4c2e_symm_old-385"><span class="linenos">385</span></a>
+</span><span id="rys_4c2e_symm_old-386"><a href="#rys_4c2e_symm_old-386"><span class="linenos">386</span></a><span class="sd">    Parameters</span>
+</span><span id="rys_4c2e_symm_old-387"><a href="#rys_4c2e_symm_old-387"><span class="linenos">387</span></a><span class="sd">    ----------</span>
+</span><span id="rys_4c2e_symm_old-388"><a href="#rys_4c2e_symm_old-388"><span class="linenos">388</span></a><span class="sd">    basis : object</span>
+</span><span id="rys_4c2e_symm_old-389"><a href="#rys_4c2e_symm_old-389"><span class="linenos">389</span></a><span class="sd">        Primary basis set object containing:</span>
+</span><span id="rys_4c2e_symm_old-390"><a href="#rys_4c2e_symm_old-390"><span class="linenos">390</span></a><span class="sd">        - bfs_coords : Cartesian coordinates of basis function centers.</span>
+</span><span id="rys_4c2e_symm_old-391"><a href="#rys_4c2e_symm_old-391"><span class="linenos">391</span></a><span class="sd">        - bfs_coeffs : Contraction coefficients.</span>
+</span><span id="rys_4c2e_symm_old-392"><a href="#rys_4c2e_symm_old-392"><span class="linenos">392</span></a><span class="sd">        - bfs_expnts : Gaussian exponents.</span>
+</span><span id="rys_4c2e_symm_old-393"><a href="#rys_4c2e_symm_old-393"><span class="linenos">393</span></a><span class="sd">        - bfs_prim_norms : Primitive normalization constants.</span>
+</span><span id="rys_4c2e_symm_old-394"><a href="#rys_4c2e_symm_old-394"><span class="linenos">394</span></a><span class="sd">        - bfs_contr_prim_norms : Contraction normalization factors.</span>
+</span><span id="rys_4c2e_symm_old-395"><a href="#rys_4c2e_symm_old-395"><span class="linenos">395</span></a><span class="sd">        - bfs_lmn : Angular momentum quantum numbers (ℓ, m, n).</span>
+</span><span id="rys_4c2e_symm_old-396"><a href="#rys_4c2e_symm_old-396"><span class="linenos">396</span></a><span class="sd">        - bfs_nprim : Number of primitives per basis function.</span>
+</span><span id="rys_4c2e_symm_old-397"><a href="#rys_4c2e_symm_old-397"><span class="linenos">397</span></a><span class="sd">        - bfs_shell_index : Index of the shell each basis function belongs to.</span>
+</span><span id="rys_4c2e_symm_old-398"><a href="#rys_4c2e_symm_old-398"><span class="linenos">398</span></a><span class="sd">        - bfs_nao : Total number of atomic orbitals.</span>
+</span><span id="rys_4c2e_symm_old-399"><a href="#rys_4c2e_symm_old-399"><span class="linenos">399</span></a>
+</span><span id="rys_4c2e_symm_old-400"><a href="#rys_4c2e_symm_old-400"><span class="linenos">400</span></a><span class="sd">    slice : list of int, optional</span>
+</span><span id="rys_4c2e_symm_old-401"><a href="#rys_4c2e_symm_old-401"><span class="linenos">401</span></a><span class="sd">        An 8-element list specifying a sub-block of integrals to compute:</span>
+</span><span id="rys_4c2e_symm_old-402"><a href="#rys_4c2e_symm_old-402"><span class="linenos">402</span></a><span class="sd">        [start_A, end_A, start_B, end_B, start_C, end_C, start_D, end_D]</span>
+</span><span id="rys_4c2e_symm_old-403"><a href="#rys_4c2e_symm_old-403"><span class="linenos">403</span></a><span class="sd">        If None (default), computes the full (Nbf, Nbf, Nbf, Nbf) block.</span>
+</span><span id="rys_4c2e_symm_old-404"><a href="#rys_4c2e_symm_old-404"><span class="linenos">404</span></a>
+</span><span id="rys_4c2e_symm_old-405"><a href="#rys_4c2e_symm_old-405"><span class="linenos">405</span></a><span class="sd">        **Note:** When slices are used, not all 8-fold symmetries may be </span>
+</span><span id="rys_4c2e_symm_old-406"><a href="#rys_4c2e_symm_old-406"><span class="linenos">406</span></a><span class="sd">        available because the requested block may not contain all </span>
+</span><span id="rys_4c2e_symm_old-407"><a href="#rys_4c2e_symm_old-407"><span class="linenos">407</span></a><span class="sd">        symmetric permutations. In such cases, only the applicable </span>
+</span><span id="rys_4c2e_symm_old-408"><a href="#rys_4c2e_symm_old-408"><span class="linenos">408</span></a><span class="sd">        symmetries are used.</span>
+</span><span id="rys_4c2e_symm_old-409"><a href="#rys_4c2e_symm_old-409"><span class="linenos">409</span></a>
+</span><span id="rys_4c2e_symm_old-410"><a href="#rys_4c2e_symm_old-410"><span class="linenos">410</span></a><span class="sd">    Returns</span>
+</span><span id="rys_4c2e_symm_old-411"><a href="#rys_4c2e_symm_old-411"><span class="linenos">411</span></a><span class="sd">    -------</span>
+</span><span id="rys_4c2e_symm_old-412"><a href="#rys_4c2e_symm_old-412"><span class="linenos">412</span></a><span class="sd">    ints4c2e : ndarray</span>
+</span><span id="rys_4c2e_symm_old-413"><a href="#rys_4c2e_symm_old-413"><span class="linenos">413</span></a><span class="sd">        The computed 4-center 2-electron integrals for the requested range.</span>
+</span><span id="rys_4c2e_symm_old-414"><a href="#rys_4c2e_symm_old-414"><span class="linenos">414</span></a>
+</span><span id="rys_4c2e_symm_old-415"><a href="#rys_4c2e_symm_old-415"><span class="linenos">415</span></a><span class="sd">    Notes</span>
+</span><span id="rys_4c2e_symm_old-416"><a href="#rys_4c2e_symm_old-416"><span class="linenos">416</span></a><span class="sd">    -----</span>
+</span><span id="rys_4c2e_symm_old-417"><a href="#rys_4c2e_symm_old-417"><span class="linenos">417</span></a><span class="sd">    - Precomputes and stores basis set data in NumPy arrays for Numba efficiency.</span>
+</span><span id="rys_4c2e_symm_old-418"><a href="#rys_4c2e_symm_old-418"><span class="linenos">418</span></a><span class="sd">    - Exploits all possible symmetry permutations when the full tensor is </span>
+</span><span id="rys_4c2e_symm_old-419"><a href="#rys_4c2e_symm_old-419"><span class="linenos">419</span></a><span class="sd">      computed (no slice) to reduce redundant work.</span>
+</span><span id="rys_4c2e_symm_old-420"><a href="#rys_4c2e_symm_old-420"><span class="linenos">420</span></a><span class="sd">    - If a slice is specified, symmetry exploitation is limited to the </span>
+</span><span id="rys_4c2e_symm_old-421"><a href="#rys_4c2e_symm_old-421"><span class="linenos">421</span></a><span class="sd">      permutations that fall within the slice&#39;s index ranges.</span>
+</span><span id="rys_4c2e_symm_old-422"><a href="#rys_4c2e_symm_old-422"><span class="linenos">422</span></a>
+</span><span id="rys_4c2e_symm_old-423"><a href="#rys_4c2e_symm_old-423"><span class="linenos">423</span></a><span class="sd">    Examples</span>
+</span><span id="rys_4c2e_symm_old-424"><a href="#rys_4c2e_symm_old-424"><span class="linenos">424</span></a><span class="sd">    --------</span>
+</span><span id="rys_4c2e_symm_old-425"><a href="#rys_4c2e_symm_old-425"><span class="linenos">425</span></a><span class="sd">    &gt;&gt;&gt; eri_full = rys_4c2e_symm(basis)</span>
+</span><span id="rys_4c2e_symm_old-426"><a href="#rys_4c2e_symm_old-426"><span class="linenos">426</span></a><span class="sd">    &gt;&gt;&gt; eri_block = rys_4c2e_symm(basis, slice=[0,5, 0,5, 0,5, 0,5])</span>
+</span><span id="rys_4c2e_symm_old-427"><a href="#rys_4c2e_symm_old-427"><span class="linenos">427</span></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="rys_4c2e_symm_old-428"><a href="#rys_4c2e_symm_old-428"><span class="linenos">428</span></a>    <span class="c1"># Here the lists are converted to numpy arrays for better use with Numba.</span>
+</span><span id="rys_4c2e_symm_old-429"><a href="#rys_4c2e_symm_old-429"><span class="linenos">429</span></a>    <span class="c1"># Once these conversions are done we pass these to a Numba decorated</span>
+</span><span id="rys_4c2e_symm_old-430"><a href="#rys_4c2e_symm_old-430"><span class="linenos">430</span></a>    <span class="c1"># function that uses prange, etc. to calculate the 4c2e integrals efficiently.</span>
+</span><span id="rys_4c2e_symm_old-431"><a href="#rys_4c2e_symm_old-431"><span class="linenos">431</span></a>    <span class="c1"># This function calculates the 4c2e electron-electron ERIs for a given basis object.</span>
+</span><span id="rys_4c2e_symm_old-432"><a href="#rys_4c2e_symm_old-432"><span class="linenos">432</span></a>    <span class="c1"># The basis object holds the information of basis functions like: exponents, coeffs, etc.</span>
+</span><span id="rys_4c2e_symm_old-433"><a href="#rys_4c2e_symm_old-433"><span class="linenos">433</span></a>
+</span><span id="rys_4c2e_symm_old-434"><a href="#rys_4c2e_symm_old-434"><span class="linenos">434</span></a>    <span class="c1"># It is possible to only calculate a slice (block/subset) of the complete set of integrals.</span>
+</span><span id="rys_4c2e_symm_old-435"><a href="#rys_4c2e_symm_old-435"><span class="linenos">435</span></a>    <span class="c1"># slice is an 8 element list whose first and second elements give the range of the A functions to be calculated.</span>
+</span><span id="rys_4c2e_symm_old-436"><a href="#rys_4c2e_symm_old-436"><span class="linenos">436</span></a>    <span class="c1"># and so on.</span>
+</span><span id="rys_4c2e_symm_old-437"><a href="#rys_4c2e_symm_old-437"><span class="linenos">437</span></a>
+</span><span id="rys_4c2e_symm_old-438"><a href="#rys_4c2e_symm_old-438"><span class="linenos">438</span></a>    <span class="c1">#We convert the required properties to numpy arrays as this is what Numba likes.</span>
+</span><span id="rys_4c2e_symm_old-439"><a href="#rys_4c2e_symm_old-439"><span class="linenos">439</span></a>    <span class="n">bfs_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_coords</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-440"><a href="#rys_4c2e_symm_old-440"><span class="linenos">440</span></a>    <span class="n">bfs_contr_prim_norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_contr_prim_norms</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-441"><a href="#rys_4c2e_symm_old-441"><span class="linenos">441</span></a>    <span class="n">bfs_lmn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_lmn</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-442"><a href="#rys_4c2e_symm_old-442"><span class="linenos">442</span></a>    <span class="n">bfs_nprim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-443"><a href="#rys_4c2e_symm_old-443"><span class="linenos">443</span></a>        
+</span><span id="rys_4c2e_symm_old-444"><a href="#rys_4c2e_symm_old-444"><span class="linenos">444</span></a>
+</span><span id="rys_4c2e_symm_old-445"><a href="#rys_4c2e_symm_old-445"><span class="linenos">445</span></a>    <span class="c1">#The remaining properties like bfs_coeffs are a list of lists of unequal sizes.</span>
+</span><span id="rys_4c2e_symm_old-446"><a href="#rys_4c2e_symm_old-446"><span class="linenos">446</span></a>    <span class="c1">#Numba won&#39;t be able to work with these efficiently.</span>
+</span><span id="rys_4c2e_symm_old-447"><a href="#rys_4c2e_symm_old-447"><span class="linenos">447</span></a>    <span class="c1">#So, we convert them to a numpy 2d array by applying a trick,</span>
+</span><span id="rys_4c2e_symm_old-448"><a href="#rys_4c2e_symm_old-448"><span class="linenos">448</span></a>    <span class="c1">#that the second dimension is that of the largest list. So that</span>
+</span><span id="rys_4c2e_symm_old-449"><a href="#rys_4c2e_symm_old-449"><span class="linenos">449</span></a>    <span class="c1">#it can accomadate all the lists.</span>
+</span><span id="rys_4c2e_symm_old-450"><a href="#rys_4c2e_symm_old-450"><span class="linenos">450</span></a>    <span class="n">maxnprim</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">)</span>
+</span><span id="rys_4c2e_symm_old-451"><a href="#rys_4c2e_symm_old-451"><span class="linenos">451</span></a>    <span class="n">bfs_coeffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-452"><a href="#rys_4c2e_symm_old-452"><span class="linenos">452</span></a>    <span class="n">bfs_expnts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-453"><a href="#rys_4c2e_symm_old-453"><span class="linenos">453</span></a>    <span class="n">bfs_prim_norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-454"><a href="#rys_4c2e_symm_old-454"><span class="linenos">454</span></a>    <span class="n">shell_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_shell_index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm_old-455"><a href="#rys_4c2e_symm_old-455"><span class="linenos">455</span></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">):</span>
+</span><span id="rys_4c2e_symm_old-456"><a href="#rys_4c2e_symm_old-456"><span class="linenos">456</span></a>        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+</span><span id="rys_4c2e_symm_old-457"><a href="#rys_4c2e_symm_old-457"><span class="linenos">457</span></a>            <span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm_old-458"><a href="#rys_4c2e_symm_old-458"><span class="linenos">458</span></a>            <span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm_old-459"><a href="#rys_4c2e_symm_old-459"><span class="linenos">459</span></a>            <span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm_old-460"><a href="#rys_4c2e_symm_old-460"><span class="linenos">460</span></a>        
+</span><span id="rys_4c2e_symm_old-461"><a href="#rys_4c2e_symm_old-461"><span class="linenos">461</span></a>
+</span><span id="rys_4c2e_symm_old-462"><a href="#rys_4c2e_symm_old-462"><span class="linenos">462</span></a>
+</span><span id="rys_4c2e_symm_old-463"><a href="#rys_4c2e_symm_old-463"><span class="linenos">463</span></a>    
+</span><span id="rys_4c2e_symm_old-464"><a href="#rys_4c2e_symm_old-464"><span class="linenos">464</span></a>    <span class="k">if</span> <span class="nb">slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="rys_4c2e_symm_old-465"><a href="#rys_4c2e_symm_old-465"><span class="linenos">465</span></a>        <span class="nb">slice</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">]</span>
+</span><span id="rys_4c2e_symm_old-466"><a href="#rys_4c2e_symm_old-466"><span class="linenos">466</span></a>        
+</span><span id="rys_4c2e_symm_old-467"><a href="#rys_4c2e_symm_old-467"><span class="linenos">467</span></a>    <span class="c1">#Limits for the calculation of 4c2e integrals</span>
+</span><span id="rys_4c2e_symm_old-468"><a href="#rys_4c2e_symm_old-468"><span class="linenos">468</span></a>    <span class="n">indx_startA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-469"><a href="#rys_4c2e_symm_old-469"><span class="linenos">469</span></a>    <span class="n">indx_endA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-470"><a href="#rys_4c2e_symm_old-470"><span class="linenos">470</span></a>    <span class="n">indx_startB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-471"><a href="#rys_4c2e_symm_old-471"><span class="linenos">471</span></a>    <span class="n">indx_endB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-472"><a href="#rys_4c2e_symm_old-472"><span class="linenos">472</span></a>    <span class="n">indx_startC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-473"><a href="#rys_4c2e_symm_old-473"><span class="linenos">473</span></a>    <span class="n">indx_endC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-474"><a href="#rys_4c2e_symm_old-474"><span class="linenos">474</span></a>    <span class="n">indx_startD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-475"><a href="#rys_4c2e_symm_old-475"><span class="linenos">475</span></a>    <span class="n">indx_endD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span>
+</span><span id="rys_4c2e_symm_old-476"><a href="#rys_4c2e_symm_old-476"><span class="linenos">476</span></a>
+</span><span id="rys_4c2e_symm_old-477"><a href="#rys_4c2e_symm_old-477"><span class="linenos">477</span></a>
+</span><span id="rys_4c2e_symm_old-478"><a href="#rys_4c2e_symm_old-478"><span class="linenos">478</span></a>    <span class="n">ints4c2e</span> <span class="o">=</span> <span class="n">rys_4c2e_symm_internal</span><span class="p">(</span><span class="n">bfs_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_contr_prim_norms</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_lmn</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_nprim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_coeffs</span><span class="p">,</span> <span class="n">bfs_prim_norms</span><span class="p">,</span> <span class="n">bfs_expnts</span><span class="p">,</span> <span class="n">shell_indices</span><span class="p">,</span>\
+</span><span id="rys_4c2e_symm_old-479"><a href="#rys_4c2e_symm_old-479"><span class="linenos">479</span></a>        <span class="n">indx_startA</span><span class="p">,</span><span class="n">indx_endA</span><span class="p">,</span> <span class="n">indx_startB</span><span class="p">,</span> <span class="n">indx_endB</span><span class="p">,</span> <span class="n">indx_startC</span><span class="p">,</span> <span class="n">indx_endC</span><span class="p">,</span> <span class="n">indx_startD</span><span class="p">,</span><span class="n">indx_endD</span><span class="p">)</span>
+</span><span id="rys_4c2e_symm_old-480"><a href="#rys_4c2e_symm_old-480"><span class="linenos">480</span></a>
+</span><span id="rys_4c2e_symm_old-481"><a href="#rys_4c2e_symm_old-481"><span class="linenos">481</span></a>    <span class="k">return</span> <span class="n">ints4c2e</span>
 </span></pre></div>
 
 
@@ -1444,76 +1660,6 @@ permutations that fall within the slice's index ranges.</li>
 </div>
 </div>
 
-
-                </section>
-                <section id="rys_4c2e_symm_old">
-                            <input id="rys_4c2e_symm_old-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-<div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">rys_4c2e_symm_old</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">basis</span>, </span><span class="param"><span class="nb">slice</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
-
-                <label class="view-source-button" for="rys_4c2e_symm_old-view-source"><span>View Source</span></label>
-
-    </div>
-    <a class="headerlink" href="#rys_4c2e_symm_old"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="rys_4c2e_symm_old-416"><a href="#rys_4c2e_symm_old-416"><span class="linenos">416</span></a><span class="k">def</span><span class="w"> </span><span class="nf">rys_4c2e_symm_old</span><span class="p">(</span><span class="n">basis</span><span class="p">,</span> <span class="nb">slice</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-</span><span id="rys_4c2e_symm_old-417"><a href="#rys_4c2e_symm_old-417"><span class="linenos">417</span></a>    <span class="c1"># Here the lists are converted to numpy arrays for better use with Numba.</span>
-</span><span id="rys_4c2e_symm_old-418"><a href="#rys_4c2e_symm_old-418"><span class="linenos">418</span></a>    <span class="c1"># Once these conversions are done we pass these to a Numba decorated</span>
-</span><span id="rys_4c2e_symm_old-419"><a href="#rys_4c2e_symm_old-419"><span class="linenos">419</span></a>    <span class="c1"># function that uses prange, etc. to calculate the 4c2e integrals efficiently.</span>
-</span><span id="rys_4c2e_symm_old-420"><a href="#rys_4c2e_symm_old-420"><span class="linenos">420</span></a>    <span class="c1"># This function calculates the 4c2e electron-electron ERIs for a given basis object.</span>
-</span><span id="rys_4c2e_symm_old-421"><a href="#rys_4c2e_symm_old-421"><span class="linenos">421</span></a>    <span class="c1"># The basis object holds the information of basis functions like: exponents, coeffs, etc.</span>
-</span><span id="rys_4c2e_symm_old-422"><a href="#rys_4c2e_symm_old-422"><span class="linenos">422</span></a>
-</span><span id="rys_4c2e_symm_old-423"><a href="#rys_4c2e_symm_old-423"><span class="linenos">423</span></a>    <span class="c1"># It is possible to only calculate a slice (block/subset) of the complete set of integrals.</span>
-</span><span id="rys_4c2e_symm_old-424"><a href="#rys_4c2e_symm_old-424"><span class="linenos">424</span></a>    <span class="c1"># slice is an 8 element list whose first and second elements give the range of the A functions to be calculated.</span>
-</span><span id="rys_4c2e_symm_old-425"><a href="#rys_4c2e_symm_old-425"><span class="linenos">425</span></a>    <span class="c1"># and so on.</span>
-</span><span id="rys_4c2e_symm_old-426"><a href="#rys_4c2e_symm_old-426"><span class="linenos">426</span></a>
-</span><span id="rys_4c2e_symm_old-427"><a href="#rys_4c2e_symm_old-427"><span class="linenos">427</span></a>    <span class="c1">#We convert the required properties to numpy arrays as this is what Numba likes.</span>
-</span><span id="rys_4c2e_symm_old-428"><a href="#rys_4c2e_symm_old-428"><span class="linenos">428</span></a>    <span class="n">bfs_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_coords</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-429"><a href="#rys_4c2e_symm_old-429"><span class="linenos">429</span></a>    <span class="n">bfs_contr_prim_norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_contr_prim_norms</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-430"><a href="#rys_4c2e_symm_old-430"><span class="linenos">430</span></a>    <span class="n">bfs_lmn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_lmn</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-431"><a href="#rys_4c2e_symm_old-431"><span class="linenos">431</span></a>    <span class="n">bfs_nprim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-432"><a href="#rys_4c2e_symm_old-432"><span class="linenos">432</span></a>        
-</span><span id="rys_4c2e_symm_old-433"><a href="#rys_4c2e_symm_old-433"><span class="linenos">433</span></a>
-</span><span id="rys_4c2e_symm_old-434"><a href="#rys_4c2e_symm_old-434"><span class="linenos">434</span></a>    <span class="c1">#The remaining properties like bfs_coeffs are a list of lists of unequal sizes.</span>
-</span><span id="rys_4c2e_symm_old-435"><a href="#rys_4c2e_symm_old-435"><span class="linenos">435</span></a>    <span class="c1">#Numba won&#39;t be able to work with these efficiently.</span>
-</span><span id="rys_4c2e_symm_old-436"><a href="#rys_4c2e_symm_old-436"><span class="linenos">436</span></a>    <span class="c1">#So, we convert them to a numpy 2d array by applying a trick,</span>
-</span><span id="rys_4c2e_symm_old-437"><a href="#rys_4c2e_symm_old-437"><span class="linenos">437</span></a>    <span class="c1">#that the second dimension is that of the largest list. So that</span>
-</span><span id="rys_4c2e_symm_old-438"><a href="#rys_4c2e_symm_old-438"><span class="linenos">438</span></a>    <span class="c1">#it can accomadate all the lists.</span>
-</span><span id="rys_4c2e_symm_old-439"><a href="#rys_4c2e_symm_old-439"><span class="linenos">439</span></a>    <span class="n">maxnprim</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">)</span>
-</span><span id="rys_4c2e_symm_old-440"><a href="#rys_4c2e_symm_old-440"><span class="linenos">440</span></a>    <span class="n">bfs_coeffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-441"><a href="#rys_4c2e_symm_old-441"><span class="linenos">441</span></a>    <span class="n">bfs_expnts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-442"><a href="#rys_4c2e_symm_old-442"><span class="linenos">442</span></a>    <span class="n">bfs_prim_norms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="n">maxnprim</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-443"><a href="#rys_4c2e_symm_old-443"><span class="linenos">443</span></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">):</span>
-</span><span id="rys_4c2e_symm_old-444"><a href="#rys_4c2e_symm_old-444"><span class="linenos">444</span></a>        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">basis</span><span class="o">.</span><span class="n">bfs_nprim</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
-</span><span id="rys_4c2e_symm_old-445"><a href="#rys_4c2e_symm_old-445"><span class="linenos">445</span></a>            <span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_coeffs</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm_old-446"><a href="#rys_4c2e_symm_old-446"><span class="linenos">446</span></a>            <span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_expnts</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm_old-447"><a href="#rys_4c2e_symm_old-447"><span class="linenos">447</span></a>            <span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_prim_norms</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm_old-448"><a href="#rys_4c2e_symm_old-448"><span class="linenos">448</span></a>        
-</span><span id="rys_4c2e_symm_old-449"><a href="#rys_4c2e_symm_old-449"><span class="linenos">449</span></a>
-</span><span id="rys_4c2e_symm_old-450"><a href="#rys_4c2e_symm_old-450"><span class="linenos">450</span></a>
-</span><span id="rys_4c2e_symm_old-451"><a href="#rys_4c2e_symm_old-451"><span class="linenos">451</span></a>    
-</span><span id="rys_4c2e_symm_old-452"><a href="#rys_4c2e_symm_old-452"><span class="linenos">452</span></a>    <span class="k">if</span> <span class="nb">slice</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="rys_4c2e_symm_old-453"><a href="#rys_4c2e_symm_old-453"><span class="linenos">453</span></a>        <span class="nb">slice</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">basis</span><span class="o">.</span><span class="n">bfs_nao</span><span class="p">]</span>
-</span><span id="rys_4c2e_symm_old-454"><a href="#rys_4c2e_symm_old-454"><span class="linenos">454</span></a>        
-</span><span id="rys_4c2e_symm_old-455"><a href="#rys_4c2e_symm_old-455"><span class="linenos">455</span></a>    <span class="c1">#Limits for the calculation of 4c2e integrals</span>
-</span><span id="rys_4c2e_symm_old-456"><a href="#rys_4c2e_symm_old-456"><span class="linenos">456</span></a>    <span class="n">indx_startA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-457"><a href="#rys_4c2e_symm_old-457"><span class="linenos">457</span></a>    <span class="n">indx_endA</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-458"><a href="#rys_4c2e_symm_old-458"><span class="linenos">458</span></a>    <span class="n">indx_startB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-459"><a href="#rys_4c2e_symm_old-459"><span class="linenos">459</span></a>    <span class="n">indx_endB</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-460"><a href="#rys_4c2e_symm_old-460"><span class="linenos">460</span></a>    <span class="n">indx_startC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-461"><a href="#rys_4c2e_symm_old-461"><span class="linenos">461</span></a>    <span class="n">indx_endC</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-462"><a href="#rys_4c2e_symm_old-462"><span class="linenos">462</span></a>    <span class="n">indx_startD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-463"><a href="#rys_4c2e_symm_old-463"><span class="linenos">463</span></a>    <span class="n">indx_endD</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">slice</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span>
-</span><span id="rys_4c2e_symm_old-464"><a href="#rys_4c2e_symm_old-464"><span class="linenos">464</span></a>
-</span><span id="rys_4c2e_symm_old-465"><a href="#rys_4c2e_symm_old-465"><span class="linenos">465</span></a>    <span class="n">ints4c2e</span> <span class="o">=</span> <span class="n">rys_4c2e_symm_internal_old</span><span class="p">(</span><span class="n">bfs_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_contr_prim_norms</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_lmn</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_nprim</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bfs_coeffs</span><span class="p">,</span> <span class="n">bfs_prim_norms</span><span class="p">,</span> <span class="n">bfs_expnts</span><span class="p">,</span>\
-</span><span id="rys_4c2e_symm_old-466"><a href="#rys_4c2e_symm_old-466"><span class="linenos">466</span></a>        <span class="n">indx_startA</span><span class="p">,</span><span class="n">indx_endA</span><span class="p">,</span> <span class="n">indx_startB</span><span class="p">,</span> <span class="n">indx_endB</span><span class="p">,</span> <span class="n">indx_startC</span><span class="p">,</span> <span class="n">indx_endC</span><span class="p">,</span> <span class="n">indx_startD</span><span class="p">,</span><span class="n">indx_endD</span><span class="p">)</span>
-</span><span id="rys_4c2e_symm_old-467"><a href="#rys_4c2e_symm_old-467"><span class="linenos">467</span></a>
-</span><span id="rys_4c2e_symm_old-468"><a href="#rys_4c2e_symm_old-468"><span class="linenos">468</span></a>    <span class="k">return</span> <span class="n">ints4c2e</span>
-</span></pre></div>
-
-
-    
 
                 </section>
                 <section id="conv_3c2e_symm">

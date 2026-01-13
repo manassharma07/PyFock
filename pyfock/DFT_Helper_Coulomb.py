@@ -55,7 +55,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
         else:
             ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis)
         duration2c2e = timer() - start2c2e
-        print('Time taken for two-centered two-electron integrals '+str(duration2c2e)+' seconds.\n', flush=True)
+        print('Time taken for two-centered two-electron integrals '+str(round(duration2c2e, 2))+' seconds.\n', flush=True)
         if DF_algo==4: #Triangular version
             ints3c2e = Integrals.rys_3c2e_tri(basis, auxbasis)
             # ints3c2e_pyscf = Integrals.rys_3c2e_tri(basis, auxbasis)
@@ -89,7 +89,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints3c2e*100,1)) + '% of original', flush=True)
             print('Schwarz screening done!')
             durationSchwarz = timer() - startSchwarz
-            print('Time taken '+str(durationSchwarz)+' seconds.\n', flush=True)
+            print('Time taken '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
             
             ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz(basis, auxbasis, indices[0], indices[1], indices[2])
             # ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse(basis, auxbasis, indices[0], indices[1], indices[2])
@@ -123,7 +123,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             start_4c2e_diag = timer()
             ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             duration_4c2e_diag = timer() - start_4c2e_diag
-            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', duration_4c2e_diag)
+            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
             
             # Calculate the square roots required for 
             duration_square_roots = 0.0
@@ -131,7 +131,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
             sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
             duration_square_roots = timer() - start_square_roots
-            print('Time taken to evaluate the square roots needed: ', duration_square_roots)
+            print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
             # print(ints4c2e_diag.max())
             # print(ints4c2e_diag.min())
             # print(ints2c2e.max())
@@ -191,7 +191,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
                     break
             
             duration_indices_calc += timer() - start_indices_calc
-            print('Time for significant indices evaluation: ', duration_indices_calc)
+            print('Time for significant indices evaluation: ', round(duration_indices_calc, 2))
             # print('Time for array concatenation: ', duration_concatenation)
 
             # Get rid of temp variables
@@ -210,7 +210,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints3c2e*100,1)) + '% of original', flush=True)
             print('Schwarz screening done!')
             durationSchwarz = timer() - startSchwarz
-            print('Total time taken for Schwarz screening '+str(durationSchwarz)+' seconds.\n', flush=True)
+            print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
             
             ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse(basis, auxbasis, indicesA, indicesB, indicesC)
 
@@ -223,7 +223,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
                     # V = cp.asarray(Integrals.nuc_mat_symm(basis, mol, None, sqrt_ints4c2e_diag))
                 H = T + V
                 duration_strict_schwarz_nuc_mat = timer() - start_strict_schwarz_nuc_mat
-                print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', duration_strict_schwarz_nuc_mat, flush=True)
+                print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', round(duration_strict_schwarz_nuc_mat, 2), flush=True)
             # The following uses joblib to parallelize instead
             # ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse2(basis, auxbasis, indicesA, indicesB, indicesC, ncores)
             # print(ints3c2e)
@@ -299,7 +299,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints3c2e*100,1)) + '% of original', flush=True)
             print('Schwarz screening done!')
             durationSchwarz = timer() - startSchwarz
-            print('Time taken '+str(durationSchwarz)+' seconds.\n', flush=True)
+            print('Time taken '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
             
 
             ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse(basis, auxbasis, indicesA, indicesB, indicesC)
@@ -315,7 +315,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             start_4c2e_diag = timer()
             ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             duration_4c2e_diag = timer() - start_4c2e_diag
-            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', duration_4c2e_diag)
+            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
             
             # Calculate the square roots required for 
             duration_square_roots = 0.0
@@ -323,13 +323,13 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
             sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
             duration_square_roots = timer() - start_square_roots
-            print('Time taken to evaluate the square roots needed: ', duration_square_roots)
+            print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
 
             start_indices_calc = timer()
             count_significant = Integrals.schwarz_helpers.calc_count_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, basis.bfs_nao, auxbasis.bfs_nao, threshold_schwarz)
             
             duration_indices_calc = timer() - start_indices_calc
-            print('Time for total significant integral count calculation: ', duration_indices_calc)
+            print('Time for total significant integral count calculation: ', round(duration_indices_calc, 2))
             # print('Time for array concatenation: ', duration_concatenation)
 
             
@@ -338,7 +338,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(count_significant) + ' or '+str(np.round(count_significant/nints3c2e*100,1)) + '% of original', flush=True)
             print('Schwarz screening partially done!')
             durationSchwarz = timer() - startSchwarz
-            print('Total time taken for Schwarz screening (partial) '+str(durationSchwarz)+' seconds.\n', flush=True)
+            print('Total time taken for Schwarz screening (partial) '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
             
             # The following works alright, except it is not very parallel efficient (this uses prange)
             ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse_algo8(basis, auxbasis, count_significant, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz)
@@ -354,7 +354,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             start_4c2e_diag = timer()
             ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             duration_4c2e_diag = timer() - start_4c2e_diag
-            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', duration_4c2e_diag)
+            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
             
             # Calculate the square roots required for 
             duration_square_roots = 0.0
@@ -362,7 +362,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
             sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
             duration_square_roots = timer() - start_square_roots
-            print('Time taken to evaluate the square roots needed: ', duration_square_roots)
+            print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
 
             chunksize = int(1e9) # Results in 2 GB chunks
             duration_indices_calc = 0.0
@@ -412,7 +412,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints3c2e*100,1)) + '% of original', flush=True)
             print('Schwarz screening done!')
             durationSchwarz = timer() - startSchwarz
-            print('Total time taken for Schwarz screening '+str(durationSchwarz)+' seconds.\n', flush=True)
+            print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
             
             # print(offset)
             ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse_algo9(basis, auxbasis, offset, indicesB, indicesC)
@@ -448,7 +448,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
                 ints4c2e_diag = Integrals.schwarz_helpers_cupy.eri_4c2e_diag_cupy(basis)
             # ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             duration_4c2e_diag = timer() - start_4c2e_diag
-            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', duration_4c2e_diag)
+            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
             
             # Calculate the square roots required for 
             duration_square_roots = 0.0
@@ -460,7 +460,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
                 sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
                 sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
             duration_square_roots = timer() - start_square_roots
-            print('Time taken to evaluate the square roots needed: ', duration_square_roots)
+            print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
             
             auxbfs_lm = np.array(auxbasis.bfs_lm)
 
@@ -488,7 +488,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints3c2e*100,1)) + '% of original', flush=True)
             print('Schwarz screening done!')
             durationSchwarz = timer() - startSchwarz
-            print('Total time taken for Schwarz screening '+str(durationSchwarz)+' seconds.\n', flush=True)
+            print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
 
             if use_gpu:
                 ints3c2e = Integrals.schwarz_helpers_cupy.rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
@@ -506,7 +506,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
                     # V = cp.asarray(Integrals.nuc_mat_symm(basis, mol, None, sqrt_ints4c2e_diag))
                 H = T + V
                 duration_strict_schwarz_nuc_mat = timer() - start_strict_schwarz_nuc_mat
-                print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', duration_strict_schwarz_nuc_mat, flush=True)
+                print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', round(duration_strict_schwarz_nuc_mat, 2), flush=True)
             
         else:
             ints3c2e = Integrals.rys_3c2e_symm(basis, auxbasis)
@@ -522,7 +522,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             # ints2c2e = np.dot(c2sph_mat, np.dot(ints2c2e, c2sph_mat.T)) # CAO --> SAO
             # ints2c2e = np.dot(sph2c_mat_pseudo, np.dot(ints2c2e, sph2c_mat_pseudo.T)) #SAO --> CAO
         duration2c2e = timer() - start2c2e
-        print('Time taken for two-centered two-electron integrals '+str(duration2c2e)+' seconds.\n', flush=True)
+        print('Time taken for two-centered two-electron integrals '+str(round(duration2c2e, 2))+' seconds.\n', flush=True)
         ints3c2e = Integrals.conv_3c2e_symm(basis, auxbasis)
         
 
@@ -643,12 +643,11 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
         else:
             cho_decomp_ints2c2e = scipy.linalg.cho_factor(ints2c2e)
         durationDF_cholesky = timer() - startDF_cholesky
-        print('Time taken for Cholesky factorization of two-centered two-electron integrals '+str(durationDF_cholesky)+' seconds.\n', flush=True)
+        print('Time taken for Cholesky factorization of two-centered two-electron integrals '+str(round(durationDF_cholesky, 2))+' seconds.\n', flush=True)
 
 
     durationCoulomb = timer() - startCoulomb
-    print('Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  '+str(durationCoulomb)+' seconds.\n', flush=True)
-
+    print('Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
     result = [
         H,
         V,
