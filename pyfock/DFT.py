@@ -1047,7 +1047,7 @@ class DFT:
                 # Core hamiltonian
                 H = T + V
 
-            print('Core H size in GB ',H.nbytes/1e9, flush=True)
+            print('Core H size in GB ',round(H.nbytes/1e9, 4), flush=True)
             print('done!', flush=True)
             duration1e = timer() - start1e
             print('Time taken '+str(round(duration1e, 2))+' seconds.\n', flush=True)
@@ -1066,7 +1066,7 @@ class DFT:
                 # Core hamiltonian
                 H = T 
 
-            print('Core H size in GB ',(H.nbytes/1e9)*2, flush=True) # Factor of 2 because nuclear matrix will also be included here later
+            print('Core H size in GB ',(round(H.nbytes/1e9, 4))*2, flush=True) # Factor of 2 because nuclear matrix will also be included here later
             print('done!', flush=True)
             duration1e = timer() - start1e
             print('Time taken '+str(round(duration1e, 2))+' seconds.\n', flush=True)
@@ -1188,6 +1188,9 @@ class DFT:
         scf_converged = False
         durationgrids = 0
 
+        print('\n\n------------------------------------------------------', flush=True)
+        print('Numerical Integration for XC Term')
+        print('------------------------------------------------------\n', flush=True)
         if grids is None:
             startGrids = timer()
             print('\nGenerating grids...\n\n', flush=True)
@@ -1259,9 +1262,9 @@ class DFT:
         # print('\nTime taken '+str(duration_pruning_weights)+' seconds.\n', flush=True)
         # print('\nNo. of grid points after screening by weights: ', grids.coords.shape[0], flush=True)
 
-        print('Size (in GB) for storing the coordinates of grid:      ', grids.coords.nbytes/1e9, flush=True)
-        print('Size (in GB) for storing the weights of grid:          ', grids.weights.nbytes/1e9, flush=True)
-        print('Size (in GB) for storing the density at gridpoints:    ', grids.weights.nbytes/1e9, flush=True)
+        print('Size (in GB) for storing the coordinates of grid:      ', round(grids.coords.nbytes/1e9, 3), flush=True)
+        print('Size (in GB) for storing the weights of grid:          ', round(grids.weights.nbytes/1e9, 3), flush=True)
+        print('Size (in GB) for storing the density at gridpoints:    ', round(grids.weights.nbytes/1e9, 3), flush=True)
 
         # Sort the grids for slightly better performance with batching (doesn't seem to make much difference)
         if sortGrids:
@@ -1384,6 +1387,9 @@ class DFT:
         print('\n\n------------------------------------------------------', flush=True)
         print('Exchange-Correlation Functional')
         print('------------------------------------------------------\n', flush=True)
+        print("PyFock utilizes LibXC's pylibxc library. Citation:")
+        print(pylibxc.util.xc_reference())
+        print('\n\n')
         print('XC Functional IDs supplied: ', funcid, flush=True)
         print('\n\nDescription of exchange functional: \n')
         print('The Exchange function belongs to the family:', xc_family_dict[x_family_code], flush=True)
