@@ -899,7 +899,8 @@ class DFT:
         print_scientist()
         print('\n\nNumber of atoms:', mol.natoms)
         print('\n\nNumber of basis functions (atomic orbitals):', basis.bfs_nao)
-        print('\n\nNumber of auxiliary basis functions:', auxbasis.bfs_nao)
+        if isDF:
+            print('\n\nNumber of auxiliary basis functions:', auxbasis.bfs_nao)
         print("\n" + "="*70 + "\n")
 
         print_sys_info()
@@ -909,16 +910,6 @@ class DFT:
         os.environ['RAYON_NUM_THREADS'] = str(ncores)
         
         print('Running DFT using '+str(numba.get_num_threads())+' threads for Numba.\n\n', flush=True)
-        # if basis is None:
-        #     basis = self.basis
-        # if mol is None:
-        #     mol = self.mol
-        # if xc is None:
-        #     xc = self.xc
-        # if gridsLevel is None:
-        #     gridsLevel = self.gridsLevel
-        # if auxbasis is None:
-        #     auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-universal-jfit')})
         if grids is None:
             sortGrids = True
         if xc_bf_screen==False:
@@ -962,30 +953,6 @@ class DFT:
                 # Switch back to main GPU
                 cp.cuda.Device(0).use()
                 streams[0].use()
-                # # Set some basis function data as cupy arrays to avoid redoing it during XC term evaluation at every SCF iteration
-                # bfs_coords = cp.asarray([basis.bfs_coords], dtype=precision_XC)
-                # bfs_contr_prim_norms = cp.asarray([basis.bfs_contr_prim_norms], dtype=precision_XC)
-                # bfs_lmn = cp.asarray([basis.bfs_lmn])
-                # bfs_nprim = cp.asarray([basis.bfs_nprim])
-                # #The remaining properties like bfs_coeffs are a list of lists of unequal sizes.
-                # #Numba won't be able to work with these efficiently.
-                # #So, we convert them to a numpy 2d array by applying a trick,
-                # #that the second dimension is that of the largest list. So that
-                # #it can accomadate all the lists.
-                # maxnprim = max(basis.bfs_nprim)
-                # bfs_coeffs = cp.zeros([basis.bfs_nao, maxnprim], dtype=precision_XC)
-                # bfs_expnts = cp.zeros([basis.bfs_nao, maxnprim], dtype=precision_XC)
-                # bfs_prim_norms = cp.zeros([basis.bfs_nao, maxnprim], dtype=precision_XC)
-                # bfs_radius_cutoff = cp.zeros([basis.bfs_nao], dtype=precision_XC)
-                # for i in range(basis.bfs_nao):
-                #     for j in range(basis.bfs_nprim[i]):
-                #         bfs_coeffs[i,j] = basis.bfs_coeffs[i][j]
-                #         bfs_expnts[i,j] = basis.bfs_expnts[i][j]
-                #         bfs_prim_norms[i,j] = basis.bfs_prim_norms[i][j]
-                #         bfs_radius_cutoff[i] = basis.bfs_radius_cutoff[i]
-                # # Now bf/ao values can be evaluated by calling the following
-                # # bf_values = Integrals.bf_val_helpers.eval_bfs(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
-                # bfs_data_as_np_arrays = [bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff]
                 
 
         else:
@@ -1092,6 +1059,7 @@ class DFT:
             
             print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
             if not isSchwarz:
+                start_4c2e = timer()
                 # Four centered two electron integrals (ERIs)
                 if rys:
                     ints4c2e = Integrals.rys_4c2e_symm(basis)
@@ -1099,6 +1067,8 @@ class DFT:
                     ints4c2e = Integrals.conv_4c2e_symm(basis)
                 print('Four Center Two electron ERI size in GB ',ints4c2e.nbytes/1e9, flush=True)
                 print('done!')
+                durationCoulomb = timer() - start_4c2e
+                print('Time taken '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
             else:
                 print('\n\nPerforming Schwarz screening...')
                 # threshold_schwarz = 1e-09

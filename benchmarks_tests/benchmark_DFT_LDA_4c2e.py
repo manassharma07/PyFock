@@ -54,8 +54,8 @@ from pyscf import gto, dft, df, scf
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
 
 # LDA_X LDA_C_VWN 
-# funcx = 1
-# funcc = 7
+funcx = 1
+funcc = 7
 
 # LDA_X LDA_C_PW 
 # funcx = 1
@@ -66,8 +66,8 @@ from pyscf import gto, dft, df, scf
 # funcc = 13
 
 # GGA_X_PBE, GGA_C_PBE (PBE)
-funcx = 101
-funcc = 130
+# funcx = 101
+# funcc = 130
 
 # GGA_X_B88, GGA_C_LYP (BLYP)
 # funcx = 106
@@ -93,12 +93,6 @@ basis_set_name = 'def2-SVP'
 # basis_set_name = 'cc-pVDZ'
 # basis_set_name = 'ano-rcc'
 
-auxbasis_name = 'def2-universal-jfit'
-# auxbasis_name = 'def2-universal-jkfit'
-# auxbasis_name = 'def2-TZVP'
-# auxbasis_name = 'sto-3g'
-# auxbasis_name = 'def2-SVP'
-# auxbasis_name = '6-31G'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 # xyzFilename = 'Adenine-Thymine.xyz'
@@ -106,7 +100,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-xyzFilename = 'H2O.xyz'
+# xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -119,7 +113,7 @@ xyzFilename = 'H2O.xyz'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -158,8 +152,8 @@ molPySCF.build()
 
 print('\n\nPySCF Results\n\n')
 start=timer()
-mf = dft.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
-# mf = scf.RHF(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf = dft.rks.RKS(molPySCF)
+# mf = scf.RHF(molPySCF)
 mf.xc = funcidpyscf
 # mf.verbose = 4
 mf.direct_scf = False
@@ -214,25 +208,23 @@ print('\n\nNatoms :',molCrysX.natoms)
 basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
 print('\n\nNAO :',basis.bfs_nao)
 
-auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
-print('\n\naux NAO :',auxbasis.bfs_nao)
 
-dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
+dftObj = DFT(molCrysX, basis, xc=funcidcrysx, grids=pyscfGrids)
 dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35
 dftObj.ncores = ncores
-dftObj.save_ao_values = False
+dftObj.save_ao_values = True
+dftObj.isDF = False
 dftObj.rys = True
-dftObj.DF_algo = 10
 dftObj.blocksize = 5000
 dftObj.XC_algo = 2
 dftObj.debug = False
 dftObj.sortGrids = False
 dftObj.xc_bf_screen = True
-dftObj.threshold_schwarz = 1e-9
-dftObj.strict_schwarz = True
-dftObj.cholesky = True
+# dftObj.threshold_schwarz = 1e-9
+dftObj.strict_schwarz = False
+# dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
 dftObj.sao = False

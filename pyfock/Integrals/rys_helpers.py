@@ -12,7 +12,7 @@ https://github.com/rpmuller/MolecularIntegrals.jl/blob/master/src/Rys.jl
 '''
 
 "Form coulomb repulsion integral using Rys quadrature"
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)#, locals=dict(ijkl=np.float32, Ix=np.float32, Iy=np.float32, Iz=np.float32, val=np.float32)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')#, locals=dict(ijkl=np.float32, Ix=np.float32, Iy=np.float32, Iz=np.float32, val=np.float32)
 def coulomb_rys(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L):
     X = rpq2*rho
 
@@ -203,13 +203,13 @@ def coulomb_rys_fast(roots,weights,G,norder,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,
     
     return  val
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Int1d(G,t,ix,jx,kx,lx,xi,xj,xk,xl,alphai,alphaj,alphak,alphal):
     #G = RecurNumba2(G,t,ix,jx,kx,lx,xi,xj,xk,xl,alphai,alphaj,alphak,alphal)
     return Shift(G,ix,jx,kx,lx,xi-xj,xk-xl)
 
 "Form G(n,m)=I(n,0,m,0) intermediate values for a Rys polynomial"
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Recur(G,t,i,j,k,l,xi,xj,xk,xl,alphai,alphaj,alphak,alphal,A,B,Ap,Bp,ABsrt):
     # print('RecurNumba1', G[0,0])
     # G1 = np.zeros((n1+1,m1+1))
@@ -406,34 +406,18 @@ LOOKUP_TABLE_COMB = np.array([
     [     1,     15,    105,    455,   1365,   3003,   5005,   6435,   6435,   5005,   3003,   1365,    455,    105,     15,      1]
 ])
 "Compute and  output I(i,j,k,l) from I(i+j,0,k+l,0) (G)"
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)#, locals=dict(ijkl=np.float32)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')#, locals=dict(ijkl=np.float32)
 def Shift(G,i,j,k,l,xij,xkl):
     
     ijkl = 0.0 
     for m in range(l+1):
         ijm0 = 0.0
-        # if m==0:
-        #     comb_2_ = 1.0
-        # elif l==0:
-        #     comb_2_ = 0.0
-        # elif m==1:
-        #     comb_2_ = l
-        # else:
-        #     comb_2_ = comb(l,m)
         if m<=5 and l<=5:
             comb_2_ = LOOKUP_TABLE_COMB[l,m]
         else:
             comb_2_ = comb(l,m)
         for n in range(j+1):
-            # if n==0:
-            #     comb_1_ = 1.0
-            # elif j==0:
-            #     comb_1_ = 0.0
-            # elif n==1:
-            #     comb_1_ = j
-            # else:
-            #     comb_1_ = comb(j,n)
-            if n<=5 and j<=5:
+            if n<=10 and j<=10:
                 comb_1_ = LOOKUP_TABLE_COMB[j,n]
             else:
                 comb_1_ = comb(j,n)
@@ -442,19 +426,6 @@ def Shift(G,i,j,k,l,xij,xkl):
         ijkl += comb_2_*xkl**(l-m)*ijm0 # I(i,j,k,l)<-I(i,j,m,0)  
     return ijkl
 
-# @njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')#, locals=dict(ijkl=np.float32)
-# def Shift_3c2e(G,i,j,k,l,xij):
-    
-#     ijm0 = 0.0
-#     for n in range(j+1):
-#         if n<=10 and j<=10:
-#             comb_1_ = LOOKUP_TABLE_COMB[j,n]
-#         else:
-#             comb_1_ = comb(j,n)
-#         ijm0 += comb_1_*xij**(j-n)*G[n+i,k]
-    
-#     ijkl = ijm0 # I(i,j,k,l)<-I(i,j,m,0)  
-#     return ijkl
 @njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Shift_3c2e(G, i, j, k, l, xij):
     if j == 0:  # Common case - early exit
@@ -471,16 +442,6 @@ def Shift_3c2e(G, i, j, k, l, xij):
     
     return ijm0
 
-# @njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
-# def RecurFactors(t,A,B,Px,Qx,xi,xk):
-#     ooopt = 1/(1+t)
-#     fact = t*ooopt/(A+B)
-#     B0 = 0.5*fact
-#     B1 = 0.5*ooopt/A + B0
-#     B1p = 0.5*ooopt/B + B0
-#     C = (Px-xi)*ooopt + (B*(Qx-xi)+A*(Px-xi))*fact
-#     Cp = (Qx-xk)*ooopt + (B*(Qx-xk)+A*(Px-xk))*fact
-#     return C,Cp,B0,B1,B1p
 @njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')
 def RecurFactors(t, A, B, Px, Qx, xi, xk):
     t_plus_1_inv = 1.0 / (1.0 + t)

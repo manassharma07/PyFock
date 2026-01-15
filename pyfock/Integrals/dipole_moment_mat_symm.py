@@ -124,7 +124,7 @@ def dipole_moment_mat_symm(basis, slice=None, origin=np.zeros((3))):
     
     return M
 
-@njit(parallel=True, cache=False)
+@njit(parallel=True, fastmath=True, error_model="numpy", nogil=True, cache=False)
 def dipole_moment_mat_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, start_row, end_row, start_col, end_col, origin):
     # This function calculates the dipole moment matrix and uses the symmetry property to only calculate half-ish the elements
     # and get the remaining half by symmetry.
@@ -200,11 +200,6 @@ def dipole_moment_mat_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, b
                         temp_gamma = alphaik*alphajk*gamma_inv
                         screenfactor = np.exp(-temp_gamma*IJsq)
                         if abs(screenfactor)<1.0e-8:   
-                        # Going lower than E-8 doesn't change the max erroor. There could still be some effects from error compounding but the max error doesnt budge.
-                        #TODO: This is quite low. But since this is the slowest part.
-                        #But I had to do this because this is a very slow part of the program.
-                        #Will have to check how the accuracy is affected and if the screening factor
-                        #can be reduced further.
                             continue
 
                         

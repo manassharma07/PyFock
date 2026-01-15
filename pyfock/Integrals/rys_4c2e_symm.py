@@ -285,11 +285,12 @@ def rys_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                                             if norder<=10:
                                                 val += tempcoeff7*coulomb_rys(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L)
                                             else:
-                                                T = rho*PQsq
-                                                sERI = 34.9868366552497256925 * (screenfactorAB+screenfactorKL) / ((gammaP*gammaQ) * np.sqrt(gammaP + gammaQ))
-                                                val += tempcoeff7*sERI*ChebGausInt(1E-8,50000, gammaP, gammaQ, la, lb, lc, ld,ma, mb, mc,  md, na, nb, nc,nd, I[0],
-                                                                                J[0],  K[0], L[0],  I[1],  J[1],  K[1], L[1], I[2],  J[2],  K[2],
-                                                                                L[2],  P[0], P[1], P[2], Q[0], Q[1], Q[2], T, sRys)
+                                                print("Error: Rys quadrature order greater than 10 not implemented.")
+                                                # T = rho*PQsq
+                                                # sERI = 34.9868366552497256925 * (screenfactorAB+screenfactorKL) / ((gammaP*gammaQ) * np.sqrt(gammaP + gammaQ))
+                                                # val += tempcoeff7*sERI*ChebGausInt(1E-8,50000, gammaP, gammaQ, la, lb, lc, ld,ma, mb, mc,  md, na, nb, nc,nd, I[0],
+                                                #                                 J[0],  K[0], L[0],  I[1],  J[1],  K[1], L[1], I[2],  J[2],  K[2],
+                                                #                                 L[2],  P[0], P[1], P[2], Q[0], Q[1], Q[2], T, sRys)
                                             
                             
                             fourC2E[i-indx_startA, j-indx_startB, k-indx_startC, l-indx_startD] = val

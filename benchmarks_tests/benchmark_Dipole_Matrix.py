@@ -9,7 +9,7 @@ from pyscf import gto, dft
 import numba 
 
 ncores = 4
-bench_GPU = True
+bench_GPU = False
 numba.set_num_threads(ncores)
 os.environ['OMP_NUM_THREADS'] = str(ncores)
 os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
@@ -33,10 +33,10 @@ print('Compilation duration: ',duration)
 #DIPOLE MOMENT MATRIX BENCHMARK and comparison with PySCF
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
 
-# basis_set_name = 'sto-2g'
-# basis_set_name = 'sto-3g'
+# # basis_set_name = 'sto-2g'
+basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
-basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-DZVP'
 # basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-TZVPPD'
@@ -56,7 +56,7 @@ basis_set_name = 'def2-SVP'
 # xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'
-# xyzFilename = 'Taxol.xyz'
+xyzFilename = 'Taxol.xyz'
 # xyzFilename = 'Valinomycin.xyz'
 # xyzFilename = 'Olestra.xyz'
 # xyzFilename = 'Ubiquitin.xyz'
@@ -65,7 +65,7 @@ basis_set_name = 'def2-SVP'
 # xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
-xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
 # xyzFilename = 'Octacontane_C80H162.xyz'
 # xyzFilename = 'Hectane_C100H202.xyz'
