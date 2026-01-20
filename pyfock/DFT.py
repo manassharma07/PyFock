@@ -1219,7 +1219,7 @@ class DFT:
         
 
         # Grid information initial
-        print('\nNo. of supplied/generated grid points: ', grids.coords.shape[0], flush=True)
+        print('\nNo. of supplied/generated grid points (after pruning): ', grids.coords.shape[0], flush=True)
 
         # Prune grids based on weights
         # start_pruning_weights = timer()

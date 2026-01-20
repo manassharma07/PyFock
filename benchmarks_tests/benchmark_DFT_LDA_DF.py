@@ -106,7 +106,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-xyzFilename = 'H2O.xyz'
+# xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -119,7 +119,7 @@ xyzFilename = 'H2O.xyz'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -170,7 +170,7 @@ mf.init_guess = 'minao'
 dmat_init = mf.init_guess_by_minao(molPySCF)
 # mf.init_guess = 'atom'
 # dmat_init = mf.init_guess_by_atom(molPySCF)
-mf.max_cycle = 30
+mf.max_cycle = 1
 mf.conv_tol = 1e-7
 mf.grids.level = 3
 # print('begin df build')
@@ -222,7 +222,7 @@ dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35
 dftObj.ncores = ncores
-dftObj.save_ao_values = False
+dftObj.save_ao_values = True
 dftObj.rys = True
 dftObj.DF_algo = 10
 dftObj.blocksize = 5000

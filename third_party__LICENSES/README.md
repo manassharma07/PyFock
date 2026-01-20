@@ -3,13 +3,13 @@
 ### 1. MolecularIntegrals.jl
 - Source: https://github.com/rpmuller/MolecularIntegrals.jl
 - License: MIT
-- Used for: Rys quadrature (roots 1–5)
+- Used for: Roots 1–5 of Rys quadrature
 - Modifications: Adapted to Python/Numba
 
 ### 2. PySCF libcint
 - Source: https://github.com/sunqm/libcint
 - License: Apache License 2.0
-- Used for: Rys quadrature (roots 6–10)
+- Used for: Roots 6–10 of Rys quadrature 
 
 ### 3. McMurchie-Davidson
 - Source: https://github.com/jjgoings/McMurchie-Davidson

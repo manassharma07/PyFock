@@ -16,10 +16,6 @@ https://github.com/rpmuller/MolecularIntegrals.jl/blob/master/src/Rys.jl
 def coulomb_rys(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L):
     X = rpq2*rho
 
-    # roots = np.zeros((norder))
-    # weights = np.zeros((norder))
-    # G = np.zeros((n+1,m+1))
-
     roots, weights = Roots(norder,X,roots,weights)
     A = alphaik+alphajk 
     B = alphakk+alphalk 
@@ -381,12 +377,6 @@ def Recur_new(G,t,i,j,k,l,xi,xj,xk,xl,A,B,value,Px,Qx):
     
     return G
 
-# LOOKUP_TABLE_COMB = np.array([[ 1,  0,  0,  0,  0,  0],
-#                         [ 1,  1,  0,  0,  0,  0],
-#                         [ 1,  2,  1,  0,  0,  0],
-#                         [ 1,  3,  3,  1,  0,  0],
-#                         [ 1,  4,  6,  4,  1,  0],
-#                         [ 1,  5, 10, 10,  5,  1]])
 LOOKUP_TABLE_COMB = np.array([
     [     1,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0],
     [     1,      1,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0],

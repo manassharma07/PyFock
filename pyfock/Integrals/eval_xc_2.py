@@ -183,10 +183,11 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, bloc
 
     # rho_blocks = [np.zeros((blocksize,1)) for _ in range(nblocks+1)]
     
-    if 2*ncores>nblocks:
-        batch_size='auto'
+    # Batch size calculation
+    if 2 * ncores > nblocks:
+        batch_size = 'auto'
     else:
-        batch_size = nblocks//(ncores*2)
+        batch_size = nblocks // (ncores * 2)
 
     # NumExpr expressions compile
     expr_den = numexpr.NumExpr('rho_block*weights_block')
@@ -211,7 +212,7 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, bloc
                 output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], list_ao_grad_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
         else:
             output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
-            # output = Parallel(n_jobs=ncores, backend='loky')(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], funcx=None, funcc=None, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug) for iblock in block_indices)
+            # output = Parallel(n_jobs=ncores, backend='loky', batch_size=batch_size)(delayed(block_dens_func_wrapper)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug) for iblock in block_indices)
     else:
         output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
         
@@ -258,6 +259,66 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, bloc
     coords = 0
 
     return efunc[0], v
+
+# from joblib.externals.loky import set_loky_pickler
+
+# Use cloudpickle for better serialization
+# set_loky_pickler('cloudpickle')
+
+# Worker-local cache for functionals and numexpr expressions
+_worker_cache = {}
+
+def _get_worker_objects(funcid, x_family_code, c_family_code):
+    """Get or create worker-local LibXC functionals and numexpr expressions"""
+    global _worker_cache
+    
+    cache_key = (tuple(funcid), x_family_code, c_family_code)
+    
+    if cache_key not in _worker_cache:
+        # Create LibXC functionals
+        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+        
+        # Compile NumExpr expressions once per worker
+        numexpr_expr = {
+            'expr_den': numexpr.NumExpr('rho_block*weights_block'),
+            'expr_F': numexpr.NumExpr('weights_block*v_rho_temp'),
+            'expr_z': numexpr.NumExpr('0.5*F*ao_value_block_T'),
+            'expr_v': numexpr.NumExpr('v_temp + v_temp_T'),
+            'expr_sigma_block': numexpr.NumExpr('rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2'),
+            'expr_Ftemp': numexpr.NumExpr('2*weights_block*vsigma_temp'),
+            'expr_Fx': numexpr.NumExpr('Ftemp*rho_grad_block_x'),
+            'expr_Fy': numexpr.NumExpr('Ftemp*rho_grad_block_y'),
+            'expr_Fz': numexpr.NumExpr('Ftemp*rho_grad_block_z'),
+            'expr_z_grad': numexpr.NumExpr('Fx*ao_value_gradx_block_T + Fy*ao_value_grady_block_T + Fz*ao_value_gradz_block_T')
+        }
+        
+        # Set numba to use single thread per worker
+        # numba.set_num_threads(1)
+        
+        _worker_cache[cache_key] = (funcx, funcc, numexpr_expr)
+    
+    return _worker_cache[cache_key]
+
+
+def block_dens_func_wrapper(weights_block, coords_block, dmat_block, funcid, 
+                            bfs_data_as_np_arrays, non_zero_indices=None, 
+                            ao_values=None, ao_grad_values=None,
+                            x_family_code=None, c_family_code=None, 
+                            xc_family_dict=None, debug=False):
+    """Wrapper that initializes worker-local objects and calls block_dens_func"""
+    
+    # Get worker-local functionals and numexpr expressions
+    funcx, funcc, numexpr_expr = _get_worker_objects(funcid, x_family_code, c_family_code)
+    
+    # Call your actual function
+    return block_dens_func(
+        weights_block, coords_block, dmat_block, funcid, bfs_data_as_np_arrays,
+        non_zero_indices, ao_values, ao_grad_values,
+        funcx=funcx, funcc=funcc,
+        x_family_code=x_family_code, c_family_code=c_family_code,
+        xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug
+    )
 
 @threadpool_limits.wrap(limits=1, user_api='blas')
 def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, ao_grad_values=None, funcx=None, funcc=None, x_family_code=None, c_family_code=None, xc_family_dict=None, numexpr_expr=None, debug=False):
@@ -355,9 +416,10 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
 
         # New approach based on this: https://pubs.acs.org/doi/10.1021/acs.jctc.0c01252 
         # rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('jm,kmj->km', Fjm, ao_values_grad_block)[:] 
-        rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('mj,kmj->km', Fmj, ao_values_grad_block)[:] 
+        rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('mj,kmj->km', Fmj, ao_values_grad_block) 
         # sigma_block = numexpr.evaluate('(rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2)')
         sigma_block = numexpr_expr['expr_sigma_block'](rho_grad_block_x, rho_grad_block_y, rho_grad_block_z)
+        
     if debug:
         durationRho = timer() - startRho
     # print('Duration for Rho at grid points: ',durationRho)
@@ -512,17 +574,3 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     # print(durationRho)
     # print('done')
     return efunc, v, nelec, profiling_timings
-
-# Extremely slow
-# @njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True)
-# def symmetric_matrix_product(A, B):
-#     n = A.shape[0]
-#     C = np.zeros((n, n))
-#     for i in range(n):
-#         for j in range(i, n):
-#             C[i, j] = np.dot(A[i,:], B[:, j])
-    
-#     # Copy the upper triangular elements to the lower triangular part
-#     C += np.tril(C, k=-1).T
-    
-#     return C

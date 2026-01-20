@@ -361,16 +361,6 @@ Don't forget to give the project a star! ⭐ Thanks!
 
 Distributed under the **MIT License**. See `LICENSE` file for more information.
 
-### Third-Party Code Acknowledgments
-
-PyFock incorporates code adapted from several open-source projects:
-
-- **Rys quadrature (roots 1–5)**: Adapted from [MolecularIntegrals.jl](https://github.com/rpmuller/MolecularIntegrals.jl) (MIT License)
-- **Rys quadrature (roots 6–10)**: Ported from [PySCF's libcint](https://github.com/sunqm/libcint) (Apache v2 License)
-- **DIIS-based SCF**: Adapted from [McMurchie-Davidson](https://github.com/jjgoings/McMurchie-Davidson) (BSD 3-Clause License)
-- **Dipole matrix integrals**: Based on [McMurchie-Davidson](https://github.com/jjgoings/McMurchie-Davidson) (BSD 3-Clause License)
-- **Boys Function**: Adapted from [PyBoys](https://github.com/peter-reinholdt/pyboys) (BSD 3-Clause License)
-- **XC functionals**: Implementation based on [eminus](https://github.com/wangenau/eminus) (Apache v2 License)
 
 ## Citation
 
