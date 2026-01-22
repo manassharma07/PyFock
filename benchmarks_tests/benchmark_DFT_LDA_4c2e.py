@@ -100,7 +100,7 @@ basis_set_name = 'def2-TZVP'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -112,7 +112,7 @@ basis_set_name = 'def2-TZVP'
 # xyzFilename = 'Ubiquitin.xyz'
 
 ### 1D Carbon Alkanes
-xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
@@ -143,7 +143,7 @@ xyzFilename = 'Ethane.xyz'
 molPySCF = gto.Mole()
 molPySCF.atom = xyzFilename
 molPySCF.basis = basis_set_name
-molPySCF.cart = True
+molPySCF.cart = False
 molPySCF.verbose = 4
 molPySCF.max_memory=5000
 # molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
@@ -156,8 +156,7 @@ mf = dft.rks.RKS(molPySCF)
 # mf = scf.RHF(molPySCF)
 mf.xc = funcidpyscf
 # mf.verbose = 4
-mf.direct_scf = False
-# mf.with_df.max_memory = 25000
+# mf.direct_scf = False
 # dmat_init = mf.init_guess_by_1e(molPySCF)
 # dmat_init = mf.init_guess_by_huckel(molPySCF)
 mf.init_guess = 'minao'
@@ -167,12 +166,6 @@ dmat_init = mf.init_guess_by_minao(molPySCF)
 mf.max_cycle = 30
 mf.conv_tol = 1e-7
 mf.grids.level = 3
-# print('begin df build')
-# start_df_pyscf=timer()
-# mf.with_df.build()
-# duration_df_pyscf = timer()- start_df_pyscf
-# print('PySCF df time: ', duration_df_pyscf)
-# print('end df build')
 energyPyscf = mf.kernel(dm0=dmat_init)
 print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
 print('One electron integrals energy',mf.scf_summary['e1'])
@@ -227,7 +220,7 @@ dftObj.strict_schwarz = False
 # dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
-dftObj.sao = False
+dftObj.sao = True
 
 # GPU acceleration
 dftObj.use_gpu = False
