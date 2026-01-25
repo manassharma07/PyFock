@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
-#SBATCH -o output_strict_schwarz_off_def2-QZVP_GGA_save_ao_fat_node_02_ncore_12_no_pyscf_max_mem
+#SBATCH -o output_strict_schwarz_off_def2-SVP_GGA_save_ao_fat
 #SBATCH -p fat
 
 ##SBATCH --ntasks=48
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=12
+#SBATCH --ntasks-per-node=4
 ##SBATCH --cpus-per-task=1
 ##SBATCH --gpus=1
 ##SBATCH --gpus-per-task=1
 ##SBATCH --gres=gpu:1
 ##SBATCH --time=24:00:00
-#SBATCH --nodelist=fat02
+#SBATCH --nodelist=fat04
 
 ##SBATCH --mail-user=manas.sharma@uni-jena.de
 ##SBATCH --mail-type=begin,end,fail

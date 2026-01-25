@@ -93,11 +93,11 @@ basis_set_name = 'def2-SVP'
 # basis_set_name = 'cc-pVDZ'
 # basis_set_name = 'ano-rcc'
 
-auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-universal-jfit'
 # auxbasis_name = 'def2-universal-jkfit'
 # auxbasis_name = 'def2-TZVP'
 # auxbasis_name = 'sto-3g'
-# auxbasis_name = 'def2-SVP'
+auxbasis_name = 'def2-SVP'
 # auxbasis_name = '6-31G'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
@@ -106,7 +106,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -119,7 +119,7 @@ auxbasis_name = 'def2-universal-jfit'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -149,7 +149,7 @@ xyzFilename = 'Decane_C10H22.xyz'
 molPySCF = gto.Mole()
 molPySCF.atom = xyzFilename
 molPySCF.basis = basis_set_name
-molPySCF.cart = True
+molPySCF.cart = False
 molPySCF.verbose = 4
 molPySCF.max_memory=5000
 # molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
@@ -170,7 +170,7 @@ mf.init_guess = 'minao'
 dmat_init = mf.init_guess_by_minao(molPySCF)
 # mf.init_guess = 'atom'
 # dmat_init = mf.init_guess_by_atom(molPySCF)
-mf.max_cycle = 1
+mf.max_cycle = 35
 mf.conv_tol = 1e-7
 mf.grids.level = 3
 # print('begin df build')
@@ -224,6 +224,7 @@ dftObj.max_itr = 35
 dftObj.ncores = ncores
 dftObj.save_ao_values = True
 dftObj.rys = True
+dftObj.isDF = True
 dftObj.DF_algo = 10
 dftObj.blocksize = 5000
 dftObj.XC_algo = 2
@@ -235,7 +236,7 @@ dftObj.strict_schwarz = True
 dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
-dftObj.sao = False
+dftObj.sao = True
 
 # GPU acceleration
 dftObj.use_gpu = False

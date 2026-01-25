@@ -30,22 +30,15 @@ from pyscf import gto, dft
 from pyscf.dft import gen_grid
 molPySCF = gto.Mole()
 molPySCF.atom = xyz_file
-molPySCF.basis = basis_set_name
-molPySCF.cart = True
-molPySCF.verbose = 0
-molPySCF.build()
 mf = dft.rks.RKS(molPySCF)
-# dmat_init = mf.init_guess_by_minao(molPySCF)
 grids = gen_grid.Grids(molPySCF)
 grids.level = 3        # optional: quality of grid (0–9 approx)
-# grids.prune = None     # disable pruning if you want the full Lebedev mesh
-grids.build(with_non0tab=True)
+grids.build()
 print('PySCF Grid Size: ', grids.weights.shape)
 
 
 # Setup DFT calculation
 dftObj = DFT(mol, basis, auxbasis, xc=funcidcrysx, grids=grids)
-# dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-07
 dftObj.max_itr = 30
 dftObj.ncores = ncores

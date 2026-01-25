@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH -o output_strict_schwarz_off_def2-SVP_GGA_save_ao_fat
+#SBATCH -o output_def2-QZVP_GGA_verbose5
 #SBATCH -p fat
 
 ##SBATCH --ntasks=48
@@ -11,7 +11,7 @@
 ##SBATCH --gpus-per-task=1
 ##SBATCH --gres=gpu:1
 ##SBATCH --time=24:00:00
-##SBATCH --nodelist=gpu012
+#SBATCH --nodelist=fat02
 
 ##SBATCH --mail-user=manas.sharma@uni-jena.de
 ##SBATCH --mail-type=begin,end,fail
