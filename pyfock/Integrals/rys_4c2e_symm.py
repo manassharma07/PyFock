@@ -1,8 +1,7 @@
 import numpy as np
 from numba import njit, prange
 
-from .integral_helpers import Fboys
-from .rys_helpers import coulomb_rys, ChebGausInt
+from .rys_helpers import coulomb_rys
 
 def rys_4c2e_symm(basis, slice=None):
     """
@@ -470,8 +469,8 @@ def rys_4c2e_symm_old(basis, slice=None):
     indx_endD = int(slice[7])
 
 
-    ints4c2e = rys_4c2e_symm_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, shell_indices,\
-        indx_startA,indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD,indx_endD)
+    ints4c2e = rys_4c2e_symm_internal_old(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, shell_indices,\
+        indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD, indx_endD)
 
     return ints4c2e
 
@@ -682,15 +681,7 @@ def rys_4c2e_symm_internal_old(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_np
                                                     val += tempcoeff7*coulomb_rys(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L)
                                                     
                                                 else:
-                                                    T = rho*PQsq
-                                                    # sERI = 34.9868366552497256925 * (screenfactorAB+screenfactorKL) / ((gammaP*gammaQ) * np.sqrt(gammaP + gammaQ))
-                                                    # val += tempcoeff7*sERI*ChebGausInt(1E-8,50000, gammaP, gammaQ, la, lb, lc, ld,ma, mb, mc,  md, na, nb, nc,nd, I[0],
-                                                    #                                 J[0],  K[0], L[0],  I[1],  J[1],  K[1], L[1], I[2],  J[2],  K[2],
-                                                    #                                 L[2],  P[0], P[1], P[2], Q[0], Q[1], Q[2], T, sRys)
-                                                    sERI = 34.9868366552497256925 * (screenfactorAB[ik,jk]+screenfactorKL[kk,lk]) / ((gammaP[ik,jk]*gammaQ[kk,lk]) * np.sqrt(gammaP[ik,jk] + gammaQ[kk,lk]))
-                                                    val += tempcoeff7*sERI*ChebGausInt(1E-8,50000, gammaP[ik,jk], gammaQ[kk,lk], la, lb, lc, ld,ma, mb, mc,  md, na, nb, nc,nd, I[0],
-                                                                                    J[0],  K[0], L[0],  I[1],  J[1],  K[1], L[1], I[2],  J[2],  K[2],
-                                                                                    L[2],  P[0], P[1], P[2], Q[0], Q[1], Q[2], T, sRys)
+                                                    print("Error: Rys quadrature order greater than 10 not implemented.")
                                                 
                                             
                             

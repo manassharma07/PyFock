@@ -54,8 +54,8 @@ from pyscf import gto, dft, df, scf
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
 
 # LDA_X LDA_C_VWN 
-funcx = 1
-funcc = 7
+# funcx = 1
+# funcc = 7
 
 # LDA_X LDA_C_PW 
 # funcx = 1
@@ -66,8 +66,8 @@ funcc = 7
 # funcc = 13
 
 # GGA_X_PBE, GGA_C_PBE (PBE)
-# funcx = 101
-# funcc = 130
+funcx = 101
+funcc = 130
 
 # GGA_X_B88, GGA_C_LYP (BLYP)
 # funcx = 106
@@ -156,7 +156,7 @@ mf = dft.rks.RKS(molPySCF)
 # mf = scf.RHF(molPySCF)
 mf.xc = funcidpyscf
 # mf.verbose = 4
-# mf.direct_scf = False
+mf.direct_scf = True
 # dmat_init = mf.init_guess_by_1e(molPySCF)
 # dmat_init = mf.init_guess_by_huckel(molPySCF)
 mf.init_guess = 'minao'
