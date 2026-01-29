@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit, prange
-
+from .integral_helpers import Fboys
 from .rys_helpers import coulomb_rys
 
 def rys_4c2e_symm(basis, slice=None):

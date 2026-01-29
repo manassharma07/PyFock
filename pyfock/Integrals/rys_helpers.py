@@ -26,18 +26,13 @@ def coulomb_rys(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na
     ijkl = 0.0
     for i in range(norder):
         G = Recur(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],alphaik,alphajk,alphakk,alphalk,A,B,Ap,Bp,ABsrt)
-        
-        Ix = Int1d(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],
-                 alphaik,alphajk,alphakk,alphalk)
+        Ix = Shift(G,la,lb,lc,ld,I[0]-J[0],K[0]-L[0])
         
         G = Recur(G,roots[i],ma,mb,mc,md,I[1],J[1],K[1],L[1],alphaik,alphajk,alphakk,alphalk,A,B,Ap,Bp,ABsrt)
-        Iy = Int1d(G,roots[i],ma,mb,mc,md,I[1],J[1],K[1],L[1],
-                 alphaik,alphajk,alphakk,alphalk)
+        Iy = Shift(G,ma,mb,mc,md,I[1]-J[1],K[1]-L[1])
         
         G = Recur(G,roots[i],na,nb,nc,nd,I[2],J[2],K[2],L[2],alphaik,alphajk,alphakk,alphalk,A,B,Ap,Bp,ABsrt)
-        
-        Iz = Int1d(G,roots[i],na,nb,nc,nd,I[2],J[2],K[2],L[2],
-                 alphaik,alphajk,alphakk,alphalk)
+        Iz = Shift(G,na,nb,nc,nd,I[2]-J[2],K[2]-L[2])
         ijkl += Ix*Iy*Iz*weights[i] # ABD eq 5 & 9
         
         
@@ -121,7 +116,7 @@ def coulomb_rys_3c2e(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,
     
     return  val
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)#, locals=dict(ijkl=np.float32, Ix=np.float32, Iy=np.float32, Iz=np.float32, val=np.float32)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')#, locals=dict(ijkl=np.float32, Ix=np.float32, Iy=np.float32, Iz=np.float32, val=np.float32)
 def coulomb_rys_new(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L):
     X = rpq2*rho
     # print('s')
@@ -334,7 +329,7 @@ def Recur_fast(G,t,i,j,k,l,xi,xj,xk,xl,alphai,alphaj,alphak,alphal,A,B,Ap,Bp,ABs
     return G
 
 "Form G(n,m)=I(n,0,m,0) intermediate values for a Rys polynomial"
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Recur_new(G,t,i,j,k,l,xi,xj,xk,xl,A,B,value,Px,Qx):
     # print('RecurNumba1', G[0,0])
     # G1 = np.zeros((n1+1,m1+1))

@@ -2,7 +2,8 @@ import numpy as np
 from numba import njit, prange, get_num_threads
 
 # from .rys_helpers_4c2e import coulomb_rys
-from .rys_helpers import coulomb_rys
+from .rys_helpers import coulomb_rys, coulomb_rys_new
+from .integral_helpers import Fboys
 
 def rys_coulomb_matrix(basis, density_matrix, sqrt_ints4c2e_diag=None, threshold=1e-9):
     """
@@ -79,6 +80,7 @@ def rys_coulomb_matrix(basis, density_matrix, sqrt_ints4c2e_diag=None, threshold
     maxnprim = max(basis.bfs_nprim)
     bfs_coeffs = np.zeros([basis.bfs_nao, maxnprim])
     bfs_expnts = np.zeros([basis.bfs_nao, maxnprim])
+    shell_indices = np.array([basis.bfs_shell_index], dtype=np.uint16)[0]
     bfs_prim_norms = np.zeros([basis.bfs_nao, maxnprim])
     
     for i in range(basis.bfs_nao):
@@ -99,7 +101,7 @@ def rys_coulomb_matrix(basis, density_matrix, sqrt_ints4c2e_diag=None, threshold
     ncore = get_num_threads()
     J_matrix = rys_coulomb_matrix_internal(
         bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], bfs_nprim[0], 
-        bfs_coeffs, bfs_prim_norms, bfs_expnts, density_matrix,
+        bfs_coeffs, bfs_prim_norms, bfs_expnts, shell_indices, density_matrix,
         sqrt_ints4c2e_diag, isSchwarz, threshold
     )
     
@@ -590,10 +592,209 @@ def rys_coulomb_matrix(basis, density_matrix, sqrt_ints4c2e_diag=None, threshold
 #     return J_final
 from numba import get_thread_id
 # from numba.np.ufunc.parallel import _get_thread_id
+# @njit(parallel=True, fastmath=True, error_model="numpy")
+# def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, 
+#                                      bfs_coeffs, bfs_prim_norms, bfs_expnts, shell_indices,
+#                                      density_matrix, 
+#                                      sqrt_ints4c2e_diag, isSchwarz=False, threshold=1e-9):
+#     """
+#     Calculates the Coulomb (J) matrix using PROPER 8-fold symmetry.
+#     """
 
+#     nbf_total = len(bfs_coords)
+#     n_threads = get_num_threads()
+#     J_local = np.zeros((n_threads, nbf_total, nbf_total), dtype=np.float64)
+
+#     pi = np.pi
+#     twopisq = 2.0 * pi * pi 
+#     n_negligible = 0
+#     n_significant = 0
+#     DENS_THRESH = 1e-11
+#     COMBINED_THRESH = threshold * 0.1
+#     PRIMITIVE_THRESH = 1e-8
+
+#     # === CORRECTED LOOP STRUCTURE WITH PROPER 8-FOLD SYMMETRY ===
+#     for i in prange(nbf_total): 
+#         tid = get_thread_id()
+#         roots = np.zeros((10))
+#         weights = np.zeros((10))
+#         G = np.zeros((20, 20))
+#         I = bfs_coords[i]
+#         Ni = bfs_contr_prim_norms[i]
+#         la, ma, na = bfs_lmn[i]
+#         nprimi = bfs_nprim[i]
+
+#         for j in range(i+1):  # ← FIXED: j <= i only
+            
+#             # Schwarz Screening (Outer)
+#             sqrt_ij = 0.0
+#             if isSchwarz:
+#                 sqrt_ij = sqrt_ints4c2e_diag[i,j]
+#                 if sqrt_ij < threshold:
+#                     continue
+
+#             lb, mb, nb = bfs_lmn[j]
+#             J_coord = bfs_coords[j]
+#             IJ = I - J_coord
+#             IJsq = np.sum(IJ**2)
+#             Nj = bfs_contr_prim_norms[j]
+#             tempcoeff1 = Ni * Nj
+#             nprimj = bfs_nprim[j]
+            
+#             d_val_ij = density_matrix[i, j]
+#             if abs(d_val_ij) < DENS_THRESH:
+#                 continue
+            
+#             # Compute compound index for (ij) pair
+#             ij_pair = i * (i + 1) // 2 + j
+            
+#             for k in range(i+1):  # ← FIXED: k <= i to ensure we don't double count
+#                 lc, mc, nc = bfs_lmn[k]
+#                 K = bfs_coords[k]
+#                 nprimk = bfs_nprim[k]
+#                 Nk = bfs_contr_prim_norms[k]
+#                 tempcoeff2 = tempcoeff1 * Nk
+                
+#                 # Determine l_max based on k's relationship to i
+#                 l_max = k if k < i else j  # ← KEY: Ensures 8-fold symmetry
+                
+#                 for l in range(l_max+1):  # ← FIXED: proper upper limit
+                    
+#                     # Compute compound index for (kl) pair
+#                     kl_pair = k * (k + 1) // 2 + l
+                    
+#                     # 8-fold symmetry check
+#                     if kl_pair > ij_pair:  # ← Only compute if kl <= ij
+#                         continue
+                    
+#                     # Schwarz Screening (Inner)
+#                     if isSchwarz:
+#                         sqrt_kl = sqrt_ints4c2e_diag[k,l]
+#                         if sqrt_kl < threshold:
+#                             continue
+#                         schwarz_prod = sqrt_ij * sqrt_kl
+#                         if schwarz_prod < threshold:
+#                             continue
+                        
+#                         d_val_kl = density_matrix[k, l]
+#                         if abs(d_val_kl) < DENS_THRESH:
+#                             continue
+                        
+#                         D_max = max(abs(d_val_ij), abs(d_val_kl), 
+#                                 abs(density_matrix[i,k]), abs(density_matrix[i,l]), 
+#                                 abs(density_matrix[j,k]), abs(density_matrix[j,l]))
+#                         if abs(D_max) < DENS_THRESH:
+#                             continue
+#                         if abs(D_max) * schwarz_prod < COMBINED_THRESH:
+#                             continue
+#                         if (abs(d_val_ij) * schwarz_prod < COMBINED_THRESH) and \
+#                            (abs(d_val_kl) * schwarz_prod < COMBINED_THRESH):
+#                             continue
+#                     else:
+#                         d_val_kl = density_matrix[k, l]
+
+#                     ld, md, nd = bfs_lmn[l]
+#                     L = bfs_coords[l]
+#                     npriml = bfs_nprim[l]
+#                     Nl = bfs_contr_prim_norms[l]
+                    
+#                     KL = K - L  
+#                     KLsq = np.sum(KL**2)
+#                     tempcoeff3 = tempcoeff2 * Nl
+                    
+#                     # Rys Roots Setup
+#                     norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1) 
+#                     n = int(max(la+lb, ma+mb, na+nb))
+#                     m = int(max(lc+ld, mc+md, nc+nd))
+                    
+#                     val = 0.0
+                    
+#                     # --- PRIMITIVE LOOPS ---
+#                     for ik in range(nprimi):   
+#                         dik = bfs_coeffs[i][ik]
+#                         Nik = bfs_prim_norms[i][ik]
+#                         alphaik = bfs_expnts[i][ik]
+#                         tempcoeff4 = tempcoeff3 * dik * Nik
+                        
+#                         for jk in range(nprimj):
+#                             alphajk = bfs_expnts[j][jk]
+#                             gammaP = alphaik + alphajk
+#                             screenfactorAB = np.exp(-alphaik * alphajk / gammaP * IJsq)
+                            
+#                             if screenfactorAB < PRIMITIVE_THRESH: 
+#                                 continue
+
+#                             djk = bfs_coeffs[j][jk] 
+#                             Njk = bfs_prim_norms[j][jk]      
+#                             tempcoeff5 = tempcoeff4 * djk * Njk  
+                            
+#                             for kk in range(nprimk):
+#                                 dkk = bfs_coeffs[k][kk]
+#                                 Nkk = bfs_prim_norms[k][kk]
+#                                 alphakk = bfs_expnts[k][kk]
+#                                 tempcoeff6 = tempcoeff5 * dkk * Nkk 
+                                
+#                                 for lk in range(npriml): 
+#                                     alphalk = bfs_expnts[l][lk]
+#                                     gammaQ = alphakk + alphalk
+#                                     screenfactorKL = np.exp(-alphakk * alphalk / gammaQ * KLsq)
+#                                     if screenfactorKL < PRIMITIVE_THRESH: 
+#                                         continue
+#                                     if screenfactorKL * screenfactorAB < PRIMITIVE_THRESH: 
+#                                         continue
+
+#                                     dlk = bfs_coeffs[l][lk] 
+#                                     Nlk = bfs_prim_norms[l][lk]     
+                                    
+#                                     rho = gammaP * gammaQ / (gammaP + gammaQ)
+                                    
+#                                     P = (alphaik*I + alphajk*J_coord) / gammaP
+#                                     Q = (alphakk*K + alphalk*L) / gammaQ        
+#                                     PQ = P - Q
+#                                     PQsq = np.sum(PQ**2)
+
+#                                     tempcoeff7 = tempcoeff6 * dlk * Nlk
+                                    
+#                                     if (la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd) == 0: 
+#                                         val += tempcoeff7*twopisq/(gammaP*gammaQ)*np.sqrt(pi/(gammaP+gammaQ))\
+#                                             *screenfactorAB*screenfactorKL*Fboys(0,PQsq/(1/gammaP+1/gammaQ))
+#                                     else:
+#                                         if norder <= 10:
+#                                             val += tempcoeff7 * coulomb_rys(roots, weights, G, PQsq, rho, norder, n, m, 
+#                                                                         la, lb, lc, ld, ma, mb, mc, md, na, nb, nc, nd, 
+#                                                                         alphaik, alphajk, alphakk, alphalk, I, J_coord, K, L)
+                    
+#                     # Count after computing the full contracted integral
+#                     if abs(val) < 1e-13:
+#                         n_negligible += 1
+#                     else:
+#                         n_significant += 1
+                    
+#                     # --- 8-FOLD SCATTER UPDATE ---
+#                     fac_kl = 2.0 if k != l else 1.0
+#                     term_ij = val * d_val_kl * fac_kl
+#                     J_local[tid, i, j] += term_ij
+                    
+#                     is_same_pair = (i == k and j == l)
+#                     if not is_same_pair:
+#                         fac_ij = 2.0 if i != j else 1.0
+#                         term_kl = val * d_val_ij * fac_ij
+#                         J_local[tid, k, l] += term_kl
+
+#     J_final = np.sum(J_local, axis=0)
+#     print("N_negligible integrals: ", n_negligible)
+#     print("N_significant integrals: ", n_significant)
+    
+#     # Symmetrize
+#     for r in prange(nbf_total):
+#         for c in range(r):
+#             val = J_final[r, c]
+#             J_final[c, r] = val
+
+#     return J_final
 @njit(parallel=True, fastmath=True, error_model="numpy")
 def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, 
-                                     bfs_coeffs, bfs_prim_norms, bfs_expnts, 
+                                     bfs_coeffs, bfs_prim_norms, bfs_expnts, shell_indices,
                                      density_matrix, 
                                      sqrt_ints4c2e_diag, isSchwarz=False, threshold=1e-9):
     """
@@ -614,45 +815,32 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
     J_local = np.zeros((n_threads, nbf_total, nbf_total), dtype=np.float64)
 
     # Check symmetries based on index ranges (Block symmetry logic)
-    all_symm = False
-    left_side_symm = False
-    right_side_symm = False
-    both_left_right_symm = False
-    no_symm = False
-    indx_startA = 0
-    indx_endA = nbf_total
-    indx_startB = 0
-    indx_endB = nbf_total   
-    indx_startC = 0
-    indx_endC = nbf_total
-    indx_startD = 0
-    indx_endD = nbf_total
-    if indx_startA==indx_startB==indx_startC==indx_startD and indx_endA==indx_endB==indx_endC==indx_endD:
-        all_symm = True
-    elif (indx_startA==indx_startB and indx_endA==indx_endB) and (indx_startC==indx_startD and indx_endC==indx_endD):
-        both_left_right_symm = True
-    elif indx_startA==indx_startB and indx_endA==indx_endB:
-        left_side_symm = True
-    elif indx_startC==indx_startD and indx_endC==indx_endD:
-        right_side_symm = True
-    else:
-        no_symm = True
+    all_symm = True
 
     pi = np.pi
     twopisq = 2.0 * pi * pi 
-
+    n_negligible = 0
+    n_significant = 0
+    DENS_THRESH = 1e-11
+    COMBINED_THRESH = threshold * 0.1
+    PRIMITIVE_THRESH = 1e-8
     # --- PARALLEL LOOP OVER SHELL 'i' ---
-    for i in prange(indx_startA, indx_endA): 
+    for i in prange(0, nbf_total): 
         tid = get_thread_id() # ID for local buffer access
-        
+        roots = np.zeros((10))
+        weights = np.zeros((10))
+        G = np.zeros((20, 20))
         I = bfs_coords[i]
         Ni = bfs_contr_prim_norms[i]
         la, ma, na = bfs_lmn[i]
         nprimi = bfs_nprim[i]
-        
-        for j in range(indx_startB, indx_endB): 
+        jshell_previous = -12 # Some random number
+        kshell_previous = -12 # Some random number
+        lshell_previous = -122 # Some random number
+
+        for j in range(0, i+1): 
             # Symmetry Check 1: Pair Permutation (ij vs ji)
-            if (all_symm and j<=i) or (left_side_symm and j<=i) or right_side_symm or no_symm or (both_left_right_symm and j<=i):
+            if (all_symm and j<=i):
                 
                 # Check Triangular index for 8-fold (Pair Exchange)
                 if all_symm:
@@ -668,27 +856,37 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                     if sqrt_ij < threshold: # Loose check
                         continue
 
-                J_coord = bfs_coords[j]
-                IJ = I - J_coord
-                IJsq = np.sum(IJ**2)
-                Nj = bfs_contr_prim_norms[j]
                 lb, mb, nb = bfs_lmn[j]
-                tempcoeff1 = Ni * Nj
-                nprimj = bfs_nprim[j]
-                
+                jshell = shell_indices[j]
+                if jshell!=jshell_previous:
+                    
+                    J_coord = bfs_coords[j]
+                    IJ = I - J_coord
+                    IJsq = np.sum(IJ**2)
+                    Nj = bfs_contr_prim_norms[j]
+                    
+                    tempcoeff1 = Ni * Nj
+                    nprimj = bfs_nprim[j]
                 # Pre-fetch Density ij
                 d_val_ij = density_matrix[i, j]
+                if abs(d_val_ij)<DENS_THRESH:
+                    continue
                 
-                for k in range(indx_startC, indx_endC): 
-                    K = bfs_coords[k]
-                    Nk = bfs_contr_prim_norms[k]
+                for k in range(0, nbf_total): 
                     lc, mc, nc = bfs_lmn[k]
-                    tempcoeff2 = tempcoeff1 * Nk
-                    nprimk = bfs_nprim[k]
+                    kshell = shell_indices[k]
+                    if kshell!=kshell_previous:
+                        K = bfs_coords[k]
+                        nprimk = bfs_nprim[k]
+                    Nk = bfs_contr_prim_norms[k]
                     
-                    for l in range(indx_startD, indx_endD): 
+                    if jshell!=jshell_previous or kshell!=kshell_previous:
+                        tempcoeff2 = tempcoeff1 * Nk
+                        
+                    
+                    for l in range(0, k+1): 
                         # Symmetry Check 2: Pair Permutation (kl vs lk) and Pair Exchange (ij vs kl)
-                        if (all_symm and l<=k) or (right_side_symm and l<=k) or (left_side_symm and j<=i) or no_symm or (both_left_right_symm and l<=k):
+                        if (all_symm and l<=k):
                             
                             # 8-Fold Check: Ensure pair(ij) >= pair(kl)
                             if all_symm:
@@ -700,9 +898,10 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                                     continue
                             
                             # Schwarz Screening (Inner)
-                            sqrt_kl = 0.0
                             if isSchwarz:
                                 sqrt_kl = sqrt_ints4c2e_diag[k,l]
+                                if sqrt_kl < threshold:
+                                    continue
                                 schwarz_prod = sqrt_ij * sqrt_kl
                                 if schwarz_prod < threshold:
                                     continue
@@ -710,28 +909,42 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                                 # Density Screening (Standard Direct SCF)
                                 # Skip if both density contributions are negligible
                                 d_val_kl = density_matrix[k, l]
-                                if (abs(d_val_ij) * schwarz_prod < threshold*0.1) and (abs(d_val_kl) * schwarz_prod < threshold*0.1):
+                                if abs(d_val_kl)<DENS_THRESH:
                                     continue
+                                D_max = max(abs(d_val_ij), abs(d_val_kl), 
+                                        abs(density_matrix[i,k]), abs(density_matrix[i,l]), 
+                                        abs(density_matrix[j,k]), abs(density_matrix[j,l]))
+                                if abs(D_max) < DENS_THRESH:
+                                    continue
+                                if abs(D_max)*schwarz_prod < COMBINED_THRESH:
+                                    continue
+                                if (abs(d_val_ij) * schwarz_prod < COMBINED_THRESH) and (abs(d_val_kl) * schwarz_prod < COMBINED_THRESH):
+                                    continue
+                                
                             else:
                                 d_val_kl = density_matrix[k, l]
 
+                            
+                            ld, md, nd = bfs_lmn[l]
+                            lshell = shell_indices[l]
+                            # if lshell!=lshell_previous:
                             L = bfs_coords[l]
+                            npriml = bfs_nprim[l]
+                            Nl = bfs_contr_prim_norms[l]
+                                     
+                            # if kshell!=kshell_previous or lshell!=lshell_previous:
                             KL = K - L  
                             KLsq = np.sum(KL**2)
-                            Nl = bfs_contr_prim_norms[l]
-                            ld, md, nd = bfs_lmn[l]
-                            tempcoeff3 = tempcoeff2 * Nl
-                            npriml = bfs_nprim[l]
 
+                            # if jshell!=jshell_previous or kshell!=kshell_previous or lshell!=lshell_previous:
+                            tempcoeff3 = tempcoeff2*Nl
+                            
+                            
                             # Rys Roots Setup
                             norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1) 
                             n = int(max(la+lb, ma+mb, na+nb))
                             m = int(max(lc+ld, mc+md, nc+nd))
                             
-                            # Stack/Heap allocation for Rys (Small enough for stack usually)
-                            roots = np.zeros((norder))
-                            weights = np.zeros((norder))
-                            G = np.zeros((n+1, m+1))
 
                             val = 0.0
                             
@@ -747,7 +960,7 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                                     gammaP = alphaik + alphajk
                                     screenfactorAB = np.exp(-alphaik * alphajk / gammaP * IJsq)
                                     
-                                    if screenfactorAB < 1.0e-8: continue
+                                    if screenfactorAB < PRIMITIVE_THRESH: continue
 
                                     djk = bfs_coeffs[j][jk] 
                                     Njk = bfs_prim_norms[j][jk]      
@@ -763,9 +976,9 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                                             alphalk = bfs_expnts[l][lk]
                                             gammaQ = alphakk + alphalk
                                             screenfactorKL = np.exp(-alphakk * alphalk / gammaQ * KLsq)
-                                            if screenfactorKL < 1.0e-8: continue
+                                            if screenfactorKL < PRIMITIVE_THRESH: continue
                                             # Combined Screening
-                                            if screenfactorKL * screenfactorAB < 1.0e-8: continue
+                                            if screenfactorKL * screenfactorAB < PRIMITIVE_THRESH: continue
 
                                             dlk = bfs_coeffs[l][lk] 
                                             Nlk = bfs_prim_norms[l][lk]     
@@ -779,11 +992,19 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                                             PQsq = np.sum(PQ**2)
 
                                             tempcoeff7 = tempcoeff6 * dlk * Nlk
-                                            
-                                            if norder <= 10:
-                                                val += tempcoeff7 * coulomb_rys(roots, weights, G, PQsq, rho, norder, n, m, 
-                                                                               la, lb, lc, ld, ma, mb, mc, md, na, nb, nc, nd, 
-                                                                               alphaik, alphajk, alphakk, alphalk, I, J_coord, K, L)
+                                            # (ss|ss) case
+                                            if (la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)==0: 
+                                                val += tempcoeff7*twopisq/(gammaP*gammaQ)*np.sqrt(pi/(gammaP+gammaQ))\
+                                                    *screenfactorAB*screenfactorKL*Fboys(0,PQsq/(1/gammaP+1/gammaQ))
+                                            else:
+                                                if norder <= 10:
+                                                    val += tempcoeff7 * coulomb_rys(roots, weights, G, PQsq, rho, norder, n, m, 
+                                                                                la, lb, lc, ld, ma, mb, mc, md, na, nb, nc, nd, 
+                                                                                alphaik, alphajk, alphakk, alphalk, I, J_coord, K, L)
+                            if abs(val)<1e-13:
+                                n_negligible+=1
+                            else:
+                                n_significant+=1
                             
                             # --- IN-PLACE J-MATRIX UPDATE (8-FOLD SCATTER) ---
                             # Logic:
@@ -805,12 +1026,15 @@ def rys_coulomb_matrix_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                                 fac_ij = 2.0 if i != j else 1.0
                                 term_kl = val * d_val_ij * fac_ij
                                 J_local[tid, k, l] += term_kl
-
+                        lshell_previous = lshell
+                    kshell_previous = kshell    
+                jshell_previous = jshell
     # --- REDUCTION STEP ---
     # Sum all thread-local matrices into the master J matrix
     # Summing axis 0 (threads) -> (N, N)
     J_final = np.sum(J_local, axis=0)
-
+    print("N_negligible integrals: ", n_negligible)
+    print("N_significant integrals: ", n_significant)
     # --- SYMMETRIZATION ---
     # We only filled J[i,j] where j<=i (and similarly for k,l). 
     # Now we copy lower triangle to upper triangle.
