@@ -53,19 +53,6 @@ except Exception as e:
 from pyfock.DFT_Helper_Coulomb import density_fitting_prelims_for_DFT_development
 from pyfock.DFT_Helper_Coulomb import Jmat_from_density_fitting
 
-# @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
-# def compute_B(errVecs):
-#     nKS = errVecs.shape[0]
-#     B = np.zeros((nKS + 1, nKS + 1))
-#     B[-1, :] = B[:, -1] = -1.0
-#     B[-1, -1] = 0.0
-#     for i in prange(nKS):
-#         # errVec_i_conj_T = errVecs[i].conj().T
-#         errVec_i_conj_T = errVecs[i].T
-#         for j in range(i + 1):
-#             # B[i, j] = B[j, i] = np.real(np.trace(np.dot(errVec_i_conj_T, errVecs[j])))
-#             B[i, j] = B[j, i] = np.trace(np.dot(errVec_i_conj_T, errVecs[j]))
-#     return B
 
 class DFT:
     """
@@ -239,13 +226,9 @@ class DFT:
 
         self.conv_crit = conv_crit
         """ Convergence criterion for SCF (in Hartrees) """
-        # if self.conv_crit is None:
-        #     self.conv_crit = 1.0E-7
 
         self.max_itr = 50 
         """ Maximum number of iterations for SCF """
-        # if self.max_itr is None:
-        #     self.max_itr = 50
 
         self.ncores = ncores
         """ Number of cores to be used for DFT calculation """
@@ -338,7 +321,7 @@ class DFT:
         Extremely memory efficient. The 4c2e tensor is never stored in memory and is contracted with the density matrix
         on the fly to compute J matrix. The downside is that is extremely slow."""
 
-        self.coul_algo = 1
+        self.coul_algo = 2
         """ Determines the algorithm for working with 4c2e ERIs.
         1: The entire 4c2e tensor is calculated at the beginning and stored in memory. (The computations employ symmetry and Schwarz screening but not the storage)
         So it is quite memory hungry and not useful for anything other than small systems and basis sets.
@@ -373,22 +356,6 @@ class DFT:
         """ Whether to keep the 3c2e integrals in GPU memory or not. 
         Recommended to keep in GPU memory to avoid CPU-GPU transfers at each iteration."""
         
-        # self.max_threads_per_block = 1024
-        # self.threads_x = 64
-        # self.threads_y = 16
-
-        # if self.use_gpu:
-        #     try:
-        #         global cp
-        #         global cupy_scipy
-        #         import cupy as cp
-        #         import cupyx.scipy as cupy_scipy
-        #         # from cupy.linalg import eig, multi_dot as dot
-        #     except ModuleNotFoundError:
-        #         print('Cupy was not found!')
-
-    # def removeLinearDep(self, H, S):
-    #     return 1 
     
     def nuclear_rep_energy(self, mol=None):
         """
@@ -709,11 +676,7 @@ class DFT:
             for j in range(i+1):
                 B[i,j] = B[j,i] = \
                     np.real(np.trace(np.dot(np.conjugate(self.errVecs[i]).T, self.errVecs[j])))
-        # for i in range(nKS):
-        #     for j in range(i+1):
-        #         print(self.errVecs[i].shape)
-        #         B[i,j] = np.real(np.dot(np.conjugate(self.errVecs[i]).T, self.errVecs[j]))
-        #         B[j,i] = B[i,j]
+        
                                                     
         residual = np.zeros((nKS + 1, 1))
         residual[-1] = -1.0
@@ -789,7 +752,6 @@ class DFT:
 
         return F 
 
-    # @profile
     def scf(self):
         """
         Perform Self-Consistent Field (SCF) calculation for Density Functional Theory (DFT).
@@ -908,6 +870,9 @@ class DFT:
         orthogonalize = self.orthogonalize
         direct_scf = self.direct_scf
         coul_algo = self.coul_algo
+
+        if isDF==False:
+            strict_schwarz = False
 
         print_pyfock_logo()
         print_scientist()
@@ -1435,7 +1400,7 @@ class DFT:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat) # This is in CAO basis
                         elif coul_algo==2:
-                            J = Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat, threshold=threshold_schwarz)
+                            J = Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat, threshold_schwarz, sqrt_ints4c2e_diag)
                     durationCoulomb += timer() - start_4c2e
                     print('Cumulative time taken to evaluate Coulomb matrix: '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
                 else:
@@ -1458,7 +1423,7 @@ class DFT:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat)
                         elif coul_algo==2:
-                            J_diff =Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat_diff, threshold=threshold_schwarz)
+                            J_diff =Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat_diff, threshold_schwarz, sqrt_ints4c2e_diag)
                             J += J_diff
                     durationCoulomb += timer() - start_4c2e
                     print('Cumulative time taken to evaluate Coulomb matrix difference: '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)

@@ -46,7 +46,8 @@ def rys_4c2e_schwarz_sparse_symm(basis, sqrt_ints4c2e_diag=None, threshold=1e-9)
     
     # Calculate actual memory usage
     n_significant = sum(len(vals) for vals in ints4c2e_values)
-    sparse_memory_mb = (n_significant * 8 + n_significant * 3 * 4) / (1024 ** 2)
+    sparse_memory_mb = (n_significant * 8 + n_significant * 3 * 2) / (1024 ** 2)
+    # sparse_memory_mb = ints4c2e_values.size / (1024 ** 2) + ints4c2e_indices.size / (1024 ** 2)
     
     print(f"Significant integrals: {n_significant:,}")
     print(f"Sparse storage used: {sparse_memory_mb:.2f} MB ({sparse_memory_mb/1024:.4f} GB)")
@@ -71,7 +72,7 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn,
     # Pass 1: Count significant integrals per basis function
     counts = np.zeros(nbf, dtype=np.int64)
     
-    for i in range(nbf):
+    for i in prange(nbf):
         count = 0
         for j in range(i + 1):
             if i < j:
@@ -106,7 +107,7 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn,
     ints4c2e_indices = []
     for i in range(nbf):
         ints4c2e_values.append(np.zeros(counts[i], dtype=np.float64))
-        ints4c2e_indices.append(np.zeros((counts[i], 3), dtype=np.int32))
+        ints4c2e_indices.append(np.zeros((counts[i], 3), dtype=np.uint16))
     
     # Pass 2: Compute integrals
     pi = np.pi
@@ -130,6 +131,8 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn,
             
             if isSchwarz:
                 sqrt_ij = sqrt_ints4c2e_diag[i, j]
+                if sqrt_ij < threshold: # Loose check
+                    continue
             
             J = bfs_coords[j]
             IJ = I - J
