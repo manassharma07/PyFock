@@ -70,9 +70,9 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn,
     nbf = len(bfs_coords)
     
     # Pass 1: Count significant integrals per basis function
-    counts = np.zeros(nbf, dtype=np.int64)
+    counts = np.zeros(nbf, dtype=np.uint32)
     
-    for i in prange(nbf):
+    for i in range(nbf):
         count = 0
         for j in range(i + 1):
             if i < j:
@@ -107,7 +107,7 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn,
     ints4c2e_indices = []
     for i in range(nbf):
         ints4c2e_values.append(np.zeros(counts[i], dtype=np.float64))
-        ints4c2e_indices.append(np.zeros((counts[i], 3), dtype=np.uint16))
+        ints4c2e_indices.append(np.zeros((counts[i], 3), dtype=np.uint32))
     
     # Pass 2: Compute integrals
     pi = np.pi

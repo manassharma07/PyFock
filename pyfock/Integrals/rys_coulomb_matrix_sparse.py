@@ -180,32 +180,26 @@ def _coulomb_from_sparse_internal(ints4c2e_values, ints4c2e_indices, density_mat
             d_kl = density_matrix[k, l]
             if abs(d_kl) < DENS_THRESH:
                 continue
-            d_ik = density_matrix[i, k]
-            if abs(d_ik) < DENS_THRESH:
-                continue
-            d_il = density_matrix[i, l]
-            if abs(d_il) < DENS_THRESH:
-                continue
-            d_jk = density_matrix[j, k]
-            if abs(d_jk) < DENS_THRESH:
-                continue
-            d_jl = density_matrix[j, l]
-            if abs(d_jl) < DENS_THRESH:
-                continue
             
-            D_max = max(abs(d_ij), abs(d_kl), 
-                       abs(d_ik), abs(d_il), 
-                       abs(d_jk), abs(d_jl))
-            if abs(D_max) < DENS_THRESH:
-                continue
-            sqrt_ij = sqrt_ints4c2e_diag[i,j]
-            sqrt_kl = sqrt_ints4c2e_diag[k,l]
-            schwarz_prod = sqrt_ij * sqrt_kl
-                                
-            if abs(D_max)*schwarz_prod < COMBINED_THRESH:
-                continue
-            # if (abs(d_ij) * schwarz_prod < COMBINED_THRESH) and (abs(d_kl) * schwarz_prod < COMBINED_THRESH):
+            # D_max = max(abs(d_ij), abs(d_kl), 
+            #            abs(d_ik), abs(d_il), 
+            #            abs(d_jk), abs(d_jl))
+            # if abs(D_max) < DENS_THRESH:
             #     continue
+            sqrt_ij = sqrt_ints4c2e_diag[i,j]
+            if sqrt_ij < threshold:
+                continue
+            sqrt_kl = sqrt_ints4c2e_diag[k,l]
+            if sqrt_kl < threshold:
+                continue
+            schwarz_prod = sqrt_ij * sqrt_kl
+            if schwarz_prod < threshold:
+                continue
+                                
+            # if abs(D_max)*schwarz_prod < COMBINED_THRESH:
+            #     continue
+            if (abs(d_ij) * schwarz_prod < COMBINED_THRESH) and (abs(d_kl) * schwarz_prod < COMBINED_THRESH):
+                continue
             
             # All updates go to thread-local matrix
             fac_kl = 2.0 if k != l else 1.0
