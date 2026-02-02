@@ -77,9 +77,9 @@ funcidcrysx = [funcx, funcc]
 funcidpyscf = str(funcx)+','+str(funcc)
 
 # basis_set_name = 'sto-2g'
-basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
-# basis_set_name = '6-31G'
+basis_set_name = '6-31G'
 # basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
 # basis_set_name = 'def2-TZVP'
