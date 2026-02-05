@@ -876,10 +876,10 @@ class DFT:
 
         print_pyfock_logo()
         print_scientist()
-        print('\n\nNumber of atoms:', mol.natoms)
-        print('\n\nNumber of basis functions (atomic orbitals):', basis.bfs_nao)
+        print('\n\nNumber of atoms: ', mol.natoms)
+        print('\n\nNumber of basis functions or Cartesian atomic orbitals (6d, 10f, 15g and so on): ', basis.bfs_nao)
         if isDF:
-            print('\n\nNumber of auxiliary basis functions:', auxbasis.bfs_nao)
+            print('\n\nNumber of auxiliary basis functions (in Cartesian atomic orbital basis): ', auxbasis.bfs_nao)
         print("\n" + "="*70 + "\n")
 
         print_sys_info()
@@ -952,15 +952,20 @@ class DFT:
                 strict_schwarz = False
         if cholesky:
             if not (DF_algo==6 or DF_algo==10):
-                print('Warning: The Cholesky decomposition of 2c2e integrls is only compatible with DF algo #6 or #10 so turning it off.')
+                print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with DF algo #6 or #10 so turning it off.')
+                cholesky = False
+            if self.sao:
+                print('Warning: Currently the Cholesky decomposition of 2c2e integrals is not compatible with the SAO basis (5d, 7f, 10g...) so turning it off.')
                 cholesky = False
         
         if self.sao:
-            print('\n\nSpherical Atomic Orbitals are being used!\n\n')
+            print('\n\nSpherical Atomic Orbitals (5d, 7f, 10g...) are being used!\n\n')
             # Get the CAO to SAO transformation matrix
             c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
             # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
             sph2c_mat_pseudo = basis.sph2cart_basis() # SAO --> CAO
+        else:
+            print('\n\nCartesian Atomic Orbitals (6d, 10f, 15g...) are being used!\n\n')
                 
 
         eigvectors = None
@@ -1119,7 +1124,7 @@ class DFT:
                     print('Time taken for 4c2e integral evaluation (including Schwarz Screening): '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
             
         else: # Density fitting case (3c2e, and 2c2e will be calculated)
-            H_temp, V_temp, ints3c2e, ints2c2e, nsignificant, indicesA, indicesB, indicesC, offsets_3c2e, indices, ints4c2e_diag, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, indices_dmat_tri, indices_dmat_tri_2, df_coeff0, Qpq, cho_decomp_ints2c2e, durationDF_cholesky, durationCoulomb = density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, self.use_gpu, self.keep_ints3c2e_in_gpu, threshold_schwarz, strict_schwarz, rys, DF_algo, cholesky)
+            H_temp, V_temp, ints3c2e, ints2c2e, nsignificant, indicesA, indicesB, indicesC, offsets_3c2e, indices, ints4c2e_diag, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, indices_dmat_tri, indices_dmat_tri_2, df_coeff0, Qpq, cho_decomp_ints2c2e, durationDF_cholesky, durationCoulomb = density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, self, T, dmat, self.use_gpu, self.keep_ints3c2e_in_gpu, threshold_schwarz, strict_schwarz, rys, DF_algo, cholesky)
             if not H_temp is None:
                 H = H_temp
             if not V_temp is None:
@@ -1373,7 +1378,7 @@ class DFT:
             #########
             # Convert the overlap matrix from CAO to SAO basis
             S = np.dot(c2sph_mat, np.dot(S, c2sph_mat.T)) # CAO --> SAO
-            # Convert back to SAO so that now we lose the extra information that the CAO basis had
+            # Convert back to CAO so that now we lose the extra information that the CAO basis had
             S = np.dot(sph2c_mat_pseudo, np.dot(S, sph2c_mat_pseudo.T))
         if orthogonalize:
             if not self.use_gpu:
@@ -1666,6 +1671,7 @@ class DFT:
 
             # Switch back to main GPU
             cp.cuda.Device(0).use()
+        
         return Etot, dmat
         
 

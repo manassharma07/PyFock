@@ -654,57 +654,11 @@ def ChebGausInt(eps,M,a12,a34, qx1, qx2, qx3, qx4,
     ssss = 1.0
     return 16*q/(3*n) 
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def clenshaw_d1(roots_or_weights, x, u, n):
     # Reference: https://github.com/sunqm/libcint/blob/master/src/polyfits.c (BSD-2 Clause license)
     i = 0
     u2 = u * 2.0
-
-    # while i < n - 1:
-    #     d0, d1, g0, g1 = 0, 0, x[13 + 14 * i], x[13 + 14 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[12 + 14 * i]
-    #     d1 = u2 * g1 - d1 + x[12 + 14 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[11 + 14 * i]
-    #     g1 = u2 * d1 - g1 + x[11 + 14 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[10 + 14 * i]
-    #     d1 = u2 * g1 - d1 + x[10 + 14 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[9 + 14 * i]
-    #     g1 = u2 * d1 - g1 + x[9 + 14 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[8 + 14 * i]
-    #     d1 = u2 * g1 - d1 + x[8 + 14 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[7 + 14 * i]
-    #     g1 = u2 * d1 - g1 + x[7 + 14 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[6 + 14 * i]
-    #     d1 = u2 * g1 - d1 + x[6 + 14 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[5 + 14 * i]
-    #     g1 = u2 * d1 - g1 + x[5 + 14 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[4 + 14 * i]
-    #     d1 = u2 * g1 - d1 + x[4 + 14 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[3 + 14 * i]
-    #     g1 = u2 * d1 - g1 + x[3 + 14 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[2 + 14 * i]
-    #     d1 = u2 * g1 - d1 + x[2 + 14 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[1 + 14 * i]
-    #     g1 = u2 * d1 - g1 + x[1 + 14 + 14 * i]
-    #     roots_or_weights[i] = u * g0 - d0 + x[14 * i] * 0.5
-    #     roots_or_weights[i + 1] = u * g1 - d1 + x[14 * i + 14] * 0.5
-    #     i += 2
-
-    # if i < n:
-    #     d0, g0 = 0, x[13 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[12 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[11 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[10 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[9 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[8 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[7 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[6 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[5 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[4 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[3 + 14 * i]
-    #     d0 = u2 * g0 - d0 + x[2 + 14 * i]
-    #     g0 = u2 * d0 - g0 + x[1 + 14 * i]
-    #     roots_or_weights[i] = u * g0 - d0 + x[14 * i] * 0.5
 
     for i in range(n):
         d0 = 0
@@ -725,7 +679,7 @@ def clenshaw_d1(roots_or_weights, x, u, n):
 
     return roots_or_weights
         
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Rootn(X,n,roots,weights):
     datax = DATA_X[((n - 1) * n // 2 - 15) * 14 * 31:]
     dataw = DATA_W[((n - 1) * n // 2 - 15) * 14 * 31:]
@@ -956,7 +910,7 @@ R13 = 1.90163509193487E-01
 R23,W23 = 1.78449274854325E+00, 1.77231492083829E-01
 R33,W33 = 5.52534374226326E+00, 5.11156880411248E-03
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Root3(X,n,roots, weights):
 
   if X < 3.0E-7:
@@ -1210,7 +1164,7 @@ R24,W24 = 1.33909728812636E+00, 2.34479815323517E-01
 R34,W34 = 3.92696350135829E+00, 1.92704402415764E-02
 R44,W44 = 8.58863568901199E+00, 2.25229076750736E-04
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Root4(X,n,roots, weights):
 
     if X <= 3.0E-7:
@@ -1549,7 +1503,7 @@ R35,W35 = 3.08593744371754E+00, 3.82231610015404E-02
 R45,W45 = 6.41472973366203E+00, 1.51614186862443E-03
 R55,W55 = 1.18071894899717E+01, 8.62130526143657E-06
 
-@njit(cache=True,fastmath=True, error_model='numpy', nogil=True)
+@njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Root5(X,n, roots, weights):
     if X < 3.0E-7:
         roots0 = 2.26659266316985E-02 -2.15865967920897E-03 *X

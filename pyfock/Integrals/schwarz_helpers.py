@@ -374,7 +374,7 @@ def calc_indices_3c2e_schwarz_fine(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, chunk
     return indicesA, indicesB, indicesC, [i,j,k], count
 
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
-def calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, auxbfs_lm, ntri, naux, tril_indicesA, tril_indicesB):
+def calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, auxbfs_lm, aux_bfs_lmn, ntri, naux, tril_indicesA, tril_indicesB):
     # Calculate the offsets for 3c2e integral evluations
     offsets = np.zeros((ntri+1), dtype=np.uint16)
     offsets[0] = 0
@@ -407,6 +407,61 @@ def calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold,
             #         count += 1
             if sqrt_ij*sqrt_diag_ints2c2e[k]>threshold:
                 count += 1
+            # else:
+            #     print("yes")
+        offsets[ij+1] = count 
+    return offsets
+@njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
+def calc_offsets_3c2e_schwarz_n(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, auxbfs_lm, aux_bfs_lmn, ntri, naux, tril_indicesA, tril_indicesB):
+    # Calculate the offsets for 3c2e integral evluations
+    offsets = np.zeros((ntri+1), dtype=np.uint16)
+    offsets[0] = 0
+    # Loop over the lower-triangular ints3c2e array
+    for ij in range(ntri):
+        i = tril_indicesA[ij]
+        j = tril_indicesB[ij]
+        sqrt_ij = sqrt_ints4c2e_diag[i,j] 
+        if strict_schwarz:
+            if sqrt_ij*sqrt_ij<1e-13:
+                continue    
+        count = 0
+        k = 0
+        while k < naux:    
+            # if strict_schwarz:
+            #     max_val = sqrt_ij*sqrt_diag_ints2c2e[k]
+            #     if max_val>threshold:
+            #         if max_val<1e-8:
+            #             if auxbfs_lm[k]<1: # s aux functions
+            #                 count += 1
+            #         elif max_val<1e-7:
+            #             if auxbfs_lm[k]<2: # s, p aux functions
+            #                 count += 1
+            #         elif max_val<1e-6:
+            #             if auxbfs_lm[k]<3: # s, p, d aux functions
+            #                 count += 1
+            #         else:
+            #             count += 1
+            # else:  
+            #     if sqrt_ij*sqrt_diag_ints2c2e[k]>threshold:
+            #         count += 1
+            lmnk = aux_bfs_lmn[k]
+            tot_ang = lmnk.sum()
+            is_first = lmnk[0]==tot_ang
+            # print(lmnk, is_first)
+            if is_first:
+                if sqrt_ij*sqrt_diag_ints2c2e[k]>threshold:
+                    # Determine shell size: (L+1)(L+2)/2
+                    shell_size = (tot_ang + 1) * (tot_ang + 2) // 2
+                    k += shell_size
+                    count += shell_size
+                    # continue
+                else:
+                    k += 1
+            else:
+                k += 1
+                # k += ((tot_ang + 1)*(tot_ang + 2)//2)
+            # if sqrt_ij*sqrt_diag_ints2c2e[k]>threshold:
+            #     count += 1
             # else:
             #     print("yes")
         offsets[ij+1] = count 
@@ -680,6 +735,70 @@ def rys_3c2e_tri_schwarz_sparse(basis, auxbasis, indicesA, indicesB, indicesC):
     ints3c2e = rys_3c2e_tri_schwarz_sparse_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
                 bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], \
                 aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indicesA, indicesB, indicesC, basis.bfs_nao, auxbasis.bfs_nao, IJsq_arr, shell_indices, aux_shell_indices)
+    # rys_3c2e_tri_schwarz_sparse_internal.parallel_diagnostics(level=1)
+    return ints3c2e
+
+def rys_3c2e_tri_schwarz_sparse_algo10_sao(basis, auxbasis, indicesA, indicesB, offsets, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, nsignificant):
+    # Wrapper for hybrid Rys+conv. 3c2e integral calculator
+    # using a list of significant contributions obtained via Schwarz screening.
+    # It returns the 3c2e integrals in triangular form.
+
+    # print('preprocessing starts', flush=True)
+
+    #We convert the required properties to numpy arrays as this is what Numba likes.
+    bfs_coords = np.array([basis.bfs_coords])
+    bfs_contr_prim_norms = np.array([basis.bfs_contr_prim_norms])
+    bfs_lmn = np.array([basis.bfs_lmn])
+    bfs_nprim = np.array([basis.bfs_nprim])
+
+    #We convert the required properties to numpy arrays as this is what Numba likes.
+    aux_bfs_coords = np.array([auxbasis.bfs_coords])
+    aux_bfs_contr_prim_norms = np.array([auxbasis.bfs_contr_prim_norms])
+    aux_bfs_lmn = np.array([auxbasis.bfs_lmn])
+    aux_bfs_nprim = np.array([auxbasis.bfs_nprim])
+        
+
+    #The remaining properties like bfs_coeffs are a list of lists of unequal sizes.
+    #Numba won't be able to work with these efficiently.
+    #So, we convert them to a numpy 2d array by applying a trick,
+    #that the second dimension is that of the largest list. So that
+    #it can accomadate all the lists.
+    maxnprim = max(basis.bfs_nprim)
+    bfs_coeffs = np.zeros([basis.bfs_nao, maxnprim])
+    bfs_expnts = np.zeros([basis.bfs_nao, maxnprim])
+    bfs_prim_norms = np.zeros([basis.bfs_nao, maxnprim])
+    shell_indices = np.array([basis.bfs_shell_index], dtype=np.uint16)[0]
+    aux_shell_indices = np.array([auxbasis.bfs_shell_index], dtype=np.uint16)[0]
+    for i in range(basis.bfs_nao):
+        for j in range(basis.bfs_nprim[i]):
+            bfs_coeffs[i,j] = basis.bfs_coeffs[i][j]
+            bfs_expnts[i,j] = basis.bfs_expnts[i][j]
+            bfs_prim_norms[i,j] = basis.bfs_prim_norms[i][j]
+
+    maxnprimaux = max(auxbasis.bfs_nprim)
+    aux_bfs_coeffs = np.zeros([auxbasis.bfs_nao, maxnprimaux])
+    aux_bfs_expnts = np.zeros([auxbasis.bfs_nao, maxnprimaux])
+    aux_bfs_prim_norms = np.zeros([auxbasis.bfs_nao, maxnprimaux])
+    for i in range(auxbasis.bfs_nao):
+        for j in range(auxbasis.bfs_nprim[i]):
+            aux_bfs_coeffs[i,j] = auxbasis.bfs_coeffs[i][j]
+            aux_bfs_expnts[i,j] = auxbasis.bfs_expnts[i][j]
+            aux_bfs_prim_norms[i,j] = auxbasis.bfs_prim_norms[i][j]
+
+    
+
+    diff = bfs_coords[0][:, np.newaxis, :] - bfs_coords[0][np.newaxis, :, :]
+    IJsq_arr = np.sum(diff**2, axis=2)
+    # IJsq_arr = 0
+    # print(IJsq_arr.nbytes/1e9)
+
+    # print('preprocessing done', flush=True)
+    # exit()
+    
+
+    ints3c2e = rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
+                bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], \
+                aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indicesA, indicesB, offsets, basis.bfs_nao, auxbasis.bfs_nao, IJsq_arr, shell_indices, aux_shell_indices, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, nsignificant)
     # rys_3c2e_tri_schwarz_sparse_internal.parallel_diagnostics(level=1)
     return ints3c2e
 
@@ -1355,6 +1474,333 @@ def rys_3c2e_tri_schwarz_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_l
     return threeC2E
 
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, boundscheck=False)
+def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indicesA, indicesB, offsets, nao, naux, IJsq_arr, shell_indices, aux_shell_indices, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, nsignificant):
+    # Calculates 3c2e integrals based on a provided list of significant triplets determined using Schwarz inequality
+    # It is assumed that the provided list was made with triangular int3c2e in mind
+    # TODO: Check out these screening methods as well 
+    # https://kops.uni-konstanz.de/server/api/core/bitstreams/79ada61a-fd29-43fd-a298-79c1696a0601/content
+    # https://aip.scitation.org/doi/10.1063/1.4917519
+
+    threeC2E = np.zeros((nsignificant), dtype=np.float64) 
+
+    #Debug:
+    # print(config.THREADING_LAYER)
+    # print(threading_layer())
+    # print(get_parallel_chunksize())
+    # print(ntriplets)
+    # set_parallel_chunksize(ntriplets//128)
+    # print(get_parallel_chunksize())
+        
+    pi = 3.141592653589793
+    # pisq = 9.869604401089358  #PI^2
+    twopisq = 19.739208802178716  #2*PI^2
+    L = np.zeros((3))
+    alphalk = 0.0
+    ld, md, nd = int(0), int(0), int(0)
+
+    # Initialize before hand to avoid contention of memory allocator
+    # roots = np.zeros((5)) # 5 is the maximum possible value currently in the code
+    # weights = np.zeros((5))
+    # G = np.zeros((21,21)) # 11 should be enough
+
+    
+    maxprims = bfs_coeffs.shape[1]
+    maxprims_aux = aux_bfs_coeffs.shape[1]
+
+    # Create arrays to avoid contention of allocator 
+    # (https://stackoverflow.com/questions/70339388/using-numba-with-np-concatenate-is-not-efficient-in-parallel/70342014#70342014)
+    
+
+    #Loop over BFs
+    for itemp in prange(indicesA.shape[0]):
+        # id_thrd = get_thread_id()
+        
+        i = indicesA[itemp]
+        j = indicesB[itemp]
+        
+        sqrt_ij = sqrt_ints4c2e_diag[i,j] 
+
+        if strict_schwarz:
+            if sqrt_ij*sqrt_ij<1e-13:
+                continue  
+
+        # ishell = shell_indices[i]
+        
+        Ni = bfs_contr_prim_norms[i]
+        nprimi = bfs_nprim[i]
+        alphaik = np.zeros(maxprims, dtype=np.float64) # Should be Hoisted out
+        alphaik[:] = bfs_expnts[i,:]
+        lmni = bfs_lmn[i]
+        la, ma, na = lmni
+        I = bfs_coords[i]
+
+        # jshell = shell_indices[j]
+        
+        Nj = bfs_contr_prim_norms[j]
+        nprimj = bfs_nprim[j]
+        alphajk = np.zeros(maxprims, dtype=np.float64) # Should be Hoisted out
+        alphajk[:] = bfs_expnts[j,:]
+        lmnj = bfs_lmn[j]
+        lb, mb, nb = lmnj
+        J = bfs_coords[j]
+
+        
+        IJsq = IJsq_arr[i,j]
+        tempcoeff1 = Ni*Nj
+
+        ## This screening is not useful for def2-SVP kind of basis sets
+        ## But useful for diffuse basis sets like def2-TZVP
+        alphaik_min = np.min(alphaik[:nprimi])
+        alphajk_min = np.min(alphajk[:nprimj])
+        gammaP_min = alphaik_min + alphajk_min
+        rho_min = alphaik_min * alphajk_min / gammaP_min
+        arg = rho_min * IJsq
+        if arg > 18.42:  # exp(-18.42) ≈ 1e-8
+            continue
+        # screening_AB_min = np.exp(-rho_min * IJsq)
+        # if abs(screening_AB_min)<1.0e-8:
+        #     continue
+        # P_min = (alphaik_min*I + alphajk_min*J)/gammaP_min
+        index_k = 0
+        k = 0
+        while k < naux:
+            lmnk = aux_bfs_lmn[k]
+            lc, mc, nc = lmnk
+            tot_ang = lc + mc + nc
+            is_first = (lmnk[0] != 0) and (lmnk.sum() == lmnk[0])
+            if is_first:
+                if sqrt_ij*sqrt_diag_ints2c2e[k]<threshold:
+                    if tot_ang == 0:
+                        k += 1
+                    elif tot_ang == 1:
+                        k += 3
+                    elif tot_ang == 2:
+                        k += 6
+                    elif tot_ang == 3:
+                        k += 10
+                    elif tot_ang == 4:
+                        k += 15
+                    continue
+            # if tot_ang==2 and is_first:
+            #     d_buffer = np.zeros(6, dtype=np.float64)
+            #     d_idx = 0
+            if is_first:
+                if tot_ang == 2: # d functions
+                    d_buffer = np.zeros(6, dtype=np.float64)
+                    d_idx = 0
+                if tot_ang == 3: # f functions
+                    f_buffer = np.zeros(10, dtype=np.float64)
+                    f_idx = 0
+                if tot_ang == 4: # g functions
+                    g_buffer = np.zeros(15, dtype=np.float64)
+                    g_idx = 0
+            
+            # lmnk = aux_bfs_lmn[k]
+            # lc, mc, nc = lmnk
+            # if strict_schwarz:
+            #     max_val = sqrt_ij*sqrt_diag_ints2c2e[k]
+            #     if max_val>threshold:
+            #         if max_val<1e-8:
+            #             if (lc+mc+nc)>=1: # s aux function
+            #                 continue
+            #         elif max_val<1e-7:
+            #             if (lc+mc+nc)>=2: # s, p aux functions
+            #                 continue
+            #         elif max_val<1e-6:
+            #             if (lc+mc+nc)>=3: # s, p, d aux functions
+            #                 continue
+            #     else:
+            #         continue
+                    
+            # else:  
+            #     if sqrt_ij*sqrt_diag_ints2c2e[k]<threshold:
+            #         continue
+            
+            Nk = aux_bfs_contr_prim_norms[k]
+            nprimk = aux_bfs_nprim[k]
+            alphakk = np.zeros(maxprims_aux, dtype=np.float64) # Should be Hoisted out
+            alphakk[:] = aux_bfs_expnts[k,:]
+            
+            
+            K = aux_bfs_coords[k]
+            Q = K   
+
+            # NEW SCREENING
+            # PQ_min = P_min - Q
+            # PQsq_min = np.sum(PQ_min**2)
+
+            # alphakk_min = np.min(alphakk[:nprimk])
+            # rho_abP_min = gammaP_min * alphakk_min / (gammaP_min + alphakk_min)
+            # screening_ABP_min = np.exp(-rho_abP_min * PQsq_min)
+            # print('screening_ABP_min:', screening_ABP_min)
+            # if rho_abP_min*PQsq_min > 1300.0:  # Try even lower threshold
+            #     index_k += 1
+            #     continue
+            # if abs(screening_ABP_min)<1.0e-8:
+            #     index_k += 1
+            #     continue
+            # geometric prescreen ONLY
+            # if rho_abP_min * PQsq_min > np.log(1.0 / 1e-6):
+            #     continue
+                
+            tempcoeff2 = tempcoeff1*Nk
+            norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1 ) 
+            tempcoeff3 = np.zeros(maxprims, dtype=np.float64) # Should be Hoisted out 
+            tempcoeff3[:] = tempcoeff2*bfs_coeffs[i,:]*bfs_prim_norms[i,:]
+            # PQsq = np.zeros((bfs_coeffs.shape[1], bfs_coeffs.shape[1], aux_bfs_coeffs.shape[1]), dtype=np.float64)
+            # rho = np.zeros((bfs_coeffs.shape[1], bfs_coeffs.shape[1], aux_bfs_coeffs.shape[1]), dtype=np.float64)
+                
+            val = 0.0
+            if norder<=10: # Use rys quadrature
+                
+                n = int(max(la+lb,ma+mb,na+nb))
+                m = int(max(lc+ld,mc+md,nc+nd))
+                # roots = np.zeros((norder)) 
+                # weights = np.zeros((norder)) 
+                roots = np.zeros((10)) 
+                weights = np.zeros((10)) 
+                # G = np.zeros((n+1,m+1)) 
+                G = np.zeros((n+1,m+1)) 
+                
+                    
+                #Loop over primitives
+                for ik in range(nprimi): 
+                    alphaik_ = alphaik[ik]
+                    tempcoeff3_ = tempcoeff3[ik]
+                    for jk in range(nprimj):
+                        alphajk_ = alphajk[jk]
+                        # gammaP[ik,jk] = alphaik_ + alphajk_
+                        gammaP_ = alphaik_ + alphajk_
+                        # gamma_inv = 1/gammaP_
+                        arg = alphaik_*alphajk_/gammaP_*IJsq
+                        if arg > 18.42:  # exp(-18.42) ≈ 1e-8
+                            continue
+                        # screenfactorAB = np.exp(-alphaik_*alphajk_/gammaP_*IJsq)
+                            
+                        # if abs(screenfactorAB)<1.0e-8:   
+                            #Although this value of screening threshold seems very large
+                            # it actually gives the best consistency with PySCF. Reducing it to 1e-15,
+                            # actually worsened the agreement.
+                            # I suspect that this is caused due to an error cancellation
+                            # that happens with the nucmat calculation, as the same screening is 
+                            # used there as well
+                            # continue
+                        P = (alphaik_*I + alphajk_*J)/gammaP_
+                        PQ = P - Q
+                        PQsq = np.sum(PQ**2)
+                        djk = bfs_coeffs[j,jk] 
+                        Njk = bfs_prim_norms[j,jk]     
+
+                        tempcoeff4 = tempcoeff3_*djk*Njk  
+
+                        # screenfactor_2 = tempcoeff4/Nk*screenfactorAB*gamma_inv*np.sqrt(gamma_inv)*15.5031383401
+                        # if abs(screenfactor_2)<1.0e-9: # The threshold used here should be the same as Schwarz screening threshold
+                        #     continue 
+                        
+                        # gammaP_ = gammaP[ik,jk]
+                            
+                        for kk in range(nprimk):
+
+                            dkk = aux_bfs_coeffs[k,kk]
+                            Nkk = aux_bfs_prim_norms[k,kk]
+                            tempcoeff5 = tempcoeff4*dkk*Nkk 
+                                
+                                
+                            gammaQ = alphakk[kk]
+                            rho = gammaP_*gammaQ/(gammaP_ + gammaQ)
+
+                            # NEW SCREENING
+                            # More aggressive early exit
+                            # if rho*PQsq > 15.0:  # Try even lower threshold
+                            #     continue
+
+                            # screenfactorAB_P = np.exp(-rho*PQsq)
+                            # if abs(screenfactorAB_P) < 1.0e-8: 
+                            #     continue
+
+                            # # Additional check: if the combined screening is too small
+                            # combined_screening = screenfactorAB * screenfactorAB_P
+                            # if abs(combined_screening) < 1.0e-10:
+                            #     continue
+                            
+                            # ABsrt = np.sqrt(gammaP[ik,jk]*alphakk[kk])
+                            # X = PQsq*rho
+                            # factor = 2*np.sqrt(rho/pi)
+                            # print('s')
+                            val += tempcoeff5*coulomb_rys_3c2e(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L,P)
+                            
+            # threeC2E[offsets[itemp] + index_k] = val
+            if tot_ang == 0 or tot_ang == 1: # s or p functions
+                threeC2E[offsets[itemp] + index_k] = val
+                index_k += 1
+            if tot_ang == 2: # d functions
+                d_buffer[d_idx] = val
+                d_idx += 1
+                if d_idx==6:
+                    threeC2E[offsets[itemp] + index_k] = 2/3 * d_buffer[0] - 1/3 * (d_buffer[3] + d_buffer[5])
+                    threeC2E[offsets[itemp] + index_k + 1] = d_buffer[1]
+                    threeC2E[offsets[itemp] + index_k + 2] = d_buffer[2]
+                    threeC2E[offsets[itemp] + index_k + 3] = 2/3 * d_buffer[3] - 1/3 * (d_buffer[0] + d_buffer[5])
+                    threeC2E[offsets[itemp] + index_k + 4] = d_buffer[4]
+                    threeC2E[offsets[itemp] + index_k + 5] = 2/3 * d_buffer[5] - 1/3 * (d_buffer[0] + d_buffer[3])
+                    index_k += 6
+            if tot_ang == 3: # f functions
+                f_buffer[f_idx] = val
+                f_idx += 1
+                if f_idx==10:
+                    a = 10/19
+                    b = 14/19
+                    c = 5/19
+                    d = 3*np.sqrt(5)/19
+
+                    M_f = np.array((
+                        [ a,  0,  0, -d,  0, -d,  0,  0,  0,  0],
+                        [ 0,  b,  0,  0,  0,  0, -d,  0, -c,  0],
+                        [ 0,  0,  b,  0,  0,  0,  0, -c,  0, -d],
+                        [-d,  0,  0,  b,  0, -c,  0,  0,  0,  0],
+                        [ 0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
+                        [-d,  0,  0, -c,  0,  b,  0,  0,  0,  0],
+                        [ 0, -d,  0,  0,  0,  0,  a,  0, -d,  0],
+                        [ 0,  0, -c,  0,  0,  0,  0,  b,  0, -d],
+                        [ 0, -c,  0,  0,  0,  0, -d,  0,  b,  0],
+                        [ 0,  0, -d,  0,  0,  0,  0, -d,  0,  a]
+                    ))
+                    
+                    threeC2E[offsets[itemp] + index_k : offsets[itemp] + index_k + 10] = M_f @ f_buffer[:]
+                    index_k += 10
+            if tot_ang == 4: # g functions
+                g_buffer[g_idx] = val
+                g_idx += 1
+                if g_idx==15:
+                    M_g = np.array((
+                        [ 0.3513422061809158,  0.0,  0.0, -0.3085873961776689,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256711,  0.0,  0.1213545940024541,  0.0,  0.1065869614256711],
+                        [ 0.0,  0.6086956521739131,  0.0,  0.0,  0.0,  0.0, -0.3913043478260871,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+                        [ 0.0,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0,  0.0],
+                        [-0.3085873961776690,  0.0,  0.0,  0.6486577938190843,  0.0, -0.1065869614256711,  0.0,  0.0,  0.0,  0.0, -0.3085873961776689,  0.0, -0.1065869614256713,  0.0,  0.1213545940024542],
+                        [ 0.0,  0.0,  0.0,  0.0,  0.7826086956521738,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.2916610405434507,  0.0],
+                        [-0.3085873961776688,  0.0,  0.0, -0.1065869614256711,  0.0,  0.6486577938190838,  0.0,  0.0,  0.0,  0.0,  0.1213545940024540,  0.0, -0.1065869614256710,  0.0, -0.3085873961776688],
+                        [ 0.0, -0.3913043478260871,  0.0,  0.0,  0.0,  0.0,  0.6086956521739131,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+                        [ 0.0,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.7826086956521741,  0.0, -0.2916610405434510,  0.0,  0.0,  0.0,  0.0,  0.0],
+                        [ 0.0, -0.2916610405434509,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.7826086956521741,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+                        [ 0.0,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0,  0.0],
+                        [ 0.1065869614256711,  0.0,  0.0, -0.3085873961776689,  0.0,  0.1213545940024540,  0.0,  0.0,  0.0,  0.0,  0.3513422061809157,  0.0, -0.3085873961776687,  0.0,  0.1065869614256710],
+                        [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.6086956521739130,  0.0, -0.3913043478260869,  0.0],
+                        [ 0.1213545940024541,  0.0,  0.0, -0.1065869614256714,  0.0, -0.1065869614256709,  0.0,  0.0,  0.0,  0.0, -0.3085873961776687,  0.0,  0.6486577938190840,  0.0, -0.3085873961776689],
+                        [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.3913043478260868,  0.0,  0.6086956521739129,  0.0],
+                        [ 0.1065869614256710,  0.0,  0.0,  0.1213545940024542,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256710,  0.0, -0.3085873961776688,  0.0,  0.3513422061809157]
+                    ))
+                    
+                    threeC2E[offsets[itemp] + index_k : offsets[itemp] + index_k + 15] = M_g @ g_buffer[:]
+                    index_k += 15
+            k += 1
+            
+            
+                                 
+
+    return threeC2E
+
+
+@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, boundscheck=False)
 def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indicesA, indicesB, offsets, nao, naux, IJsq_arr, shell_indices, aux_shell_indices, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, nsignificant):
     # Calculates 3c2e integrals based on a provided list of significant triplets determined using Schwarz inequality
     # It is assumed that the provided list was made with triangular int3c2e in mind
@@ -1577,13 +2023,8 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
                             # ABsrt = np.sqrt(gammaP[ik,jk]*alphakk[kk])
                             # X = PQsq*rho
                             # factor = 2*np.sqrt(rho/pi)
-                            # print('s')
                             val += tempcoeff5*coulomb_rys_3c2e(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L,P)
                             
-                            # The following should have been faster but isnt somehow
-                            # val += tempcoeff5*coulomb_rys_new(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L)
-                            # The following should have been faster but isnt
-                            # val += tempcoeff5*coulomb_rys_fast(roots,weights,G,norder,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik[ik], alphajk[jk], alphakk[kk], alphalk,I,J,K,L,X,gammaP[ik,jk],alphakk[kk],Ap[ik,jk],0.0,ABsrt,factor,P,Q)
                             
             
             threeC2E[offsets[itemp] + index_k] = val
@@ -1591,9 +2032,6 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
                                  
 
     return threeC2E
-
-
-
 
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, boundscheck=False)
 def rys_3c2e_tri_schwarz_sparse_internal_old(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indicesA, indicesB, indicesC, nao, naux, IJsq_arr, shell_indices, aux_shell_indices):
@@ -2592,7 +3030,7 @@ def df_coeff_calculator_algo10_serial(ints3c2e_1d, dmat_1d, indicesA, indicesB, 
     return df_coeff
 
 
-def df_coeff_calculator_algo10_parallel(ints3c2e_1d, dmat_1d, indicesA, indicesB, offsets_3c2e, naux, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, ncores, strict_schwarz, auxbfs_lm):
+def df_coeff_calculator_algo10_parallel(ints3c2e_1d, dmat_1d, indicesA, indicesB, offsets_3c2e, naux, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, ncores, strict_schwarz, auxbfs_lm, auxbfs_lmn):
     # This function calculates the coefficients of the auxiliary basis for
     # density fitting. 
     # This can also be simply calculated using:
@@ -2605,7 +3043,7 @@ def df_coeff_calculator_algo10_parallel(ints3c2e_1d, dmat_1d, indicesA, indicesB
     # nelements = ints3c2e_1d.shape[0]
     batch_size = min(indicesA.shape[0], int(500))
     nbatches = indicesA.shape[0]//batch_size
-    output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size='auto')(delayed(df_coeff_calculator_algo10_parallel_internal)(ints3c2e_1d[offsets_3c2e[ibatch*batch_size] : offsets_3c2e[min(ibatch*batch_size+batch_size, indicesA.shape[0])]], dmat_1d, indicesA[ibatch*batch_size : min(ibatch*batch_size+batch_size,indicesA.shape[0])], indicesB[ibatch*batch_size : min(ibatch*batch_size+batch_size,indicesA.shape[0])], offsets_3c2e[ibatch*batch_size : min(ibatch*batch_size+batch_size,indicesA.shape[0])], naux, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, auxbfs_lm) for ibatch in range(nbatches+1))
+    output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size='auto')(delayed(df_coeff_calculator_algo10_parallel_internal)(ints3c2e_1d[offsets_3c2e[ibatch*batch_size] : offsets_3c2e[min(ibatch*batch_size+batch_size, indicesA.shape[0])]], dmat_1d, indicesA[ibatch*batch_size : min(ibatch*batch_size+batch_size,indicesA.shape[0])], indicesB[ibatch*batch_size : min(ibatch*batch_size+batch_size,indicesA.shape[0])], offsets_3c2e[ibatch*batch_size : min(ibatch*batch_size+batch_size,indicesA.shape[0])], naux, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, auxbfs_lm, auxbfs_lmn) for ibatch in range(nbatches+1))
     df_coeff = np.zeros((naux), dtype=np.float64)
     for ibatch in range(0,len(output)):
         df_coeff += output[ibatch]
@@ -2615,7 +3053,7 @@ def df_coeff_calculator_algo10_parallel(ints3c2e_1d, dmat_1d, indicesA, indicesB
     return df_coeff
 
 @njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True)
-def df_coeff_calculator_algo10_parallel_internal(ints3c2e_1d, dmat_1d, indicesA, indicesB, offsets_3c2e, naux, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, auxbfs_lm):
+def df_coeff_calculator_algo10_parallel_internal(ints3c2e_1d, dmat_1d, indicesA, indicesB, offsets_3c2e, naux, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, auxbfs_lm, auxbfs_lmn):
     # This function calculates the coefficients of the auxiliary basis for
     # density fitting. 
     # This can also be simply calculated using:
@@ -2659,6 +3097,21 @@ def df_coeff_calculator_algo10_parallel_internal(ints3c2e_1d, dmat_1d, indicesA,
             if sqrt_ij*sqrt_diag_ints2c2e[k]>threshold:
                 df_coeff[k] += ints3c2e_1d[offsets_3c2e[ij]-offsets_3c2e[0]+index_k]*dmat_1d[j+offset]  # This leads to race condition
                 index_k += 1 
+        # k = 0
+        # index_k = 0
+        # while k < naux:    
+        #     lmnk = auxbfs_lmn[k]
+        #     tot_ang = lmnk.sum()
+        #     is_first = lmnk[0]==tot_ang
+        #     if is_first:
+        #         if sqrt_ij*sqrt_diag_ints2c2e[k]>threshold:
+        #             # Determine shell size: (L+1)(L+2)/2
+        #             shell_size = (tot_ang + 1) * (tot_ang + 2) // 2
+        #             df_coeff[k:k+shell_size] += ints3c2e_1d[offsets_3c2e[ij]-offsets_3c2e[0]+index_k:offsets_3c2e[ij]-offsets_3c2e[0]+index_k+shell_size]*dmat_1d[j+offset]
+        #             k += shell_size
+        #             index_k += shell_size
+        #             # continue
+                
     return df_coeff
 
 

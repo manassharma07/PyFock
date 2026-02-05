@@ -93,11 +93,11 @@ basis_set_name = 'def2-SVP'
 # basis_set_name = 'cc-pVDZ'
 # basis_set_name = 'ano-rcc'
 
-# auxbasis_name = 'def2-universal-jfit'
+auxbasis_name = 'def2-universal-jfit'
 # auxbasis_name = 'def2-universal-jkfit'
 # auxbasis_name = 'def2-TZVP'
 # auxbasis_name = 'sto-3g'
-auxbasis_name = 'def2-SVP'
+# auxbasis_name = 'def2-SVP'
 # auxbasis_name = '6-31G'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
@@ -106,7 +106,7 @@ auxbasis_name = 'def2-SVP'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -119,7 +119,7 @@ auxbasis_name = 'def2-SVP'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -190,6 +190,7 @@ pyscfGrids = mf.grids
 print('PySCF Grid Size: ', pyscfGrids.weights.shape)
 print('\n\n PySCF Dipole moment')
 dmat = mf.make_rdm1()
+print(dmat.shape)
 mol_dip_pyscf = mf.dip_moment(molPySCF, dmat, unit='AU')
 mf = 0#None
 import psutil
@@ -232,7 +233,7 @@ dftObj.debug = False
 dftObj.sortGrids = False
 dftObj.xc_bf_screen = True
 dftObj.threshold_schwarz = 1e-9
-dftObj.strict_schwarz = True
+dftObj.strict_schwarz = False
 dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
@@ -252,7 +253,7 @@ dftObj.keep_ints3c2e_in_gpu = True
 
 # print(dmat_init)
 # Using PySCF grids to compare the energies
-energyCrysX, dmat = dftObj.scf()
+energyCrysX, dmat_pyfock = dftObj.scf()
 # print(dmat)
 
 # Using CrysX grids 
@@ -268,9 +269,10 @@ print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
 
 print('\n\nPyFock Dipole moment')
 M = Integrals.dipole_moment_mat_symm(basis)
-mol_dip = molCrysX.get_dipole_moment(M, dmat)
+mol_dip = molCrysX.get_dipole_moment(M, dmat_pyfock)
 print('Dipole moment(X, Y, Z, A.U.):', *mol_dip)
 print('Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
+
 
 #Print package versions
 import joblib

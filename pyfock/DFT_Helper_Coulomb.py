@@ -17,7 +17,7 @@ except Exception as e:
 from threadpoolctl import ThreadpoolController, threadpool_info, threadpool_limits
 from opt_einsum import contract
 
-def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, use_gpu=False, keep_ints3c2e_in_gpu=True, threshold_schwarz=1e-9, strict_schwarz=False, rys=True, DF_algo=6, cholesky=True):
+def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T, dmat, use_gpu=False, keep_ints3c2e_in_gpu=True, threshold_schwarz=1e-9, strict_schwarz=False, rys=True, DF_algo=6, cholesky=True):
     startCoulomb = timer()
     if not rys:
         if DF_algo>4:
@@ -45,6 +45,10 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
     cho_decomp_ints2c2e = None
     durationDF_cholesky = 0
 
+    if dftObj.sao:
+        c2sph_mat_aux = auxbasis.cart2sph_basis() # CAO --> SAO
+        sph2c_mat_pseudo_aux = auxbasis.sph2cart_basis() # SAO --> CAO
+
 
     print('Stricter version of Schwarz screening: ', strict_schwarz, flush=True)
     print('\nCalculating three centered two electron and two-centered two-electron integrals...\n\n', flush=True)
@@ -52,6 +56,11 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
         start2c2e = timer()
         if not use_gpu:
             ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
+            if dftObj.sao:
+                # Convert the 2c2e matrix from CAO to SAO basis
+                ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
+                # Convert back to CAO so that now we lose the extra information that the CAO basis had
+                ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
         else:
             ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis)
         duration2c2e = timer() - start2c2e
@@ -429,9 +438,6 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             # print('Percentage of total calculated: ', count_below_threshold/nsignificant*100)
             # ints3c2e[mask] = 0.0
         elif DF_algo==10:
-            # TODO: The Schwarz can also be made more efficient (work on this)
-            # Takes a lot of time and most of the stuff is only done serially
-            # Also gets slower with more number of cores
             print('\n\nPerforming Schwarz screening...')
             # threshold_schwarz = 1e-09
             print('Threshold ', threshold_schwarz)
@@ -446,7 +452,6 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
                 ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             else:
                 ints4c2e_diag = Integrals.schwarz_helpers_cupy.eri_4c2e_diag_cupy(basis)
-            # ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             duration_4c2e_diag = timer() - start_4c2e_diag
             print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
             
@@ -463,6 +468,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
             
             auxbfs_lm = np.array(auxbasis.bfs_lm)
+            aux_bfs_lmn = np.array([auxbasis.bfs_lmn])
 
 
 
@@ -473,7 +479,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
             if use_gpu:
                 offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(cp.asnumpy(sqrt_ints4c2e_diag), cp.asnumpy(sqrt_diag_ints2c2e), threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
             else:
-                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
+                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, auxbfs_lm,  aux_bfs_lmn[0], indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
             nsignificant = np.sum(offsets_3c2e)
             offsets_3c2e = np.cumsum(offsets_3c2e)
             duration_indices_calc += timer() - start_indices_calc
@@ -495,7 +501,10 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
                 if not keep_ints3c2e_in_gpu:
                     ints3c2e = cp.asnumpy(ints3c2e)
             else:
-                ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse_algo10(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
+                if dftObj.sao:
+                    ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse_algo10_sao(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
+                else:
+                    ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse_algo10(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
             
             if strict_schwarz:
                 start_strict_schwarz_nuc_mat = timer()
@@ -538,17 +547,36 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
 
     # Compute the intermediate DF coefficients (df_coeff0) 
     if DF_algo==1:
-        #The following solve step is very sloww and makes the Coulomb time much longer. 
-        df_coeff0 = scipy.linalg.solve(ints2c2e, ints3c2e.reshape(basis.bfs_nao*basis.bfs_nao, auxbasis.bfs_nao).T)
-        df_coeff0 = df_coeff0.reshape(auxbasis.bfs_nao, basis.bfs_nao, basis.bfs_nao)
+        #The following solve step is very sloww and makes the Coulomb time much longer.
+        if dftObj.sao:
+            # Get the CAO to SAO transformation matrix
+            c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
+            # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
+            sph2c_mat_pseudo = basis.sph2cart_basis() # SAO --> CAO
+            # Get the CAO to SAO transformation matrix
+            c2sph_mat_aux = auxbasis.cart2sph_basis() # CAO --> SAO
+            # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
+            sph2c_mat_pseudo_aux = auxbasis.sph2cart_basis() # SAO --> CAO
+            # Convert the 2c2e matrix from CAO to SAO basis
+            ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
+            # Convert back to CAO so that now we lose the extra information that the CAO basis had
+            ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
+            # Convert the 3c2e matrix from CAO to SAO basis
+            # ints3c2e = np.einsum('pm,qn,rk,mnk->pqr', c2sph_mat, c2sph_mat, c2sph_mat_aux, ints3c2e, optimize=True)
+            # Convert back to CAO so that now we lose the extra information that the CAO basis had
+            # ints3c2e = np.einsum('pm,qn,rk,mnk->pqr', sph2c_mat_pseudo, sph2c_mat_pseudo, sph2c_mat_pseudo_aux, ints3c2e, optimize=True)
+            # Convert the only the aux bfs of 3c2e matrix from CAO to SAO basis
+            ints3c2e = np.einsum('rk,mnk->mnr', c2sph_mat_aux, ints3c2e, optimize=True)
+            # Convert back to CAO so that now we lose the extra information that the CAO basis had
+            ints3c2e = np.einsum('rk,mnk->mnr', sph2c_mat_pseudo_aux, ints3c2e, optimize=True)
+        df_coeff0 = scipy.linalg.solve(ints2c2e, ints3c2e.T)
+        
+        
+        
         print('Three Center Two electron ERI size in GB ',ints3c2e.nbytes/1e9, flush=True)
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
         print('Intermediate Auxiliary Density fitting coefficients size in GB ',df_coeff0.nbytes/1e9, flush=True)
 
-    ## Alternative based on Psi4numpy tutorial
-    # https://github.com/psi4/psi4numpy/blob/master/Tutorials/03_Hartree-Fock/density-fitting.ipynb
-    # metric_inverse_sqrt = scipy.linalg.inv(scipy.linalg.sqrtm(ints2c2e))
-    # metric_inverse_sqrt = scipy.linalg.sqrtm(scipy.linalg.inv(ints2c2e))
     if DF_algo==2:
         ##### This version requires double the memory of a 3c2e array, as the result of the scipy solve (Qpq) is also of the same size.
         ##### We later don't require the ints3c2e array and get rid of it to free memory but still we did require it at some point so 
@@ -591,24 +619,6 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
         print('Intermediate Auxiliary Density fitting coefficients size in GB ',Qpq.nbytes/1e9, flush=True)
 
-        ##### Sparse version of above (The solve is very slow and the reshape after solve on sparse matrix doesn't work)
-        # metric_sqrt = scipy.linalg.sqrtm(ints2c2e)
-        # print('Sqrt done!')
-        # ints3c2e_reshape = ints3c2e.reshape(basis.bfs_nao*basis.bfs_nao, auxbasis.bfs_nao).T
-        # print('Reshape done!')
-        # ints3c2e_reshape[np.abs(ints3c2e_reshape) < 1E-09] = 0# fill most of the array with zeros (1E-09 is optimal i guess)
-        # ints3c2e_reshape_sparse = csc_matrix(ints3c2e_reshape)
-        # metric_sqrt[np.abs(metric_sqrt) < 1E-09] = 0# fill most of the array with zeros (1E-09 is optimal i guess)
-        # metric_sqrt_sparse = csc_matrix(metric_sqrt)
-        # print('Sparsification done!')
-        # print('ints3c2e Sparse size in GB ',(ints3c2e_reshape_sparse.data.nbytes + ints3c2e_reshape_sparse.indptr.nbytes + ints3c2e_reshape_sparse.indices.nbytes)/1e9, flush=True)
-        # # Sparse solve
-        # Qpq_sparse = scipy.sparse.linalg.spsolve(metric_sqrt_sparse, ints3c2e_reshape_sparse)
-        # print('Sparse Solve done!')
-        # Qpq_sparse =  Qpq_sparse.reshape(auxbasis.bfs_nao, basis.bfs_nao, basis.bfs_nao)
-        # print('Reshape done!')
-        # print('Qpq Sparse size in GB ',(Qpq_sparse.data.nbytes + Qpq_sparse.indptr.nbytes + Qpq_sparse.indices.nbytes)/1e9, flush=True)
-        # Qpq = sparse.COO.from_scipy_sparse(Qpq_sparse)
 
     if DF_algo==3: # Best algorithm (Memory efficient and fast without any prefactor linalg.solve)
         #https://aip.scitation.org/doi/pdf/10.1063/1.1567253
@@ -625,16 +635,6 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, T, dmat, u
 
     print('Three-centered two electron evaluation done!', flush=True)
 
-    ### TESTING SOME SPARSE STUFF
-    # Unfortunately, the current settings only provide small memory savings and the error is also quite large (0.00001 Ha)
-    # Anyway this is not very useful as we are making a sparse array from an already calculated array which may not fit into memory
-    # So I don't see much use for this right now.
-    # df_coeff0[np.abs(df_coeff0) < 1E-09] = 0# fill most of the array with zeros (1E-09 is optimal i guess)
-    # df_coeff0_sp = sparse.COO(df_coeff0)  # convert to sparse array
-    # ints3c2e[np.abs(ints3c2e) < 1E-07] = 0# fill most of the array with zeros (1E-07 is optimal i guess) 
-    # ints3c2e_sp = sparse.COO(ints3c2e)  # convert to sparse array
-    # print('Sparse Three Center Two electron ERI size in GB ',ints3c2e_sp.nbytes/1e9, flush=True)
-    # print('Intermediate Sparse Auxiliary Density fitting coefficients size in GB ',df_coeff0_sp.nbytes/1e9, flush=True)
 
     if cholesky:
         startDF_cholesky = timer()
@@ -755,6 +755,7 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         dmat_tri = dmat_temp[indices_dmat_tri]
         startDF_gamma = timer()
         auxbfs_lm = np.array(auxbasis.bfs_lm)
+        auxbfs_lmn = np.array(auxbasis.bfs_lmn)
         if use_gpu:
             ints3c2e_cp = cp.asarray(ints3c2e)
             dmat_tri_cp = cp.array(dmat_tri)
@@ -766,7 +767,8 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         else:
             # df_coeff_1 = contract('pP,p->P', ints3c2e, dmat_tri) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
             # gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_serial(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-            gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_parallel(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, ncores, strict_schwarz, auxbfs_lm) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
+            gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_parallel(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, ncores, strict_schwarz, auxbfs_lm, auxbfs_lmn) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
+            
         # gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_parallel(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, ncores, strict_schwarz, auxbfs_lm) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
         durationDF_gamma += timer() - startDF_gamma
         startDF_coeff = timer()
@@ -774,7 +776,7 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
             # print('Density fitting', controller.info())
             if not cholesky:
                 if not use_gpu:
-                    df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, assume_a='pos', overwrite_a=False, overwrite_b=False)
+                    df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, overwrite_a=False, overwrite_b=False)
                 else:
                     df_coeff = cp.linalg.solve(ints2c2e, gamma_alpha)
                     # print(df_coeff[0:10])

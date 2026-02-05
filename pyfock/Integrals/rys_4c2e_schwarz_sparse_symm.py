@@ -107,7 +107,7 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn,
     ints4c2e_indices = []
     for i in range(nbf):
         ints4c2e_values.append(np.zeros(counts[i], dtype=np.float64))
-        ints4c2e_indices.append(np.zeros((counts[i], 3), dtype=np.uint32))
+        ints4c2e_indices.append(np.zeros((counts[i], 3), dtype=np.uint16))
     
     # Pass 2: Compute integrals
     pi = np.pi

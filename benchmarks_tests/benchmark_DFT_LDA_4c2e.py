@@ -79,8 +79,8 @@ funcidpyscf = str(funcx)+','+str(funcc)
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
-basis_set_name = '6-31G'
-# basis_set_name = 'def2-SVP'
+# basis_set_name = '6-31G'
+basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
 # basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
@@ -100,7 +100,7 @@ basis_set_name = '6-31G'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -113,7 +113,7 @@ basis_set_name = '6-31G'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -215,7 +215,7 @@ dftObj.XC_algo = 2
 dftObj.debug = False
 dftObj.sortGrids = False
 dftObj.xc_bf_screen = True
-# dftObj.threshold_schwarz = 1e-9
+dftObj.threshold_schwarz = 1e-9
 dftObj.strict_schwarz = False
 # dftObj.cholesky = True
 dftObj.orthogonalize = True

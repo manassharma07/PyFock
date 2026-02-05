@@ -256,6 +256,10 @@ class Basis:
         """Atom index corresponding to each basis function.
         Type: List[int]
         """
+        self.sao = False
+        """Determines if CAO (6 d functions) or SAO (5 d functions) basis is used.
+        Type: Boolean
+        """
         #---------------------------------
         #If all data was parsed successfully.
         self.success = False
