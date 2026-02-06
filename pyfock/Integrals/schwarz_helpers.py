@@ -417,7 +417,7 @@ def calc_offsets_3c2e_schwarz_n(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshol
     offsets = np.zeros((ntri+1), dtype=np.uint16)
     offsets[0] = 0
     # Loop over the lower-triangular ints3c2e array
-    for ij in range(ntri):
+    for ij in prange(ntri):
         i = tril_indicesA[ij]
         j = tril_indicesB[ij]
         sqrt_ij = sqrt_ints4c2e_diag[i,j] 
