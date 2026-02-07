@@ -28,9 +28,9 @@ Vmat_temp = Integrals.rys_4c2e_schwarz_symm(basis_temp)
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
-# basis_set_name = 'def2-SVP'
+basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-DZVP'
-basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
 # basis_set_name = 'def2-TZVPPD'
 # basis_set_name = 'def2-QZVPPD'
@@ -67,8 +67,8 @@ basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
 # print('4c2e ERI array (Conventional Algorithm)\n')
 # print('NAO: ', basis.bfs_nao)
 # start=timer()
-# #NOTE: The matrices are calculated in CAO basis and not the SAO basis
-# #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+# #NOTE: The tensors are calculated in CAO basis and not the SAO basis
+# #You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
 # ERI_conv = Integrals.conv_4c2e_symm(basis)
 # print(ERI_conv[0:7,0:7,0,0]) 
 # duration = timer() - start
@@ -76,40 +76,40 @@ basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
 
 
 #Let's calculate the complete ERI array using the MMD algorithm
-print('\n\n\n')
-print('Integrals')
-print('4c2e ERI array (MMD) (Unstable as gives segmentation fault on the second run if caching is enabled)\n')
-print('NAO: ', basis.bfs_nao)
-start=timer()
-#NOTE: The matrices are calculated in CAO basis and not the SAO basis
-#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_mmd = Integrals.mmd_4c2e_symm(basis)
-print(ERI_mmd[0:7,0:7,0,0]) 
-duration = timer() - start
+# print('\n\n\n')
+# print('Integrals')
+# print('4c2e ERI array (MMD) (Unstable as gives segmentation fault on the second run if caching is enabled)\n')
+# print('NAO: ', basis.bfs_nao)
+# start=timer()
+# #NOTE: The tensors are calculated in CAO basis and not the SAO basis
+# #You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
+# ERI_mmd = Integrals.mmd_4c2e_symm(basis)
+# print(ERI_mmd[0:7,0:7,0,0]) 
+# duration = timer() - start
 # print(abs(ERI_conv - ERI_mmd).max())
-print('Duration for ERI using PyFock MMD algorithm: ',duration)
+# print('Duration for ERI using PyFock MMD algorithm: ',duration)
 
-print('\n\n\n')
-print('Integrals')
-print('4c2e ERI array (MMD) (second run)\n')
-print('NAO: ', basis.bfs_nao)
-start=timer()
-#NOTE: The matrices are calculated in CAO basis and not the SAO basis
-#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_mmd = Integrals.mmd_4c2e_symm(basis)
-print(ERI_mmd[0:7,0:7,0,0]) 
-duration = timer() - start
+# print('\n\n\n')
+# print('Integrals')
+# print('4c2e ERI array (MMD) (second run)\n')
+# print('NAO: ', basis.bfs_nao)
+# start=timer()
+# #NOTE: The tensors are calculated in CAO basis and not the SAO basis
+# #You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
+# ERI_mmd = Integrals.mmd_4c2e_symm(basis)
+# print(ERI_mmd[0:7,0:7,0,0]) 
+# duration = timer() - start
 # print(abs(ERI_conv - ERI_mmd).max())
-print('Duration for ERI using PyFock MMD algorithm: ',duration)
+# print('Duration for ERI using PyFock MMD algorithm: ',duration)
 
-#Let's calculate the complete ERI array using the Rys algorithm
+#Let's calculate the complete ERI array using the older version of Rys algorithm
 # print('\n\n\n')
 # print('Integrals')
 # print('4c2e ERI array (Rys Old)\n')
 # print('NAO: ', basis.bfs_nao)
 # start=timer()
-# #NOTE: The matrices are calculated in CAO basis and not the SAO basis
-# #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+# #NOTE: The tensors are calculated in CAO basis and not the SAO basis
+# #You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
 # ERI_rys_old = Integrals.rys_4c2e_symm_old(basis)
 # print(ERI_rys_old[0:7,0:7,0,0]) 
 # duration = timer() - start
@@ -122,12 +122,12 @@ print('Integrals')
 print('4c2e ERI array (Rys New)\n')
 print('NAO: ', basis.bfs_nao)
 start=timer()
-#NOTE: The matrices are calculated in CAO basis and not the SAO basis
-#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+#NOTE: The tensors are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
 ERI_rys = Integrals.rys_4c2e_symm(basis)
 print(ERI_rys[0:7,0:7,0,0]) 
 duration = timer() - start
-print(abs(ERI_conv - ERI_rys).max())
+# print(abs(ERI_conv - ERI_rys).max())
 print('Duration for ERI using PyFock Rys algorithm: ',duration)
 
 
@@ -137,20 +137,9 @@ print('Integrals')
 print('4c2e ERI array (Rys New + Schwarz Screening)\n')
 print('NAO: ', basis.bfs_nao)
 start=timer()
-start_4c2e_diag = timer()
-# Diagonal elements of ERI 4c2e array
-ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
-duration_4c2e_diag = timer() - start_4c2e_diag
-print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
-# Calculate the square roots required for 
-duration_square_roots = 0.0
-start_square_roots = timer()
-sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-duration_square_roots = timer() - start_square_roots
-print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
-#NOTE: The matrices are calculated in CAO basis and not the SAO basis
-#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_rys_schwarz = Integrals.rys_4c2e_schwarz_symm(basis, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag)
+#NOTE: The tensors are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
+ERI_rys_schwarz = Integrals.rys_4c2e_schwarz_symm(basis, threshold_schwarz=1e-9)
 print(ERI_rys_schwarz[0:7,0:7,0,0]) 
 duration = timer() - start
 # print(abs(ERI_conv - ERI_rys_schwarz).max())
@@ -180,6 +169,6 @@ print('Array dimensions: ', ERI_pyscf.shape)
 
 print(abs(ERI_pyscf - ERI_rys_schwarz).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
 print(abs(ERI_pyscf - ERI_rys).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
-print(abs(ERI_pyscf - ERI_rys_old).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
+# print(abs(ERI_pyscf - ERI_rys_old).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
 print(abs(ERI_pyscf - ERI_conv).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
-# print(abs(ERI_pyscf - ERI_mmd).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
+print(abs(ERI_pyscf - ERI_mmd).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.

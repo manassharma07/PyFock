@@ -129,7 +129,6 @@ def rys_4c2e_symm(basis, slice=None):
 
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
 def rys_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD, indx_endD):
-    #  Based on Rys Quadrature from https://github.com/rpmuller/MolecularIntegrals.jl
     # This function calculates the 4D electron-electron repulsion integrals (ERIs) array for a given basis object and mol object.
     # This uses 8 fold symmetry to only calculate the unique elements and assign the rest via symmetry
     # The basis object holds the information of basis functions like: exponents, coeffs, etc.

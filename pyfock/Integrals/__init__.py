@@ -63,6 +63,7 @@ from .rys_3c2e_symm_cupy import rys_3c2e_symm_cupy
 from .rys_3c2e_symm_cupy_fp32 import rys_3c2e_symm_cupy_fp32
 from .conv_2c2e_symm import conv_2c2e_symm
 from .rys_2c2e_symm import rys_2c2e_symm
+from .rys_2c2e_diag import rys_2c2e_diag
 from .rys_2c2e_symm_cupy import rys_2c2e_symm_cupy
 from .rys_3c2e_tri import rys_3c2e_tri
 from .rys_nuc_mat_symm import rys_nuc_mat_symm
@@ -90,7 +91,7 @@ __all__ = ['integral_helpers', 'mmd_nuc_mat_symm', 'nuc_mat_symm', 'kin_mat_symm
         'bf_val_helpers', 'eval_xc_1', 'eval_xc_2', 'eval_xc_3', 'eval_xc_1_cupy', 'eval_xc_2_cupy', 'eval_xc_3_cupy', 'dipole_moment_mat_symm', 'kin_mat_symm_cupy'\
         , 'overlap_mat_symm_cupy', 'dipole_moment_mat_symm_cupy', 'nuc_mat_symm_cupy', 'kin_mat_symm_shell_cupy', 'rys_2c2e_symm_cupy', 'rys_3c2e_symm_cupy',\
         'rys_3c2e_symm_cupy_fp32', 'schwarz_helpers_cupy', 'overlap_mat_grad_symm', 'kin_mat_grad_symm', 'nuc_mat_grad_symm', 'cross_overlap_mat_symm', 'rys_coulomb_matrix',\
-         'rys_4c2e_schwarz_sparse_symm', 'rys_coulomb_matrix_sparse', 'rys_coulomb_matrix_sparse_v2']
+         'rys_4c2e_schwarz_sparse_symm', 'rys_coulomb_matrix_sparse', 'rys_coulomb_matrix_sparse_v2', 'rys_2c2e_diag']
 
 # # This code will import all of the modules in the library directory and expose all of 
 # # the functions in those modules to the user. The user can then use the functions just 

@@ -3,11 +3,14 @@ from numba import njit, prange
 
 from .integral_helpers import innerLoop4c2e
 from .rys_helpers import coulomb_rys
+from .rys_helpers import coulomb_rys_3c2e
+from .rys_helpers import coulomb_rys_3c2e_new
 from .schwarz_helpers import eri_4c2e_diag
 from .rys_2c2e_symm import rys_2c2e_symm
+from .rys_2c2e_diag import rys_2c2e_diag
 
 
-def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, schwarz_threshold=1e-9):
+def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, threshold_schwarz=1e-9):
     """
     Compute three-center two-electron (3c2e) electron repulsion integrals using
     the Rys quadrature method with symmetry considerations.
@@ -45,9 +48,9 @@ def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, schwarz_threshold=
 
     schwarz : bool, optional
         If True, applies Schwarz screening to skip calculations where the 
-        product of integral bounds is below `schwarz_threshold`.
+        product of integral bounds is below `threshold_schwarz`.
 
-    schwarz_threshold : float, optional
+    threshold_schwarz : float, optional
         The threshold for Schwarz screening (default is 1e-9).
 
     Returns
@@ -71,7 +74,7 @@ def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, schwarz_threshold=
     --------
     >>> ints = rys_3c2e_symm(basis, auxbasis)
     >>> ints_block = rys_3c2e_symm(basis, auxbasis, slice=[0, 5, 0, 5, 0, 10])
-    >>> ints_screened = rys_3c2e_symm(basis, auxbasis, schwarz=True, schwarz_threshold=1e-10)
+    >>> ints_screened = rys_3c2e_symm(basis, auxbasis, schwarz=True, threshold_schwarz=1e-10)
     """
     # Here the lists are converted to numpy arrays for better use with Numba.
     # Once these conversions are done we pass these to a Numba decorated
@@ -139,24 +142,23 @@ def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, schwarz_threshold=
 
     if schwarz:
         ints4c2e_diag = eri_4c2e_diag(basis)
-        ints2c2e = rys_2c2e_symm(auxbasis)
+        ints2c2e_diag = rys_2c2e_diag(auxbasis)
         sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-        sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
+        sqrt_diag_ints2c2e = np.sqrt(np.abs(ints2c2e_diag))
         print('Prelims calc done for Schwarz screening!')
     else:
         #Create dummy array
         sqrt_ints4c2e_diag = np.zeros((1,1), dtype=np.float64)
         sqrt_diag_ints2c2e = np.zeros((1), dtype=np.float64)
 
-    ints3c2e = rys_3c2e_symm_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts,indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, schwarz, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, schwarz_threshold)
+    ints3c2e = rys_3c2e_symm_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts,indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, schwarz, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz)
     return ints3c2e
 
-@njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
-def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, schwarz, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, schwarz_threshold):
+@njit(parallel=True, cache=True, fastmath=True, nogil=True, error_model="numpy")
+def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, schwarz, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz):
     # This function calculates the three-centered two electron integrals for density fitting
     # The basis object holds the information of basis functions like: exponents, coeffs, etc.
     
-    # The integrals are performed using the formulas https://pubs.acs.org/doi/full/10.1021/acs.jchemed.8b00255
     # returns (AB|P) 
     
     # Infer the matrix shape from the start and end indices
@@ -195,28 +197,26 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
         lmni = bfs_lmn[i]
         la, ma, na = lmni
         nprimi = bfs_nprim[i]
-        
+        roots = np.zeros((10))
+        weights = np.zeros((10))
+        G = np.zeros((20,20))
         for j in prange(indx_startB, indx_endB): #B
             if (tri_symm and j<=i) or no_symm:
                 if schwarz:
                     sqrt_ints4c2e_diag_ij = sqrt_ints4c2e_diag[i,j]
                 J = bfs_coords[j]
                 IJ = np.zeros((3))
-                # IJ = I - J
-                # IJsq = np.sum(IJ**2)
-                IJ[0] = I[0] - J[0]
-                IJ[1] = I[1] - J[1]
-                IJ[2] = I[2] - J[2]
-                IJsq = IJ[0]**2 + IJ[1]**2 + IJ[2]**2
+                IJ = I - J
+                IJsq = np.sum(IJ**2)
                 Nj = bfs_contr_prim_norms[j]
                 lmnj = bfs_lmn[j]
                 lb, mb, nb = lmnj
                 tempcoeff1 = Ni*Nj
                 nprimj = bfs_nprim[j]
                 
-                for k in prange(indx_startC, indx_endC): #C
+                for k in range(indx_startC, indx_endC): #C
                     if schwarz:
-                        if sqrt_ints4c2e_diag_ij*sqrt_diag_ints2c2e[k]<schwarz_threshold:
+                        if sqrt_ints4c2e_diag_ij*sqrt_diag_ints2c2e[k]<threshold_schwarz:
                             continue
                     PQ = np.zeros((3))
                     K = aux_bfs_coords[k]
@@ -237,9 +237,9 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                     if norder<=10: # Use rys quadrature # Good for upto i orbitals
                         n = int(max(la+lb,ma+mb,na+nb))
                         m = int(max(lc+ld,mc+md,nc+nd))
-                        roots = np.zeros((norder))
-                        weights = np.zeros((norder))
-                        G = np.zeros((n+1,m+1))
+                        # roots = np.zeros((norder))
+                        # weights = np.zeros((norder))
+                        # G = np.zeros((n+1,m+1))
                         
                         #Loop over primitives
                         for ik in range(nprimi):   
@@ -268,26 +268,22 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                                         
                                         
                                     gammaQ = alphakk #+ alphalk
-                                    # screenfactorKL = np.exp(-alphakk*alphalk/gammaQ*KLsq)
-                                    # if abs(screenfactorKL)<1.0e-8:   
-                                    #     #TODO: Check for optimal value for screening
-                                    #     continue
-                                    # if abs(screenfactorAB*screenfactorKL)<1.0e-10:   
-                                    #     #TODO: Check for optimal value for screening
-                                    #     continue
                                     
                                     Q = K        
-                                    PQ[0] = P[0] - Q[0]
-                                    PQ[1] = P[1] - Q[1]
-                                    PQ[2] = P[2] - Q[2]
-                                    PQsq = PQ[0]**2 + PQ[1]**2 + PQ[2]**2
+                                    PQ = P - Q
+                                    PQsq = np.sum(PQ**2)
                                     rho = gammaP*gammaQ/(gammaP+gammaQ)
                                             
                                             
                                             
                                             
-                                    val += tempcoeff5*coulomb_rys(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L)
-                                        
+                                    # val += tempcoeff5*coulomb_rys(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L)
+                                    val += tempcoeff5 * coulomb_rys_3c2e_new(
+                                                roots, weights, G, PQsq, rho, norder, n, m,
+                                                la, lb, lc, 0, ma, mb, mc, 0, na, nb, nc, 0,
+                                                alphaik, alphajk, alphakk, alphalk,
+                                                I, J, K, L, P
+                                            )   
 
                     else: # Analytical (Conventional)
                         KLsq = np.sum(KL**2)
@@ -322,13 +318,6 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                                         
                                     
                                     gammaQ = alphakk #+ alphalk
-                                    screenfactorKL = np.exp(-alphakk*alphalk/gammaQ*KLsq)
-                                    if abs(screenfactorKL)<1.0e-8:   
-                                        #TODO: Check for optimal value for screening
-                                        continue
-                                    if abs(screenfactorAB*screenfactorKL)<1.0e-10:   
-                                        #TODO: Check for optimal value for screening
-                                        continue
                                     
                                     Q = K#(alphakk*K + alphalk*L)/gammaQ        
                                     PQ = P - Q

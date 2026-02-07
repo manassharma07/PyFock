@@ -8,7 +8,7 @@ except Exception as e:
     pass
 
 from .integral_helpers import innerLoop4c2e
-from .rys_helpers import coulomb_rys, coulomb_rys_fast, coulomb_rys_new, coulomb_rys_3c2e
+from .rys_helpers import coulomb_rys, coulomb_rys_fast, coulomb_rys_new, coulomb_rys_3c2e, coulomb_rys_3c2e_new
 from .integral_helpers import Fboys
 
 from joblib import Parallel, delayed
@@ -794,6 +794,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao(basis, auxbasis, indicesA, indicesB, 
 
     # print('preprocessing done', flush=True)
     # exit()
+
     
     ints3c2e = rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
                 bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], \
@@ -1750,6 +1751,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
     # https://kops.uni-konstanz.de/server/api/core/bitstreams/79ada61a-fd29-43fd-a298-79c1696a0601/content
     # https://aip.scitation.org/doi/10.1063/1.4917519
 
+
     threeC2E = np.zeros((nsignificant), dtype=np.float64) 
     
     a = 10/19
@@ -1978,13 +1980,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
                 m = int(max(lc+ld,mc+md,nc+nd))
                 # roots = np.zeros((norder)) 
                 # weights = np.zeros((norder)) 
-                # G = np.zeros((n+1,m+1)) 
-                # roots = np.zeros((10)) 
-                # weights = np.zeros((10)) 
                 # G = np.zeros((n+1,m+1))
-                roots[:] = 0.0
-                weights[:] = 0.0
-                G[:, :] = 0.0
                 
                     
                 #Loop over primitives
@@ -2052,6 +2048,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
                             # factor = 2*np.sqrt(rho/pi)
                             # print('s')
                             val += tempcoeff5*coulomb_rys_3c2e(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L,P)
+                            # val += tempcoeff5*coulomb_rys_3c2e_new(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L,P)
                             
             # threeC2E[offsets[itemp] + index_k] = val
             if tot_ang == 0 or tot_ang == 1: # s or p functions
@@ -2143,7 +2140,9 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
         if strict_schwarz:
             if sqrt_ij*sqrt_ij<1e-13:
                 continue  
-
+        # roots = np.zeros((10)) 
+        # weights = np.zeros((10))  
+        # G = np.zeros((20, 20)) 
         # ishell = shell_indices[i]
         
         Ni = bfs_contr_prim_norms[i]
@@ -2155,6 +2154,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
         I = bfs_coords[i]
 
         # jshell = shell_indices[j]
+
         
         Nj = bfs_contr_prim_norms[j]
         nprimj = bfs_nprim[j]
@@ -2245,12 +2245,10 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
                 
                 n = int(max(la+lb,ma+mb,na+nb))
                 m = int(max(lc+ld,mc+md,nc+nd))
-                # roots = np.zeros((norder)) 
-                # weights = np.zeros((norder)) 
-                roots = np.zeros((10)) 
-                weights = np.zeros((10)) 
-                # G = np.zeros((n+1,m+1)) 
-                G = np.zeros((n+1,m+1)) 
+                roots = np.zeros((norder)) 
+                weights = np.zeros((norder)) 
+                G = np.zeros((n+1,m+1))
+                
                 
                     
                 #Loop over primitives
@@ -2317,6 +2315,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal(bfs_coords, bfs_contr_prim_norms
                             # X = PQsq*rho
                             # factor = 2*np.sqrt(rho/pi)
                             val += tempcoeff5*coulomb_rys_3c2e(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L,P)
+                            # val += tempcoeff5*coulomb_rys_3c2e_new(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik_, alphajk_,alphakk[kk],alphalk,I,J,K,L,P)
                             
                             
             

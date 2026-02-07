@@ -113,15 +113,15 @@ def coulomb_rys_3c2e_new(roots, weights, G, rpq2, rho, norder, n, m, la, lb, lc,
         root_i = roots[i]
         weight_i = weights[i]
         
-        G = Recur_3c2e(G, root_i, la, lb, lc, ld, I[0], J[0], K[0], L[0], 
+        G = Recur_3c2e_new(G, root_i, la, lb, lc, ld, I[0], J[0], K[0], L[0], 
                        alphaik, alphajk, alphakk, alphalk, A, B, Ap, ABsrt)
         Ix = Shift_3c2e(G, la, lb, lc, ld, IJ_0)
         
-        G = Recur_3c2e(G, root_i, ma, mb, mc, md, I[1], J[1], K[1], L[1], 
+        G = Recur_3c2e_new(G, root_i, ma, mb, mc, md, I[1], J[1], K[1], L[1], 
                        alphaik, alphajk, alphakk, alphalk, A, B, Ap, ABsrt)
         Iy = Shift_3c2e(G, ma, mb, mc, md, IJ_1)
         
-        G = Recur_3c2e(G, root_i, na, nb, nc, nd, I[2], J[2], K[2], L[2], 
+        G = Recur_3c2e_new(G, root_i, na, nb, nc, nd, I[2], J[2], K[2], L[2], 
                        alphaik, alphajk, alphakk, alphalk, A, B, Ap, ABsrt)
         Iz = Shift_3c2e(G, na, nb, nc, nd, IJ_2)
         

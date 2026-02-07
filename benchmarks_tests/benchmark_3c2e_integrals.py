@@ -7,8 +7,10 @@ import numpy as np
 import numba 
 import os
 
-ncores = 4
-bench_GPU = True
+ncores = 8
+
+bench_GPU = False
+
 
 numba.set_num_threads(ncores)
 os.environ['OMP_NUM_THREADS'] = str(ncores)
@@ -36,10 +38,10 @@ basis_set_name = 'def2-SVP'
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 # xyzFilename = 'H2O.xyz'
 # xyzFilename = 'Zn_dimer.xyz'
-xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'Serotonin.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -64,21 +66,21 @@ auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=auxbasisName)})
 #Now we can calculate integrals using different algorithms
 
 #Let's calculate the complete ERI array using the explicit conventional formula (Slow)
-print('\n\n\n')
-print('Integrals')
-print('3c2e ERI array (Conventional Algorithm)\n')
-print('NAO: ', basis.bfs_nao)
-print('NAO (aux): ', auxbasis.bfs_nao)
-start=timer()
-#NOTE: The matrices are calculated in CAO basis and not the SAO basis
-#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_conv = Integrals.conv_3c2e_symm(basis, auxbasis)
-print(ERI_conv[0:7,0:7,0]) 
-duration = timer() - start
-print('Duration for 3c2e ERI using PyFock Conventional algorithm: ',duration)
+# print('\n\n\n')
+# print('Integrals')
+# print('3c2e ERI array (Conventional Algorithm)\n')
+# print('NAO: ', basis.bfs_nao)
+# print('NAO (aux): ', auxbasis.bfs_nao)
+# start=timer()
+# #NOTE: The matrices are calculated in CAO basis and not the SAO basis
+# #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+# ERI_conv = Integrals.conv_3c2e_symm(basis, auxbasis)
+# print(ERI_conv[0:7,0:7,0]) 
+# duration = timer() - start
+# print('Duration for 3c2e ERI using PyFock Conventional algorithm: ',duration)
 
 
-#Let's calculate the complete 3c2e ERI array using the Rys algorithm
+# Let's calculate the complete 3c2e ERI array using the Rys algorithm
 print('\n\n\n')
 print('Integrals')
 print('3c2e ERI array (Rys)\n')
@@ -90,8 +92,22 @@ start=timer()
 ERI_rys = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=False)
 print(ERI_rys[0:7,0:7,0]) 
 duration = timer() - start
-print(abs(ERI_conv - ERI_rys).max())
+# print(abs(ERI_conv - ERI_rys).max())
 print('Duration for 3c2e ERI using PyFock Rys algorithm: ',duration)
+
+print('\n\n\n')
+print('Integrals')
+print('3c2e ERI array (Rys with Schwarz screening)\n')
+print('NAO: ', basis.bfs_nao)
+print('NAO (aux): ', auxbasis.bfs_nao)
+start=timer()
+#NOTE: The matrices are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+ERI_rys_schwarz = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True)
+print(ERI_rys[0:7,0:7,0]) 
+duration = timer() - start
+print(abs(ERI_rys - ERI_rys_schwarz).max())
+print('Duration for 3c2e ERI using PyFock Rys algorithm with Schwarz screening: ',duration)
 
 if bench_GPU:
     print('\n\n\n')
@@ -135,13 +151,14 @@ molPySCF.build()
 
 auxmol = df.addons.make_auxmol(molPySCF, auxbasisName)
 
+print('\n\nPySCF')
 #ERI array/tensor
 start=timer()
 ERI_pyscf = df.incore.aux_e2(molPySCF, auxmol, intor='int3c2e')
+# ERI_pyscf = df.incore.aux_e2(molPySCF, auxmol, intor='int3c2e', aosym='s2')
 duration = timer() - start
-print('\n\nPySCF')
-print(ERI_pyscf[0:7,0:7,0])
-print('Array dimensions: ', ERI_pyscf.shape)
 print('Duration for 3c2e ERI using PySCF: ',duration)
+print('Array dimensions: ', ERI_pyscf.shape)
+print(ERI_pyscf[0:7,0:7,0])
 print(abs(ERI_pyscf - ERI_conv).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
 # print(abs(ERI_pyscf - ERI_mmd).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.

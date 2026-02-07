@@ -2,8 +2,9 @@ import numpy as np
 from numba import njit, prange
 
 from .rys_helpers import coulomb_rys
+from .schwarz_helpers import eri_4c2e_diag
 
-def rys_4c2e_schwarz_symm(basis, slice=None, sqrt_ints4c2e_diag=None, threshold=1e-9):
+def rys_4c2e_schwarz_symm(basis, slice=None, threshold_schwarz=1e-9):
     """
     Compute four-center two-electron (4c2e) electron repulsion integrals (ERIs) 
     using the Rys quadrature method with exploitation of 8-fold permutational 
@@ -122,21 +123,17 @@ def rys_4c2e_schwarz_symm(basis, slice=None, sqrt_ints4c2e_diag=None, threshold=
     indx_startD = int(slice[6])
     indx_endD = int(slice[7])
 
-    if sqrt_ints4c2e_diag is None:
-        #Create dummy array
-        sqrt_ints4c2e_diag = np.zeros((1,1), dtype=np.float64)
-        isSchwarz = False
-    else:
-        isSchwarz = True
+    ints4c2e_diag = eri_4c2e_diag(basis)    
+    sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
+    isSchwarz = True
 
     ints4c2e = rys_4c2e_schwarz_symm_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,\
-        indx_startA,indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD,indx_endD, sqrt_ints4c2e_diag, isSchwarz, threshold)
+        indx_startA,indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD,indx_endD, sqrt_ints4c2e_diag, isSchwarz, threshold_schwarz)
 
     return ints4c2e
 
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
 def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD, indx_endD, sqrt_ints4c2e_diag, isSchwarz = False, threshold=1e-9):
-    #  Based on Rys Quadrature from https://github.com/rpmuller/MolecularIntegrals.jl
     # This function calculates the 4D electron-electron repulsion integrals (ERIs) array for a given basis object and mol object.
     # This uses 8 fold symmetry to only calculate the unique elements and assign the rest via symmetry
     # The basis object holds the information of basis functions like: exponents, coeffs, etc.
@@ -195,6 +192,8 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bf
                         triangle2ij = (i)*(i+1)/2+j
                 if isSchwarz:
                     sqrt_ij = sqrt_ints4c2e_diag[i,j]
+                    if sqrt_ij < threshold: # Loose check
+                        continue
                 J = bfs_coords[j]
                 IJ = I - J
                 IJsq = np.sum(IJ**2)
@@ -224,7 +223,9 @@ def rys_4c2e_schwarz_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bf
                                     continue
                             if isSchwarz:
                                 sqrt_kl = sqrt_ints4c2e_diag[k,l]
-                                if sqrt_ij*sqrt_kl<1e-9:
+                                if sqrt_kl < threshold: # Loose check
+                                    continue
+                                if sqrt_ij*sqrt_kl<threshold:
                                     continue
                             L = bfs_coords[l]
                             KL = K - L  

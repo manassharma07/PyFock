@@ -296,9 +296,6 @@ def mmd_4c2e_symm_internal2(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim
     # This uses 8 fold symmetry to only calculate the unique elements and assign the rest via symmetry
     # The basis object holds the information of basis functions like: exponents, coeffs, etc.
     
-    # The integrals are performed using the formulas https://pubs.acs.org/doi/full/10.1021/acs.jchemed.8b00255
-    # Some useful resources:
-    # https://chemistry.stackexchange.com/questions/71527/how-does-one-compute-the-number-of-unique-2-electron-integrals-for-a-given-basis
     # returns (AB|CD) 
 
     # Infer the matrix shape from the start and end indices
