@@ -27,10 +27,10 @@ Vmat_temp = Integrals.rys_4c2e_schwarz_symm(basis_temp)
 # basis_set_name = '6-31G'
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
-basis_set_name = 'sto-6g'
+# basis_set_name = 'sto-6g'
 # basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-DZVP'
-# basis_set_name = 'def2-TZVP'
+basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
 # basis_set_name = 'def2-TZVPPD'
 # basis_set_name = 'def2-QZVPPD'
@@ -41,10 +41,10 @@ basis_set_name = 'sto-6g'
 # xyzFilename = 'H2O.xyz'
 # xyzFilename = 'Zn.xyz'
 # xyzFilename = 'Zn_dimer.xyz'
-# xyzFilename = 'Ethane.xyz'
+xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'Serotonin.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -76,18 +76,31 @@ basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
 
 
 #Let's calculate the complete ERI array using the MMD algorithm
-# print('\n\n\n')
-# print('Integrals')
-# print('4c2e ERI array (MMD) (Unstable as gives segmentation fault on the second run)\n')
-# print('NAO: ', basis.bfs_nao)
-# start=timer()
-# #NOTE: The matrices are calculated in CAO basis and not the SAO basis
-# #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-# ERI_mmd = Integrals.mmd_4c2e_symm(basis)
-# print(ERI_mmd[0:7,0:7,0,0]) 
-# duration = timer() - start
+print('\n\n\n')
+print('Integrals')
+print('4c2e ERI array (MMD) (Unstable as gives segmentation fault on the second run if caching is enabled)\n')
+print('NAO: ', basis.bfs_nao)
+start=timer()
+#NOTE: The matrices are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+ERI_mmd = Integrals.mmd_4c2e_symm(basis)
+print(ERI_mmd[0:7,0:7,0,0]) 
+duration = timer() - start
 # print(abs(ERI_conv - ERI_mmd).max())
-# print('Duration for ERI using PyFock MMD algorithm: ',duration)
+print('Duration for ERI using PyFock MMD algorithm: ',duration)
+
+print('\n\n\n')
+print('Integrals')
+print('4c2e ERI array (MMD) (second run)\n')
+print('NAO: ', basis.bfs_nao)
+start=timer()
+#NOTE: The matrices are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+ERI_mmd = Integrals.mmd_4c2e_symm(basis)
+print(ERI_mmd[0:7,0:7,0,0]) 
+duration = timer() - start
+# print(abs(ERI_conv - ERI_mmd).max())
+print('Duration for ERI using PyFock MMD algorithm: ',duration)
 
 #Let's calculate the complete ERI array using the Rys algorithm
 # print('\n\n\n')
@@ -104,18 +117,19 @@ basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
 # print('Duration for ERI using PyFock Rys (old) algorithm: ',duration)
 
 #Let's calculate the complete ERI array using the Rys algorithm
-# print('\n\n\n')
-# print('Integrals')
-# print('4c2e ERI array (Rys New)\n')
-# print('NAO: ', basis.bfs_nao)
-# start=timer()
-# #NOTE: The matrices are calculated in CAO basis and not the SAO basis
-# #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-# ERI_rys = Integrals.rys_4c2e_symm(basis)
-# print(ERI_rys[0:7,0:7,0,0]) 
-# duration = timer() - start
-# print(abs(ERI_conv - ERI_rys).max())
-# print('Duration for ERI using PyFock Rys algorithm: ',duration)
+print('\n\n\n')
+print('Integrals')
+print('4c2e ERI array (Rys New)\n')
+print('NAO: ', basis.bfs_nao)
+start=timer()
+#NOTE: The matrices are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+ERI_rys = Integrals.rys_4c2e_symm(basis)
+print(ERI_rys[0:7,0:7,0,0]) 
+duration = timer() - start
+print(abs(ERI_conv - ERI_rys).max())
+print('Duration for ERI using PyFock Rys algorithm: ',duration)
+
 
 #Let's calculate the complete ERI array using the Rys algorithm and Schwarz screening
 print('\n\n\n')

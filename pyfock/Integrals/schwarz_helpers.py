@@ -795,7 +795,6 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao(basis, auxbasis, indicesA, indicesB, 
     # print('preprocessing done', flush=True)
     # exit()
     
-
     ints3c2e = rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
                 bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], \
                 aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indicesA, indicesB, offsets, basis.bfs_nao, auxbasis.bfs_nao, IJsq_arr, shell_indices, aux_shell_indices, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, nsignificant)
@@ -1473,6 +1472,276 @@ def rys_3c2e_tri_schwarz_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_l
 
     return threeC2E
 
+# Compile-time constants (point 7)
+PI = 3.141592653589793
+TWOPISQ = 19.739208802178716
+EXP_THRESHOLD = 18.42
+SCREEN_THRESHOLD = 1e-8
+
+# Pre-compute transformation matrices as module-level constants (point 6)
+M_F = np.array((
+    [10/19,  0,  0, -3*np.sqrt(5)/19,  0, -3*np.sqrt(5)/19,  0,  0,  0,  0],
+    [ 0, 14/19,  0,  0,  0,  0, -3*np.sqrt(5)/19,  0, -5/19,  0],
+    [ 0,  0, 14/19,  0,  0,  0,  0, -5/19,  0, -3*np.sqrt(5)/19],
+    [-3*np.sqrt(5)/19,  0,  0, 14/19,  0, -5/19,  0,  0,  0,  0],
+    [ 0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
+    [-3*np.sqrt(5)/19,  0,  0, -5/19,  0, 14/19,  0,  0,  0,  0],
+    [ 0, -3*np.sqrt(5)/19,  0,  0,  0,  0, 10/19,  0, -3*np.sqrt(5)/19,  0],
+    [ 0,  0, -5/19,  0,  0,  0,  0, 14/19,  0, -3*np.sqrt(5)/19],
+    [ 0, -5/19,  0,  0,  0,  0, -3*np.sqrt(5)/19,  0, 14/19,  0],
+    [ 0,  0, -3*np.sqrt(5)/19,  0,  0,  0,  0, -3*np.sqrt(5)/19,  0, 10/19]
+), dtype=np.float64)
+
+M_G = np.array((
+    [ 0.3513422061809158,  0.0,  0.0, -0.3085873961776689,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256711,  0.0,  0.1213545940024541,  0.0,  0.1065869614256711],
+    [ 0.0,  0.6086956521739131,  0.0,  0.0,  0.0,  0.0, -0.3913043478260871,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [-0.3085873961776690,  0.0,  0.0,  0.6486577938190843,  0.0, -0.1065869614256711,  0.0,  0.0,  0.0,  0.0, -0.3085873961776689,  0.0, -0.1065869614256713,  0.0,  0.1213545940024542],
+    [ 0.0,  0.0,  0.0,  0.0,  0.7826086956521738,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.2916610405434507,  0.0],
+    [-0.3085873961776688,  0.0,  0.0, -0.1065869614256711,  0.0,  0.6486577938190838,  0.0,  0.0,  0.0,  0.0,  0.1213545940024540,  0.0, -0.1065869614256710,  0.0, -0.3085873961776688],
+    [ 0.0, -0.3913043478260871,  0.0,  0.0,  0.0,  0.0,  0.6086956521739131,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.7826086956521741,  0.0, -0.2916610405434510,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0, -0.2916610405434509,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.7826086956521741,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.1065869614256711,  0.0,  0.0, -0.3085873961776689,  0.0,  0.1213545940024540,  0.0,  0.0,  0.0,  0.0,  0.3513422061809157,  0.0, -0.3085873961776687,  0.0,  0.1065869614256710],
+    [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.6086956521739130,  0.0, -0.3913043478260869,  0.0],
+    [ 0.1213545940024541,  0.0,  0.0, -0.1065869614256714,  0.0, -0.1065869614256709,  0.0,  0.0,  0.0,  0.0, -0.3085873961776687,  0.0,  0.6486577938190840,  0.0, -0.3085873961776689],
+    [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.3913043478260868,  0.0,  0.6086956521739129,  0.0],
+    [ 0.1065869614256710,  0.0,  0.0,  0.1213545940024542,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256710,  0.0, -0.3085873961776688,  0.0,  0.3513422061809157]
+), dtype=np.float64)
+
+# Optimized transformation functions (point 6)
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
+def fast_transform_f(output, f_buffer, offset):
+    """In-place F-orbital transformation"""
+    for i in range(10):
+        acc = 0.0
+        for j in range(10):
+            acc += M_F[i, j] * f_buffer[j]
+        output[offset + i] = acc
+
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
+def fast_transform_g(output, g_buffer, offset):
+    """In-place G-orbital transformation"""
+    for i in range(15):
+        acc = 0.0
+        for j in range(15):
+            acc += M_G[i, j] * g_buffer[j]
+        output[offset + i] = acc
+
+@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, boundscheck=False)
+def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal_new(
+    bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, 
+    bfs_prim_norms, bfs_expnts, aux_bfs_coords, aux_bfs_contr_prim_norms, 
+    aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, 
+    aux_bfs_expnts, indicesA, indicesB, offsets, nao, naux, IJsq_arr, 
+    shell_indices, aux_shell_indices, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, 
+    threshold, strict_schwarz, nsignificant):
+    
+    threeC2E = np.zeros((nsignificant), dtype=np.float64) 
+    
+    L = np.zeros((3), dtype=np.float64)
+    alphalk = 0.0
+    
+    maxprims = bfs_coeffs.shape[1]
+    maxprims_aux = aux_bfs_coeffs.shape[1]
+    
+    # Loop over BFs
+    for itemp in prange(indicesA.shape[0]):
+        i = indicesA[itemp]
+        j = indicesB[itemp]
+        
+        sqrt_ij = sqrt_ints4c2e_diag[i, j] 
+
+        if strict_schwarz:
+            if sqrt_ij * sqrt_ij < 1e-13:
+                continue  
+
+        # Point 2: Allocate thread-local buffers once per (i,j) pair
+        alphaik = np.empty(maxprims, dtype=np.float64)
+        alphajk = np.empty(maxprims, dtype=np.float64)
+        alphakk = np.empty(maxprims_aux, dtype=np.float64)
+        tempcoeff3 = np.empty(maxprims, dtype=np.float64)
+        d_buffer = np.empty(6, dtype=np.float64)
+        f_buffer = np.empty(10, dtype=np.float64)
+        g_buffer = np.empty(15, dtype=np.float64)
+        roots = np.empty(10, dtype=np.float64)
+        weights = np.empty(10, dtype=np.float64)
+        G = np.empty((20, 20), dtype=np.float64)
+        
+        Ni = bfs_contr_prim_norms[i]
+        nprimi = bfs_nprim[i]
+        alphaik[:nprimi] = bfs_expnts[i, :nprimi]
+        lmni = bfs_lmn[i]
+        la, ma, na = lmni[0], lmni[1], lmni[2]
+        I = bfs_coords[i]
+        
+        # Point 4: Cache coordinates
+        I_0, I_1, I_2 = I[0], I[1], I[2]
+
+        Nj = bfs_contr_prim_norms[j]
+        nprimj = bfs_nprim[j]
+        alphajk[:nprimj] = bfs_expnts[j, :nprimj]
+        lmnj = bfs_lmn[j]
+        lb, mb, nb = lmnj[0], lmnj[1], lmnj[2]
+        J = bfs_coords[j]
+        
+        # Point 4: Cache coordinates
+        J_0, J_1, J_2 = J[0], J[1], J[2]
+        
+        IJsq = IJsq_arr[i, j]
+        tempcoeff1 = Ni * Nj
+
+        # Screening for diffuse basis sets
+        alphaik_min = alphaik[0]
+        for ik in range(1, nprimi):
+            if alphaik[ik] < alphaik_min:
+                alphaik_min = alphaik[ik]
+        
+        alphajk_min = alphajk[0]
+        for jk in range(1, nprimj):
+            if alphajk[jk] < alphajk_min:
+                alphajk_min = alphajk[jk]
+        
+        gammaP_min = alphaik_min + alphajk_min
+        rho_min = alphaik_min * alphajk_min / gammaP_min
+        arg = rho_min * IJsq
+        if arg > EXP_THRESHOLD:
+            continue
+        
+        index_k = 0
+        k = 0
+        
+        while k < naux:
+            lmnk = aux_bfs_lmn[k]
+            lc, mc, nc = lmnk[0], lmnk[1], lmnk[2]
+            tot_ang = lc + mc + nc
+            is_first = (lmnk[0] != 0) and (lmnk[0] + lmnk[1] + lmnk[2] == lmnk[0])
+            
+            if is_first:
+                if sqrt_ij * sqrt_diag_ints2c2e[k] < threshold:
+                    if tot_ang == 0:
+                        k += 1
+                    elif tot_ang == 1:
+                        k += 3
+                    elif tot_ang == 2:
+                        k += 6
+                    elif tot_ang == 3:
+                        k += 10
+                    elif tot_ang == 4:
+                        k += 15
+                    continue
+            
+            if is_first:
+                if tot_ang == 2:
+                    d_idx = 0
+                elif tot_ang == 3:
+                    f_idx = 0
+                elif tot_ang == 4:
+                    g_idx = 0
+            
+            Nk = aux_bfs_contr_prim_norms[k]
+            nprimk = aux_bfs_nprim[k]
+            alphakk[:nprimk] = aux_bfs_expnts[k, :nprimk]
+            
+            K = aux_bfs_coords[k]
+            Q = K
+            
+            # Point 4: Cache coordinates
+            Q_0, Q_1, Q_2 = Q[0], Q[1], Q[2]
+            
+            tempcoeff2 = tempcoeff1 * Nk
+            norder = int((la + ma + na + lb + mb + nb + lc + mc + nc) / 2 + 1) 
+            
+            # Vectorize coefficient multiplication
+            for ik in range(nprimi):
+                tempcoeff3[ik] = tempcoeff2 * bfs_coeffs[i, ik] * bfs_prim_norms[i, ik]
+            
+            val = 0.0
+            if norder <= 10:
+                n = int(max(la + lb, ma + mb, na + nb))
+                m = int(max(lc, mc, nc))
+                
+                # Keep original nested loop structure (faster for this use case)
+                for ik in range(nprimi): 
+                    alphaik_ = alphaik[ik]
+                    tempcoeff3_ = tempcoeff3[ik]
+                    
+                    for jk in range(nprimj):
+                        alphajk_ = alphajk[jk]
+                        gammaP_ = alphaik_ + alphajk_
+                        gamma_inv = 1.0 / gammaP_
+                        
+                        arg = alphaik_ * alphajk_ * gamma_inv * IJsq
+                        if arg > EXP_THRESHOLD:
+                            continue
+                        
+                        # Point 4: Use cached coordinates
+                        P_0 = (alphaik_ * I_0 + alphajk_ * J_0) * gamma_inv
+                        P_1 = (alphaik_ * I_1 + alphajk_ * J_1) * gamma_inv
+                        P_2 = (alphaik_ * I_2 + alphajk_ * J_2) * gamma_inv
+                        
+                        PQ_0 = P_0 - Q_0
+                        PQ_1 = P_1 - Q_1
+                        PQ_2 = P_2 - Q_2
+                        PQsq = PQ_0 * PQ_0 + PQ_1 * PQ_1 + PQ_2 * PQ_2
+                        
+                        djk = bfs_coeffs[j, jk] 
+                        Njk = bfs_prim_norms[j, jk]     
+                        tempcoeff4 = tempcoeff3_ * djk * Njk  
+                        
+                        for kk in range(nprimk):
+                            dkk = aux_bfs_coeffs[k, kk]
+                            Nkk = aux_bfs_prim_norms[k, kk]
+                            tempcoeff5 = tempcoeff4 * dkk * Nkk 
+                            
+                            alphakk_ = alphakk[kk]
+                            gammaQ = alphakk_
+                            rho = gammaP_ * gammaQ / (gammaP_ + gammaQ)
+                            
+                            # Reconstruct P for coulomb function
+                            P = np.array([P_0, P_1, P_2], dtype=np.float64)
+                            
+                            val += tempcoeff5 * coulomb_rys_3c2e(
+                                roots, weights, G, PQsq, rho, norder, n, m,
+                                la, lb, lc, 0, ma, mb, mc, 0, na, nb, nc, 0,
+                                alphaik_, alphajk_, alphakk_, alphalk,
+                                I, J, K, L, P
+                            )
+            
+            # Store results
+            if tot_ang <= 1:
+                threeC2E[offsets[itemp] + index_k] = val
+                index_k += 1
+            elif tot_ang == 2:
+                d_buffer[d_idx] = val
+                d_idx += 1
+                if d_idx == 6:
+                    offset_base = offsets[itemp] + index_k
+                    threeC2E[offset_base] = 2.0/3.0 * d_buffer[0] - 1.0/3.0 * (d_buffer[3] + d_buffer[5])
+                    threeC2E[offset_base + 1] = d_buffer[1]
+                    threeC2E[offset_base + 2] = d_buffer[2]
+                    threeC2E[offset_base + 3] = 2.0/3.0 * d_buffer[3] - 1.0/3.0 * (d_buffer[0] + d_buffer[5])
+                    threeC2E[offset_base + 4] = d_buffer[4]
+                    threeC2E[offset_base + 5] = 2.0/3.0 * d_buffer[5] - 1.0/3.0 * (d_buffer[0] + d_buffer[3])
+                    index_k += 6
+            elif tot_ang == 3:
+                f_buffer[f_idx] = val
+                f_idx += 1
+                if f_idx == 10:
+                    fast_transform_f(threeC2E, f_buffer, offsets[itemp] + index_k)
+                    index_k += 10
+            elif tot_ang == 4:
+                g_buffer[g_idx] = val
+                g_idx += 1
+                if g_idx == 15:
+                    fast_transform_g(threeC2E, g_buffer, offsets[itemp] + index_k)
+                    index_k += 15
+            
+            k += 1
+    return threeC2E
+
+
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, boundscheck=False)
 def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indicesA, indicesB, offsets, nao, naux, IJsq_arr, shell_indices, aux_shell_indices, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, nsignificant):
     # Calculates 3c2e integrals based on a provided list of significant triplets determined using Schwarz inequality
@@ -1482,6 +1751,41 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
     # https://aip.scitation.org/doi/10.1063/1.4917519
 
     threeC2E = np.zeros((nsignificant), dtype=np.float64) 
+    
+    a = 10/19
+    b = 14/19
+    c = 5/19
+    d = 3*np.sqrt(5)/19
+    M_f = np.array((
+            [ a,  0,  0, -d,  0, -d,  0,  0,  0,  0],
+            [ 0,  b,  0,  0,  0,  0, -d,  0, -c,  0],
+            [ 0,  0,  b,  0,  0,  0,  0, -c,  0, -d],
+            [-d,  0,  0,  b,  0, -c,  0,  0,  0,  0],
+            [ 0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
+            [-d,  0,  0, -c,  0,  b,  0,  0,  0,  0],
+            [ 0, -d,  0,  0,  0,  0,  a,  0, -d,  0],
+            [ 0,  0, -c,  0,  0,  0,  0,  b,  0, -d],
+            [ 0, -c,  0,  0,  0,  0, -d,  0,  b,  0],
+            [ 0,  0, -d,  0,  0,  0,  0, -d,  0,  a]
+        ))
+
+    M_g = np.array((
+            [ 0.3513422061809158,  0.0,  0.0, -0.3085873961776689,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256711,  0.0,  0.1213545940024541,  0.0,  0.1065869614256711],
+            [ 0.0,  0.6086956521739131,  0.0,  0.0,  0.0,  0.0, -0.3913043478260871,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [ 0.0,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [-0.3085873961776690,  0.0,  0.0,  0.6486577938190843,  0.0, -0.1065869614256711,  0.0,  0.0,  0.0,  0.0, -0.3085873961776689,  0.0, -0.1065869614256713,  0.0,  0.1213545940024542],
+            [ 0.0,  0.0,  0.0,  0.0,  0.7826086956521738,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.2916610405434507,  0.0],
+            [-0.3085873961776688,  0.0,  0.0, -0.1065869614256711,  0.0,  0.6486577938190838,  0.0,  0.0,  0.0,  0.0,  0.1213545940024540,  0.0, -0.1065869614256710,  0.0, -0.3085873961776688],
+            [ 0.0, -0.3913043478260871,  0.0,  0.0,  0.0,  0.0,  0.6086956521739131,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [ 0.0,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.7826086956521741,  0.0, -0.2916610405434510,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [ 0.0, -0.2916610405434509,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.7826086956521741,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [ 0.0,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [ 0.1065869614256711,  0.0,  0.0, -0.3085873961776689,  0.0,  0.1213545940024540,  0.0,  0.0,  0.0,  0.0,  0.3513422061809157,  0.0, -0.3085873961776687,  0.0,  0.1065869614256710],
+            [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.6086956521739130,  0.0, -0.3913043478260869,  0.0],
+            [ 0.1213545940024541,  0.0,  0.0, -0.1065869614256714,  0.0, -0.1065869614256709,  0.0,  0.0,  0.0,  0.0, -0.3085873961776687,  0.0,  0.6486577938190840,  0.0, -0.3085873961776689],
+            [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.3913043478260868,  0.0,  0.6086956521739129,  0.0],
+            [ 0.1065869614256710,  0.0,  0.0,  0.1213545940024542,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256710,  0.0, -0.3085873961776688,  0.0,  0.3513422061809157]
+        ))
 
     #Debug:
     # print(config.THREADING_LAYER)
@@ -1509,7 +1813,15 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
 
     # Create arrays to avoid contention of allocator 
     # (https://stackoverflow.com/questions/70339388/using-numba-with-np-concatenate-is-not-efficient-in-parallel/70342014#70342014)
-    
+    # chunk_size = 20 
+    # for start in range(0, len(indicesA), chunk_size):
+    #     end = min(start + chunk_size, len(indicesA))
+
+    #     idxA = indicesA[start:end]
+    #     idxB = indicesB[start:end]
+    #     offs = offsets[start:end] - offsets[start]
+
+        # sub_nsig = offs[-1] + (offsets[start+1] - offsets[start])
 
     #Loop over BFs
     for itemp in prange(indicesA.shape[0]):
@@ -1563,6 +1875,12 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
         # P_min = (alphaik_min*I + alphajk_min*J)/gammaP_min
         index_k = 0
         k = 0
+        d_buffer = np.zeros(6, dtype=np.float64)
+        f_buffer = np.zeros(10, dtype=np.float64)
+        g_buffer = np.zeros(15, dtype=np.float64)
+        roots = np.zeros((10)) 
+        weights = np.zeros((10)) 
+        G = np.zeros((20, 20)) 
         while k < naux:
             lmnk = aux_bfs_lmn[k]
             lc, mc, nc = lmnk
@@ -1586,13 +1904,16 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
             #     d_idx = 0
             if is_first:
                 if tot_ang == 2: # d functions
-                    d_buffer = np.zeros(6, dtype=np.float64)
+                    # d_buffer = np.zeros(6, dtype=np.float64)
+                    d_buffer[:] = 0.0
                     d_idx = 0
                 if tot_ang == 3: # f functions
-                    f_buffer = np.zeros(10, dtype=np.float64)
+                    # f_buffer = np.zeros(10, dtype=np.float64)
+                    f_buffer[:] = 0.0
                     f_idx = 0
                 if tot_ang == 4: # g functions
-                    g_buffer = np.zeros(15, dtype=np.float64)
+                    # g_buffer = np.zeros(15, dtype=np.float64)
+                    g_buffer[:] = 0.0
                     g_idx = 0
             
             # lmnk = aux_bfs_lmn[k]
@@ -1657,10 +1978,13 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
                 m = int(max(lc+ld,mc+md,nc+nd))
                 # roots = np.zeros((norder)) 
                 # weights = np.zeros((norder)) 
-                roots = np.zeros((10)) 
-                weights = np.zeros((10)) 
                 # G = np.zeros((n+1,m+1)) 
-                G = np.zeros((n+1,m+1)) 
+                # roots = np.zeros((10)) 
+                # weights = np.zeros((10)) 
+                # G = np.zeros((n+1,m+1))
+                roots[:] = 0.0
+                weights[:] = 0.0
+                G[:, :] = 0.0
                 
                     
                 #Loop over primitives
@@ -1748,23 +2072,8 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
                 f_buffer[f_idx] = val
                 f_idx += 1
                 if f_idx==10:
-                    a = 10/19
-                    b = 14/19
-                    c = 5/19
-                    d = 3*np.sqrt(5)/19
 
-                    M_f = np.array((
-                        [ a,  0,  0, -d,  0, -d,  0,  0,  0,  0],
-                        [ 0,  b,  0,  0,  0,  0, -d,  0, -c,  0],
-                        [ 0,  0,  b,  0,  0,  0,  0, -c,  0, -d],
-                        [-d,  0,  0,  b,  0, -c,  0,  0,  0,  0],
-                        [ 0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
-                        [-d,  0,  0, -c,  0,  b,  0,  0,  0,  0],
-                        [ 0, -d,  0,  0,  0,  0,  a,  0, -d,  0],
-                        [ 0,  0, -c,  0,  0,  0,  0,  b,  0, -d],
-                        [ 0, -c,  0,  0,  0,  0, -d,  0,  b,  0],
-                        [ 0,  0, -d,  0,  0,  0,  0, -d,  0,  a]
-                    ))
+                    
                     
                     threeC2E[offsets[itemp] + index_k : offsets[itemp] + index_k + 10] = M_f @ f_buffer[:]
                     index_k += 10
@@ -1772,23 +2081,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal(bfs_coords, bfs_contr_prim_n
                 g_buffer[g_idx] = val
                 g_idx += 1
                 if g_idx==15:
-                    M_g = np.array((
-                        [ 0.3513422061809158,  0.0,  0.0, -0.3085873961776689,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256711,  0.0,  0.1213545940024541,  0.0,  0.1065869614256711],
-                        [ 0.0,  0.6086956521739131,  0.0,  0.0,  0.0,  0.0, -0.3913043478260871,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
-                        [ 0.0,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0,  0.0],
-                        [-0.3085873961776690,  0.0,  0.0,  0.6486577938190843,  0.0, -0.1065869614256711,  0.0,  0.0,  0.0,  0.0, -0.3085873961776689,  0.0, -0.1065869614256713,  0.0,  0.1213545940024542],
-                        [ 0.0,  0.0,  0.0,  0.0,  0.7826086956521738,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.2916610405434507,  0.0],
-                        [-0.3085873961776688,  0.0,  0.0, -0.1065869614256711,  0.0,  0.6486577938190838,  0.0,  0.0,  0.0,  0.0,  0.1213545940024540,  0.0, -0.1065869614256710,  0.0, -0.3085873961776688],
-                        [ 0.0, -0.3913043478260871,  0.0,  0.0,  0.0,  0.0,  0.6086956521739131,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
-                        [ 0.0,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.7826086956521741,  0.0, -0.2916610405434510,  0.0,  0.0,  0.0,  0.0,  0.0],
-                        [ 0.0, -0.2916610405434509,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.7826086956521741,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
-                        [ 0.0,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0,  0.0],
-                        [ 0.1065869614256711,  0.0,  0.0, -0.3085873961776689,  0.0,  0.1213545940024540,  0.0,  0.0,  0.0,  0.0,  0.3513422061809157,  0.0, -0.3085873961776687,  0.0,  0.1065869614256710],
-                        [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.6086956521739130,  0.0, -0.3913043478260869,  0.0],
-                        [ 0.1213545940024541,  0.0,  0.0, -0.1065869614256714,  0.0, -0.1065869614256709,  0.0,  0.0,  0.0,  0.0, -0.3085873961776687,  0.0,  0.6486577938190840,  0.0, -0.3085873961776689],
-                        [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.3913043478260868,  0.0,  0.6086956521739129,  0.0],
-                        [ 0.1065869614256710,  0.0,  0.0,  0.1213545940024542,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256710,  0.0, -0.3085873961776688,  0.0,  0.3513422061809157]
-                    ))
+                    
                     
                     threeC2E[offsets[itemp] + index_k : offsets[itemp] + index_k + 15] = M_g @ g_buffer[:]
                     index_k += 15

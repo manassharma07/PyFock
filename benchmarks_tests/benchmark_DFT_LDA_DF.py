@@ -149,7 +149,7 @@ xyzFilename = 'H2O.xyz'
 molPySCF = gto.Mole()
 molPySCF.atom = xyzFilename
 molPySCF.basis = basis_set_name
-molPySCF.cart = True
+molPySCF.cart = False
 molPySCF.verbose = 4
 molPySCF.max_memory=5000
 # molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
@@ -237,7 +237,7 @@ dftObj.strict_schwarz = False
 dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
-dftObj.sao = False
+dftObj.sao = True
 
 # GPU acceleration
 dftObj.use_gpu = False

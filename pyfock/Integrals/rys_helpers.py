@@ -42,6 +42,92 @@ def coulomb_rys(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na
     
     return  val
 
+# Module-level constants (add at the top of the file)
+PI = 3.141592653589793
+PI_SQRT = 1.7724538509055159
+HALF = 0.5
+
+@njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')
+def coulomb_rys_3c2e_new(roots, weights, G, rpq2, rho, norder, n, m, la, lb, lc, ld, 
+                     ma, mb, mc, md, na, nb, nc, nd, alphaik, alphajk, alphakk, 
+                     alphalk, I, J, K, L, P):
+    X = rpq2 * rho
+    roots, weights = Roots(norder, X, roots, weights)
+    A = alphaik + alphajk 
+    B = alphakk
+    Ap = alphaik * alphajk
+    ABsrt = math.sqrt(A * B)
+    
+    # Precompute common values
+    IJ_0, IJ_1, IJ_2 = I[0] - J[0], I[1] - J[1], I[2] - J[2]
+    Ap_over_A = Ap / A
+    IJ_sq = IJ_0*IJ_0 + IJ_1*IJ_1 + IJ_2*IJ_2
+    exp_factor = math.exp(-Ap_over_A * IJ_sq)
+    G00_base = PI / ABsrt
+    
+    tot_ang = la + ma + na + lb + mb + nb + lc + mc + nc + ld + md + nd
+    
+    # Fast path for tot_ang == 0
+    if tot_ang == 0:
+        ijkl = G00_base * G00_base * G00_base * exp_factor * weights[0]
+        return 2.0 * math.sqrt(rho / PI) * ijkl
+    
+    # Fast path for tot_ang == 1 and (la+ma+na) == 1
+    if tot_ang == 1 and (la + ma + na == 1):
+        ooopt = 1.0 / (1.0 + roots[0])
+        
+        # Compute exponentials for each dimension
+        G00_x = G00_base * math.exp(-Ap_over_A * IJ_0 * IJ_0)
+        G00_y = G00_base * math.exp(-Ap_over_A * IJ_1 * IJ_1)
+        G00_z = G00_base * math.exp(-Ap_over_A * IJ_2 * IJ_2)
+        
+        # Precompute common term
+        root0 = roots[0]
+        ooopt_root_over_ApB = ooopt * root0 / (A + B)
+        
+        if la == 1:
+            PI_0 = P[0] - I[0]
+            C = PI_0 * ooopt + (B * (K[0] - I[0]) + A * PI_0) * ooopt_root_over_ApB
+            Ix = C * G00_x
+            Iy = G00_y
+            Iz = G00_z
+        elif ma == 1:
+            PI_1 = P[1] - I[1]
+            C = PI_1 * ooopt + (B * (K[1] - I[1]) + A * PI_1) * ooopt_root_over_ApB
+            Ix = G00_x
+            Iy = C * G00_y
+            Iz = G00_z
+        else:  # na == 1
+            PI_2 = P[2] - I[2]
+            C = PI_2 * ooopt + (B * (K[2] - I[2]) + A * PI_2) * ooopt_root_over_ApB
+            Ix = G00_x
+            Iy = G00_y
+            Iz = C * G00_z
+        
+        ijkl = Ix * Iy * Iz * weights[0]
+        return 2.0 * math.sqrt(rho / PI) * ijkl
+    
+    # General case
+    ijkl = 0.0
+    for i in range(norder):
+        root_i = roots[i]
+        weight_i = weights[i]
+        
+        G = Recur_3c2e(G, root_i, la, lb, lc, ld, I[0], J[0], K[0], L[0], 
+                       alphaik, alphajk, alphakk, alphalk, A, B, Ap, ABsrt)
+        Ix = Shift_3c2e(G, la, lb, lc, ld, IJ_0)
+        
+        G = Recur_3c2e(G, root_i, ma, mb, mc, md, I[1], J[1], K[1], L[1], 
+                       alphaik, alphajk, alphakk, alphalk, A, B, Ap, ABsrt)
+        Iy = Shift_3c2e(G, ma, mb, mc, md, IJ_1)
+        
+        G = Recur_3c2e(G, root_i, na, nb, nc, nd, I[2], J[2], K[2], L[2], 
+                       alphaik, alphajk, alphakk, alphalk, A, B, Ap, ABsrt)
+        Iz = Shift_3c2e(G, na, nb, nc, nd, IJ_2)
+        
+        ijkl += Ix * Iy * Iz * weight_i
+    
+    return 2.0 * math.sqrt(rho / PI) * ijkl
 "Form coulomb repulsion integral using Rys quadrature"
 @njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')#, locals=dict(ijkl=np.float32, Ix=np.float32, Iy=np.float32, Iz=np.float32, val=np.float32)
 def coulomb_rys_3c2e(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L,P):
@@ -242,7 +328,52 @@ def Recur(G,t,i,j,k,l,xi,xj,xk,xl,alphai,alphaj,alphak,alphal,A,B,Ap,Bp,ABsrt):
     
     
     return G
-
+@njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')
+def Recur_3c2e_new(G, t, i, j, k, l, xi, xj, xk, xl, alphai, alphaj, alphak, alphal, A, B, Ap, ABsrt):
+    n = i + j
+    m = k + l
+    
+    if n == 0 and m == 0:
+        G[0, 0] = PI * math.exp(-Ap * (xi - xj) * (xi - xj) / A) / ABsrt
+        return G
+    
+    Px = (alphai * xi + alphaj * xj) / A
+    Qx = (alphak * xk + alphal * xl) / B
+    
+    C, Cp, B0, B1, B1p = RecurFactors(t, A, B, Px, Qx, xi, xk)
+    
+    G[0, 0] = PI * math.exp(-Ap * (xi - xj) * (xi - xj) / A) / ABsrt
+    
+    if n > 0:
+        G[1, 0] = C * G[0, 0]
+    if m > 0:
+        G[0, 1] = Cp * G[0, 0]
+    
+    # Unroll small cases for n
+    if n == 2:
+        G[2, 0] = B1 * G[0, 0] + C * G[1, 0]
+    elif n > 2:
+        for a in range(2, n + 1):
+            G[a, 0] = B1 * (a - 1) * G[a - 2, 0] + C * G[a - 1, 0]
+    
+    # Unroll small cases for m
+    if m == 2:
+        G[0, 2] = B1p * G[0, 0] + Cp * G[0, 1]
+    elif m > 2:
+        for b in range(2, m + 1):
+            G[0, b] = B1p * (b - 1) * G[0, b - 2] + Cp * G[0, b - 1]
+    
+    if m == 0 or n == 0:
+        return G
+    
+    # Optimize the nested loop
+    for a in range(1, n + 1):
+        a_B0 = a * B0
+        G[a, 1] = a_B0 * G[a - 1, 0] + Cp * G[a, 0]
+        for b in range(2, m + 1):
+            G[a, b] = B1p * (b - 1) * G[a, b - 2] + a_B0 * G[a - 1, b - 1] + Cp * G[a, b - 1]
+    
+    return G
 @njit(cache=True,fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Recur_3c2e(G,t,i,j,k,l,xi,xj,xk,xl,alphai,alphaj,alphak,alphal,A,B,Ap,ABsrt):
     
@@ -410,6 +541,7 @@ def Shift(G,i,j,k,l,xij,xkl):
         
         ijkl += comb_2_*xkl**(l-m)*ijm0 # I(i,j,k,l)<-I(i,j,m,0)  
     return ijkl
+
 
 @njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')
 def Shift_3c2e(G, i, j, k, l, xij):

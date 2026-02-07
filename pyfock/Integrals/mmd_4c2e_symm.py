@@ -10,7 +10,6 @@ def mmd_4c2e_symm(basis, slice=None):
     # This function calculates the 4c2e electron-electron ERIs for a given basis object.
     # The basis object holds the information of basis functions like: exponents, coeffs, etc.
     
-    # The integrals are performed using the formulas https://pubs.acs.org/doi/full/10.1021/acs.jchemed.8b00255
 
     # It is possible to only calculate a slice (block/subset) of the complete set of integrals.
     # slice is an 8 element list whose first and second elements give the range of the A functions to be calculated.
@@ -59,15 +58,12 @@ def mmd_4c2e_symm(basis, slice=None):
 
     return ints4c2e
 
-@njit(parallel=True, cache=False, fastmath=True, error_model="numpy")
+@njit(parallel=False, cache=False, fastmath=True, error_model="numpy", boundscheck=True)
 def mmd_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD, indx_endD):
     # This function calculates the 4D electron-electron repulsion integrals (ERIs) array for a given basis object and mol object.
     # This uses 8 fold symmetry to only calculate the unique elements and assign the rest via symmetry
     # The basis object holds the information of basis functions like: exponents, coeffs, etc.
     
-    # The integrals are performed using the formulas https://pubs.acs.org/doi/full/10.1021/acs.jchemed.8b00255
-    # Some useful resources:
-    # https://chemistry.stackexchange.com/questions/71527/how-does-one-compute-the-number-of-unique-2-electron-integrals-for-a-given-basis
     # returns (AB|CD) 
 
     # Infer the matrix shape from the start and end indices
@@ -107,14 +103,14 @@ def mmd_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
     two_pi_2_5 = 2*np.power(np.pi,2.5)
 
     #Loop pver BFs
-    for i in prange(indx_startA, indx_endA): #A
+    for i in range(indx_startA, indx_endA): #A
         I = bfs_coords[i]
         Ni = bfs_contr_prim_norms[i]
         lmni = bfs_lmn[i]
         la, ma, na = lmni
         nprimi = bfs_nprim[i]
         
-        for j in prange(indx_startB, indx_endB): #B
+        for j in range(indx_startB, indx_endB): #B
             if (all_symm and j<=i) or (left_side_symm and j<=i) or right_side_symm or no_symm or (both_left_right_symm and j<=i):
                 if all_symm:
                     if i<j:
@@ -130,7 +126,7 @@ def mmd_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                 tempcoeff1 = Ni*Nj
                 nprimj = bfs_nprim[j]
                 
-                for k in prange(indx_startC, indx_endC): #C
+                for k in range(indx_startC, indx_endC): #C
                     K = bfs_coords[k]
                     Nk = bfs_contr_prim_norms[k]
                     lmnk = bfs_lmn[k]
@@ -138,7 +134,7 @@ def mmd_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                     tempcoeff2 = tempcoeff1*Nk
                     nprimk = bfs_nprim[k]
                     
-                    for l in prange(indx_startD, indx_endD): #D
+                    for l in range(indx_startD, indx_endD): #D
                         if (all_symm and l<=k) or (right_side_symm and l<=k) or (left_side_symm and j<=i) or no_symm or (both_left_right_symm and l<=k):
                             # Take care of further symmetries
                             if all_symm:
@@ -208,44 +204,12 @@ def mmd_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                                             PQ = P - Q
                                             RPQ = np.linalg.norm(PQ)
                                             T = alpha*RPQ*RPQ
-                                            # boys = Fboys(0,T)
-                                            
-                                            # QK = Q - K
-                                            # QL = Q - L
                                             tempcoeff7 = tempcoeff6*dlk*Nlk
                                             
-                                            # fac2 = fac1/gammaQ
-                                            
-
-                                            # omega = (fac2)*np.sqrt(pi/(gammaP + gammaQ))*screenfactorKL
-                                            # delta = 0.25*(1/gammaQ) + onefourthgammaPinv          
-                                            # PQsqBy4delta = np.sum(PQ**2)/(4*delta)         
-                                                
-                                            # sum1 = innerLoop4c2e(la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,gammaP,gammaQ,PI,PJ,QK,QL,PQ,PQsqBy4delta,delta)
                                             sum1 = 0.0
                                             for t in range(la+lb+1):
-                                                # if t%2 == 0:
-                                                #     t_temp = t/2
-                                                # else:
-                                                #     t_temp = t//2 + 1
                                                 for u in range(ma+mb+1):
-                                                    # if u%2 == 0:
-                                                    #     u_temp = u/2
-                                                    # else:
-                                                    #     u_temp = u//2 + 1
                                                     for v in range(na+nb+1):
-                                                        # if v%2 == 0:
-                                                        #     v_temp = v/2
-                                                        # else:
-                                                        #     v_temp = v//2 + 1
-                                                        # n_min = int(t_temp + u_temp + v_temp)
-                                                        # n_max = int(t + u + v)
-                                                        # n = np.arange(n_min,n_max+1,1)
-                                                        # boys = np.zeros((n.shape[0]),dtype=np.float64)
-                                                        # for n_i in n:
-                                                        #     boys[n_i-n_min] = np.power(-2.0*alpha,n_i)*Fboys(n_i,T)
-                                                        # print(n_min, n_max)
-                                                        # print(boys)
                                                         for tau in range(lc+ld+1):
                                                             for nu in range(mc+md+1):
                                                                 for phi in range(nc+nd+1):
@@ -326,7 +290,7 @@ def mmd_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
         
     return fourC2E
 
-@njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
+@njit(parallel=True, cache=False, fastmath=True, error_model="numpy")
 def mmd_4c2e_symm_internal2(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD, indx_endD):
     # This function calculates the 4D electron-electron repulsion integrals (ERIs) array for a given basis object and mol object.
     # This uses 8 fold symmetry to only calculate the unique elements and assign the rest via symmetry
