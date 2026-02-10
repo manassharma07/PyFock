@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit, prange
 
-from .integral_helpers import innerLoop4c2e
+from .integral_helpers import innerLoop4c2e, Fboys
 from .rys_helpers import coulomb_rys
 from .rys_helpers import coulomb_rys_3c2e
 from .rys_helpers import coulomb_rys_3c2e_new
@@ -186,6 +186,7 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
 
     L = np.zeros((3))
     
+    shell_sizes = np.array((1, 3, 6, 10, 15, 21, 28, 36))
     
     ld, md, nd = int(0), int(0), int(0)
     alphalk = 0.0
@@ -200,12 +201,13 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
         roots = np.zeros((10))
         weights = np.zeros((10))
         G = np.zeros((20,20))
-        for j in prange(indx_startB, indx_endB): #B
+        for j in range(indx_startB, indx_endB): #B
             if (tri_symm and j<=i) or no_symm:
                 if schwarz:
                     sqrt_ints4c2e_diag_ij = sqrt_ints4c2e_diag[i,j]
+                    if sqrt_ints4c2e_diag_ij<threshold_schwarz:
+                        continue
                 J = bfs_coords[j]
-                IJ = np.zeros((3))
                 IJ = I - J
                 IJsq = np.sum(IJ**2)
                 Nj = bfs_contr_prim_norms[j]
@@ -215,31 +217,29 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                 nprimj = bfs_nprim[j]
                 
                 for k in range(indx_startC, indx_endC): #C
-                    if schwarz:
-                        if sqrt_ints4c2e_diag_ij*sqrt_diag_ints2c2e[k]<threshold_schwarz:
-                            continue
-                    PQ = np.zeros((3))
-                    K = aux_bfs_coords[k]
-                    Nk = aux_bfs_contr_prim_norms[k]
                     lmnk = aux_bfs_lmn[k]
                     lc, mc, nc = lmnk
+                    tot_ang = lc + mc + nc
+                    is_first = (lmnk.sum() == lmnk[0])
+                    if schwarz and is_first:
+                        if sqrt_ints4c2e_diag_ij*sqrt_diag_ints2c2e[k]<threshold_schwarz:
+                            k += shell_sizes[tot_ang] # Skip the entire shell
+                            continue
+                    
+                    K = aux_bfs_coords[k]
+                    Nk = aux_bfs_contr_prim_norms[k]
+                    
                     tempcoeff2 = tempcoeff1*Nk
                     nprimk = aux_bfs_nprim[k]
-                    
-                    
-                        
-                    KL = K #- L  
-                    # KLsq = np.sum(KL**2)
+                    KL = K 
                     
                     norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1 ) 
                     val = 0.0
 
                     if norder<=10: # Use rys quadrature # Good for upto i orbitals
+                        
                         n = int(max(la+lb,ma+mb,na+nb))
                         m = int(max(lc+ld,mc+md,nc+nd))
-                        # roots = np.zeros((norder))
-                        # weights = np.zeros((norder))
-                        # G = np.zeros((n+1,m+1))
                         
                         #Loop over primitives
                         for ik in range(nprimi):   
@@ -258,26 +258,24 @@ def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                                 djk = bfs_coeffs[j][jk] 
                                 Njk = bfs_prim_norms[j][jk]      
                                 P = (alphaik*I + alphajk*J)/gammaP
+                                PQ = P - K
+                                PQsq = np.sum(PQ**2)
                                 tempcoeff4 = tempcoeff3*djk*Njk  
                                     
                                 for kk in range(nprimk):
                                     dkk = aux_bfs_coeffs[k][kk]
                                     Nkk = aux_bfs_prim_norms[k][kk]
                                     alphakk = aux_bfs_expnts[k][kk]
+
+
                                     tempcoeff5 = tempcoeff4*dkk*Nkk 
                                         
-                                        
+
                                     gammaQ = alphakk #+ alphalk
                                     
-                                    Q = K        
-                                    PQ = P - Q
-                                    PQsq = np.sum(PQ**2)
                                     rho = gammaP*gammaQ/(gammaP+gammaQ)
-                                            
-                                            
-                                            
-                                            
-                                    # val += tempcoeff5*coulomb_rys(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L)
+                
+                
                                     val += tempcoeff5 * coulomb_rys_3c2e_new(
                                                 roots, weights, G, PQsq, rho, norder, n, m,
                                                 la, lb, lc, 0, ma, mb, mc, 0, na, nb, nc, 0,

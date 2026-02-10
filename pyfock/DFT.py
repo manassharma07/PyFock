@@ -579,8 +579,6 @@ class DFT:
             mol = self.mol
         if basis is None:
             basis = self.basis
-        nao = basis.bfs_nao 
-        H = np.empty((nao,nao))
         Vmat = Integrals.nuc_mat_symm(basis, mol)
         Tmat = Integrals.kin_mat_symm(basis)
         H = Vmat + Tmat
@@ -1075,25 +1073,8 @@ class DFT:
                             print('FOR THE CURRENT BASIS SET, THE 4C2E ERI TENSOR WILL REQUIRE APPROXIMATELY '+str(round(estimated_mem_GB, 2))+' GB OF MEMORY.', flush=True)
                             print('IF THIS EXCEEDS THE AVAILABLE MEMORY ON YOUR SYSTEM, THE PROGRAM MAY CRASH OR THE SYSTEM MAY BECOME UNRESPONSIVE.', flush=True)
                             print('IF YOU WISH TO AVOID THIS, PLEASE ENABLE DIRECT SCF MODE BY SETTING direct_scf = TRUE.\n\n', flush=True)
-                            print('\n\nPerforming Schwarz screening...')
-                            print('Threshold ', threshold_schwarz)
-                            startSchwarz = timer()
-                            duration_4c2e_diag = 0.0
-                            start_4c2e_diag = timer()
-                            # Diagonal elements of ERI 4c2e array
-                            ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
-                            duration_4c2e_diag = timer() - start_4c2e_diag
-                            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
-                            # Calculate the square roots required for 
-                            duration_square_roots = 0.0
-                            start_square_roots = timer()
-                            sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-                            duration_square_roots = timer() - start_square_roots
-                            print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
-                            durationSchwarz = timer() - startSchwarz
-                            print('Total time taken for Schwarz screening: ', round(durationSchwarz, 2))
                             print('\nCalculating four center two electron integrals (ERIs) using Rys quadrature with Schwarz screening...\n\n', flush=True)
-                            ints4c2e = Integrals.rys_4c2e_schwarz_symm(basis, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
+                            ints4c2e = Integrals.rys_4c2e_schwarz_symm(basis, threshold_schwarz=threshold_schwarz)
                             print("Size of 4c2e ERI tensor in GB: ", round(ints4c2e.nbytes/1e9, 4), flush=True)
                             print("Negligible integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)<1.0e-12), flush=True)
                             print("Significant integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)>=1.0e-12), flush=True)
@@ -1166,7 +1147,7 @@ class DFT:
             # Evaluate ao_values to calculate rho
             print('\nPruning generated grids by rho...\n\n', flush=True)
             startGrids_prune_rho = timer()
-            threshold_rho = 1e-011
+            threshold_rho = 1e-11
             ngrids_temp = grids.coords.shape[0]
             ndeleted = 0
             blocksize_temp = 50000

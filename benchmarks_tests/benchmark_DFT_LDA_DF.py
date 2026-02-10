@@ -108,7 +108,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_TPP.xyz'
 # xyzFilename = 'H2O.xyz'
 
-# xyzFilename = 'Caffeine.xyz'
+xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'
@@ -119,7 +119,7 @@ auxbasis_name = 'def2-universal-jfit'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -218,6 +218,7 @@ print('\n\nNAO :',basis.bfs_nao)
 auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
 print('\n\naux NAO :',auxbasis.bfs_nao)
 
+# dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx)
 dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
 dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
@@ -251,18 +252,8 @@ dftObj.threads_y = 32
 dftObj.dynamic_precision = False
 dftObj.keep_ints3c2e_in_gpu = True
 
-# print(dmat_init)
 # Using PySCF grids to compare the energies
 energyCrysX, dmat_pyfock = dftObj.scf()
-# print(dmat)
-
-# Using CrysX grids 
-# To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
-# radial_precision=1.0e-13
-# level=3
-# pruning by density with threshold = 1e-011
-# alpha_min and alpha_max corresponding to QZVP
-# energyCrysX, dmat = dftObj.scf()
 
 
 print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))

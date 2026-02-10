@@ -7,7 +7,7 @@ import numpy as np
 import numba 
 import os
 
-ncores = 8
+ncores = 4
 
 bench_GPU = False
 
@@ -23,11 +23,11 @@ os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=1
 
 # 3c2e ERI
 
-# basis_set_name = '6-31G'
+basis_set_name = '6-31G'
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
-basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-DZVP'
 # basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
@@ -66,18 +66,18 @@ auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=auxbasisName)})
 #Now we can calculate integrals using different algorithms
 
 #Let's calculate the complete ERI array using the explicit conventional formula (Slow)
-# print('\n\n\n')
-# print('Integrals')
-# print('3c2e ERI array (Conventional Algorithm)\n')
-# print('NAO: ', basis.bfs_nao)
-# print('NAO (aux): ', auxbasis.bfs_nao)
-# start=timer()
-# #NOTE: The matrices are calculated in CAO basis and not the SAO basis
-# #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-# ERI_conv = Integrals.conv_3c2e_symm(basis, auxbasis)
-# print(ERI_conv[0:7,0:7,0]) 
-# duration = timer() - start
-# print('Duration for 3c2e ERI using PyFock Conventional algorithm: ',duration)
+print('\n\n\n')
+print('Integrals')
+print('3c2e ERI array (Conventional Algorithm)\n')
+print('NAO: ', basis.bfs_nao)
+print('NAO (aux): ', auxbasis.bfs_nao)
+start=timer()
+#NOTE: The matrices are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+ERI_conv = Integrals.conv_3c2e_symm(basis, auxbasis)
+print(ERI_conv[0:7,0:7,0]) 
+duration = timer() - start
+print('Duration for 3c2e ERI using PyFock Conventional algorithm: ',duration)
 
 
 # Let's calculate the complete 3c2e ERI array using the Rys algorithm
@@ -92,7 +92,7 @@ start=timer()
 ERI_rys = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=False)
 print(ERI_rys[0:7,0:7,0]) 
 duration = timer() - start
-# print(abs(ERI_conv - ERI_rys).max())
+print(abs(ERI_conv - ERI_rys).max())
 print('Duration for 3c2e ERI using PyFock Rys algorithm: ',duration)
 
 print('\n\n\n')
@@ -104,10 +104,25 @@ start=timer()
 #NOTE: The matrices are calculated in CAO basis and not the SAO basis
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
 ERI_rys_schwarz = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True)
-print(ERI_rys[0:7,0:7,0]) 
+print(ERI_rys_schwarz[0:7,0:7,0]) 
 duration = timer() - start
+print(abs(ERI_conv - ERI_rys_schwarz).max())
 print(abs(ERI_rys - ERI_rys_schwarz).max())
 print('Duration for 3c2e ERI using PyFock Rys algorithm with Schwarz screening: ',duration)
+
+print('\n\n\n')
+print('Integrals')
+print('3c2e ERI array (Rys with triangular symmetry)\n')
+print('NAO: ', basis.bfs_nao)
+print('NAO (aux): ', auxbasis.bfs_nao)
+start=timer()
+#NOTE: The matrices are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+ERI_rys_tri = Integrals.rys_3c2e_tri(basis, auxbasis)
+# print(ERI_rys_tri[0:7,0:7,0]) 
+duration = timer() - start
+# print(abs(ERI_rys - ERI_rys_tri).max())
+print('Duration for 3c2e ERI using PyFock Rys algorithm with triangular symmetry: ',duration)
 
 if bench_GPU:
     print('\n\n\n')

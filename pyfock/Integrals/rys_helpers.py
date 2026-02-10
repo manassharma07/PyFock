@@ -128,6 +128,8 @@ def coulomb_rys_3c2e_new(roots, weights, G, rpq2, rho, norder, n, m, la, lb, lc,
         ijkl += Ix * Iy * Iz * weight_i
     
     return 2.0 * math.sqrt(rho / PI) * ijkl
+
+
 "Form coulomb repulsion integral using Rys quadrature"
 @njit(cache=True, fastmath=True, error_model='numpy', nogil=True, inline='always')#, locals=dict(ijkl=np.float32, Ix=np.float32, Iy=np.float32, Iz=np.float32, val=np.float32)
 def coulomb_rys_3c2e(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L,P):
@@ -227,18 +229,12 @@ def coulomb_rys_new(roots,weights,G,rpq2, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,m
     ijkl = 0.0
     for i in range(norder):
         G = Recur_new(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],A,B,value[0],P[0],Q[0])
-        # Ix = Int1d(G,roots[i],la,lb,lc,ld,I[0],J[0],K[0],L[0],
-        #          alphaik,alphajk,alphakk,alphalk)
         Ix = Shift(G,la,lb,lc,ld,IJ[0],KL[0])
         
         G = Recur_new(G,roots[i],ma,mb,mc,md,I[1],J[1],K[1],L[1],A,B,value[1],P[1],Q[1])
-        # Iy = Int1d(G,roots[i],ma,mb,mc,md,I[1],J[1],K[1],L[1],
-        #          alphaik,alphajk,alphakk,alphalk)
         Iy = Shift(G,ma,mb,mc,md,IJ[1],KL[1])
         
         G = Recur_new(G,roots[i],na,nb,nc,nd,I[2],J[2],K[2],L[2],A,B,value[2],P[2],Q[2])
-        # Iz = Int1d(G,roots[i],na,nb,nc,nd,I[2],J[2],K[2],L[2],
-        #          alphaik,alphajk,alphakk,alphalk)
         Iz = Shift(G,na,nb,nc,nd,IJ[2],KL[2])
 
         ijkl += Ix*Iy*Iz*weights[i] # ABD eq 5 & 9

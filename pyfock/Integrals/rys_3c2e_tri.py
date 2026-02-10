@@ -2,7 +2,7 @@ import numpy as np
 from numba import njit, prange
 
 from .integral_helpers import innerLoop4c2e
-from .rys_helpers import coulomb_rys
+from .rys_helpers import coulomb_rys, coulomb_rys_3c2e, coulomb_rys_3c2e_new
 
 
 def rys_3c2e_tri(basis, auxbasis):
@@ -151,8 +151,12 @@ def rys_3c2e_tri_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, 
         lmni = bfs_lmn[i]
         la, ma, na = lmni
         nprimi = bfs_nprim[i]
+
+        roots = np.zeros((10))
+        weights = np.zeros((10))
+        G = np.zeros((20,20))
         
-        for j in prange(0, i+1): #B
+        for j in range(0, i+1): #B
             J = bfs_coords[j]
             IJ = I - J
             IJsq = np.sum(IJ**2)
@@ -162,7 +166,7 @@ def rys_3c2e_tri_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, 
             tempcoeff1 = Ni*Nj
             nprimj = bfs_nprim[j]
             
-            for k in prange(0,  naux): #C
+            for k in range(0,  naux): #C
                 K = aux_bfs_coords[k]
                 Nk = aux_bfs_contr_prim_norms[k]
                 lmnk = aux_bfs_lmn[k]
@@ -181,9 +185,7 @@ def rys_3c2e_tri_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, 
                 if norder<=10: # Use rys quadrature
                     n = int(max(la+lb,ma+mb,na+nb))
                     m = int(max(lc+ld,mc+md,nc+nd))
-                    roots = np.zeros((norder))
-                    weights = np.zeros((norder))
-                    G = np.zeros((n+1,m+1))
+                    
                     
                     #Loop over primitives
                     for ik in range(nprimi):   
@@ -212,13 +214,6 @@ def rys_3c2e_tri_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, 
                                     
                                     
                                 gammaQ = alphakk #+ alphalk
-                                screenfactorKL = np.exp(-alphakk*alphalk/gammaQ*KLsq)
-                                if abs(screenfactorKL)<1.0e-8:   
-                                    #TODO: Check for optimal value for screening
-                                    continue
-                                if abs(screenfactorAB*screenfactorKL)<1.0e-10:   
-                                    #TODO: Check for optimal value for screening
-                                    continue
                                 
                                 Q = K        
                                 PQ = P - Q
@@ -228,7 +223,7 @@ def rys_3c2e_tri_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, 
                                         
                                         
                                         
-                                val += tempcoeff5*coulomb_rys(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L)
+                                val += tempcoeff5*coulomb_rys_3c2e_new(roots,weights,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk, alphakk, alphalk,I,J,K,L, P)
                                     
 
                 else: # Analytical (Conventional)
