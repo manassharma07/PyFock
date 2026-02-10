@@ -14,7 +14,7 @@ import scipy
 import random
 
 
-def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, blocksize=5000, list_nonzero_indices=None, count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None, debug=False):
+def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, blocksize=5000, list_nonzero_indices=None, count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None, debug=False, print_nelec=True):
     """
     Evaluate exchange-correlation (XC) energy and potential matrix for DFT
     using algorithm 2, which is the preferred algorithm for running DFT on CPU.
@@ -245,7 +245,8 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, bloc
     
 
     numba.set_num_threads(ncores)    
-    print('Number of electrons: ', nelec)
+    if print_nelec:
+        print('Number of electrons: ', nelec)
     if debug:
         print('Timings:', timings)
 

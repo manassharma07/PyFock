@@ -355,6 +355,11 @@ class DFT:
         self.keep_ints3c2e_in_gpu = True
         """ Whether to keep the 3c2e integrals in GPU memory or not. 
         Recommended to keep in GPU memory to avoid CPU-GPU transfers at each iteration."""
+
+        self.rt_tddft = False
+        """ Whether to return data needed for efficient real-time TDDFT calculation after the DFT SCF calculation.
+        If True, the following additional data will be returned after the SCF calculation: list_nonzero_indices, count_nonzero_indices, list_ao_values, list_ao_grad_values. 
+        These are needed for efficient evaluation of the XC term during RT-TDDFT propagation. """
         
     
     def nuclear_rep_energy(self, mol=None):
@@ -872,6 +877,9 @@ class DFT:
         if isDF==False:
             strict_schwarz = False
 
+        
+
+
         print_pyfock_logo()
         print_scientist()
         print('\n\nNumber of atoms: ', mol.natoms)
@@ -889,11 +897,6 @@ class DFT:
         print('Running DFT using '+str(numba.get_num_threads())+' threads for Numba.\n\n', flush=True)
         if grids is None:
             sortGrids = True
-        if xc_bf_screen==False:
-            if save_ao_values==True:
-                print('Warning! AO screening is set to False, but AO values are requested to be saved. \
-                      AO values can only be saved when XC_BF_SCREEN=TRUE. AO values will not be saved.', flush=True)
-                save_ao_values = False
         if CUPY_AVAILABLE:
             if self.use_gpu:
                 print('GPU acceleration is enabled. Currently this only accelerates AO values and XC term evaluation.', flush=True)
@@ -1126,6 +1129,11 @@ class DFT:
         print('\n\n------------------------------------------------------', flush=True)
         print('Numerical Integration for XC Term')
         print('------------------------------------------------------\n', flush=True)
+        if not xc_bf_screen:
+            if save_ao_values:
+                print('Warning! BF screening (xc_bf_screen) is set to False, but AO values are requested to be saved (save_ao_values=True).')
+                print('AO values can only be saved when xc_bf_screen = True. Turning xc_bf_screen to True.', flush=True)
+                xc_bf_screen = True
         if grids is None:
             startGrids = timer()
             print('\nGenerating grids...\n\n', flush=True)
@@ -1655,8 +1663,16 @@ class DFT:
 
             # Switch back to main GPU
             cp.cuda.Device(0).use()
-        
-        return Etot, dmat
+        rt_tddft = self.rt_tddft
+        if rt_tddft:
+            if xc_bf_screen and save_ao_values:
+                return Etot, dmat, list_nonzero_indices, count_nonzero_indices, list_ao_values, list_ao_grad_values
+            if xc_bf_screen and not save_ao_values:
+                return Etot, dmat, list_nonzero_indices, count_nonzero_indices
+            if not xc_bf_screen and not save_ao_values:
+                return Etot, dmat
+        else:
+            return Etot, dmat
         
 
     
