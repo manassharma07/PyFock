@@ -80,9 +80,9 @@ funcidpyscf = str(funcx)+','+str(funcc)
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
 # basis_set_name = '6-31G'
-# basis_set_name = 'def2-SVP'
+basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
-basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
 # basis_set_name = 'def2-TZVPP'
 # basis_set_name = 'def2-QZVPP'
@@ -100,7 +100,7 @@ basis_set_name = 'def2-TZVP'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-xyzFilename = 'H2O.xyz'
+# xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -113,7 +113,7 @@ xyzFilename = 'H2O.xyz'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -143,7 +143,7 @@ xyzFilename = 'H2O.xyz'
 molPySCF = gto.Mole()
 molPySCF.atom = xyzFilename
 molPySCF.basis = basis_set_name
-molPySCF.cart = False
+molPySCF.cart = True
 molPySCF.verbose = 4
 molPySCF.max_memory=5000
 # molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
@@ -209,7 +209,7 @@ dftObj.max_itr = 35
 dftObj.ncores = ncores
 dftObj.save_ao_values = True
 dftObj.isDF = False
-dftObj.rys = True
+dftObj.rys = False
 dftObj.blocksize = 5000
 dftObj.XC_algo = 2
 dftObj.debug = False
@@ -220,9 +220,9 @@ dftObj.strict_schwarz = False
 # dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
-dftObj.sao = True
-dftObj.direct_scf = False
-dftObj.coul_algo = 2
+dftObj.sao = False
+dftObj.direct_scf = True
+dftObj.coul_algo = 1
 
 # GPU acceleration
 dftObj.use_gpu = False

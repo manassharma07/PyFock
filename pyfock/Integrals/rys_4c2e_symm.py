@@ -285,7 +285,8 @@ def rys_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                                             else:
                                                 print("Error: Rys quadrature order greater than 10 not implemented.")
                                             
-                            
+                            if abs(val) < 1e-12:
+                                continue
                             fourC2E[i-indx_startA, j-indx_startB, k-indx_startC, l-indx_startD] = val
                         
 
@@ -308,6 +309,8 @@ def rys_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                     for k in prange(indx_startC, indx_endC):
                         for l in prange(indx_startD, indx_endD):
                             val = fourC2E[i-indx_startA, j-indx_startB, k-indx_startC, l-indx_startD]
+                            if abs(val) < 1e-12:
+                                continue
                             if l<=k:
                                 fourC2E[j-indx_startB, i-indx_startA, k-indx_startC, l-indx_startD] = val
                                 fourC2E[i-indx_startA, j-indx_startB, l-indx_startD, k-indx_startC] = val
@@ -339,6 +342,8 @@ def rys_4c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
                     for k in prange(indx_startC, indx_endC):
                         for l in prange(indx_startD, indx_endD):
                             val = fourC2E[i-indx_startA, j-indx_startB, k-indx_startC, l-indx_startD]
+                            if abs(val)>1e-12:  #TODO: Check for optimal value for screening
+                                continue
                             if l<=k:
                                 fourC2E[j-indx_startB, i-indx_startA, k-indx_startC, l-indx_startD] = val
                                 fourC2E[i-indx_startA, j-indx_startB, l-indx_startD, k-indx_startC] = val

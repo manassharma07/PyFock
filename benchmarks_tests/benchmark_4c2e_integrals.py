@@ -24,7 +24,7 @@ Vmat_temp = Integrals.rys_4c2e_schwarz_symm(basis_temp)
 
 # 4c2e ERI via explicit conventional integrals (quite slow)
 
-# basis_set_name = '6-31G'
+basis_set_name = '6-31G'
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
@@ -35,16 +35,16 @@ Vmat_temp = Integrals.rys_4c2e_schwarz_symm(basis_temp)
 # basis_set_name = 'def2-TZVPPD'
 # basis_set_name = 'def2-QZVPPD'
 # basis_set_name = 'ano-rcc'
-basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'cc-pVDZ'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 # xyzFilename = 'H2O.xyz'
 # xyzFilename = 'Zn.xyz'
 # xyzFilename = 'Zn_dimer.xyz'
-xyzFilename = 'Ethane.xyz'
+# xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'Serotonin.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -73,6 +73,47 @@ basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
 # print(ERI_conv[0:7,0:7,0,0]) 
 # duration = timer() - start
 # print('Duration for ERI using PyFock Conventional algorithm: ',duration)
+
+
+print('\n\n\n')
+print('Integrals')
+print('4c2e ERI array (Obara-Saika Algorithm)\n')
+print('NAO: ', basis.bfs_nao)
+start=timer()
+#NOTE: The tensors are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
+ERI_os = Integrals.os_4c2e_symm(basis)
+print(ERI_os[0:7,0:7,0,0]) 
+duration = timer() - start
+# print(abs(ERI_conv - ERI_os).max())
+print('Duration for ERI using PyFock Obara-Saika algorithm: ',duration)
+
+print('\n\n\n')
+print('Integrals')
+print('4c2e ERI array (Obara-Saika Algorithm with Schwarz Screening)\n')
+print('NAO: ', basis.bfs_nao)
+start=timer()
+#NOTE: The tensors are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
+ERI_os_schwarz = Integrals.os_4c2e_schwarz_symm(basis, threshold_schwarz=1e-10)
+print(ERI_os_schwarz[0:7,0:7,0,0]) 
+duration = timer() - start
+print(abs(ERI_os_schwarz - ERI_os).max())
+print('Duration for ERI using PyFock Obara-Saika algorithm with Schwarz Screening: ',duration)
+
+# print('\n\n\n')
+# print('Integrals')
+# print('4c2e ERI array (Obara-Saika Algorithm NEW)\n')
+# print('NAO: ', basis.bfs_nao)
+# start=timer()
+# #NOTE: The tensors are calculated in CAO basis and not the SAO basis
+# #You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
+# ERI_os_new = Integrals.os_4c2e_symm_new(basis)
+# print(ERI_os_new[0:7,0:7,0,0]) 
+# duration = timer() - start
+# # print(abs(ERI_conv - ERI_os_new).max())
+# print(abs(ERI_os - ERI_os_new).max())
+# print('Duration for ERI using PyFock Obara-Saika algorithm NEW: ',duration)
 
 
 #Let's calculate the complete ERI array using the MMD algorithm
@@ -128,6 +169,7 @@ ERI_rys = Integrals.rys_4c2e_symm(basis)
 print(ERI_rys[0:7,0:7,0,0]) 
 duration = timer() - start
 # print(abs(ERI_conv - ERI_rys).max())
+print(abs(ERI_os - ERI_rys).max())
 print('Duration for ERI using PyFock Rys algorithm: ',duration)
 
 
@@ -143,6 +185,7 @@ ERI_rys_schwarz = Integrals.rys_4c2e_schwarz_symm(basis, threshold_schwarz=1e-9)
 print(ERI_rys_schwarz[0:7,0:7,0,0]) 
 duration = timer() - start
 # print(abs(ERI_conv - ERI_rys_schwarz).max())
+print(abs(ERI_rys - ERI_rys_schwarz).max())
 print('Duration for ERI using PyFock Rys+Schwarz algorithm (includes screening time): ',duration)
 
 
@@ -170,5 +213,5 @@ print('Array dimensions: ', ERI_pyscf.shape)
 print(abs(ERI_pyscf - ERI_rys_schwarz).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
 print(abs(ERI_pyscf - ERI_rys).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
 # print(abs(ERI_pyscf - ERI_rys_old).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
-print(abs(ERI_pyscf - ERI_conv).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
-print(abs(ERI_pyscf - ERI_mmd).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
+# print(abs(ERI_pyscf - ERI_conv).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
+# print(abs(ERI_pyscf - ERI_mmd).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.

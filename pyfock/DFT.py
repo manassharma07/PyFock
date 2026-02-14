@@ -241,18 +241,23 @@ class DFT:
         """ Atomic grids for DFT calculation """
 
         self.isDF = True
-        """ Use density fitting (DF) for two-electron Coulomb integrals. This is only for developers. Users should not change it. """
+        """ Use density fitting (DF) for two-electron Coulomb integrals by default. 
+        Not using DF is possible but not recommended as it is slower with no advantage in accuracy. """
 
         self.auxbasis = auxbasis
-        """ Basis object to be used as the auxiliary basis for DF """
+        """ Basis object to be used as the auxiliary basis for DF. Use universal by default. """
         if self.auxbasis is None:
             auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-universal-jfit')})
 
         self.rys = True
-        """ Use rys quadrature for the evaluation of two electron integrals (with and without DF)"""
+        """ Use rys quadrature for the evaluation of two electron integrals (with and without DF)
+        In case of DF, only rys quadrature based evaluation of ERIs is supported."""
 
         self.DF_algo = 10
-        """ This is only for developers. Users should not change it. """
+        """ This is only for developers. Users should not change it. 
+        In this algo, the significant 3c2e integrals are calculated and stored in memory throughout SCF.
+        Other alternatives are 1 and 2, which are only for reference and. take up a lot of memory as the complete
+        3c2e tensor is stored in memory."""
 
         self.blocksize = blocksize
         """ Block size for the evaulation of XC term on grids. For CPUs a value of ~5000 is recommended. For GPUs, a value >20480 is recommended. """
@@ -282,7 +287,8 @@ class DFT:
         self.strict_schwarz = True
         """ If True, enforce stricter Schwarz screening to aggressively eliminate small two-electron integrals. """
         self.cholesky = True
-        """ Whether to use Cholesky decomposition for DF. Slightly speeds up calculations. """
+        """ Whether to use Cholesky decomposition for DF. Slightly speeds up calculations on CPU. 
+        Cholesky decomposition for DF is not supported on GPUs."""
         self.orthogonalize = True
         """ Apply orthogonalization to the AO basis. Should be True for most standard calculations. """
 
@@ -319,7 +325,7 @@ class DFT:
         self.direct_scf = False 
         """ Only relevant for calculations without DF. If True, the 4c2e integrals are recalculated at every SCF iteration.
         Extremely memory efficient. The 4c2e tensor is never stored in memory and is contracted with the density matrix
-        on the fly to compute J matrix. The downside is that is extremely slow."""
+        on the fly to compute J matrix. The downside is that it is slow."""
 
         self.coul_algo = 2
         """ Determines the algorithm for working with 4c2e ERIs.
@@ -1042,47 +1048,75 @@ class DFT:
             if not dmat.shape==S.shape:
                 dmat = np.dot(sph2c_mat_pseudo, np.dot(dmat, sph2c_mat_pseudo.T)) # Convert to CAO from SAO (SAO --> CAO)
                 # Later the dmat will be converted back to SAO after J and XC term evaluations
+
+        if rys:
+            print("\n\nUser requested to use Rys Quadrature Algorithm for the evaluation of ERIs")
+        else:
+            print("\n\nUser requested to use Obara-Saika Algorithm for the evaluation of ERIs")
+
         if not isDF: # 4c2e ERI case
-            
             
             if isSchwarz:
                 start_4c2e = timer()
                 # Four centered two electron integrals (ERIs)
-                if rys:
-                    if direct_scf:
-                        print('\n\nPerforming Schwarz screening...')
-                        print('Threshold ', threshold_schwarz)
-                        startSchwarz = timer()
-                        duration_4c2e_diag = 0.0
-                        start_4c2e_diag = timer()
-                        # Diagonal elements of ERI 4c2e array
-                        ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
-                        duration_4c2e_diag = timer() - start_4c2e_diag
-                        print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
-                        # Calculate the square roots required for 
-                        duration_square_roots = 0.0
-                        start_square_roots = timer()
-                        sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-                        duration_square_roots = timer() - start_square_roots
-                        print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
-                        durationSchwarz = timer() - startSchwarz
-                        print('Total time taken for Schwarz screening: ', round(durationSchwarz, 2))
-                    else:
-                        if coul_algo==1:
-                            ## WARN USER THAT DIRECT SCF IS OFF AND THUS 4C2E INTEGRALS WILL BE FULLY STORED
-                            ## ALSO NOTIFY THE USER ABOUT THE EXPECTED MEMORY REQUIREMENTS
-                            estimated_mem_GB = (basis.bfs_nao**4)*8/1e9
-                            print('\n\nWARNING: DIRECT SCF IS TURNED OFF. THIS MEANS THAT THE FULL 4C2E ERI TENSOR WILL BE STORED IN MEMORY.', flush=True)
-                            print('FOR THE CURRENT BASIS SET, THE 4C2E ERI TENSOR WILL REQUIRE APPROXIMATELY '+str(round(estimated_mem_GB, 2))+' GB OF MEMORY.', flush=True)
-                            print('IF THIS EXCEEDS THE AVAILABLE MEMORY ON YOUR SYSTEM, THE PROGRAM MAY CRASH OR THE SYSTEM MAY BECOME UNRESPONSIVE.', flush=True)
-                            print('IF YOU WISH TO AVOID THIS, PLEASE ENABLE DIRECT SCF MODE BY SETTING direct_scf = TRUE.\n\n', flush=True)
-                            print('\nCalculating four center two electron integrals (ERIs) using Rys quadrature with Schwarz screening...\n\n', flush=True)
+                
+                if direct_scf:
+                    print('\n\nPerforming Schwarz screening...')
+                    print('Threshold ', threshold_schwarz)
+                    startSchwarz = timer()
+                    duration_4c2e_diag = 0.0
+                    start_4c2e_diag = timer()
+                    # Diagonal elements of ERI 4c2e array
+                    ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
+                    duration_4c2e_diag = timer() - start_4c2e_diag
+                    print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
+                    # Calculate the square roots required for 
+                    duration_square_roots = 0.0
+                    start_square_roots = timer()
+                    sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
+                    duration_square_roots = timer() - start_square_roots
+                    print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
+                    if not rys:
+                        # Build shell-pair Schwarz upper bounds: max over bf pairs in the shell pair
+                        # schwarz_shell_pair[i_shell, j_shell] = max_{a in i, b in j} sqrt(|(ab|ab)|)
+                        schwarz_shell_pair = np.zeros((basis.nshells, basis.nshells), dtype=np.float64)
+                        for ish in range(basis.nshells):
+                            bf_i_start = basis.shell_bfs_offset[ish]
+                            nbf_i = basis.bfs_nbfshell[ish]
+                            for jsh in range(ish + 1):
+                                bf_j_start = basis.shell_bfs_offset[jsh]
+                                nbf_j = basis.bfs_nbfshell[jsh]
+                                max_val = 0.0
+                                for ia in range(nbf_i):
+                                    for jb in range(nbf_j):
+                                        val = sqrt_ints4c2e_diag[bf_i_start + ia, bf_j_start + jb]
+                                        if val > max_val:
+                                            max_val = val
+                                schwarz_shell_pair[ish, jsh] = max_val
+                                schwarz_shell_pair[jsh, ish] = max_val
+                    durationSchwarz = timer() - startSchwarz
+                    print('Total time taken for Schwarz screening: ', round(durationSchwarz, 2))
+                else:
+                    if coul_algo==1:
+                        ## WARN USER THAT DIRECT SCF IS OFF AND THUS 4C2E INTEGRALS WILL BE FULLY STORED
+                        ## ALSO NOTIFY THE USER ABOUT THE EXPECTED MEMORY REQUIREMENTS
+                        estimated_mem_GB = (basis.bfs_nao**4)*8/1e9
+                        print('\n\nWARNING: DIRECT SCF IS TURNED OFF. THIS MEANS THAT THE FULL 4C2E ERI TENSOR WILL BE STORED IN MEMORY.', flush=True)
+                        print('FOR THE CURRENT BASIS SET, THE 4C2E ERI TENSOR WILL REQUIRE APPROXIMATELY '+str(round(estimated_mem_GB, 2))+' GB OF MEMORY.', flush=True)
+                        print('IF THIS EXCEEDS THE AVAILABLE MEMORY ON YOUR SYSTEM, THE PROGRAM MAY CRASH OR THE SYSTEM MAY BECOME UNRESPONSIVE.', flush=True)
+                        print('IF YOU WISH TO AVOID THIS, PLEASE ENABLE DIRECT SCF MODE BY SETTING direct_scf = TRUE.\n\n', flush=True)
+                        print('\nCalculating four center two electron integrals (ERIs) using Rys quadrature with Schwarz screening...\n\n', flush=True)
+                        if rys:
                             ints4c2e = Integrals.rys_4c2e_schwarz_symm(basis, threshold_schwarz=threshold_schwarz)
-                            print("Size of 4c2e ERI tensor in GB: ", round(ints4c2e.nbytes/1e9, 4), flush=True)
-                            print("Negligible integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)<1.0e-12), flush=True)
-                            print("Significant integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)>=1.0e-12), flush=True)
-                            print("Total number of integrals in the 4c2e ERI tensor = ", ints4c2e.size, flush=True)
-                        elif coul_algo==2:
+                        else: #Obara-Saika
+                            ints4c2e = Integrals.os_4c2e_schwarz_symm(basis, threshold_schwarz=threshold_schwarz)
+                        print("Size of 4c2e ERI tensor in GB: ", round(ints4c2e.nbytes/1e9, 4), flush=True)
+                        print("Negligible integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)<1.0e-12), flush=True)
+                        print("Significant integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)>=1.0e-12), flush=True)
+                        print("Total number of integrals in the 4c2e ERI tensor = ", ints4c2e.size, flush=True)
+
+                    elif coul_algo==2:
+                        if rys:
                             print('\n\nPerforming Schwarz screening...')
                             print('Threshold ', threshold_schwarz)
                             startSchwarz = timer()
@@ -1102,10 +1136,11 @@ class DFT:
                             print('Total time taken for Schwarz screening: ', round(durationSchwarz, 2))
                             print('\nCalculating four center two electron integrals (ERIs) using Rys quadrature with Schwarz screening...\n\n', flush=True)
                             ints4c2e_values, ints4c2e_indices = Integrals.rys_4c2e_schwarz_sparse_symm(basis, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
-                            
+                        else:
+                            print("Error: Coul_Algo 2 currently only supports Rys based ERIs")
+                            return
 
-                else:
-                    print('DFT without Rys quadrature based 4c2e ERIs is too slow so not allowed!')
+                
                 durationCoulomb = timer() - start_4c2e
                 if not direct_scf:
                     print('Time taken for 4c2e integral evaluation (including Schwarz Screening): '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
@@ -1391,8 +1426,10 @@ class DFT:
                     start_4c2e = timer()
                     if direct_scf:
                         print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
-                        
-                        J = Integrals.rys_coulomb_matrix(basis, dmat, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
+                        if rys:
+                            J = Integrals.rys_coulomb_matrix(basis, dmat, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
+                        else: #Obara-Saika
+                            J = Integrals.os_coulomb_matrix(basis, dmat, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz)
                     else:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat) # This is in CAO basis
@@ -1413,8 +1450,10 @@ class DFT:
                     start_4c2e = timer()
                     if direct_scf:
                         print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
-                        
-                        J_diff = Integrals.rys_coulomb_matrix(basis, dmat_diff, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
+                        if rys:
+                            J_diff = Integrals.rys_coulomb_matrix(basis, dmat_diff, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
+                        else: #Obara-saika
+                            J_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz)
                         J += J_diff
                     else:
                         if coul_algo==1:
