@@ -79,6 +79,20 @@ print(ERI_conv[0:7,0:7,0])
 duration = timer() - start
 print('Duration for 3c2e ERI using PyFock Conventional algorithm: ',duration)
 
+# Let's calculate the complete 3c2e ERI array using the OS algorithm
+print('\n\n\n')
+print('Integrals')
+print('3c2e ERI array (Obara-Saika)\n')
+print('NAO: ', basis.bfs_nao)
+print('NAO (aux): ', auxbasis.bfs_nao)
+start=timer()
+#NOTE: The matrices are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
+ERI_os = Integrals.os_3c2e_symm(basis, auxbasis)
+print(ERI_os[0:7,0:7,0]) 
+duration = timer() - start
+print(abs(ERI_conv - ERI_os).max())
+print('Duration for 3c2e ERI using PyFock Obara-Saika algorithm: ',duration)
 
 # Let's calculate the complete 3c2e ERI array using the Rys algorithm
 print('\n\n\n')

@@ -163,7 +163,7 @@ mf.init_guess = 'minao'
 dmat_init = mf.init_guess_by_minao(molPySCF)
 # mf.init_guess = 'atom'
 # dmat_init = mf.init_guess_by_atom(molPySCF)
-mf.max_cycle = 30
+mf.max_cycle = 1
 mf.conv_tol = 1e-7
 mf.grids.level = 3
 energyPyscf = mf.kernel(dm0=dmat_init)

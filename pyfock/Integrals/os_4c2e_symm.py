@@ -1,6 +1,7 @@
 import numpy as np
 from numba import njit, prange
 from .integral_helpers import Fboys
+from .integral_helpers import comb
 
 def os_4c2e_symm(basis):
     """
@@ -64,16 +65,14 @@ def os_4c2e_symm(basis):
 def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset,
                           bfs_nbfshell, bfs_coords, bfs_contr_prim_norms, bfs_lmn,
                           bfs_nprim, bfs_shell_index, bfs_coeffs, bfs_expnts, bfs_prim_norms):
-    
-    fourC2E = np.zeros((nbf, nbf, nbf, nbf), dtype=np.float64)
 
+    fourC2E = np.zeros((nbf, nbf, nbf, nbf), dtype=np.float64)
 
     pi = np.pi
     two_pi_52 = 2.0 * pi ** 2.5
 
     n_ab = nshells * (nshells + 1) // 2
 
-    #Let store all the imp things like shell pair data beforehand
     AB_vecs = np.zeros((n_ab, 3), dtype=np.float64)
     AB_sqs = np.zeros(n_ab, dtype=np.float64)
     ab_shell_a = np.zeros(n_ab, dtype=np.int64)
@@ -93,7 +92,6 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
             AB_sqs[idx] = dx * dx + dy * dy + dz * dz
             idx += 1
 
-    #find out some max sizes of things
     max_L = 0
     max_nprim = 0
     max_nbf_shell = 0
@@ -107,10 +105,14 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
             max_nbf_shell = bfs_nbfshell[i]
 
     max_L_all = 4 * max_L
-    max_dim = 2 * max_L + 1
+    max_dim_bra = 2 * max_L + 1
+    max_dim_ket = 2 * max_L + 1
     max_dim_m = max_L_all + 1
     max_prim_pairs = max_nprim * max_nprim
     max_hrr = (max_L + 1) ** 3
+
+    # Flat size for V array: d1^3 * d2^3 where d1=max_dim_bra, d2=max_dim_ket
+    max_flat = max_dim_bra ** 3 * max_dim_ket ** 3
 
     for ab_idx in prange(n_ab):
         ish_a = ab_shell_a[ab_idx]
@@ -135,26 +137,25 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
         nprimi = bfs_nprim[ibf_a0]
         nprimj = bfs_nprim[ibf_b0]
 
-        # lots of allocations for scratch data (need to see if there is a better way to do this?)
         bra_p = np.empty(max_prim_pairs, dtype=np.float64)
         bra_K = np.empty(max_prim_pairs, dtype=np.float64)
         bra_Px = np.empty(max_prim_pairs, dtype=np.float64)
         bra_Py = np.empty(max_prim_pairs, dtype=np.float64)
         bra_Pz = np.empty(max_prim_pairs, dtype=np.float64)
         bra_PAx = np.empty(max_prim_pairs, dtype=np.float64)
-        bra_PAy = np.empty(max_prim_pairs,dtype=np.float64)
-        bra_PAz = np.empty(max_prim_pairs,dtype=np.float64)
-        bra_alpha = np.empty(max_prim_pairs,dtype=np.float64)
-        bra_beta = np.empty(max_prim_pairs,dtype=np.float64)
-        bra_ipa = np.empty(max_prim_pairs,dtype=np.int64)
+        bra_PAy = np.empty(max_prim_pairs, dtype=np.float64)
+        bra_PAz = np.empty(max_prim_pairs, dtype=np.float64)
+        bra_alpha = np.empty(max_prim_pairs, dtype=np.float64)
+        bra_beta = np.empty(max_prim_pairs, dtype=np.float64)
+        bra_ipa = np.empty(max_prim_pairs, dtype=np.int64)
         bra_ipb = np.empty(max_prim_pairs, dtype=np.int64)
 
-        ket_q =np.empty(max_prim_pairs, dtype=np.float64)
-        ket_K =np.empty(max_prim_pairs, dtype=np.float64)
-        ket_Qx =np.empty(max_prim_pairs, dtype=np.float64)
-        ket_Qy =np.empty(max_prim_pairs, dtype=np.float64)
-        ket_Qz =np.empty(max_prim_pairs, dtype=np.float64)
-        ket_QCx =np.empty(max_prim_pairs, dtype=np.float64)
+        ket_q = np.empty(max_prim_pairs, dtype=np.float64)
+        ket_K = np.empty(max_prim_pairs, dtype=np.float64)
+        ket_Qx = np.empty(max_prim_pairs, dtype=np.float64)
+        ket_Qy = np.empty(max_prim_pairs, dtype=np.float64)
+        ket_Qz = np.empty(max_prim_pairs, dtype=np.float64)
+        ket_QCx = np.empty(max_prim_pairs, dtype=np.float64)
         ket_QCy = np.empty(max_prim_pairs, dtype=np.float64)
         ket_QCz = np.empty(max_prim_pairs, dtype=np.float64)
         ket_gamma = np.empty(max_prim_pairs, dtype=np.float64)
@@ -162,8 +163,8 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
         ket_ipc = np.empty(max_prim_pairs, dtype=np.int64)
         ket_ipd = np.empty(max_prim_pairs, dtype=np.int64)
 
-        V_vrr = np.zeros((max_dim_m, max_dim, max_dim, max_dim,
-                          max_dim, max_dim, max_dim), dtype=np.float64)
+        # 2D flat V array instead of 7D
+        V_vrr = np.zeros((max_dim_m, max_flat), dtype=np.float64)
 
         ERI_shell = np.zeros((max_nbf_shell, max_nbf_shell,
                               max_nbf_shell, max_nbf_shell), dtype=np.float64)
@@ -186,7 +187,6 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
         X_WQ = np.empty(3, dtype=np.float64)
         F = np.empty(max_dim_m, dtype=np.float64)
 
-        
         n_bra_pairs = 0
         for ipa in range(nprimi):
             alpha = bfs_expnts[ibf_a0, ipa]
@@ -223,7 +223,6 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
         if n_bra_pairs == 0:
             continue
 
-        
         for ic_a in range(nbf_a):
             ibf_a = bf_a_start + ic_a
             ax, ay, az = bfs_lmn[ibf_a, 0], bfs_lmn[ibf_a, 1], bfs_lmn[ibf_a, 2]
@@ -232,15 +231,15 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                 bx, by, bz = bfs_lmn[ibf_b, 0], bfs_lmn[ibf_b, 1], bfs_lmn[ibf_b, 2]
                 count = 0
                 for px in range(bx + 1):
-                    binom_x = _binom(bx, px)
+                    binom_x = comb(bx, px)
                     pow_x = X_AB[0] ** (bx - px)
                     ax_f = ax + px
                     for py in range(by + 1):
-                        binom_y = _binom(by, py)
+                        binom_y = comb(by, py)
                         pow_y = X_AB[1] ** (by - py)
                         ay_f = ay + py
                         for pz in range(bz + 1):
-                            binom_z = _binom(bz, pz)
+                            binom_z = comb(bz, pz)
                             pow_z = X_AB[2] ** (bz - pz)
                             az_f = az + pz
                             coeff = binom_x * pow_x * binom_y * pow_y * binom_z * pow_z
@@ -251,7 +250,6 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                             count += 1
                 bra_hrr_n[ic_a, ic_b] = count
 
-        
         for cd_idx in range(ab_idx + 1):
             ish_c = ab_shell_a[cd_idx]
             ish_d = ab_shell_b[cd_idx]
@@ -275,12 +273,14 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
             dim_ket = L_ket + 1
             dim_m = L_all + 1
 
+            # Actual flat size for this shell quartet
+            flat_size = dim_bra * dim_bra * dim_bra * dim_ket * dim_ket * dim_ket
+
             ibf_c0 = bf_c_start
             ibf_d0 = bf_d_start
             nprimk = bfs_nprim[ibf_c0]
             npriml = bfs_nprim[ibf_d0]
 
-            
             n_ket_pairs = 0
             for ipc in range(nprimk):
                 gamma = bfs_expnts[ibf_c0, ipc]
@@ -317,14 +317,12 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
             if n_ket_pairs == 0:
                 continue
 
-            #Zero ERI_shell (only the portion we need)
             for ic_a in range(nbf_a):
                 for ic_b in range(nbf_b):
                     for ic_c in range(nbf_c):
                         for ic_d in range(nbf_d):
                             ERI_shell[ic_a, ic_b, ic_c, ic_d] = 0.0
 
-            
             for ic_c in range(nbf_c):
                 ibf_c = bf_c_start + ic_c
                 cx, cy, cz = bfs_lmn[ibf_c, 0], bfs_lmn[ibf_c, 1], bfs_lmn[ibf_c, 2]
@@ -333,15 +331,15 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                     ddx, ddy, ddz = bfs_lmn[ibf_d, 0], bfs_lmn[ibf_d, 1], bfs_lmn[ibf_d, 2]
                     count = 0
                     for ix in range(ddx + 1):
-                        binom_x = _binom(ddx, ix)
+                        binom_x = comb(ddx, ix)
                         pow_x = X_CD[0] ** (ddx - ix)
                         cx_s = cx + ix
                         for iy in range(ddy + 1):
-                            binom_y = _binom(ddy, iy)
+                            binom_y = comb(ddy, iy)
                             pow_y = X_CD[1] ** (ddy - iy)
                             cy_s = cy + iy
                             for iz in range(ddz + 1):
-                                binom_z = _binom(ddz, iz)
+                                binom_z = comb(ddz, iz)
                                 pow_z = X_CD[2] ** (ddz - iz)
                                 cz_s = cz + iz
                                 coeff = binom_x * pow_x * binom_y * pow_y * binom_z * pow_z
@@ -352,7 +350,6 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                                 count += 1
                     ket_hrr_n[ic_c, ic_d] = count
 
-            
             for ibra in range(n_bra_pairs):
                 p = bra_p[ibra]
                 K_AB_val = bra_K[ibra]
@@ -409,25 +406,21 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                     for m in range(dim_m):
                         F[m] = Fboys(m, T_arg)
 
-                    
-                    # for m in range(dim_m):
-                    #     for i1 in range(dim_bra):
-                    #         for i2 in range(dim_bra):
-                    #             for i3 in range(dim_bra):
-                    #                 for i4 in range(dim_ket):
-                    #                     for i5 in range(dim_ket):
-                    #                         for i6 in range(dim_ket):
-                    #                             V_vrr[m, i1, i2, i3, i4, i5, i6] = 0.0
-
+                    # Zero only what we need
                     for m in range(dim_m):
-                        V_vrr[m, 0, 0, 0, 0, 0, 0] = prefactor * F[m]
+                        for fi in range(flat_size):
+                            V_vrr[m, fi] = 0.0
+
+                    idx_000000 = _flat_idx(0, 0, 0, 0, 0, 0, dim_bra, dim_ket)
+                    for m in range(dim_m):
+                        V_vrr[m, idx_000000] = prefactor * F[m]
 
                     if L_bra > 0:
-                        os_bra_vrr_opt(V_vrr, X_PA, X_WP, p, eta, L_bra, L_all)
+                        os_bra_vrr_flat(V_vrr, X_PA, X_WP, p, eta, L_bra, L_all, dim_bra, dim_ket)
                     if L_ket > 0:
-                        os_ket_vrr_opt(V_vrr, X_QC, X_WQ, q, eta, L_bra, L_ket, L_all)
+                        os_ket_vrr_flat(V_vrr, X_QC, X_WQ, q, eta, L_bra, L_ket, L_all, dim_bra, dim_ket)
 
-                    #Contract over basis functions
+                    # Contract over basis functions
                     for ic_a in range(nbf_a):
                         ibf_a = bf_a_start + ic_a
                         da = bfs_coeffs[ibf_a, ipa]
@@ -442,7 +435,7 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                             Nj = bfs_contr_prim_norms[ibf_b]
                             c_ab = c_a * Nj * db * Njk
 
-                            n_bra = bra_hrr_n[ic_a, ic_b]
+                            n_bra_h = bra_hrr_n[ic_a, ic_b]
 
                             for ic_c in range(nbf_c):
                                 ibf_c = bf_c_start + ic_c
@@ -461,7 +454,7 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                                     n_ket_h = ket_hrr_n[ic_c, ic_d]
 
                                     hrr_val = 0.0
-                                    for ib in range(n_bra):
+                                    for ib in range(n_bra_h):
                                         bc = bra_hrr_coeffs[ic_a, ic_b, ib]
                                         ax_f = bra_hrr_ax[ic_a, ic_b, ib]
                                         ay_f = bra_hrr_ay[ic_a, ic_b, ib]
@@ -471,11 +464,12 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                                             cx_f = ket_hrr_cx[ic_c, ic_d, ik]
                                             cy_f = ket_hrr_cy[ic_c, ic_d, ik]
                                             cz_f = ket_hrr_cz[ic_c, ic_d, ik]
-                                            hrr_val += bc * kc * V_vrr[0, ax_f, ay_f, az_f, cx_f, cy_f, cz_f]
+                                            fidx = _flat_idx(ax_f, ay_f, az_f, cx_f, cy_f, cz_f, dim_bra, dim_ket)
+                                            hrr_val += bc * kc * V_vrr[0, fidx]
 
                                     ERI_shell[ic_a, ic_b, ic_c, ic_d] += c_abcd * hrr_val
 
-            #Store results with 8-fold symmetry
+            # Store results with 8-fold symmetry
             for ic_a in range(nbf_a):
                 ibf_a = bf_a_start + ic_a
                 for ic_b in range(nbf_b):
@@ -499,6 +493,147 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
                             fourC2E[ibf_d, ibf_c, ibf_b, ibf_a] = val
 
     return fourC2E
+
+@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline='always')
+def _flat_idx(ax, ay, az, cx, cy, cz, d1, d2):
+    """Convert 6 angular momentum indices to a single flat index.
+    d1 = dim_bra (L_bra + 1), d2 = dim_ket (L_ket + 1)
+    Layout: ((((ax * d1 + ay) * d1 + az) * d2 + cx) * d2 + cy) * d2 + cz
+    """
+    return ((((ax * d1 + ay) * d1 + az) * d2 + cx) * d2 + cy) * d2 + cz
+
+
+@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline='always')
+def os_bra_vrr_flat(V, X_PA, X_WP, p, eta, L_bra, m_total, d1, d2):
+    inv_2p = 0.5 / p
+    eta_over_p = eta / p
+
+    for L_e in range(L_bra):
+        m_top = m_total - L_e - 1
+
+        for ax in range(L_e + 1):
+            for ay in range(L_e + 1 - ax):
+                az = L_e - ax - ay
+
+                idx_src = _flat_idx(ax, ay, az, 0, 0, 0, d1, d2)
+
+                # Increment x
+                ax1 = ax + 1
+                idx_dst = _flat_idx(ax1, ay, az, 0, 0, 0, d1, d2)
+                if ax > 0:
+                    idx_am1 = _flat_idx(ax - 1, ay, az, 0, 0, 0, d1, d2)
+                    for m in range(m_top + 1):
+                        v = X_PA[0] * V[m, idx_src] + X_WP[0] * V[m + 1, idx_src]
+                        v += ax * inv_2p * (V[m, idx_am1] - eta_over_p * V[m + 1, idx_am1])
+                        V[m, idx_dst] = v
+                else:
+                    for m in range(m_top + 1):
+                        V[m, idx_dst] = X_PA[0] * V[m, idx_src] + X_WP[0] * V[m + 1, idx_src]
+
+                # Increment y
+                ay1 = ay + 1
+                idx_dst = _flat_idx(ax, ay1, az, 0, 0, 0, d1, d2)
+                if ay > 0:
+                    idx_am1 = _flat_idx(ax, ay - 1, az, 0, 0, 0, d1, d2)
+                    for m in range(m_top + 1):
+                        v = X_PA[1] * V[m, idx_src] + X_WP[1] * V[m + 1, idx_src]
+                        v += ay * inv_2p * (V[m, idx_am1] - eta_over_p * V[m + 1, idx_am1])
+                        V[m, idx_dst] = v
+                else:
+                    for m in range(m_top + 1):
+                        V[m, idx_dst] = X_PA[1] * V[m, idx_src] + X_WP[1] * V[m + 1, idx_src]
+
+                # Increment z
+                az1 = az + 1
+                idx_dst = _flat_idx(ax, ay, az1, 0, 0, 0, d1, d2)
+                if az > 0:
+                    idx_am1 = _flat_idx(ax, ay, az - 1, 0, 0, 0, d1, d2)
+                    for m in range(m_top + 1):
+                        v = X_PA[2] * V[m, idx_src] + X_WP[2] * V[m + 1, idx_src]
+                        v += az * inv_2p * (V[m, idx_am1] - eta_over_p * V[m + 1, idx_am1])
+                        V[m, idx_dst] = v
+                else:
+                    for m in range(m_top + 1):
+                        V[m, idx_dst] = X_PA[2] * V[m, idx_src] + X_WP[2] * V[m + 1, idx_src]
+
+
+@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline='always')
+def os_ket_vrr_flat(V, X_QC, X_WQ, q, eta, L_bra, L_ket, m_total, d1, d2):
+    inv_2q = 0.5 / q
+    eta_over_q = eta / q
+    p = eta * q / (q - eta)
+    inv_2pq = 0.5 / (p + q)
+
+    for L_f in range(L_ket):
+        for L_e in range(L_bra + 1):
+            m_top = m_total - L_e - L_f - 1
+
+            for ex in range(L_e + 1):
+                for ey in range(L_e + 1 - ex):
+                    ez = L_e - ex - ey
+
+                    for fx in range(L_f + 1):
+                        for fy in range(L_f + 1 - fx):
+                            fz = L_f - fx - fy
+
+                            idx_src = _flat_idx(ex, ey, ez, fx, fy, fz, d1, d2)
+
+                            # Increment fx
+                            fx1 = fx + 1
+                            idx_dst = _flat_idx(ex, ey, ez, fx1, fy, fz, d1, d2)
+                            has_fx = fx > 0
+                            has_ex = ex > 0
+                            if has_fx:
+                                idx_fm1 = _flat_idx(ex, ey, ez, fx - 1, fy, fz, d1, d2)
+                            if has_ex:
+                                idx_em1 = _flat_idx(ex - 1, ey, ez, fx, fy, fz, d1, d2)
+
+                            for m in range(m_top + 1):
+                                v = X_QC[0] * V[m, idx_src] + X_WQ[0] * V[m + 1, idx_src]
+                                if has_fx:
+                                    v += fx * inv_2q * (V[m, idx_fm1] - eta_over_q * V[m + 1, idx_fm1])
+                                if has_ex:
+                                    v += ex * inv_2pq * V[m + 1, idx_em1]
+                                V[m, idx_dst] = v
+
+                            # Increment fy
+                            fy1 = fy + 1
+                            idx_dst = _flat_idx(ex, ey, ez, fx, fy1, fz, d1, d2)
+                            has_fy = fy > 0
+                            has_ey = ey > 0
+                            if has_fy:
+                                idx_fm1 = _flat_idx(ex, ey, ez, fx, fy - 1, fz, d1, d2)
+                            if has_ey:
+                                idx_em1 = _flat_idx(ex, ey - 1, ez, fx, fy, fz, d1, d2)
+
+                            for m in range(m_top + 1):
+                                v = X_QC[1] * V[m, idx_src] + X_WQ[1] * V[m + 1, idx_src]
+                                if has_fy:
+                                    v += fy * inv_2q * (V[m, idx_fm1] - eta_over_q * V[m + 1, idx_fm1])
+                                if has_ey:
+                                    v += ey * inv_2pq * V[m + 1, idx_em1]
+                                V[m, idx_dst] = v
+
+                            # Increment fz
+                            fz1 = fz + 1
+                            idx_dst = _flat_idx(ex, ey, ez, fx, fy, fz1, d1, d2)
+                            has_fz = fz > 0
+                            has_ez = ez > 0
+                            if has_fz:
+                                idx_fm1 = _flat_idx(ex, ey, ez, fx, fy, fz - 1, d1, d2)
+                            if has_ez:
+                                idx_em1 = _flat_idx(ex, ey, ez - 1, fx, fy, fz, d1, d2)
+
+                            for m in range(m_top + 1):
+                                v = X_QC[2] * V[m, idx_src] + X_WQ[2] * V[m + 1, idx_src]
+                                if has_fz:
+                                    v += fz * inv_2q * (V[m, idx_fm1] - eta_over_q * V[m + 1, idx_fm1])
+                                if has_ez:
+                                    v += ez * inv_2pq * V[m + 1, idx_em1]
+                                V[m, idx_dst] = v
+
+
+
 
 
 @njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline='always')
@@ -588,66 +723,5 @@ def os_ket_vrr_opt(V, X_QC, X_WQ, q, eta, L_bra, L_ket, m_total):
                                 if ez > 0:
                                     v += ez * inv_2pq * V[m+1, ex, ey, ez-1, fx, fy, fz]
                                 V[m, ex, ey, ez, fx, fy, fz1] = v
-
-
-@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline='always')
-def _binom(n, k):
-    if k < 0 or k > n:
-        return 0
-    if k > n - k:
-        k = n - k
-    res = 1
-    for i in range(1, k + 1):
-        res = res * (n - i + 1) // i
-    return res
-
-
-@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline='always')
-def os_hrr_element(V_vrr, ax, ay, az, bx, by, bz,
-                   cx, cy, cz, dx, dy, dz, X_AB, X_CD):
-    result = 0.0
-
-    for ix in range(dx + 1):
-        binom_x_ket = _binom(dx, ix)
-        pow_x_ket = X_CD[0] ** (dx - ix)
-        cx_shift = cx + ix
-
-        for iy in range(dy + 1):
-            binom_y_ket = _binom(dy, iy)
-            pow_y_ket = X_CD[1] ** (dy - iy)
-            cy_shift = cy + iy
-
-            for iz in range(dz + 1):
-                binom_z_ket = _binom(dz, iz)
-                pow_z_ket = X_CD[2] ** (dz - iz)
-                cz_shift = cz + iz
-
-                ket_coeff = (binom_x_ket * pow_x_ket *
-                             binom_y_ket * pow_y_ket *
-                             binom_z_ket * pow_z_ket)
-
-                for px in range(bx + 1):
-                    binom_x_bra = _binom(bx, px)
-                    pow_x_bra = X_AB[0] ** (bx - px)
-                    ax_final = ax + px
-
-                    for py in range(by + 1):
-                        binom_y_bra = _binom(by, py)
-                        pow_y_bra = X_AB[1] ** (by - py)
-                        ay_final = ay + py
-
-                        for pz in range(bz + 1):
-                            binom_z_bra = _binom(bz, pz)
-                            pow_z_bra = X_AB[2] ** (bz - pz)
-                            az_final = az + pz
-
-                            bra_coeff = (binom_x_bra * pow_x_bra *
-                                        binom_y_bra * pow_y_bra *
-                                        binom_z_bra * pow_z_bra)
-
-                            result += ket_coeff * bra_coeff * V_vrr[0, ax_final, ay_final, az_final,
-                                                                     cx_shift, cy_shift, cz_shift]
-
-    return result
 
 
