@@ -477,7 +477,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             start_indices_calc = timer()
             indicesA, indicesB = np.tril_indices_from(dmat)
             if use_gpu:
-                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(cp.asnumpy(sqrt_ints4c2e_diag), cp.asnumpy(sqrt_diag_ints2c2e), threshold_schwarz, strict_schwarz, auxbfs_lm,  indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
+                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(cp.asnumpy(sqrt_ints4c2e_diag), cp.asnumpy(sqrt_diag_ints2c2e), threshold_schwarz, strict_schwarz, auxbfs_lm, aux_bfs_lmn[0], indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
             else:
                 offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, auxbfs_lm,  aux_bfs_lmn[0], indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
             nsignificant = np.sum(offsets_3c2e)

@@ -32,7 +32,7 @@ table = np.array([
 ], dtype='float64')
 
 
-@jit(cache=True, fastmath=True, inline='always')
+@njit(cache=True, fastmath=True, inline='always')
 def taylor(a,z):
     z0 = int(np.round(z))
     zi = z0 + 50
