@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit
+from numba import jit, njit
 from numba import cuda
 
 table = np.array([
