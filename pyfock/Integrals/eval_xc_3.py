@@ -1,6 +1,9 @@
 import numpy as np
 import numexpr
-import pylibxc
+try:
+    import pylibxc
+except Exception as e:
+    print('Pylibxc is not available. Can only use XC functionals implemented in PyFock.')
 from timeit import default_timer as timer
 # from time import process_time
 from pyfock import Integrals
