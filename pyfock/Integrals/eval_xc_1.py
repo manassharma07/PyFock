@@ -1,6 +1,7 @@
 import numpy as np
 import numexpr
-import pylibxc
+try:
+    import pylibxc
 from timeit import default_timer as timer
 from pyfock import Integrals
 from opt_einsum import contract

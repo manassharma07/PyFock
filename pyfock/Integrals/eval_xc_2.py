@@ -1,6 +1,6 @@
 import numpy as np
 import numexpr
-import pylibxc
+
 from pyfock import XC
 from timeit import default_timer as timer
 # from time import process_time
@@ -169,6 +169,7 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
 
     xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
     if use_libxc:
+        import pylibxc
         # Create a LibXC object  
         funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
         funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")

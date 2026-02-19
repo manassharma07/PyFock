@@ -243,7 +243,7 @@ dftObj.sao = False
 # GPU acceleration
 dftObj.use_gpu = False
 dftObj.keep_ao_in_gpu = False
-dftObj.use_libxc = False
+dftObj.use_libxc = True
 dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
 dftObj.n_gpus = 1 # Specify the number of GPUs
 dftObj.free_gpu_mem = True
