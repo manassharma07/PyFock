@@ -10,10 +10,11 @@ except Exception as e:
             return func 
         return decorator
 import numpy as np
+from numba import njit
 
 # The following implementation of the Slater exchange has been taken from this repository (https://github.com/wangenau/eminus/blob/main/eminus/xc/lda_x.py)
 # pretty much as is. The repo has the Apache 2.0 license.
-
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_x(rho):
     """
     Compute the LDA exchange energy and potential using the Slater exchange functional (spin-unpolarized).

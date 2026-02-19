@@ -12,11 +12,12 @@ except Exception as e:
 import numpy as np
 # from pyfock.XC import lda_c_pw_mod, lda_c_pw_mod_cupy
 from pyfock.XC.lda_c_pw_mod import lda_c_pw_mod_, lda_c_pw_mod_cupy_
+from numba import njit
 
 # The following implementation of the PBE correlation has been taken from this repository (https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py)
 # pretty much as is. The repo has the Apache 2.0 license.
 
-
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_c_pbe_(rho, sigma):
     # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).
@@ -60,6 +61,7 @@ def gga_c_pbe_(rho, sigma):
 
     return ec, vc, vsigma
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_c_pbe(rho, sigma):
     # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).

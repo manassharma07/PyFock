@@ -15,6 +15,23 @@ from pyfock.XC import gga_x_pbe, gga_x_pbe_cupy, gga_c_pbe, gga_c_pbe_cupy, gga_
 # Metadata tables
 # ──────────────────────────────────────────────────────────────────────────────
 
+# Add to _FUNCTIONAL_DATA or as a separate mapping
+_FUNCTIONAL_FAMILY = {
+    1:   1,  # LDA_X        → LDA
+    7:   1,  # LDA_C_VWN    → LDA
+    12:  1,  # LDA_C_PW     → LDA
+    13:  1,  # LDA_C_PW_MOD → LDA
+    101: 2,  # GGA_X_PBE    → GGA
+    106: 2,  # GGA_X_B88    → GGA
+    130: 2,  # GGA_C_PBE    → GGA
+    131: 2,  # GGA_C_LYP    → GGA
+}
+
+FAMILY_LDA    = 1
+FAMILY_GGA    = 2
+FAMILY_HYBRID = 3
+FAMILY_MGGA   = 4
+
 # Maps LibXC ID → (canonical name, citation)
 _FUNCTIONAL_DATA = {
     1: (
@@ -307,3 +324,36 @@ def func_compute(funcid, rho, sigma=None, use_gpu=True):
                 "You need to use LibXC to calculate the functional values."
             )
             exit()
+
+def get_family(funcid: int) -> int:
+    """
+    Return the family of a functional given its LibXC ID.
+
+    Parameters
+    ----------
+    funcid : int
+        LibXC functional ID.
+
+    Returns
+    -------
+    int
+        1 = LDA, 2 = GGA, 3 = Hybrid, 4 = mGGA
+
+    Raises
+    ------
+    KeyError
+        If the functional ID is not recognised.
+
+    Examples
+    --------
+    >>> get_family(1)
+    1
+    >>> get_family(101)
+    2
+    """
+    if funcid not in _FUNCTIONAL_FAMILY:
+        raise KeyError(
+            f"Unknown functional ID {funcid}. "
+            f"Available IDs: {sorted(_FUNCTIONAL_FAMILY.keys())}"
+        )
+    return _FUNCTIONAL_FAMILY[funcid]

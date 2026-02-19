@@ -11,10 +11,11 @@ except Exception as e:
         return decorator
 import numpy as np
 from pyfock.XC import lda_x
+from numba import njit
 
 # The following implementation of the PBE exchange has been taken from this repository (https://github.com/wangenau/eminus/blob/main/eminus/xc/)
 # pretty much as is. The repo has the Apache 2.0 license.
-
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_x_pbe(rho, sigma):
     """
     Compute the restricted PBE (Perdew–Burke–Ernzerhof) exchange energy density and potential
@@ -68,6 +69,7 @@ def gga_x_pbe(rho, sigma):
 
     return ex, vx, vsigma
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def pbe_x_temp(rho, sigma):
     """
     Intermediate computation for PBE exchange: enhancement factor, 
@@ -133,7 +135,7 @@ def pbe_x_temp(rho, sigma):
     vsigmax = exunifdFx * divkf / (2 * norm_dn)
     # vsigmax = np.divide(exunifdFx * divkf, 2 * norm_dn,
     #                     out=np.zeros_like(norm_dn), where=(norm_dn > 0))
-    return sx * rho, np.array(vx), vsigmax
+    return sx * rho, vx, vsigmax
 
 @fuse(kernel_name='pbe_x_temp_cupy')
 def pbe_x_temp_cupy(rho, sigma):

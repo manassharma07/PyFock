@@ -25,6 +25,7 @@ from .gga_c_pbe import gga_c_pbe, gga_c_pbe_cupy
 from .gga_x_b88 import gga_x_b88, gga_x_b88_cupy
 from .gga_c_lyp import gga_c_lyp, gga_c_lyp_cupy
 from .xcfunc_handler import check_implemented, func_compute, get_functional_id, resolve_functional 
+from .xcfunc_handler import get_family, get_functional_citation
 # get_functional_citation, _ALIAS_TO_IDS, _NAME_TO_ID, _FUNCTIONAL_DATA
 
 __all__ = [
@@ -33,7 +34,7 @@ __all__ = [
     'gga_x_pbe', 'gga_x_pbe_cupy', 'gga_c_pbe', 'gga_c_pbe_cupy',
     'gga_x_b88', 'gga_x_b88_cupy', 'gga_c_lyp', 'gga_c_lyp_cupy',
     'check_implemented', 'func_compute', 'get_functional_id', 
-    'resolve_functional', 'get_functional_citation'
+    'resolve_functional', 'get_functional_citation', 'get_family'
 ]
 
 

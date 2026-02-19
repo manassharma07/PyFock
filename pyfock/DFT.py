@@ -21,6 +21,7 @@ from pyfock.Utils import print_scientist
 from pyfock.Utils import print_sys_info
 import pyfock.Mol as Mol
 import pyfock.Basis as Basis
+from pyfock import XC
 # import pyfock.Integrals as Integrals
 import pyfock.Integrals as Integrals
 import pyfock.Grids as Grids
@@ -33,7 +34,7 @@ import scipy
 from timeit import default_timer as timer
 import numba
 from opt_einsum import contract
-import pylibxc
+
 # import sparse
 # import dask.array as da
 from scipy.sparse import csr_matrix, csc_matrix
@@ -340,7 +341,7 @@ class DFT:
         """ Whether to use GPU acceleration or not """
         self.keep_ao_in_gpu = True
         """ Whether to keep the atomic orbitals for XC evaluation in GPU memory or CPU memory. Only relevant if save_ao_values = True. """
-        self.use_libxc = True
+        self.use_libxc = False
         """ Whether to use LibXC's version of XC functionals or PyFock implementations. 
         Only relevant when GPU is used. For GPU calculations it is recommended to use PyFock 
         implementation as it avoids CPU-GPU transfers."""
@@ -883,7 +884,16 @@ class DFT:
         if isDF==False:
             strict_schwarz = False
 
-        
+        if self.use_libxc:
+            import pylibxc
+        if not self.use_libxc:
+            if isinstance(xc, list):
+                if all(isinstance(v, int) for v in xc):
+                    xc = xc  # already like [1, 7], do nothing
+                elif all(isinstance(v, str) for v in xc):
+                    xc = [XC.get_functional_id(name) for name in xc]  # ['LDA_X', 'LDA_C_VWN'] → [1, 7]
+            elif isinstance(xc, str):
+                xc = XC.resolve_functional(xc)  # 'LDA' → [1, 7]
 
 
         print_pyfock_logo()
@@ -1277,11 +1287,15 @@ class DFT:
         list_ao_grad_values = None
         if xc_bf_screen:
             xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-            # Create a LibXC object  
-            funcx = pylibxc.LibXCFunctional(xc[0], "unpolarized")
-            funcc = pylibxc.LibXCFunctional(xc[1], "unpolarized")
-            x_family_code = funcx.get_family()
-            c_family_code = funcc.get_family()
+            if self.use_libxc:
+                # Create a LibXC object  
+                funcx = pylibxc.LibXCFunctional(xc[0], "unpolarized")
+                funcc = pylibxc.LibXCFunctional(xc[1], "unpolarized")
+                x_family_code = funcx.get_family()
+                c_family_code = funcc.get_family()
+            else:
+                x_family_code = XC.get_family(xc[0])
+                c_family_code = XC.get_family(xc[1])
             ### Find the list of significanlty contributing bfs for xc evaluations
             startXCpreprocessing = timer()
             print('\nPreliminary processing for XC term evaluations...', flush=True)
@@ -1351,30 +1365,35 @@ class DFT:
         
         #-------XC Stuff start----------------------
 
-        funcid = self.xc
+        funcid = xc
 
         xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
 
         # Create a LibXC object  
-        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-        x_family_code = funcx.get_family()
-        c_family_code = funcc.get_family()
+        # funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+        # funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+        # x_family_code = funcx.get_family()
+        # c_family_code = funcc.get_family()
 
 
         print('\n\n------------------------------------------------------', flush=True)
         print('Exchange-Correlation Functional')
         print('------------------------------------------------------\n', flush=True)
-        print("PyFock utilizes LibXC's pylibxc library. Citation:")
-        print(pylibxc.util.xc_reference())
-        print('\n\n')
-        print('XC Functional IDs supplied: ', funcid, flush=True)
-        print('\n\nDescription of exchange functional: \n')
-        print('The Exchange function belongs to the family:', xc_family_dict[x_family_code], flush=True)
-        print(funcx.describe())
-        print('\n\nDescription of correlation functional: \n', flush=True)
-        print(' The Correlation function belongs to the family:', xc_family_dict[c_family_code], flush=True)
-        print(funcc.describe())
+        if self.use_libxc:
+            print("PyFock utilizes LibXC's pylibxc library. Citation:")
+            print(pylibxc.util.xc_reference())
+            print('\n\n')
+            print('XC Functional IDs supplied: ', funcid, flush=True)
+            print('\n\nDescription of exchange functional: \n')
+            print('The Exchange function belongs to the family:', xc_family_dict[x_family_code], flush=True)
+            print(funcx.describe())
+            print('\n\nDescription of correlation functional: \n', flush=True)
+            print(' The Correlation function belongs to the family:', xc_family_dict[c_family_code], flush=True)
+            print(funcc.describe())
+            
+        else:
+            print(XC.get_functional_citation(xc[0]))
+            print(XC.get_functional_citation(xc[1]))
         print('------------------------------------------------------\n', flush=True)
         print('\n\n', flush=True)
         #-------XC Stuff end----------------------
@@ -1488,7 +1507,7 @@ class DFT:
                     # Used to unstable and had memory leaks,
                     # But now all that is fixed by using threadpoolctl, garbage collection or freeing up memory after XC evaluation at each iteration
                     
-                    Exc, Vxc = Integrals.eval_xc_2(basis, dmat, grids.weights, grids.coords, funcid, ncores=ncores, blocksize=blocksize, \
+                    Exc, Vxc = Integrals.eval_xc_2(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, ncores=ncores, blocksize=blocksize, \
                                                 list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
                                                     list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
                     

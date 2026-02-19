@@ -9,12 +9,13 @@ except Exception as e:
         def decorator(func):
             return func 
         return decorator
+from numba import njit
 import numpy as np
 
 # The following implementation of the Perdew-Wang parametrization of the correlation functional
 # has been taken from this repository (https://github.com/wangenau/eminus/blob/main/eminus/xc/lda_c_pw.py)
 # pretty much as is. The repo has the Apache 2.0 license.
-
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_pw_mod_(rho):
     # From https://github.com/wangenau/eminus
     # Corresponds to the functional with the label LDA_C_PW_MOD and ID 13 in Libxc.
@@ -42,7 +43,7 @@ def lda_c_pw_mod_(rho):
     vc = -2 * A * (1 + 2 / 3 * a1 * rs) * olog - 2 / 3 * A * (1 + a1 * rs) * dom / (om * (om + 1))
 
     return ec, vc
-
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_pw_mod(rho):
     ec, vc = lda_c_pw_mod_(rho)
     vc[np.isnan(vc)] = 0

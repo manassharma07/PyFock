@@ -66,21 +66,21 @@ from pyscf import gto, dft, df, scf
 # funcc = 13
 
 # GGA_X_PBE, GGA_C_PBE (PBE)
-funcx = 101
-funcc = 130
+# funcx = 101
+# funcc = 130
 
 # GGA_X_B88, GGA_C_LYP (BLYP)
-# funcx = 106
-# funcc = 131
+funcx = 106
+funcc = 131
 
 funcidcrysx = [funcx, funcc]
 funcidpyscf = str(funcx)+','+str(funcc)
 
 # basis_set_name = 'sto-2g'
-# basis_set_name = 'sto-3g'
+basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
 # basis_set_name = '6-31G'
-basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
 # basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
