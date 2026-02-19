@@ -17,8 +17,8 @@ from pyfock.XC.lda_c_pw_mod import lda_c_pw_mod_, lda_c_pw_mod_cupy_
 # pretty much as is. The repo has the Apache 2.0 license.
 
 
-def gga_c_pbe_cupy_(rho, sigma):
-    # Taken from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
+def gga_c_pbe_(rho, sigma):
+    # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).
     # Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.
     # Reference: Phys. Rev. Lett. 78, 1396.
@@ -61,7 +61,7 @@ def gga_c_pbe_cupy_(rho, sigma):
     return ec, vc, vsigma
 
 def gga_c_pbe(rho, sigma):
-    # Taken from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
+    # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).
     # Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.
     # Reference: Phys. Rev. Lett. 78, 1396.
@@ -76,7 +76,7 @@ def gga_c_pbe(rho, sigma):
 
 @fuse(kernel_name='pbe_c_pbe_cupy_')
 def gga_c_pbe_cupy_(rho, sigma):
-    # Taken from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
+    # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).
     # Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.
     # Reference: Phys. Rev. Lett. 78, 1396.
@@ -119,7 +119,7 @@ def gga_c_pbe_cupy_(rho, sigma):
     return ec, vc, vsigma
 
 def gga_c_pbe_cupy(rho, sigma):
-    # Taken from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
+    # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).
     # Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.
     # Reference: Phys. Rev. Lett. 78, 1396.

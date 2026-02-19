@@ -24,14 +24,16 @@ from .gga_x_pbe import gga_x_pbe, gga_x_pbe_cupy
 from .gga_c_pbe import gga_c_pbe, gga_c_pbe_cupy
 from .gga_x_b88 import gga_x_b88, gga_x_b88_cupy
 from .gga_c_lyp import gga_c_lyp, gga_c_lyp_cupy
-from .xcfunc_handler import check_implemented, func_compute
+from .xcfunc_handler import check_implemented, func_compute, get_functional_id, resolve_functional 
+# get_functional_citation, _ALIAS_TO_IDS, _NAME_TO_ID, _FUNCTIONAL_DATA
 
 __all__ = [
     'lda_x', 'lda_x_cupy', 'lda_c_vwn', 'lda_c_vwn_cupy',
     'lda_c_pw', 'lda_c_pw_cupy', 'lda_c_pw_mod', 'lda_c_pw_mod_cupy',
     'gga_x_pbe', 'gga_x_pbe_cupy', 'gga_c_pbe', 'gga_c_pbe_cupy',
     'gga_x_b88', 'gga_x_b88_cupy', 'gga_c_lyp', 'gga_c_lyp_cupy',
-    'check_implemented', 'func_compute'
+    'check_implemented', 'func_compute', 'get_functional_id', 
+    'resolve_functional', 'get_functional_citation'
 ]
 
 

@@ -133,7 +133,7 @@ def pbe_x_temp(rho, sigma):
     vsigmax = exunifdFx * divkf / (2 * norm_dn)
     # vsigmax = np.divide(exunifdFx * divkf, 2 * norm_dn,
     #                     out=np.zeros_like(norm_dn), where=(norm_dn > 0))
-    return sx * rho, np.array([vx]), vsigmax
+    return sx * rho, np.array(vx), vsigmax
 
 @fuse(kernel_name='pbe_x_temp_cupy')
 def pbe_x_temp_cupy(rho, sigma):
