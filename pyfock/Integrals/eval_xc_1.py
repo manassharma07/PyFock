@@ -2,6 +2,8 @@ import numpy as np
 import numexpr
 try:
     import pylibxc
+except Exception as e:
+    print('Pylibxc is not available. Can only use XC functionals implemented in PyFock.')
 from timeit import default_timer as timer
 from pyfock import Integrals
 from opt_einsum import contract
