@@ -45,6 +45,9 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
 
     funcid : list of int, optional
         LibXC functional IDs. Default is [1, 7] for Slater (X) and VWN (C) (LDA).
+    
+    use_libxc : bool, optional
+        Whether to use LibXC or not. If False (default), the number of available XC functionals is limited.
 
     spin : int, optional
         Spin multiplicity: 0 for unpolarized, 1 for spin-polarized (not allowed currently).
@@ -81,7 +84,7 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
     Notes
     -----
     - Only supports LDA and GGA functionals currently. meta-GGA and hybrid support is in development.
-    - Uses LibXC for energy and derivative functional evaluation.
+    - Works with or without LibXC for energy and derivative functional evaluation.
     - Blocks are randomly shuffled before processing to balance parallel load.
     - Grid-based DFT evaluation using precomputed AO and gradient matrices is supported.
 

@@ -75,7 +75,6 @@ from .rys_nuc_mat_symm import rys_nuc_mat_symm
 from .schwarz_helpers import rys_3c2e_tri_schwarz
 from .eval_xc_1 import eval_xc_1
 from .eval_xc_2 import eval_xc_2
-from .eval_xc_3 import eval_xc_3
 from .eval_xc_1_cupy import eval_xc_1_cupy
 from .eval_xc_2_cupy import eval_xc_2_cupy
 from .eval_xc_3_cupy import eval_xc_3_cupy
@@ -93,7 +92,7 @@ from .nuc_mat_grad_symm import nuc_mat_grad_symm
 
 __all__ = ['integral_helpers', 'mmd_nuc_mat_symm', 'nuc_mat_symm', 'kin_mat_symm', 'overlap_mat_symm', 'conv_4c2e_symm', 'mmd_4c2e_symm', 'rys_helpers', 'rys_4c2e_symm',\
      'rys_4c2e_symm_old', 'rys_4c2e_schwarz_symm', 'conv_3c2e_symm', 'rys_3c2e_symm', 'conv_2c2e_symm', 'rys_2c2e_symm', 'rys_3c2e_tri', 'rys_nuc_mat_symm', 'schwarz_helpers', 'rys_3c2e_tri_schwarz'\
-        'bf_val_helpers', 'eval_xc_1', 'eval_xc_2', 'eval_xc_3', 'eval_xc_1_cupy', 'eval_xc_2_cupy', 'eval_xc_3_cupy', 'dipole_moment_mat_symm', 'kin_mat_symm_cupy'\
+        'bf_val_helpers', 'eval_xc_1', 'eval_xc_2', 'eval_xc_1_cupy', 'eval_xc_2_cupy', 'eval_xc_3_cupy', 'dipole_moment_mat_symm', 'kin_mat_symm_cupy'\
         , 'overlap_mat_symm_cupy', 'dipole_moment_mat_symm_cupy', 'nuc_mat_symm_cupy', 'kin_mat_symm_shell_cupy', 'rys_2c2e_symm_cupy', 'rys_3c2e_symm_cupy',\
         'rys_3c2e_symm_cupy_fp32', 'schwarz_helpers_cupy', 'overlap_mat_grad_symm', 'kin_mat_grad_symm', 'nuc_mat_grad_symm', 'cross_overlap_mat_symm', 'rys_coulomb_matrix',\
          'rys_4c2e_schwarz_sparse_symm', 'rys_coulomb_matrix_sparse', 'rys_2c2e_diag', 'os_4c2e_symm', 'os_4c2e_symm_old', 'os_3c2e_symm']

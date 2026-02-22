@@ -17,7 +17,6 @@ import numpy as np
 # pretty much as is. The repo has the Apache 2.0 license.
 @njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_pw_mod_(rho):
-    # From https://github.com/wangenau/eminus
     # Corresponds to the functional with the label LDA_C_PW_MOD and ID 13 in Libxc.
     # Reference: Phys. Rev. B 45, 13244.
 
@@ -53,7 +52,6 @@ def lda_c_pw_mod(rho):
 
 @fuse(kernel_name='lda_c_pw_mod_cupy_')
 def lda_c_pw_mod_cupy_(rho):
-    # From https://github.com/wangenau/eminus
     # Corresponds to the functional with the label LDA_C_PW_MOD and ID 13 in Libxc.
     # Reference: Phys. Rev. B 45, 13244.
 

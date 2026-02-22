@@ -1499,10 +1499,10 @@ class DFT:
                 if XC_algo==1:
                     # Much slower than JOBLIB version
                     # Still keeping it because, it can be useful when using GPUs
-                    Exc, Vxc = Integrals.eval_xc_1(basis, dmat, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
+                    Exc, Vxc = Integrals.eval_xc_1(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, blocksize=blocksize, debug=debug, \
                                                 list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
                                                     list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values)
-                if XC_algo==2:
+                elif XC_algo==2:
                     # Much faster than above and stable too, therefore this should be default now.
                     # Used to unstable and had memory leaks,
                     # But now all that is fixed by using threadpoolctl, garbage collection or freeing up memory after XC evaluation at each iteration
@@ -1510,12 +1510,6 @@ class DFT:
                     Exc, Vxc = Integrals.eval_xc_2(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, ncores=ncores, blocksize=blocksize, \
                                                 list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
                                                     list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
-                    
-                if XC_algo==3:
-                    with threadpool_limits(limits=1, user_api='blas'):
-                        Exc, Vxc = Integrals.eval_xc_3(basis, dmat, grids.weights, grids.coords, funcid, ncores=ncores, blocksize=blocksize, \
-                                                    list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
-                                                        list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
             else: # GPU
                 if XC_algo==1:
                     Exc, Vxc = Integrals.eval_xc_1_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
@@ -1523,7 +1517,7 @@ class DFT:
                                                 list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, use_libxc=self.use_libxc,\
                                                 nstreams=self.n_streams, ngpus=self.n_gpus, freemem=self.free_gpu_mem, threads_per_block=threads_per_block,
                                                 type=precision_XC)
-                if XC_algo==2:
+                elif XC_algo==2:
                     Exc, Vxc = Integrals.eval_xc_2_cupy(basis, dmat_cp, grids.weights, cp.asnumpy(grids.coords), funcid, ncores=ncores, blocksize=blocksize, \
                                                 list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
                                                     list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)

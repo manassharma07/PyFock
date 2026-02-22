@@ -53,25 +53,57 @@ from pyscf import gto, dft, df, scf
 #DFT SCF benchmark and comparison with PySCF
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
 
-# LDA_X LDA_C_VWN 
+# ──────────────────────────────────────────────────────────────────────────────
+# LDA Functionals
+# ──────────────────────────────────────────────────────────────────────────────
+
+# LDA_X + LDA_C_VWN (SVWN / LDA)
 # funcx = 1
 # funcc = 7
 
-# LDA_X LDA_C_PW 
+# LDA_X + LDA_C_PZ (SPZ)
+# funcx = 1
+# funcc = 9
+
+# LDA_X + LDA_C_PZ_MOD 
+# funcx = 1
+# funcc = 10
+
+# LDA_X + LDA_C_PW
 # funcx = 1
 # funcc = 12
 
-# LDA_X LDA_C_PW_MOD 
+# LDA_X + LDA_C_PW_MOD
 # funcx = 1
 # funcc = 13
 
-# GGA_X_PBE, GGA_C_PBE (PBE)
+# ──────────────────────────────────────────────────────────────────────────────
+# GGA Functionals
+# ──────────────────────────────────────────────────────────────────────────────
+
+# GGA_X_PBE + GGA_C_PBE (PBE)
 # funcx = 101
 # funcc = 130
 
-# GGA_X_B88, GGA_C_LYP (BLYP)
+# GGA_X_PBE_SOL + GGA_C_PBE_SOL (PBEsol)
+# funcx = 116
+# funcc = 133
+
+# GGA_X_RPBE + GGA_C_PBE (RPBE)
+# funcx = 117
+# funcc = 130
+
+# GGA_X_PW91 + GGA_C_PW91 (PW91) !!TODO: Wrong
+# funcx = 109
+# funcc = 134
+
+# GGA_X_B88 + GGA_C_LYP (BLYP)
+# funcx = 106
+# funcc = 131
+
+# GGA_X_B88 + GGA_C_P86 (BP86) !!TODO: Wrong
 funcx = 106
-funcc = 131
+funcc = 132
 
 funcidcrysx = [funcx, funcc]
 funcidpyscf = str(funcx)+','+str(funcc)
@@ -109,7 +141,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
-# xyzFilename = 'Serotonin.xyz'
+xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'
 # xyzFilename = 'Taxol.xyz'
@@ -119,7 +151,7 @@ auxbasis_name = 'def2-universal-jfit'
 
 ### 1D Carbon Alkanes
 # xyzFilename = 'Ethane.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -243,7 +275,7 @@ dftObj.sao = False
 # GPU acceleration
 dftObj.use_gpu = False
 dftObj.keep_ao_in_gpu = False
-dftObj.use_libxc = True
+dftObj.use_libxc = False
 dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
 dftObj.n_gpus = 1 # Specify the number of GPUs
 dftObj.free_gpu_mem = True

@@ -36,6 +36,28 @@ grids.level = 3        # optional: quality of grid (0–9 approx)
 grids.build()
 print('PySCF Grid Size: ', grids.weights.shape)
 
+# from grid import MolGrid, BeckeWeights
+
+# # Extract what MolGrid needs from the Mol API
+# atnums = np.array(mol.Zcharges)       # atomic numbers
+# atcoords = mol.coordsBohrs            # coordinates already in Bohr
+
+# mgrid = MolGrid.from_pruned(
+#     atnums=atnums,
+#     atcoords=atcoords,
+#     rgrid=None,
+#     preset="insane",
+#     aim_weights=BeckeWeights(),
+#     store=True
+# )
+# print(mgrid.points)
+# print(mgrid.atweights)
+# print(mgrid.points.shape)
+# print(mgrid.atweights.shape)
+# grids.coords = mgrid.points
+# grids.weights = mgrid.aim_weights
+# exit()
+
 
 # Setup DFT calculation
 dftObj = DFT(mol, basis, auxbasis, xc=funcidcrysx, grids=grids)
@@ -43,6 +65,7 @@ dftObj.conv_crit = 1e-07
 dftObj.max_itr = 30
 dftObj.ncores = ncores
 dftObj.save_ao_values = True
+dftObj.use_libxc = True
 
 # Run SCF
 energy, dmat = dftObj.scf()

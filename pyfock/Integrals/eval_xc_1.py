@@ -1,14 +1,15 @@
 import numpy as np
 import numexpr
-try:
-    import pylibxc
-except Exception as e:
-    print('Pylibxc is not available. Can only use XC functionals implemented in PyFock.')
+# try:
+#     import pylibxc
+# except Exception as e:
+#     print('Pylibxc is not available. Can only use XC functionals implemented in PyFock.')
 from timeit import default_timer as timer
 from pyfock import Integrals
 from opt_einsum import contract
+from pyfock import XC
 
-def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=50000, debug=False, list_nonzero_indices=None, count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None):
+def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=0, blocksize=50000, debug=False, list_nonzero_indices=None, count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None):
     """
     Evaluate exchange-correlation (XC) energy and potential matrix for DFT
     using algorithm 1, which is a baseline method for grid-based DFT.
@@ -40,6 +41,9 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
 
     funcid : list of int, optional
         LibXC functional IDs. Default is [1, 7] for Slater (X) and VWN (C) (LDA).
+
+    use_libxc : bool, optional
+        Whether to use LibXC or not. If False (default), the number of available XC functionals is limited.
 
     spin : int, optional
         Spin multiplicity: 0 for unpolarized. Spin-polarized (1) not currently supported.
@@ -76,7 +80,7 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
     - This algorithm prioritizes code clarity and correctness, not maximum speed.
     - Only LDA and GGA functionals are currently supported. meta-GGA and hybrid functionals
       are planned for future implementation.
-    - Uses LibXC for exchange-correlation energy and potential evaluation.
+    - Works with or without LibXC for exchange-correlation energy and potential evaluation.
     - AO values and gradients can be reused via precomputation to improve speed.
     - The number of electrons (via integrated density) is printed for validation.
 
@@ -84,7 +88,6 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
     ----------
     - LibXC Functional Codes: https://libxc.gitlab.io/functionals/
     - Functional energy and potential formulation: https://pubs.acs.org/doi/full/10.1021/ct200412r
-    - LibXC Python interface: https://www.tddft.org/programs/libxc/manual/
     """
     # Evaluate the XC term
     # This is a slightly slower algorithm.
@@ -92,18 +95,16 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
 
     # In order to evaluate a density functional we will use the 
     # libxc library with Python bindings.
-    # However, some sort of simple functionals like LDA, GGA, etc would
-    # need to be implemented in CrysX also, so that the it doesn't depend
+    # However, some simple functionals like LDA, PBE, etc have been
+    # implemented in PyFock also, so that the it doesn't depend
     # on external libraries so heavily that it becomes unusable without those.
 
     #Useful links:
-    # LibXC manual: https://www.tddft.org/programs/libxc/manual/
     # LibXC gitlab: https://gitlab.com/libxc/libxc/-/tree/master
     # LibXC python interface code: https://gitlab.com/libxc/libxc/-/blob/master/pylibxc/functional.py
     # LibXC python version installation and example: https://www.tddft.org/programs/libxc/installation/
     # Formulae for XC energy and potential calculation: https://pubs.acs.org/doi/full/10.1021/ct200412r
-    # LibXC code list: https://github.com/pyscf/pyscf/blob/master/pyscf/dft/libxc.py
-    # PySCF nr_rks code: https://github.com/pyscf/pyscf/blob/master/pyscf/dft/numint.py
+    # LibXC code list: https://github.com/pyscf/pyscf/blob/master/pyscf/dft/libxc.p
     # https://www.osti.gov/pages/servlets/purl/1650078
 
 
@@ -151,6 +152,8 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
             bfs_radius_cutoff[i] = basis.bfs_radius_cutoff[i]
     # Now bf/ao values can be evaluated by calling the following
     # bf_values = Integrals.bf_val_helpers.eval_bfs(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
+    rho_block = None
+    sigma_block = None
 
     # For debugging and benchmarking purposes
     durationLibxc = 0.0
@@ -163,11 +166,18 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
 
     xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
 
-    # Create a LibXC object  
-    funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-    funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-    x_family_code = funcx.get_family()
-    c_family_code = funcc.get_family()
+    if use_libxc:
+        import pylibxc
+        # Create a LibXC object  
+        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+        x_family_code = funcx.get_family()
+        c_family_code = funcc.get_family()
+    else:
+        x_family_code = XC.get_family(funcid[0])
+        c_family_code = XC.get_family(funcid[1])
+        funcx = None
+        funcc = None
 
     # Loop over blocks/batches of grid points
     for iblock in range(nblocks+1):
@@ -233,27 +243,39 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
         # Exchange
         if debug:
             startLibxc = timer()
-        # Input dictionary for libxc
-        inp = {}
-        # Input dictionary needs density values at grid points
-        inp['rho'] = rho_block
         if xc_family_dict[x_family_code]!='LDA':
+            # Input dictionary for libxc
+            inp = {}
+            # Input dictionary needs density values at grid points
+            inp['rho'] = rho_block
             # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
             inp['sigma'] = sigma_block[1]
         # Calculate the necessary quantities using LibXC
-        retx = funcx.compute(inp)
+        if use_libxc:
+            retx = funcx.compute(inp)
+        else:
+            if xc_family_dict[x_family_code]=='LDA':
+                retx = XC.func_compute(funcid[0], rho_block, sigma=None, use_gpu=False)
+            elif xc_family_dict[x_family_code]=='GGA':
+                retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block[1], use_gpu=False)
         # print('Duration for LibXC computations at grid points: ',durationLibxc)
 
         # Correlation
-        # Input dictionary for libxc
-        inp = {}
-        # Input dictionary needs density values at grid points
-        inp['rho'] = rho_block
         if xc_family_dict[c_family_code]!='LDA':
+            # Input dictionary for libxc
+            inp = {}
+            # Input dictionary needs density values at grid points
+            inp['rho'] = rho_block
             # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
             inp['sigma'] = sigma_block[1]
         # Calculate the necessary quantities using LibXC
-        retc = funcc.compute(inp)
+        if use_libxc:
+            retc = funcc.compute(inp)
+        else:
+            if xc_family_dict[x_family_code]=='LDA':
+                retc = XC.func_compute(funcid[1], rho_block, sigma=None, use_gpu=False)
+            elif xc_family_dict[x_family_code]=='GGA':
+                retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block[1], use_gpu=False)
 
         if debug:
             durationLibxc = durationLibxc + timer() - startLibxc
@@ -262,9 +284,10 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
         if debug:
             startE = timer()
         #ENERGY-----------
-        e = retx['zk'] + retc['zk'] # Functional values at grid points
-        # Testing CrysX's own implmentation
-        #e = densfuncs.lda_x(rho)
+        if use_libxc:
+            e = retx['zk'] + retc['zk'] # Functional values at grid points
+        else:
+            e = retx[0] + retc[0]
 
         # Calculate the total energy 
         # Multiply the density at grid points by weights
@@ -278,24 +301,40 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
 
         #POTENTIAL----------
         # The derivative of functional wrt density is vrho
-        vrho = retx['vrho'] + retc['vrho']
+        if use_libxc:
+            vrho = retx['vrho'] + retc['vrho']
+        else:
+            vrho = retx[1] + retc[1]
         vsigma = 0
         # If either x or c functional is of GGA/MGGA type we need rho_grad_values
         if xc_family_dict[x_family_code]!='LDA':
             # The derivative of functional wrt grad \rho square.
-            vsigma = retx['vsigma']
+            if use_libxc:
+                vsigma += retx['vsigma']
+            else:
+                vsigma += retx[2]
         if xc_family_dict[c_family_code]!='LDA':
             # The derivative of functional wrt grad \rho square.
-            vsigma += retc['vsigma']
+            if use_libxc:
+                vsigma += retc['vsigma']
+            else:
+                vsigma += retc[2]
         
         if debug:
             startF = timer()
         # F = np.multiply(weights_block,vrho[:,0]) #This is fast enough.
-        v_rho_temp = vrho[:,0]
-        F = numexpr.evaluate('(weights_block*v_rho_temp)')
+        
+        if use_libxc:
+            v_rho_temp = vrho[:,0]
+            F = numexpr.evaluate('(weights_block*v_rho_temp)')
+        else:
+            F = numexpr.evaluate('(weights_block*vrho)')
         # If either x or c functional is of GGA/MGGA type we need rho_grad_values
         if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
-            Ftemp = 2*weights_block*vsigma[:,0]
+            if use_libxc:
+                Ftemp = 2*weights_block*vsigma[:,0]
+            else:
+                Ftemp = 2*weights_block*vsigma
             Fx = Ftemp*rho_grad_block_x
             Fy = Ftemp*rho_grad_block_y
             Fz = Ftemp*rho_grad_block_z
@@ -350,5 +389,7 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=5000
         print('Duration for LibXC: ',durationLibxc)
 
     
-
-    return efunc[0], v
+    if use_libxc:
+        return efunc[0], v
+    else:
+        return efunc, v

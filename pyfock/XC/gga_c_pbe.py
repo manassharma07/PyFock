@@ -63,7 +63,6 @@ def gga_c_pbe_(rho, sigma):
 
 @njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_c_pbe(rho, sigma):
-    # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).
     # Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.
     # Reference: Phys. Rev. Lett. 78, 1396.
@@ -78,7 +77,6 @@ def gga_c_pbe(rho, sigma):
 
 @fuse(kernel_name='pbe_c_pbe_cupy_')
 def gga_c_pbe_cupy_(rho, sigma):
-    # Adapted from: https://github.com/wangenau/eminus/blob/main/eminus/xc/gga_c_pbe.py
     # Perdew-Burke-Ernzerhof parametrization of the correlation functional (spin-paired).
     # Corresponds to the functional with the label GGA_C_PBE and ID 130 in Libxc.
     # Reference: Phys. Rev. Lett. 78, 1396.
