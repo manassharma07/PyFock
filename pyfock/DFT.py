@@ -884,16 +884,23 @@ class DFT:
         if isDF==False:
             strict_schwarz = False
 
-        if self.use_libxc:
-            import pylibxc
-        if not self.use_libxc:
-            if isinstance(xc, list):
-                if all(isinstance(v, int) for v in xc):
-                    xc = xc  # already like [1, 7], do nothing
-                elif all(isinstance(v, str) for v in xc):
-                    xc = [XC.get_functional_id(name) for name in xc]  # ['LDA_X', 'LDA_C_VWN'] → [1, 7]
-            elif isinstance(xc, str):
-                xc = XC.resolve_functional(xc)  # 'LDA' → [1, 7]
+        if xc!='HF':
+            if self.use_libxc:
+                import pylibxc
+            if not self.use_libxc:
+                if isinstance(xc, list):
+                    if all(isinstance(v, int) for v in xc):
+                        xc = xc  # already like [1, 7], do nothing
+                    elif all(isinstance(v, str) for v in xc):
+                        xc = [XC.get_functional_id(name) for name in xc]  # ['LDA_X', 'LDA_C_VWN'] → [1, 7]
+                elif isinstance(xc, str):
+                    xc = XC.resolve_functional(xc)  # 'LDA' → [1, 7]
+
+        if xc=='HF' and isDF:
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('ERROR: Hartree-Fock is currently incompatible with density fitting!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            exit()
 
 
         print_pyfock_logo()
@@ -1170,232 +1177,232 @@ class DFT:
         
         scf_converged = False
         durationgrids = 0
+        if xc!='HF':
+            print('\n\n------------------------------------------------------', flush=True)
+            print('Numerical Integration for XC Term')
+            print('------------------------------------------------------\n', flush=True)
+            if not xc_bf_screen:
+                if save_ao_values:
+                    print('Warning! BF screening (xc_bf_screen) is set to False, but AO values are requested to be saved (save_ao_values=True).')
+                    print('AO values can only be saved when xc_bf_screen = True. Turning xc_bf_screen to True.', flush=True)
+                    xc_bf_screen = True
+            if grids is None:
+                startGrids = timer()
+                print('\nGenerating grids...\n\n', flush=True)
+                # To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
+                # radial_precision = 1.0e-13
+                # level=3
+                # pruning by density with threshold = 1e-011
+                # alpha_min and alpha_max corresponding to QZVP
+                print('Grids level: ', gridsLevel)
+                # Generate grids for XC term
+                basisGrids = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-QZVP')})
+                grids = Grids(mol, basis=basisGrids, level = gridsLevel, ncores=ncores)
 
-        print('\n\n------------------------------------------------------', flush=True)
-        print('Numerical Integration for XC Term')
-        print('------------------------------------------------------\n', flush=True)
-        if not xc_bf_screen:
-            if save_ao_values:
-                print('Warning! BF screening (xc_bf_screen) is set to False, but AO values are requested to be saved (save_ao_values=True).')
-                print('AO values can only be saved when xc_bf_screen = True. Turning xc_bf_screen to True.', flush=True)
-                xc_bf_screen = True
-        if grids is None:
-            startGrids = timer()
-            print('\nGenerating grids...\n\n', flush=True)
-            # To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
-            # radial_precision = 1.0e-13
-            # level=3
-            # pruning by density with threshold = 1e-011
-            # alpha_min and alpha_max corresponding to QZVP
-            print('Grids level: ', gridsLevel)
-            # Generate grids for XC term
-            basisGrids = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-QZVP')})
-            grids = Grids(mol, basis=basisGrids, level = gridsLevel, ncores=ncores)
-
-            print('done!', flush=True)
-            durationgrids = timer() - startGrids
-            print('Time taken '+str(round(durationgrids, 2))+' seconds.\n', flush=True)
-
-            # Begin pruning the grids based on density (rho)
-            # Evaluate ao_values to calculate rho
-            print('\nPruning generated grids by rho...\n\n', flush=True)
-            startGrids_prune_rho = timer()
-            threshold_rho = 1e-11
-            ngrids_temp = grids.coords.shape[0]
-            ndeleted = 0
-            blocksize_temp = 50000
-            nblocks_temp = ngrids_temp//blocksize_temp
-            weightsNew = None
-            coordsNew = None
-            for iblock in range(nblocks_temp+1):
-                offset = iblock*blocksize_temp
-                weights_block = grids.weights[offset : min(offset+blocksize_temp,ngrids_temp)]
-                coords_block = grids.coords[offset : min(offset+blocksize_temp,ngrids_temp)] 
-                ao_value_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block)  
-                rho_block = contract('ij,mi,mj->m', dmat, ao_value_block, ao_value_block)
-                zero_indices = np.where(np.abs(rho_block*weights_block) < threshold_rho)[0]
-                ndeleted += len(zero_indices)
-                weightsNew_block = np.delete(weights_block, zero_indices)
-                coordsNew_block = np.delete(coords_block, zero_indices, 0)
-                if weightsNew_block.shape[0]>0:
-                    if weightsNew is None:
-                        weightsNew = weightsNew_block
-                        coordsNew = coordsNew_block
-                    else:
-                        weightsNew = np.concatenate((weightsNew, weightsNew_block))
-                        coordsNew = np.concatenate([coordsNew, coordsNew_block], axis=0)
-
-            grids.coords = coordsNew
-            grids.weights = weightsNew
-            print('done!', flush=True)
-            durationgrids_prune_rho = timer() - startGrids_prune_rho
-            print('Time taken '+str(round(durationgrids_prune_rho, 2))+' seconds.\n', flush=True)
-            print('\nDeleted '+ str(ndeleted) + ' grid points.', flush=True)
-            
-        else:
-            print('\nUsing the user supplied grids!\n\n', flush=True)
-        
-
-        # Grid information initial
-        print('\nNo. of supplied/generated grid points (after pruning): ', grids.coords.shape[0], flush=True)
-
-        # Prune grids based on weights
-        # start_pruning_weights = timer()
-        # print('\nPruning grids based on weights....', flush=True)
-        # zero_indices = np.where(np.logical_and(grids.weights>=-1.0e-12, grids.weights<=1.e-12))
-        # grids.weights = np.delete(grids.weights, zero_indices)
-        # grids.coords = np.delete(grids.coords, zero_indices, 0)
-        # print('done!', flush=True)
-        # duration_pruning_weights = timer() - start_pruning_weights
-        # print('\nTime taken '+str(duration_pruning_weights)+' seconds.\n', flush=True)
-        # print('\nNo. of grid points after screening by weights: ', grids.coords.shape[0], flush=True)
-
-        print('Size (in GB) for storing the coordinates of grid:      ', round(grids.coords.nbytes/1e9, 3), flush=True)
-        print('Size (in GB) for storing the weights of grid:          ', round(grids.weights.nbytes/1e9, 3), flush=True)
-        print('Size (in GB) for storing the density at gridpoints:    ', round(grids.weights.nbytes/1e9, 3), flush=True)
-
-        # Sort the grids for slightly better performance with batching (doesn't seem to make much difference)
-        if sortGrids:
-            print('\nSorting grids ....', flush=True)
-            # Function to sort grids
-            def get_ordered_list(points, x, y, z):
-                points.sort(key = lambda p: (p[0] - x)**2 + (p[1] - y)**2 + (p[2] - z)**2)
-                # print(points[0:10])
-                return points
-            # Make a single array of coords and weights
-            coords_weights = np.c_[grids.coords, grids.weights]
-            coords_weights = np.array(get_ordered_list(coords_weights.tolist(), min(grids.coords[:,0]), min(grids.coords[:,1]), min(grids.coords[:,2])))
-            # Now go back to two arrays for coords and weights
-            grids.weights = coords_weights[:,3]
-            grids.coords = coords_weights[:,0:3]
-            coords_weights = 0#None
-            print('done!', flush=True)
-
-        # blocksize = 10000
-        ngrids = grids.coords.shape[0]
-        nblocks = ngrids//blocksize
-        print('\nWill use batching to evaluate the XC term for memory efficiency.', flush=True)
-        print('Batch size: ', blocksize, flush=True)
-        print('No. of batches: ', nblocks+1, flush=True)
-
-
-        #### Some preliminary stuff for XC evaluation
-        durationXCpreprocessing = 0
-        list_nonzero_indices = None
-        count_nonzero_indices = None
-        list_ao_values = None
-        list_ao_grad_values = None
-        if xc_bf_screen:
-            xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-            if self.use_libxc:
-                # Create a LibXC object  
-                funcx = pylibxc.LibXCFunctional(xc[0], "unpolarized")
-                funcc = pylibxc.LibXCFunctional(xc[1], "unpolarized")
-                x_family_code = funcx.get_family()
-                c_family_code = funcc.get_family()
-            else:
-                x_family_code = XC.get_family(xc[0])
-                c_family_code = XC.get_family(xc[1])
-            ### Find the list of significanlty contributing bfs for xc evaluations
-            startXCpreprocessing = timer()
-            print('\nPreliminary processing for XC term evaluations...', flush=True)
-            print('Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...', flush=True)
-            # Calculate the value of basis functions for all grid points in batches
-            # and find the indices of basis functions that have a significant contribution to those batches for each batch
-            if not self.use_gpu:
-                list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices(basis, grids.coords, blocksize, nblocks, ngrids)
-            else:
-                list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices_cupy(basis, grids.coords, blocksize, nblocks, ngrids, streams[0])
-            print('done!', flush=True)
-            durationXCpreprocessing = timer() - startXCpreprocessing
-            print('Time taken '+str(round(durationXCpreprocessing, 2))+' seconds.\n', flush=True)
-            print('Maximum no. of basis functions contributing to a batch of grid points:   ', max(count_nonzero_indices))
-            print('Average no. of basis functions contributing to a batch of grid points:   ', int(np.mean(count_nonzero_indices)))
-
-            
-            durationAO_values = 0
-            if save_ao_values:
-                startAO_values = timer()
-                if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
-                    print('\nYou have asked to save the values of significant basis functions on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
-                    memory_required = sum(count_nonzero_indices*blocksize)*8/1024/1024/1024
-                    print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
-                    print('Calculating the value of significantly contributing basis functions (atomic orbitals)...', flush=True)
-                    list_ao_values = []
-                    # Loop over batches
-                    for iblock in range(nblocks+1):
-                        offset = iblock*blocksize
-                        coords_block = grids.coords[offset : min(offset+blocksize,ngrids)]   
-                        ao_values_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
-                        if self.use_gpu and self.keep_ao_in_gpu:
-                            list_ao_values.append(cp.asarray(ao_values_block))
-                        else:
-                            list_ao_values.append(ao_values_block)
-                    #Free memory 
-                    ao_values_block = 0 
-                if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
-                    print('\nYou have asked to save the values of significant basis functions and their gradients on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
-                    memory_required = 4*sum(count_nonzero_indices*blocksize)*8/1024/1024/1024
-                    print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
-                    print('Calculating the value of significantly contributing basis functions (atomic orbitals)...', flush=True)
-                    list_ao_values = []
-                    list_ao_grad_values = []
-                    # Loop over batches
-                    for iblock in range(nblocks+1):
-                        offset = iblock*blocksize
-                        coords_block = grids.coords[offset : min(offset+blocksize,ngrids)]   
-                        # ao_values_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
-                        ao_values_block, ao_grad_values_block = Integrals.bf_val_helpers.eval_bfs_and_grad(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
-                        if self.use_gpu and self.keep_ao_in_gpu:
-                            list_ao_values.append(cp.asarray(ao_values_block))
-                            list_ao_grad_values.append(cp.asarray(ao_grad_values_block))
-                        else:
-                            list_ao_values.append(ao_values_block)
-                            list_ao_grad_values.append(ao_grad_values_block)
-                    #Free memory 
-                    ao_values_block = 0 
-                    ao_grad_values_block =0
                 print('done!', flush=True)
-                durationAO_values = timer() - startAO_values
-                print('Time taken '+str(round(durationAO_values, 2))+' seconds.\n', flush=True)
-        
-        if self.use_gpu:
-            grids.coords = cp.asarray(grids.coords, dtype=cp.float64)
-            grids.weights = cp.asarray(grids.weights, dtype=cp.float64)
-        
-        #-------XC Stuff start----------------------
+                durationgrids = timer() - startGrids
+                print('Time taken '+str(round(durationgrids, 2))+' seconds.\n', flush=True)
 
-        funcid = xc
+                # Begin pruning the grids based on density (rho)
+                # Evaluate ao_values to calculate rho
+                print('\nPruning generated grids by rho...\n\n', flush=True)
+                startGrids_prune_rho = timer()
+                threshold_rho = 1e-11
+                ngrids_temp = grids.coords.shape[0]
+                ndeleted = 0
+                blocksize_temp = 50000
+                nblocks_temp = ngrids_temp//blocksize_temp
+                weightsNew = None
+                coordsNew = None
+                for iblock in range(nblocks_temp+1):
+                    offset = iblock*blocksize_temp
+                    weights_block = grids.weights[offset : min(offset+blocksize_temp,ngrids_temp)]
+                    coords_block = grids.coords[offset : min(offset+blocksize_temp,ngrids_temp)] 
+                    ao_value_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block)  
+                    rho_block = contract('ij,mi,mj->m', dmat, ao_value_block, ao_value_block)
+                    zero_indices = np.where(np.abs(rho_block*weights_block) < threshold_rho)[0]
+                    ndeleted += len(zero_indices)
+                    weightsNew_block = np.delete(weights_block, zero_indices)
+                    coordsNew_block = np.delete(coords_block, zero_indices, 0)
+                    if weightsNew_block.shape[0]>0:
+                        if weightsNew is None:
+                            weightsNew = weightsNew_block
+                            coordsNew = coordsNew_block
+                        else:
+                            weightsNew = np.concatenate((weightsNew, weightsNew_block))
+                            coordsNew = np.concatenate([coordsNew, coordsNew_block], axis=0)
 
-        xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-
-        # Create a LibXC object  
-        # funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-        # funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-        # x_family_code = funcx.get_family()
-        # c_family_code = funcc.get_family()
-
-
-        print('\n\n------------------------------------------------------', flush=True)
-        print('Exchange-Correlation Functional')
-        print('------------------------------------------------------\n', flush=True)
-        if self.use_libxc:
-            print("PyFock utilizes LibXC's pylibxc library. Citation:")
-            print(pylibxc.util.xc_reference())
-            print('\n\n')
-            print('XC Functional IDs supplied: ', funcid, flush=True)
-            print('\n\nDescription of exchange functional: \n')
-            print('The Exchange function belongs to the family:', xc_family_dict[x_family_code], flush=True)
-            print(funcx.describe())
-            print('\n\nDescription of correlation functional: \n', flush=True)
-            print(' The Correlation function belongs to the family:', xc_family_dict[c_family_code], flush=True)
-            print(funcc.describe())
+                grids.coords = coordsNew
+                grids.weights = weightsNew
+                print('done!', flush=True)
+                durationgrids_prune_rho = timer() - startGrids_prune_rho
+                print('Time taken '+str(round(durationgrids_prune_rho, 2))+' seconds.\n', flush=True)
+                print('\nDeleted '+ str(ndeleted) + ' grid points.', flush=True)
+                
+            else:
+                print('\nUsing the user supplied grids!\n\n', flush=True)
             
-        else:
-            print(XC.get_functional_citation(xc[0]))
-            print(XC.get_functional_citation(xc[1]))
-        print('------------------------------------------------------\n', flush=True)
-        print('\n\n', flush=True)
+
+            # Grid information initial
+            print('\nNo. of supplied/generated grid points (after pruning): ', grids.coords.shape[0], flush=True)
+
+            # Prune grids based on weights
+            # start_pruning_weights = timer()
+            # print('\nPruning grids based on weights....', flush=True)
+            # zero_indices = np.where(np.logical_and(grids.weights>=-1.0e-12, grids.weights<=1.e-12))
+            # grids.weights = np.delete(grids.weights, zero_indices)
+            # grids.coords = np.delete(grids.coords, zero_indices, 0)
+            # print('done!', flush=True)
+            # duration_pruning_weights = timer() - start_pruning_weights
+            # print('\nTime taken '+str(duration_pruning_weights)+' seconds.\n', flush=True)
+            # print('\nNo. of grid points after screening by weights: ', grids.coords.shape[0], flush=True)
+
+            print('Size (in GB) for storing the coordinates of grid:      ', round(grids.coords.nbytes/1e9, 3), flush=True)
+            print('Size (in GB) for storing the weights of grid:          ', round(grids.weights.nbytes/1e9, 3), flush=True)
+            print('Size (in GB) for storing the density at gridpoints:    ', round(grids.weights.nbytes/1e9, 3), flush=True)
+
+            # Sort the grids for slightly better performance with batching (doesn't seem to make much difference)
+            if sortGrids:
+                print('\nSorting grids ....', flush=True)
+                # Function to sort grids
+                def get_ordered_list(points, x, y, z):
+                    points.sort(key = lambda p: (p[0] - x)**2 + (p[1] - y)**2 + (p[2] - z)**2)
+                    # print(points[0:10])
+                    return points
+                # Make a single array of coords and weights
+                coords_weights = np.c_[grids.coords, grids.weights]
+                coords_weights = np.array(get_ordered_list(coords_weights.tolist(), min(grids.coords[:,0]), min(grids.coords[:,1]), min(grids.coords[:,2])))
+                # Now go back to two arrays for coords and weights
+                grids.weights = coords_weights[:,3]
+                grids.coords = coords_weights[:,0:3]
+                coords_weights = 0#None
+                print('done!', flush=True)
+
+            # blocksize = 10000
+            ngrids = grids.coords.shape[0]
+            nblocks = ngrids//blocksize
+            print('\nWill use batching to evaluate the XC term for memory efficiency.', flush=True)
+            print('Batch size: ', blocksize, flush=True)
+            print('No. of batches: ', nblocks+1, flush=True)
+
+
+            #### Some preliminary stuff for XC evaluation
+            durationXCpreprocessing = 0
+            list_nonzero_indices = None
+            count_nonzero_indices = None
+            list_ao_values = None
+            list_ao_grad_values = None
+            if xc_bf_screen:
+                xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
+                if self.use_libxc:
+                    # Create a LibXC object  
+                    funcx = pylibxc.LibXCFunctional(xc[0], "unpolarized")
+                    funcc = pylibxc.LibXCFunctional(xc[1], "unpolarized")
+                    x_family_code = funcx.get_family()
+                    c_family_code = funcc.get_family()
+                else:
+                    x_family_code = XC.get_family(xc[0])
+                    c_family_code = XC.get_family(xc[1])
+                ### Find the list of significanlty contributing bfs for xc evaluations
+                startXCpreprocessing = timer()
+                print('\nPreliminary processing for XC term evaluations...', flush=True)
+                print('Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...', flush=True)
+                # Calculate the value of basis functions for all grid points in batches
+                # and find the indices of basis functions that have a significant contribution to those batches for each batch
+                if not self.use_gpu:
+                    list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices(basis, grids.coords, blocksize, nblocks, ngrids)
+                else:
+                    list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices_cupy(basis, grids.coords, blocksize, nblocks, ngrids, streams[0])
+                print('done!', flush=True)
+                durationXCpreprocessing = timer() - startXCpreprocessing
+                print('Time taken '+str(round(durationXCpreprocessing, 2))+' seconds.\n', flush=True)
+                print('Maximum no. of basis functions contributing to a batch of grid points:   ', max(count_nonzero_indices))
+                print('Average no. of basis functions contributing to a batch of grid points:   ', int(np.mean(count_nonzero_indices)))
+
+                
+                durationAO_values = 0
+                if save_ao_values:
+                    startAO_values = timer()
+                    if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
+                        print('\nYou have asked to save the values of significant basis functions on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
+                        memory_required = sum(count_nonzero_indices*blocksize)*8/1024/1024/1024
+                        print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
+                        print('Calculating the value of significantly contributing basis functions (atomic orbitals)...', flush=True)
+                        list_ao_values = []
+                        # Loop over batches
+                        for iblock in range(nblocks+1):
+                            offset = iblock*blocksize
+                            coords_block = grids.coords[offset : min(offset+blocksize,ngrids)]   
+                            ao_values_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
+                            if self.use_gpu and self.keep_ao_in_gpu:
+                                list_ao_values.append(cp.asarray(ao_values_block))
+                            else:
+                                list_ao_values.append(ao_values_block)
+                        #Free memory 
+                        ao_values_block = 0 
+                    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+                        print('\nYou have asked to save the values of significant basis functions and their gradients on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
+                        memory_required = 4*sum(count_nonzero_indices*blocksize)*8/1024/1024/1024
+                        print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
+                        print('Calculating the value of significantly contributing basis functions (atomic orbitals)...', flush=True)
+                        list_ao_values = []
+                        list_ao_grad_values = []
+                        # Loop over batches
+                        for iblock in range(nblocks+1):
+                            offset = iblock*blocksize
+                            coords_block = grids.coords[offset : min(offset+blocksize,ngrids)]   
+                            # ao_values_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
+                            ao_values_block, ao_grad_values_block = Integrals.bf_val_helpers.eval_bfs_and_grad(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
+                            if self.use_gpu and self.keep_ao_in_gpu:
+                                list_ao_values.append(cp.asarray(ao_values_block))
+                                list_ao_grad_values.append(cp.asarray(ao_grad_values_block))
+                            else:
+                                list_ao_values.append(ao_values_block)
+                                list_ao_grad_values.append(ao_grad_values_block)
+                        #Free memory 
+                        ao_values_block = 0 
+                        ao_grad_values_block =0
+                    print('done!', flush=True)
+                    durationAO_values = timer() - startAO_values
+                    print('Time taken '+str(round(durationAO_values, 2))+' seconds.\n', flush=True)
+            
+            if self.use_gpu:
+                grids.coords = cp.asarray(grids.coords, dtype=cp.float64)
+                grids.weights = cp.asarray(grids.weights, dtype=cp.float64)
+            
+            #-------XC Stuff start----------------------
+
+            funcid = xc
+
+            xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
+
+            # Create a LibXC object  
+            # funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+            # funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+            # x_family_code = funcx.get_family()
+            # c_family_code = funcc.get_family()
+
+
+            print('\n\n------------------------------------------------------', flush=True)
+            print('Exchange-Correlation Functional')
+            print('------------------------------------------------------\n', flush=True)
+            if self.use_libxc:
+                print("PyFock utilizes LibXC's pylibxc library. Citation:")
+                print(pylibxc.util.xc_reference())
+                print('\n\n')
+                print('XC Functional IDs supplied: ', funcid, flush=True)
+                print('\n\nDescription of exchange functional: \n')
+                print('The Exchange function belongs to the family:', xc_family_dict[x_family_code], flush=True)
+                print(funcx.describe())
+                print('\n\nDescription of correlation functional: \n', flush=True)
+                print(' The Correlation function belongs to the family:', xc_family_dict[c_family_code], flush=True)
+                print(funcc.describe())
+                
+            else:
+                print(XC.get_functional_citation(xc[0]))
+                print(XC.get_functional_citation(xc[1]))
+            print('------------------------------------------------------\n', flush=True)
+            print('\n\n', flush=True)
         #-------XC Stuff end----------------------
 
         Etot = 0
@@ -1452,6 +1459,8 @@ class DFT:
                     else:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat) # This is in CAO basis
+                            if xc=='HF':
+                                K = contract('ijkl,ik', ints4c2e, dmat) # This is in CAO basis
                         elif coul_algo==2:
                             J = Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat, threshold_schwarz, sqrt_ints4c2e_diag)
                     durationCoulomb += timer() - start_4c2e
@@ -1477,6 +1486,8 @@ class DFT:
                     else:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat)
+                            if xc=='HF':
+                                K = contract('ijkl,ik', ints4c2e, dmat) # This is in CAO basis
                         elif coul_algo==2:
                             J_diff =Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat_diff, threshold_schwarz, sqrt_ints4c2e_diag)
                             J += J_diff
@@ -1491,47 +1502,47 @@ class DFT:
                 streams[0].synchronize()
                 cp.cuda.Stream.null.synchronize()
             
-                
-            # XC energy and potential
-            startxc = timer()
+            if xc!='HF':
+                # XC energy and potential
+                startxc = timer()
 
-            if not self.use_gpu:
-                if XC_algo==1:
-                    # Much slower than JOBLIB version
-                    # Still keeping it because, it can be useful when using GPUs
-                    Exc, Vxc = Integrals.eval_xc_1(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, blocksize=blocksize, debug=debug, \
-                                                list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
-                                                    list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values)
-                elif XC_algo==2:
-                    # Much faster than above and stable too, therefore this should be default now.
-                    # Used to unstable and had memory leaks,
-                    # But now all that is fixed by using threadpoolctl, garbage collection or freeing up memory after XC evaluation at each iteration
-                    
-                    Exc, Vxc = Integrals.eval_xc_2(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, ncores=ncores, blocksize=blocksize, \
-                                                list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
-                                                    list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
-            else: # GPU
-                if XC_algo==1:
-                    Exc, Vxc = Integrals.eval_xc_1_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
-                                                list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
-                                                list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, use_libxc=self.use_libxc,\
-                                                nstreams=self.n_streams, ngpus=self.n_gpus, freemem=self.free_gpu_mem, threads_per_block=threads_per_block,
-                                                type=precision_XC)
-                elif XC_algo==2:
-                    Exc, Vxc = Integrals.eval_xc_2_cupy(basis, dmat_cp, grids.weights, cp.asnumpy(grids.coords), funcid, ncores=ncores, blocksize=blocksize, \
-                                                list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
-                                                    list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
-                if XC_algo==3:
-                    # Default for GPUs
-                    Exc, Vxc = Integrals.eval_xc_3_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
-                                                list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
-                                                list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, use_libxc=self.use_libxc,\
-                                                nstreams=self.n_streams, ngpus=self.n_gpus, freemem=self.free_gpu_mem, threads_per_block=threads_per_block,
-                                                type=precision_XC, streams=streams, nb_streams=nb_streams)
+                if not self.use_gpu:
+                    if XC_algo==1:
+                        # Much slower than JOBLIB version
+                        # Still keeping it because, it can be useful when using GPUs
+                        Exc, Vxc = Integrals.eval_xc_1(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, blocksize=blocksize, debug=debug, \
+                                                    list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
+                                                        list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values)
+                    elif XC_algo==2:
+                        # Much faster than above and stable too, therefore this should be default now.
+                        # Used to unstable and had memory leaks,
+                        # But now all that is fixed by using threadpoolctl, garbage collection or freeing up memory after XC evaluation at each iteration
+                        
+                        Exc, Vxc = Integrals.eval_xc_2(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, ncores=ncores, blocksize=blocksize, \
+                                                    list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
+                                                        list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
+                else: # GPU
+                    if XC_algo==1:
+                        Exc, Vxc = Integrals.eval_xc_1_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
+                                                    list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
+                                                    list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, use_libxc=self.use_libxc,\
+                                                    nstreams=self.n_streams, ngpus=self.n_gpus, freemem=self.free_gpu_mem, threads_per_block=threads_per_block,
+                                                    type=precision_XC)
+                    elif XC_algo==2:
+                        Exc, Vxc = Integrals.eval_xc_2_cupy(basis, dmat_cp, grids.weights, cp.asnumpy(grids.coords), funcid, ncores=ncores, blocksize=blocksize, \
+                                                    list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
+                                                        list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
+                    if XC_algo==3:
+                        # Default for GPUs
+                        Exc, Vxc = Integrals.eval_xc_3_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
+                                                    list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
+                                                    list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, use_libxc=self.use_libxc,\
+                                                    nstreams=self.n_streams, ngpus=self.n_gpus, freemem=self.free_gpu_mem, threads_per_block=threads_per_block,
+                                                    type=precision_XC, streams=streams, nb_streams=nb_streams)
 
-                Vxc = cp.asarray(Vxc, dtype=cp.float64)
+                    Vxc = cp.asarray(Vxc, dtype=cp.float64)
 
-            durationxc = durationxc + timer() - startxc
+                durationxc = durationxc + timer() - startxc
 
             
             dmat_old = dmat # This is in CAO basis
@@ -1547,13 +1558,19 @@ class DFT:
                     Enuc = contract('ij,ji->', dmat, V)
                     Ekin = contract('ij,ji->', dmat, T)
                     Ecoul = contract('ij,ji->', dmat, J)*0.5
+                    if xc=='HF':
+                        Eexchange = -contract('ij,ji->', dmat, K)*0.25
             if isDF and (DF_algo==6 or DF_algo==10):
                 Ecoul = Ecoul*2 - 0.5*Ecoul_temp # This is the correct formula for Coulomb energy with DF
-
-            Etot_new = Exc + Enuc + Ekin + Enn + Ecoul
+            
+            if xc!='HF':
+                Etot_new = Exc + Enuc + Ekin + Enn + Ecoul
+            else:
+                Etot_new = Eexchange + Enuc + Ekin + Enn + Ecoul
             self.scf_energies.append(Etot_new)
             self.Total_energy = Etot_new
-            self.XC_energy = Exc
+            if xc!='HF':
+                self.XC_energy = Exc
             self.Kinetic_energy = Ekin
             self.Nuclear_repulsion_energy = Enn
             self.J_energy = Ecoul
@@ -1569,7 +1586,10 @@ class DFT:
             print(f"{'Nuclear repulsion Energy':<{label_w}}{num_fmt.format(Enn)}")
             print(f"{'Kinetic Energy':<{label_w}}{num_fmt.format(Ekin)}")
             print(f"{'Coulomb Energy':<{label_w}}{num_fmt.format(Ecoul)}")
-            print(f"{'Exchange-Correlation Energy':<{label_w}}{num_fmt.format(Exc)}")
+            if xc!='HF':
+                print(f"{'Exchange-Correlation Energy':<{label_w}}{num_fmt.format(Exc)}")
+            else:
+                print(f"{'Exchange Energy':<{label_w}}{num_fmt.format(Eexchange)}")
             print('-' * (label_w + 20))
             print(f"{'Total Energy':<{label_w}}{num_fmt.format(Etot_new)}")
             print('-' * (label_w + 20) + "\n\n\n", flush=True)
@@ -1598,7 +1618,10 @@ class DFT:
             
 
             if not scf_converged:
-                KS = H + J + Vxc 
+                if xc!='HF':
+                    KS = H + J + Vxc 
+                else:
+                    KS = H + J - 0.5*K
                 if self.sao:
                     # The following gets rid of the extra information in the CAO basis KS matrix by going to SAO and then back to CAO.
                     # This way even though the matrix dimensions would be that of CAO but the information would be the same as SAO

@@ -48,65 +48,10 @@ from timeit import default_timer as timer
 import numpy as np
 import scipy
 
-from pyscf import gto, dft, df, scf
+from pyscf import gto, df, scf
 
-#DFT SCF benchmark and comparison with PySCF
+#HF SCF benchmark and comparison with PySCF
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
-
-# ──────────────────────────────────────────────────────────────────────────────
-# LDA Functionals
-# ──────────────────────────────────────────────────────────────────────────────
-
-# LDA_X + LDA_C_VWN (SVWN / LDA)
-funcx = 1
-funcc = 7
-
-# LDA_X + LDA_C_PZ (SPZ)
-# funcx = 1
-# funcc = 9
-
-# LDA_X + LDA_C_PZ_MOD 
-# funcx = 1
-# funcc = 10
-
-# LDA_X + LDA_C_PW
-# funcx = 1
-# funcc = 12
-
-# LDA_X + LDA_C_PW_MOD
-# funcx = 1
-# funcc = 13
-
-# ──────────────────────────────────────────────────────────────────────────────
-# GGA Functionals
-# ──────────────────────────────────────────────────────────────────────────────
-
-# GGA_X_PBE + GGA_C_PBE (PBE)
-# funcx = 101
-# funcc = 130
-
-# GGA_X_PBE_SOL + GGA_C_PBE_SOL (PBEsol)
-# funcx = 116
-# funcc = 133
-
-# GGA_X_RPBE + GGA_C_PBE (RPBE)
-# funcx = 117
-# funcc = 130
-
-# GGA_X_PW91 + GGA_C_PW91 (PW91) !!TODO: Wrong
-# funcx = 109
-# funcc = 134
-
-# GGA_X_B88 + GGA_C_LYP (BLYP)
-# funcx = 106
-# funcc = 131
-
-# GGA_X_B88 + GGA_C_P86 (BP86) !!TODO: Wrong
-# funcx = 106
-# funcc = 132
-
-funcidcrysx = [funcx, funcc]
-funcidpyscf = str(funcx)+','+str(funcc)
 
 # basis_set_name = 'sto-2g'
 basis_set_name = 'sto-3g'
@@ -124,13 +69,6 @@ basis_set_name = 'sto-3g'
 # basis_set_name = 'def2-QZVPPD'
 # basis_set_name = 'cc-pVDZ'
 # basis_set_name = 'ano-rcc'
-
-auxbasis_name = 'def2-universal-jfit'
-# auxbasis_name = 'def2-universal-jkfit'
-# auxbasis_name = 'def2-TZVP'
-# auxbasis_name = 'sto-3g'
-# auxbasis_name = 'def2-SVP'
-# auxbasis_name = '6-31G'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 # xyzFilename = 'Adenine-Thymine.xyz'
@@ -190,40 +128,23 @@ molPySCF.build()
 
 print('\n\nPySCF Results\n\n')
 start=timer()
-mf = dft.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
-# mf = scf.RHF(molPySCF).density_fit(auxbasis=auxbasis_name)
-mf.xc = funcidpyscf
-# mf.verbose = 4
-mf.direct_scf = False
-# mf.with_df.max_memory = 25000
-# dmat_init = mf.init_guess_by_1e(molPySCF)
-# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf = scf.RHF(molPySCF)
+mf.direct_scf = True
 mf.init_guess = 'minao'
 dmat_init = mf.init_guess_by_minao(molPySCF)
 # mf.init_guess = 'atom'
 # dmat_init = mf.init_guess_by_atom(molPySCF)
 mf.max_cycle = 35
 mf.conv_tol = 1e-7
-mf.grids.level = 3
-# print('begin df build')
-# start_df_pyscf=timer()
-# mf.with_df.build()
-# duration_df_pyscf = timer()- start_df_pyscf
-# print('PySCF df time: ', duration_df_pyscf)
-# print('end df build')
 energyPyscf = mf.kernel(dm0=dmat_init)
 print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
 print('One electron integrals energy',mf.scf_summary['e1'])
-print('Coulomb energy ',mf.scf_summary['coul'])
-print('EXC ',mf.scf_summary['exc'])
+# print('Coulomb energy ',mf.scf_summary['coul'])
+# print('EXC ',mf.scf_summary['exc'])
 duration = timer()-start
 print('PySCF time: ', duration)
-pyscfGrids = mf.grids
-print('PySCF Grid Size: ', pyscfGrids.weights.shape)
-print('\n\n PySCF Dipole moment')
+
 dmat = mf.make_rdm1()
-print(dmat.shape)
-mol_dip_pyscf = mf.dip_moment(molPySCF, dmat, unit='AU')
 mf = 0#None
 import psutil
 
@@ -247,27 +168,17 @@ print('\n\nNatoms :',molCrysX.natoms)
 basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
 print('\n\nNAO :',basis.bfs_nao)
 
-auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
-print('\n\naux NAO :',auxbasis.bfs_nao)
-
 # dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx)
-dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
+dftObj = DFT(molCrysX, basis, xc='HF')
 dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35
 dftObj.ncores = ncores
-dftObj.save_ao_values = True
 dftObj.rys = True
-dftObj.isDF = True
-dftObj.DF_algo = 10
-dftObj.blocksize = 5000
-dftObj.XC_algo = 2
-dftObj.debug = False
-dftObj.sortGrids = False
-dftObj.xc_bf_screen = True
+dftObj.isDF = False
+dftObj.direct_scf = False
+dftObj.coul_algo = 1
 dftObj.threshold_schwarz = 1e-9
-dftObj.strict_schwarz = False
-dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
 dftObj.sao = False
