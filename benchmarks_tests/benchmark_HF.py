@@ -54,12 +54,12 @@ from pyscf import gto, df, scf
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
 
 # basis_set_name = 'sto-2g'
-basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
 # basis_set_name = '6-31G'
 # basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
-# basis_set_name = 'def2-TZVP'
+basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
 # basis_set_name = 'def2-TZVPP'
 # basis_set_name = 'def2-QZVPP'
@@ -73,13 +73,13 @@ basis_set_name = 'sto-3g'
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 # xyzFilename = 'Adenine-Thymine.xyz'
 # xyzFilename = 'Zn.xyz'
-# xyzFilename = 'Zn_dimer.xyz'
+xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
 # xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
-xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'
 # xyzFilename = 'Taxol.xyz'
@@ -174,9 +174,9 @@ dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35
 dftObj.ncores = ncores
-dftObj.rys = True
+dftObj.rys = False
 dftObj.isDF = False
-dftObj.direct_scf = False
+dftObj.direct_scf = True
 dftObj.coul_algo = 1
 dftObj.threshold_schwarz = 1e-9
 dftObj.orthogonalize = True

@@ -1412,6 +1412,7 @@ class DFT:
         #diis = scf.CDIIS()
         dmat_old = 0
         J_diff = 0
+        K_diff = 0
         Ecoul = 0.0
         Ecoul_temp = 0.0
 
@@ -1455,7 +1456,11 @@ class DFT:
                         if rys:
                             J = Integrals.rys_coulomb_matrix(basis, dmat, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
                         else: #Obara-Saika
-                            J = Integrals.os_coulomb_matrix(basis, dmat, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz)
+                            if xc=='HF':
+                                J, K = Integrals.os_coulomb_matrix(basis, dmat, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
+                                
+                            else:
+                                J = Integrals.os_coulomb_matrix(basis, dmat, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=False)
                     else:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat) # This is in CAO basis
@@ -1481,8 +1486,13 @@ class DFT:
                         if rys:
                             J_diff = Integrals.rys_coulomb_matrix(basis, dmat_diff, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
                         else: #Obara-saika
-                            J_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz)
+                            if xc=='HF':
+                                J_diff, K_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
+                            else:
+                                J_diff, K_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
                         J += J_diff
+                        if xc=='HF':
+                            K += K_diff
                     else:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat)
