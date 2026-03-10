@@ -24,11 +24,11 @@ Vmat_temp = Integrals.rys_4c2e_schwarz_symm(basis_temp)
 
 # 4c2e ERI via explicit conventional integrals (quite slow)
 
-basis_set_name = '6-31G'
+# basis_set_name = '6-31G'
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
-# basis_set_name = 'def2-SVP'
+basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-DZVP'
 # basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
@@ -38,13 +38,13 @@ basis_set_name = '6-31G'
 # basis_set_name = 'cc-pVDZ'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 # xyzFilename = 'Zn.xyz'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'Serotonin.xyz'
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -62,17 +62,17 @@ basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
 #Now we can calculate integrals using different algorithms
 
 #Let's calculate the complete ERI array using the explicit conventional formula (Slow)
-# print('\n\n\n')
-# print('Integrals')
-# print('4c2e ERI array (Conventional Algorithm)\n')
-# print('NAO: ', basis.bfs_nao)
-# start=timer()
-# #NOTE: The tensors are calculated in CAO basis and not the SAO basis
-# #You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
-# ERI_conv = Integrals.conv_4c2e_symm(basis)
-# print(ERI_conv[0:7,0:7,0,0]) 
-# duration = timer() - start
-# print('Duration for ERI using PyFock Conventional algorithm: ',duration)
+print('\n\n\n')
+print('Integrals')
+print('4c2e ERI array (Conventional Algorithm)\n')
+print('NAO: ', basis.bfs_nao)
+start=timer()
+#NOTE: The tensors are calculated in CAO basis and not the SAO basis
+#You should refer to the example that shows the transformation between the two if you need tensors in SAO basis.
+ERI_conv = Integrals.conv_4c2e_symm(basis)
+print(ERI_conv[0:7,0:7,0,0]) 
+duration = timer() - start
+print('Duration for ERI using PyFock Conventional algorithm: ',duration)
 
 
 print('\n\n\n')
@@ -85,7 +85,7 @@ start=timer()
 ERI_os = Integrals.os_4c2e_symm(basis)
 print(ERI_os[0:7,0:7,0,0]) 
 duration = timer() - start
-# print(abs(ERI_conv - ERI_os).max())
+print(abs(ERI_conv - ERI_os).max())
 print('Duration for ERI using PyFock Obara-Saika algorithm: ',duration)
 
 print('\n\n\n')
