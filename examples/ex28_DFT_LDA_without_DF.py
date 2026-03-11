@@ -11,19 +11,20 @@ os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # or  export NUMEXPR_NUM_THREADS
 # Run your tasks here
 from pyfock import Basis
 from pyfock import Mol
-from pyfock import Integrals
 from pyfock import DFT
-
-from timeit import default_timer as timer
-import numpy as np
-import scipy
-
 
 
 #LDA
-funcx = 1
-funcc = 7
-funcidcrysx = [funcx, funcc]
+
+# DFT functional can be specified either like [1, 7]
+# funcx = 1
+# funcc = 7
+# funcidcrysx = [funcx, funcc]
+#
+# or using predefined strings
+# funcidpyfock = 'LDA' # [1, 7]
+funcidpyfock = 'SPZ' # [1, 9]
+# funcidpyfock = 'SPW' # [1, 12]
 
 
 # basis_set_name = 'sto-2g'
@@ -37,11 +38,8 @@ basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-TZVPPD'
 # basis_set_name = 'def2-QZVPPD'
 # basis_set_name = 'cc-pVDZ'
-# basis_set_name = 'ano-rcc'
 
 auxbasis_name = 'def2-universal-jfit'
-# auxbasis_name = 'sto-3g'
-# auxbasis_name = 'def2-SVP'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 # xyzFilename = 'Zn.xyz'
@@ -61,26 +59,40 @@ xyzFilename = 'H2O.xyz'
 # xyzFilename = 'Icosahectane_C120H242.xyz'
 
 
-#Initialize a Mol object with somewhat large geometry
+# Initialize a Mol object 
 mol = Mol(coordfile=xyzFilename)
 
 
-#Initialize a Basis object with a very large basis set
+#Initialize a Basis object 
 basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
 
-auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=auxbasis_name)})
 
-dftObj = DFT(mol, basis, auxbasis, xc=funcidcrysx)
+# APPROACH 1: Good for only small systems as it requires storing significant ERIs in memory
+dftObj = DFT(mol, basis, xc=funcidpyfock)
 
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 20
 dftObj.ncores = ncores
-dftObj.save_ao_values = True
-dftObj.isDF = False
-# Using CrysX grids 
-# To get the same energies as PySCF (level=5) upto 1e-7 au, use the following settings
-# radial_precision=1.0e-13
-# level=3
-# pruning by density with threshold = 1e-011
-# alpha_min and alpha_max corresponding to QZVP
+dftObj.save_ao_values = True # Requires more memory but is faster
+dftObj.isDF = False # Disable density fitting
+dftObj.coul_algo = 2 # When DF is disabled, PyFock uses the coul_algo=2 by default. This means that the singificant 4c2e ERIs are stored in memory.
 energyCrysX, dmat = dftObj.scf()
+
+
+
+# APPROACH 2: Direct SCF. Good for small to medium sized systems with extremely low memory footprint at the cost of speed.
+# NOTE: The first iteration of direct_scf mode also includes just-in-time compilation time, so the timings may appear off.
+dftObj = DFT(mol, basis, xc=funcidpyfock)
+
+dftObj.conv_crit = 1e-7
+dftObj.max_itr = 20
+dftObj.ncores = ncores
+dftObj.save_ao_values = True # Requires more memory but is faster
+dftObj.isDF = False # Disable density fitting
+dftObj.direct_scf = True # Coulomb matrix is computed on the fly without storing the large 4c2e ERI tensor.
+dftObj.rys = False # By default PyFock uses Rys quadrature for the evaluation of the ERIs. But Obara-Saika (OS) scheme is faster for direct_scf.
+energyCrysX, dmat = dftObj.scf()
+
+
+# NOTE: The above examples are only for demonstration purposes. For production runs, one should always use density fitting
+# as it gives significant acceleration without compromising accuracy.

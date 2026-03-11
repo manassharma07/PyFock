@@ -15,7 +15,6 @@ ncores = 4
 funcx = 1
 funcc = 7
 funcidcrysx = [funcx, funcc]
-funcidpyscf = str(funcx)+','+str(funcc)
 
 
 basis_set_name = 'sto-3g'
