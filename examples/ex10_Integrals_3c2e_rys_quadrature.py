@@ -24,8 +24,8 @@ xyzFilename = 'h2o.xyz'
 basisName = '6-31G'
 # basisName = 'def2-SVP'
 
-auxbasisName = '6-31G'
-# auxbasisName = 'def2-universal-jfit'
+# auxbasisName = '6-31G'
+auxbasisName = 'def2-universal-jfit'
 
 #First of all we need a mol object with some geometry
 mol = Mol(coordfile = xyzFilename)

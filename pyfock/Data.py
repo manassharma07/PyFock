@@ -42,7 +42,7 @@ class Data:
     Angs2BohrFactor = 1.88972612456 # Including more digits than currently used somehow increases the error drastically?!    #Previosuly used value was 1.889725989
     """Conversion factor from Ångström to Bohr (1 Å = 1.88972612456 Bohr)."""
     shell_dict = {'s':1, 'p':2, 'd':3, 'f':4, 'g':5, 'h':6, 'i':7, 'j':8}
-    """Mapping of orbital angular momentum shell labels to integer quantum numbers (e.g., 's' → 1, 'p' → 2, etc.)."""
+    """Mapping of orbital angular momentum shell labels to integer quantum numbers (e.g., 's' -> 1, 'p' -> 2, etc.)."""
     # PySCF/HORTON ordering (for Cartesian GTOs https://github.com/sunqm/libcint/blob/master/doc/program_ref.pdf and https://theochem.github.io/horton/2.0.1/tech_ref_gaussian_basis.html#collected-notes-on-gaussian-basis-sets)
     # shell_lmn = {'s':[0,0,0], 'px':[1,0,0], 'py':[0,1,0], 'pz':[0,0,1], 'dxx':[2,0,0], 'dxy':[1,1,0], 'dxz':[1,0,1], 'dyy':[0,2,0], 'dyz':[0,1,1], 'dzz':[0,0,2], 'fxxx':[3,0,0], 'fxxy':[2,1,0], 'fxxz':[2,0,1], 'fxyy':[1,2,0], 'fxyz':[1,1,1], 'fxzz':[1,0,2], 'fyyy':[0,3,0], 'fyyz':[0,2,1], 'fyzz':[0,1,2], 'fzzz':[0,0,3], 'gxxxx':[4,0,0], 'gxxxy':[3,1,0], 'gxxxz':[3,0,1], 'gxxyy':[2,2,0], 'gxxyz':[2,1,1], 'gxxzz':[2,0,2], 'gxyyy':[1,3,0], 'gxyyz':[1,2,1], 'gxyzz':[1,1,2], 'gxzzz':[1,0,3], 'gyyyy':[0,4,0], 'gyyyz':[0,3,1], 'gyyzz':[0,2,2], 'gyzzz':[0,1,3], 'gzzzz':[0,0,4] }
     shell_lmn = {
@@ -143,3 +143,76 @@ class Data:
     #First element is ghost element remember
     elementPeriod=["1","1","1","2","2","2","2","2","2","2","2","3","3","3","3","3","3","3","3","4","4","4","4","4","4","4","4","4","4","4","4","4","4","4","4","4","4","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","5","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","6","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7","7"]
     """Period (row) of the periodic table for each element. Index 0 corresponds to the ghost atom."""
+    # Ground state multiplicities (2S+1) for Z=1..86
+    # Period 1:  H  He
+    # Period 2:  Li Be B  C  N  O  F  Ne
+    # Period 3:  Na Mg Al Si P  S  Cl Ar
+    # Period 4:  K  Ca Sc Ti V  Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr
+    # Period 5:  Rb Sr Y  Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I  Xe
+    # Period 6:  Cs Ba La Ce-Lu (lanthanides)
+    #            Hf Ta W  Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn
+    GROUND_STATE_MULTIPLICITY = {
+        'H': 2, 'He': 1,
+        'Li': 2, 'Be': 1, 'B': 2, 'C': 3, 'N': 4, 'O': 3, 'F': 2, 'Ne': 1,
+        'Na': 2, 'Mg': 1, 'Al': 2, 'Si': 3, 'P': 4, 'S': 3, 'Cl': 2, 'Ar': 1,
+        'K': 2, 'Ca': 1, 'Sc': 2, 'Ti': 3, 'V': 4, 'Cr': 7, 'Mn': 6,
+        'Fe': 5, 'Co': 4, 'Ni': 3, 'Cu': 2, 'Zn': 1,
+        'Ga': 2, 'Ge': 3, 'As': 4, 'Se': 3, 'Br': 2, 'Kr': 1,
+        'Rb': 2, 'Sr': 1, 'Y': 2, 'Zr': 3, 'Nb': 6, 'Mo': 7, 'Tc': 6,
+        'Ru': 5, 'Rh': 4, 'Pd': 1, 'Ag': 2, 'Cd': 1,
+        'In': 2, 'Sn': 3, 'Sb': 4, 'Te': 3, 'I': 2, 'Xe': 1,
+        'Cs': 2, 'Ba': 1,
+        # Lanthanides (Z=57-71)
+        'La': 2, 'Ce': 3, 'Pr': 4, 'Nd': 5, 'Pm': 6, 'Sm': 7, 'Eu': 8,
+        'Gd': 9, 'Tb': 6, 'Dy': 5, 'Ho': 4, 'Er': 3, 'Tm': 2, 'Yb': 1,
+        # 5d transition metals and 6p block (Z=71-86)
+        'Lu': 2, 'Hf': 3, 'Ta': 4, 'W': 5, 'Re': 6, 'Os': 5, 'Ir': 4,
+        'Pt': 3, 'Au': 2, 'Hg': 1,
+        'Tl': 2, 'Pb': 3, 'Bi': 4, 'Po': 3, 'At': 2, 'Rn': 1,
+    }
+    """Ground state multiplicities (2S+1) for Z=1..86"""
+    # GROUND_STATE_MULTIPLICITY = {
+    #     # Period 1
+    #     'H': 2, 'He': 1,
+    #     # Period 2
+    #     'Li': 2, 'Be': 1, 'B': 2, 'C': 3, 'N': 4, 'O': 3, 'F': 2, 'Ne': 1,
+    #     # Period 3
+    #     'Na': 2, 'Mg': 1, 'Al': 2, 'Si': 3, 'P': 4, 'S': 3, 'Cl': 2, 'Ar': 1,
+    #     # Period 4
+    #     'K': 2, 'Ca': 1, 'Sc': 2, 'Ti': 3, 'V': 4, 'Cr': 7, 'Mn': 6,
+    #     'Fe': 5, 'Co': 4, 'Ni': 3, 'Cu': 2, 'Zn': 1,
+    #     'Ga': 2, 'Ge': 3, 'As': 4, 'Se': 3, 'Br': 2, 'Kr': 1,
+    #     # Period 5
+    #     'Rb': 2, 'Sr': 1, 'Y': 2, 'Zr': 3, 'Nb': 6, 'Mo': 7, 'Tc': 6,
+    #     'Ru': 5, 'Rh': 4, 'Pd': 1, 'Ag': 2, 'Cd': 1,
+    #     'In': 2, 'Sn': 3, 'Sb': 4, 'Te': 3, 'I': 2, 'Xe': 1,
+    #     # Period 6: Cs-Ba, then lanthanides La-Lu, then Hf-Hg
+    #     'Cs': 2, 'Ba': 1,
+    #     # Lanthanides
+    #     'La': 2,   # [Xe] 5d1 6s2,          2D3/2  -> 2S+1 = 2
+    #     'Ce': 1,   # [Xe] 4f1 5d1 6s2,      1G4    -> 2S+1 = 1  (ground term 1G4)
+    #     'Pr': 4,   # [Xe] 4f3 6s2,          4I9/2  -> 2S+1 = 4
+    #     'Nd': 5,   # [Xe] 4f4 6s2,          5I4    -> 2S+1 = 5
+    #     'Pm': 6,   # [Xe] 4f5 6s2,          6H5/2  -> 2S+1 = 6
+    #     'Sm': 7,   # [Xe] 4f6 6s2,          7F0    -> 2S+1 = 7
+    #     'Eu': 8,   # [Xe] 4f7 6s2,          8S7/2  -> 2S+1 = 8
+    #     'Gd': 9,   # [Xe] 4f7 5d1 6s2,      9D2    -> 2S+1 = 9
+    #     'Tb': 6,   # [Xe] 4f9 6s2,          6H15/2 -> 2S+1 = 6
+    #     'Dy': 5,   # [Xe] 4f10 6s2,         5I8    -> 2S+1 = 5
+    #     'Ho': 4,   # [Xe] 4f11 6s2,         4I15/2 -> 2S+1 = 4
+    #     'Er': 3,   # [Xe] 4f12 6s2,         3H6    -> 2S+1 = 3
+    #     'Tm': 2,   # [Xe] 4f13 6s2,         2F7/2  -> 2S+1 = 2
+    #     'Yb': 1,   # [Xe] 4f14 6s2,         1S0    -> 2S+1 = 1
+    #     'Lu': 2,   # [Xe] 4f14 5d1 6s2,     2D3/2  -> 2S+1 = 2
+    #     # 5d transition metals
+    #     'Hf': 3,   # [Xe] 4f14 5d2 6s2,     3F2    -> 2S+1 = 3
+    #     'Ta': 4,   # [Xe] 4f14 5d3 6s2,     4F3/2  -> 2S+1 = 4
+    #     'W': 5,    # [Xe] 4f14 5d4 6s2,     5D0    -> 2S+1 = 5
+    #     'Re': 6,   # [Xe] 4f14 5d5 6s2,     6S5/2  -> 2S+1 = 6
+    #     'Os': 5,   # [Xe] 4f14 5d6 6s2,     5D4    -> 2S+1 = 5
+    #     'Ir': 4,   # [Xe] 4f14 5d7 6s2,     4F9/2  -> 2S+1 = 4
+    #     'Pt': 3,   # [Xe] 4f14 5d9 6s1,     3D3    -> 2S+1 = 3
+    #     'Au': 2,   # [Xe] 4f14 5d10 6s1,    2S1/2  -> 2S+1 = 2
+    #     'Hg': 1,   # [Xe] 4f14 5d10 6s2,    1S0    -> 2S+1 = 1
+    # }
+    # """Ground state multiplicities (2S+1) for Z=1..80"""
