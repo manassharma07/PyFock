@@ -440,7 +440,7 @@ class Basis:
         return factor
 
 
-    def readBasisSetFromFile(key, filename):
+    def readBasisSetFromFile(self, key, filename):
         """
         Read the basis set block corresponding to a particular atom from a TURBOMOLE format file.
         
