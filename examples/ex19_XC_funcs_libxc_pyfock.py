@@ -8,7 +8,7 @@ funcid = 1
 print('Functional ID in LibXC: ')
 print(funcid)
 
-rho = [1,2,3]
+rho = np.array([1, 2, 3], dtype=np.float64)
 print('Density at grid points: ')
 print(rho)
 
