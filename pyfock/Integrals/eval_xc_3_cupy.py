@@ -1,6 +1,6 @@
 import numpy as np
 import numexpr
-import pylibxc
+
 from timeit import default_timer as timer
 # from time import process_time
 from pyfock import Integrals
@@ -108,11 +108,18 @@ def eval_xc_3_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize
         bfs_data_as_np_arrays = [bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff]
 
     xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-    # Create a LibXC object  
-    funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-    funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-    x_family_code = funcx.get_family()
-    c_family_code = funcc.get_family()
+    if use_libxc:
+        import pylibxc
+        # Create a LibXC object  
+        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+        x_family_code = funcx.get_family()
+        c_family_code = funcc.get_family()
+    else:
+        x_family_code = XC.get_family(funcid[0])
+        c_family_code = XC.get_family(funcid[1])
+        funcx = None
+        funcc = None
 
     my_expr = contract_expression('ij,mi,mj->m', (150, 150), (blocksize, 150), (blocksize, 150))
     my_expr_grad1 = None

@@ -1,5 +1,5 @@
 import numpy as np
-import pylibxc
+
 from timeit import default_timer as timer
 from pyfock import Integrals
 from opt_einsum import contract, contract_expression
@@ -133,11 +133,18 @@ def eval_xc_1_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize
 
     xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
 
-    # Create a LibXC object  
-    funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-    funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-    x_family_code = funcx.get_family()
-    c_family_code = funcc.get_family()
+    if use_libxc:
+        import pylibxc
+        # Create a LibXC object  
+        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+        x_family_code = funcx.get_family()
+        c_family_code = funcc.get_family()
+    else:
+        x_family_code = XC.get_family(funcid[0])
+        c_family_code = XC.get_family(funcid[1])
+        funcx = None
+        funcc = None
 
 
     my_expr = contract_expression('ij,mi,mj->m', (150, 150), (blocksize, 150), (blocksize, 150))

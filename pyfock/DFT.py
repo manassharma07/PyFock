@@ -271,10 +271,10 @@ class DFT:
         
         self.XC_algo = None
         """ This is only for developers. Users should not change it. The algorithm for XC evaluation should be 2 for CPU and 3 for GPU."""
-        if use_gpu:
-            self.XC_algo = 3
-        else:
-            self.XC_algo = 2 
+        # if use_gpu:
+        #     self.XC_algo = 3
+        # else:
+        #     self.XC_algo = 2 
 
         self.debug = False
         """ Turn on printing debug statements """
@@ -632,8 +632,15 @@ class DFT:
         if S is None:
             S = Integrals.overlap_mat_symm(basis)
 
-        eigvalues, eigvectors = scipy.linalg.eigh(Hcore, S)
-        # print(eigvalues)
+        if self.use_gpu:
+            eigvalues, eigvectors = self.solve_cupy(Hcore, S)
+        else:
+            eigvalues, eigvectors = scipy.linalg.eigh(Hcore, S)
+
+        if isinstance(eigvalues, cp.ndarray):
+            eigvalues = eigvalues.get()
+        if isinstance(eigvectors, cp.ndarray):
+            eigvectors = eigvectors.get()
         idx = np.argmax(abs(eigvectors.real), axis=0)
         eigvectors[:,eigvectors[idx,np.arange(len(eigvalues))].real<0] *= -1
         mo_occ = self.getOcc(mol, eigvalues, eigvectors)
@@ -927,7 +934,7 @@ class DFT:
                 print('GPU acceleration is enabled. Currently this only accelerates AO values and XC term evaluation.', flush=True)
                 print('GPU(s) information:')
                 # print(cp.cuda.Device.mem_info())
-                print(cuda.detect())
+                # print(cuda.detect())
                 print('Max threads per block supported by the GPU: ', cuda.get_current_device().MAX_THREADS_PER_BLOCK, flush=True)
                 print('The user has specified to use '+str(self.n_gpus)+' GPU(s).')
             
@@ -945,6 +952,7 @@ class DFT:
 
                 if XC_algo is None:
                     XC_algo = 3
+                    self.XC_algo = 3
                 if blocksize is None:
                     blocksize = 20480
                 streams = []
@@ -965,11 +973,13 @@ class DFT:
                 print('GPU acceleration requested but cannot be enabled as Cupy is not installed.', flush=True)
                 self.use_gpu = False
 
-                if XC_algo is None:
-                    XC_algo = 2
-                if blocksize is None:
-                    blocksize = 5000
-        
+
+        if XC_algo is None and not self.use_gpu:
+            XC_algo = 2
+            self.XC_algo = 2
+            if blocksize is None:
+                blocksize = 5000
+
         isSchwarz = True
         
         if strict_schwarz:
@@ -980,6 +990,14 @@ class DFT:
             if not (DF_algo==6 or DF_algo==10):
                 print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with DF algo #6 or #10 so turning it off.')
                 cholesky = False
+        if cholesky:
+            if self.use_gpu:
+                print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with CPU version, so turning it off.')
+                cholesky = False
+        if save_ao_values:
+            if self.use_gpu:
+                print('Warning: AO values and gradients caching is not support for GPU devices. Turning it off')
+                save_ao_values = False
             
         
         if self.sao:
@@ -1378,12 +1396,6 @@ class DFT:
 
             xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
 
-            # Create a LibXC object  
-            # funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-            # funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-            # x_family_code = funcx.get_family()
-            # c_family_code = funcc.get_family()
-
 
             print('\n\n------------------------------------------------------', flush=True)
             print('Exchange-Correlation Functional')
@@ -1519,7 +1531,7 @@ class DFT:
             if xc!='HF':
                 # XC energy and potential
                 startxc = timer()
-
+                print('\n\n\n\n XC algo', XC_algo)
                 if not self.use_gpu:
                     if XC_algo==1:
                         # Much slower than JOBLIB version
