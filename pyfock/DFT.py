@@ -636,11 +636,11 @@ class DFT:
             eigvalues, eigvectors = self.solve_cupy(Hcore, S)
         else:
             eigvalues, eigvectors = scipy.linalg.eigh(Hcore, S)
-
-        if isinstance(eigvalues, cp.ndarray):
-            eigvalues = eigvalues.get()
-        if isinstance(eigvectors, cp.ndarray):
-            eigvectors = eigvectors.get()
+        if self.use_gpu:
+            if isinstance(eigvalues, cp.ndarray):
+                eigvalues = eigvalues.get()
+            if isinstance(eigvectors, cp.ndarray):
+                eigvectors = eigvectors.get()
         idx = np.argmax(abs(eigvectors.real), axis=0)
         eigvectors[:,eigvectors[idx,np.arange(len(eigvalues))].real<0] *= -1
         mo_occ = self.getOcc(mol, eigvalues, eigvectors)
@@ -931,7 +931,7 @@ class DFT:
             sortGrids = True
         if CUPY_AVAILABLE:
             if self.use_gpu:
-                print('GPU acceleration is enabled. Currently this only accelerates AO values and XC term evaluation.', flush=True)
+                print('GPU acceleration is enabled.', flush=True)
                 print('GPU(s) information:')
                 # print(cp.cuda.Device.mem_info())
                 # print(cuda.detect())
