@@ -25,6 +25,7 @@ from pyfock import XC
 # import pyfock.Integrals as Integrals
 import pyfock.Integrals as Integrals
 import pyfock.Grids as Grids
+import pyfock.Data as Data
 from threadpoolctl import ThreadpoolController, threadpool_info, threadpool_limits
 # controller = ThreadpoolController()
 import numpy as np
@@ -907,6 +908,7 @@ class DFT:
         print_scientist()
         print('\n\nNumber of atoms: ', mol.natoms)
         print('\n\nNumber of basis functions or Cartesian atomic orbitals (6d, 10f, 15g and so on): ', basis.bfs_nao)
+            
         if isDF:
             print('\n\nNumber of auxiliary basis functions (in Cartesian atomic orbital basis): ', auxbasis.bfs_nao)
         print("\n" + "="*70 + "\n")
@@ -978,9 +980,7 @@ class DFT:
             if not (DF_algo==6 or DF_algo==10):
                 print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with DF algo #6 or #10 so turning it off.')
                 cholesky = False
-            if self.sao:
-                print('Warning: Currently the Cholesky decomposition of 2c2e integrals is not compatible with the SAO basis (5d, 7f, 10g...) so turning it off.')
-                cholesky = False
+            
         
         if self.sao:
             print('\n\nSpherical Atomic Orbitals (5d, 7f, 10g...) are being used!\n\n')
@@ -991,6 +991,7 @@ class DFT:
             c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
             # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
             sph2c_mat_pseudo = basis.sph2cart_basis() # SAO --> CAO
+            print('\n\nNumber of Spherical atomic orbitals (5d, 7f, 10g and so on): ', c2sph_mat.shape[0])
         else:
             print('\n\nCartesian Atomic Orbitals (6d, 10f, 15g...) are being used!\n\n')
                 
@@ -1063,7 +1064,8 @@ class DFT:
             # It is possible that the supplied density matrix to the SCF was in SAO format already.
             # In such a case we need to transform this density matrix to CAO basis so that the J and XC term evaluations can be done properly 
             if not dmat.shape==S.shape:
-                dmat = np.dot(sph2c_mat_pseudo, np.dot(dmat, sph2c_mat_pseudo.T)) # Convert to CAO from SAO (SAO --> CAO)
+                dmat = c2sph_mat.T @ dmat @ c2sph_mat # Convert to CAO from SAO (SAO --> CAO)
+                # dmat = np.dot(sph2c_mat_pseudo, np.dot(dmat, sph2c_mat_pseudo.T)) # Convert to CAO from SAO (SAO --> CAO)
                 # Later the dmat will be converted back to SAO after J and XC term evaluations
 
         if rys:
@@ -1421,26 +1423,28 @@ class DFT:
         startKS = timer()
         if self.sao:
             #########
-            # I use a trick to calculate the DFT energy in SAO basis. 
-            # The trick is to get rid of the extra information in the CAO basis matrices.
-            # The following does just that. 
-            # Going from CAO --> SAO we lose the extra information then we go back to from SAO --> CAO
-            # This way all the integrals (potential matrices and density matrices) can still be calculated
-            # in the CAO basis. In fact even the KS matrix is diagonalized in the CAO basis with the extra information 
-            # removed by forward and backward transformation: CAO --> SAO followed by SAO --> CAO.
-            # This also helps in reducing the number of transformations needed for calculation of various energy contributions.
+            # To get the energy in SAO basis we compute the KS matrix in CAO basis.
+            # Transform it to SAO basis.
+            # Then diagonalize the SAO basis KS matrix to take advantage of the fewer 
+            # number of basis functions in SAO basis
+            # The resulting dmat is also in SAO basis.
+            # Therefore, we convert it back to CAO basis for use in calculaiton of XC and J terms.
+
             #########
-            # Convert the overlap matrix from CAO to SAO basis
-            S = np.dot(c2sph_mat, np.dot(S, c2sph_mat.T)) # CAO --> SAO
+            # Convert the overlap matrix from CAO to SAO basis as it is needed for diagonalization
+            S_sao = np.dot(c2sph_mat, np.dot(S, c2sph_mat.T)) # CAO --> SAO
             # Convert back to CAO so that now we lose the extra information that the CAO basis had
-            S = np.dot(sph2c_mat_pseudo, np.dot(S, sph2c_mat_pseudo.T))
+            S = np.dot(sph2c_mat_pseudo, np.dot(S_sao, sph2c_mat_pseudo.T))
         if orthogonalize:
             if not self.use_gpu:
-                eig_val_s, eig_vec_s = scipy.linalg.eigh(S)
+                if self.sao:
+                    eig_val_s, eig_vec_s = scipy.linalg.eigh(S_sao)
+                else:
+                    eig_val_s, eig_vec_s = scipy.linalg.eigh(S)
                 # Removing the eigenvectors assoicated to the smallest eigenvalue.
-                x = eig_vec_s[:,eig_val_s>1e-7] / np.sqrt(eig_val_s[eig_val_s>1e-7])
+                x_ortho = eig_vec_s[:,eig_val_s>1e-7] / np.sqrt(eig_val_s[eig_val_s>1e-7])
         else:
-            x = None
+            x_ortho = None
         durationKS = durationKS + timer() - startKS
         
 
@@ -1636,11 +1640,12 @@ class DFT:
                     # The following gets rid of the extra information in the CAO basis KS matrix by going to SAO and then back to CAO.
                     # This way even though the matrix dimensions would be that of CAO but the information would be the same as SAO
                     # leading to the same energy as SAO basis PySCF or TURBOMOLE calculations
-                    KS = np.dot(c2sph_mat, np.dot(KS, c2sph_mat.T)) # CAO --> SAO
-                    KS = np.dot(sph2c_mat_pseudo, np.dot(KS, sph2c_mat_pseudo.T)) #SAO --> CAO
+                    KS_sao = np.dot(c2sph_mat, np.dot(KS, c2sph_mat.T)) # CAO --> SAO 
+                    # The following is needed for DIIS
+                    KS = np.dot(sph2c_mat_pseudo, np.dot(KS_sao, sph2c_mat_pseudo.T)) #SAO --> CAO
                     
 
-                #### DIIS
+                #### DIIS (Currently performed in CAO basis)
                 startDIIS = timer()
                 diis_start_itr = 1
                 if itr >= diis_start_itr:
@@ -1653,6 +1658,10 @@ class DFT:
                         streams[0].synchronize()
                         cp.cuda.Stream.null.synchronize()
                 durationDIIS = durationDIIS + timer() - startDIIS
+                if self.sao:
+                    # Convert the DIISed KS matrix to SAO for diagonalization
+                    KS_sao = np.dot(c2sph_mat, np.dot(KS, c2sph_mat.T)) # CAO --> SAO 
+                    
 
                 #### Solve KS equation (Diagonalize KS matrix)
                 startKS = timer()
@@ -1671,13 +1680,19 @@ class DFT:
                         lumo_idx = homo_idx + 1
                         gap = (eigvalues[lumo_idx] - eigvalues[homo_idx])
                         print(f"\n\nHOMO-LUMO gap: {gap} au", flush=True)
-                        print(f"HOMO-LUMO gap: {gap*27.211324570273:.3f} eV", flush=True)
+                        print(f"HOMO-LUMO gap: {gap*Data.au2eVFactor:.3f} eV", flush=True)
                 else:
                     with threadpool_limits(limits=ncores, user_api='blas'):
-                        # print('KS eigh', controller.info())
-                        eigvalues, eigvectors = self.solve(KS, S, orthogonalize=orthogonalize, x=x)
+                        if self.sao:
+                            eigvalues, eigvectors = self.solve(KS_sao, S_sao, orthogonalize=orthogonalize, x=x_ortho)
+                        else:
+                            eigvalues, eigvectors = self.solve(KS, S, orthogonalize=orthogonalize, x=x_ortho)
                     mo_occ = self.getOcc(mol, eigvalues, eigvectors)
                     dmat = self.gen_dm(eigvectors, mo_occ)
+                    if self.sao:
+                        dmat = c2sph_mat.T @ dmat @ c2sph_mat #SAO --> CAO
+                        # dmat = np.dot(sph2c_mat_pseudo, np.dot(dmat, sph2c_mat_pseudo.T)) #SAO --> CAO (not the right way for density matrix)
+                    
                     # HOMO-LUMO gap
                     occupied = np.where(mo_occ > 1e-8)[0]
                     if len(occupied) < len(eigvalues):
@@ -1685,7 +1700,7 @@ class DFT:
                         lumo_idx = homo_idx + 1
                         gap = (eigvalues[lumo_idx] - eigvalues[homo_idx]) 
                         print(f"\n\nHOMO-LUMO gap: {gap} au", flush=True)
-                        print(f"HOMO-LUMO gap: {gap*27.211324570273:.3f} eV", flush=True)
+                        print(f"HOMO-LUMO gap: {gap*Data.au2eVFactor:.3f} eV", flush=True)
                 durationKS = durationKS + timer() - startKS
 
                 self.dmat = dmat

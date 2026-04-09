@@ -524,12 +524,6 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
     else:
         start2c2e = timer()
         ints2c2e = Integrals.conv_2c2e_symm(auxbasis) 
-        # if sao:
-            # print('here\n\n\n\n\n\n')
-            # c2sph_mat = auxbasis.cart2sph_basis() # CAO --> SAO
-            # sph2c_mat_pseudo = auxbasis.sph2cart_basis() # SAO --> CAO
-            # ints2c2e = np.dot(c2sph_mat, np.dot(ints2c2e, c2sph_mat.T)) # CAO --> SAO
-            # ints2c2e = np.dot(sph2c_mat_pseudo, np.dot(ints2c2e, sph2c_mat_pseudo.T)) #SAO --> CAO
         duration2c2e = timer() - start2c2e
         print('Time taken for two-centered two-electron integrals '+str(round(duration2c2e, 2))+' seconds.\n', flush=True)
         ints3c2e = Integrals.conv_3c2e_symm(basis, auxbasis)
@@ -641,6 +635,14 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         if use_gpu:
             cho_decomp_ints2c2e = scipy.linalg.cho_factor(cp.asnumpy(ints2c2e))
         else:
+            if dftObj.sao:
+                # w = np.linalg.eigvalsh(ints2c2e)
+                # print('Lowest eigenvalue of the 2c2e matrix: ', flush=True)
+                # print(w.min())
+                # In case of SAO --> CAO --> SAO transformations some numerical noise gets introduced. 
+                # Fix that to make the ints2c2e matrix positive definite.
+                eps = 1e-12  # or 1e-10 if needed
+                ints2c2e += eps * np.eye(ints2c2e.shape[0])
             cho_decomp_ints2c2e = scipy.linalg.cho_factor(ints2c2e)
         durationDF_cholesky = timer() - startDF_cholesky
         print('Time taken for Cholesky factorization of two-centered two-electron integrals '+str(round(durationDF_cholesky, 2))+' seconds.\n', flush=True)

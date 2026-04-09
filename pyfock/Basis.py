@@ -28,6 +28,11 @@ import os
 # print(sys.argv[0])
 # print(sys.path[0])
 
+def safe_factorial2(n):
+    if n <= 0:
+        return 1.0
+    return factorial2(n)
+
 #Class to store basis function properties
 class Basis:
     """
@@ -411,7 +416,7 @@ class Basis:
         Returns:
             float: Normalization factor for the primitive Gaussian
         """
-        return np.sqrt((2*alpha/np.pi)**(3/2)*(4*alpha)**(l+m+n)/(factorial2(2*l-1)*factorial2(2*m-1)*factorial2(2*n-1)))
+        return np.sqrt((2*alpha/np.pi)**(3/2)*(4*alpha)**(l+m+n)/(safe_factorial2(2*l-1)*safe_factorial2(2*m-1)*safe_factorial2(2*n-1)))
 
     #Normalization factor for a contraction of gaussians
     def normalizationFactorContraction(self, alphas, coeffs, norms, l, m, n, lm):
@@ -431,7 +436,7 @@ class Basis:
             float: Normalization factor for the contracted Gaussian
         """
 
-        temp = np.pi**(3/2)*factorial2(2*l-1)*factorial2(2*m-1)*factorial2(2*n-1)/(2**lm)
+        temp = np.pi**(3/2)*safe_factorial2(2*l-1)*safe_factorial2(2*m-1)*safe_factorial2(2*n-1)/(2**lm)
         sum = 0.0
         for i in range(len(alphas)):
             for j in range(len(alphas)):
@@ -913,5 +918,3 @@ class Basis:
 
         # self.nprims_angmom_list = result
         return result
-
-                            

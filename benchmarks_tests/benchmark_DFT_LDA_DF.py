@@ -53,9 +53,9 @@ from pyscf import gto, dft, df, scf
 #DFT SCF benchmark and comparison with PySCF
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 # LDA Functionals
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 # LDA_X + LDA_C_VWN (SVWN / LDA)
 funcx = 1
@@ -77,9 +77,9 @@ funcc = 7
 # funcx = 1
 # funcc = 13
 
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 # GGA Functionals
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 # GGA_X_PBE + GGA_C_PBE (PBE)
 # funcx = 101
@@ -109,12 +109,12 @@ funcidcrysx = [funcx, funcc]
 funcidpyscf = str(funcx)+','+str(funcc)
 
 # basis_set_name = 'sto-2g'
-basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
 # basis_set_name = '6-31G'
 # basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
-# basis_set_name = 'def2-TZVP'
+basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
 # basis_set_name = 'def2-TZVPP'
 # basis_set_name = 'def2-QZVPP'
@@ -140,8 +140,8 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_TPP.xyz'
 # xyzFilename = 'H2O.xyz'
 
-# xyzFilename = 'Caffeine.xyz'
-xyzFilename = 'Serotonin.xyz'
+xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'
 # xyzFilename = 'Taxol.xyz'
@@ -181,7 +181,7 @@ xyzFilename = 'Serotonin.xyz'
 molPySCF = gto.Mole()
 molPySCF.atom = xyzFilename
 molPySCF.basis = basis_set_name
-molPySCF.cart = True
+molPySCF.cart = False
 molPySCF.verbose = 4
 molPySCF.max_memory=5000
 # molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
@@ -270,7 +270,7 @@ dftObj.strict_schwarz = False
 dftObj.cholesky = True
 dftObj.orthogonalize = True
 # SAO or CAO basis
-dftObj.sao = False
+dftObj.sao = True
 
 # GPU acceleration
 dftObj.use_gpu = False
