@@ -24,9 +24,9 @@ from numba import cuda
 def eval_xc_3_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=10240, debug=False, list_nonzero_indices=None, \
                    count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None, use_libxc=True, nstreams=1, ngpus=1,\
                     freemem=True, threads_per_block=None, type=cp.float64, streams=None, nb_streams=None, bfs_data_as_np_arrays=None):
-    print('Calculating XC term using GPU and algo 3', flush=True)
-    if not use_libxc:
-        print('Not using LibXC for XC evaluations', flush=True)
+    # print('Calculating XC term using GPU and algo 3', flush=True)
+    # if not use_libxc:
+    #     print('Not using LibXC for XC evaluations', flush=True)
     # This performs parallelization at the blocks/batches level.
     # Therefore, joblib is perfect for such embarrasingly parallel task
     # In order to evaluate a density functional we will use the 
@@ -263,11 +263,9 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     durationAO = 0.0
 
     if funcx is None:
-        xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'}
-        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-        x_family_code = funcx.get_family()
-        c_family_code = funcc.get_family()
+        if use_libxc:
+            funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+            funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
 
     
     bfs_coords = cp.asarray(bfs_data_as_np_arrays[0])

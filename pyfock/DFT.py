@@ -1531,7 +1531,7 @@ class DFT:
             if xc!='HF':
                 # XC energy and potential
                 startxc = timer()
-                print('\n\n\n\n XC algo', XC_algo)
+                print('\n\n\n\nXC algo', XC_algo)
                 if not self.use_gpu:
                     if XC_algo==1:
                         # Much slower than JOBLIB version
