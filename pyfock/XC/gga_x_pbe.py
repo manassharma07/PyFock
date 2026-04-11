@@ -109,6 +109,7 @@ def pbe_x_temp(rho, sigma):
     mu = 0.2195149727645171
     kappa = 0.804
 
+    sigma = np.maximum(sigma, 1e-20)
     norm_dn = np.sqrt(sigma)
     kf = (3 * np.pi**2 * rho)**(1 / 3)
     # Handle divisions by zero
@@ -116,7 +117,7 @@ def pbe_x_temp(rho, sigma):
     # divkf = np.divide(1, kf,
     #                   out=np.zeros_like(kf), where=(kf > 0))
     # Handle divisions by zero
-    s = norm_dn * divkf / (2 * rho)
+    s = norm_dn * divkf / (2 * rho + 1e-20)
     # s = np.divide(norm_dn * divkf, 2 * rho,
     #               out=np.zeros_like(rho), where=(rho > 0))
     f1 = 1 + mu * s**2 / kappa
@@ -132,7 +133,7 @@ def pbe_x_temp(rho, sigma):
     vx = sx + dexunif * Fx + exunifdFx * dsdn  # dFx/dn = dFx/ds * ds/dn
 
     # Handle divisions by zero
-    vsigmax = exunifdFx * divkf / (2 * norm_dn)
+    vsigmax = exunifdFx * divkf / (2 * norm_dn + 1e-20)
     # vsigmax = np.divide(exunifdFx * divkf, 2 * norm_dn,
     #                     out=np.zeros_like(norm_dn), where=(norm_dn > 0))
     return sx * rho, vx, vsigmax

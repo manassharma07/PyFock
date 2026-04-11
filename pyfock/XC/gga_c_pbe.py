@@ -31,15 +31,18 @@ def gga_c_pbe_(rho, sigma):
 
     pi34 = (3 / (4 * np.pi))**(1 / 3)
     rs = pi34 * rho**(-1 / 3)
+    sigma = np.maximum(sigma, 1e-20)
     norm_dn = np.sqrt(sigma)
     ec, vc = lda_c_pw_mod_(rho)
 
     kf = (9 / 4 * np.pi)**(1 / 3) / rs
     ks = np.sqrt(4 * kf / np.pi)
     divt = 2 * ks * rho
-    t = norm_dn / divt
-    expec = np.exp(-ec / gamma)
-    A = beta / (gamma * (expec - 1))
+    t = norm_dn / (divt + 1e-20)
+    arg = -ec / gamma
+    arg = np.clip(arg, -50, 50)
+    expec = np.exp(arg)
+    A = beta / (gamma * (expec - 1 + 1e-20))
     t2 = t**2
     At2 = A * t2
     A2t4 = At2**2
