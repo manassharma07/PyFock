@@ -58,7 +58,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
             if dftObj.sao:
                 # Convert the 2c2e matrix from CAO to SAO basis
-                ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
+                ints2c2e = auxbasis.cart2sph_operator_blockwise(ints2c2e) # CAO --> SAO 
+                # ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
                 # Convert back to CAO so that now we lose the extra information that the CAO basis had
                 ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
         else:

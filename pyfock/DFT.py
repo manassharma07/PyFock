@@ -1702,7 +1702,8 @@ class DFT:
                     mo_occ = self.getOcc(mol, eigvalues, eigvectors)
                     dmat = self.gen_dm(eigvectors, mo_occ)
                     if self.sao:
-                        dmat = c2sph_mat.T @ dmat @ c2sph_mat #SAO --> CAO
+                        dmat = basis.sph2cart_operator_blockwise(dmat) #SAO --> CAO
+                        # dmat = c2sph_mat.T @ dmat @ c2sph_mat 
                         # dmat = np.dot(sph2c_mat_pseudo, np.dot(dmat, sph2c_mat_pseudo.T)) #SAO --> CAO (not the right way for density matrix)
                     
                     # HOMO-LUMO gap

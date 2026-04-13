@@ -34,7 +34,57 @@ def safe_factorial2(n):
         return 1.0
     return factorial2(n)
 
-#  helpers called once at setup 
+@njit(cache=True, parallel=True, fastmath=True)
+def _transform_kernel_sph2cart(
+    D_sph,
+    T_flat, T_offsets, T_rows, T_cols,
+    cart_offsets,
+    sph_offsets,
+    nshells,
+    D_cart,
+):
+    """
+    Compute  D_cart[ci0:ci1, cj0:cj1] = Ti.T @ D_sph[si-block, sj-block] @ Ti
+    for every shell pair (i, j), exploiting symmetry of D_sph.
+
+    The cart2sph transform T has shape (n_sph, n_cart), so:
+        sph -> cart:  T.T @ D_sph @ T   (n_cart x n_cart result)
+    """
+    for i in prange(nshells):
+        si0   = sph_offsets[i]
+        ri    = T_rows[i]          # spherical functions in shell i  (rows of Ti)
+        ci0   = cart_offsets[i]
+        ni    = T_cols[i]          # Cartesian functions in shell i  (cols of Ti)
+        Ti_r0 = T_offsets[i]
+
+        for j in range(i, nshells):        # upper triangle only
+            sj0   = sph_offsets[j]
+            rj    = T_rows[j]
+            cj0   = cart_offsets[j]
+            nj    = T_cols[j]
+            Tj_r0 = T_offsets[j]
+
+            # Pass 1: Ti.T @ D_sph_block  →  tmp  (ni × rj)
+            # Ti.T[k, p] = Ti[p, k] = T_flat[Ti_r0 + p, k]
+            tmp = np.zeros((ni, rj))
+            for k in range(ni):
+                for p in range(ri):
+                    tik = T_flat[Ti_r0 + p, k]   # Ti.T[k,p]
+                    for q in range(rj):
+                        tmp[k, q] += tik * D_sph[si0 + p, sj0 + q]
+
+            # Pass 2: tmp @ Tj  →  out  (ni × nj)
+            # Tj[q, l] = T_flat[Tj_r0 + q, l]
+            for k in range(ni):
+                for l in range(nj):
+                    s = 0.0
+                    for q in range(rj):
+                        s += tmp[k, q] * T_flat[Tj_r0 + q, l]
+                    D_cart[ci0 + k, cj0 + l] = s
+                    if i != j:
+                        D_cart[cj0 + l, ci0 + k] = s   # symmetry
+
+    return D_cart
 
 def _pack_transforms(T_shell):
     """
@@ -907,6 +957,47 @@ class Basis:
         )
 
         return A_sph
+
+
+    def sph2cart_operator_blockwise(self, D_sph):
+        """
+        Blockwise spherical → Cartesian back-transformation of a symmetric operator.
+
+        Applies:  D_cart[i,j] = Ti.T @ D_sph[i,j] @ Tj
+        which is the inverse of the cart→sph transform  Ti @ A @ Tj.T
+
+        Args
+        ----
+        D_sph : (nao_sph, nao_sph) ndarray – symmetric operator in spherical basis
+
+        Returns
+        -------
+        D_cart : (nao_cart, nao_cart) ndarray
+        """
+        nshells = self.nshells
+
+        T_shell = [Basis.cart2sph(self.shells[i] - 1) for i in range(nshells)]
+        T_flat, T_offsets, T_rows, T_cols = _pack_transforms(T_shell)
+
+        cart_offsets = np.array(self.shell_bfs_offset, dtype=np.int64)
+        sph_offsets  = np.zeros(nshells, dtype=np.int64)
+        sph_offsets[1:] = np.cumsum(T_rows[:-1])
+
+        nao_cart = int(T_cols.sum())
+        D_cart   = np.zeros((nao_cart, nao_cart), dtype=np.float64)
+
+        D_sph = np.ascontiguousarray(D_sph, dtype=np.float64)
+
+        _transform_kernel_sph2cart(
+            D_sph,
+            T_flat, T_offsets, T_rows, T_cols,
+            cart_offsets,
+            sph_offsets,
+            nshells,
+            D_cart,
+        )
+
+        return D_cart
 
     # #Probably won't be used
     # def readBasisFunctionsfromFile(self, mol, basis_name):
