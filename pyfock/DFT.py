@@ -1444,7 +1444,7 @@ class DFT:
 
             #########
             # Convert the overlap matrix from CAO to SAO basis as it is needed for diagonalization
-            S_sao = np.dot(c2sph_mat, np.dot(S, c2sph_mat.T)) # CAO --> SAO
+            S_sao = basis.cart2sph_operator_blockwise(S)
             # Convert back to CAO so that now we lose the extra information that the CAO basis had
             S = np.dot(sph2c_mat_pseudo, np.dot(S_sao, sph2c_mat_pseudo.T))
         if orthogonalize:
@@ -1652,7 +1652,7 @@ class DFT:
                     # The following gets rid of the extra information in the CAO basis KS matrix by going to SAO and then back to CAO.
                     # This way even though the matrix dimensions would be that of CAO but the information would be the same as SAO
                     # leading to the same energy as SAO basis PySCF or TURBOMOLE calculations
-                    KS_sao = np.dot(c2sph_mat, np.dot(KS, c2sph_mat.T)) # CAO --> SAO 
+                    KS_sao = basis.cart2sph_operator_blockwise(KS)
                     # The following is needed for DIIS
                     KS = np.dot(sph2c_mat_pseudo, np.dot(KS_sao, sph2c_mat_pseudo.T)) #SAO --> CAO
                     
@@ -1672,7 +1672,7 @@ class DFT:
                 durationDIIS = durationDIIS + timer() - startDIIS
                 if self.sao:
                     # Convert the DIISed KS matrix to SAO for diagonalization
-                    KS_sao = np.dot(c2sph_mat, np.dot(KS, c2sph_mat.T)) # CAO --> SAO 
+                    KS_sao = basis.cart2sph_operator_blockwise(KS) # CAO --> SAO 
                     
 
                 #### Solve KS equation (Diagonalize KS matrix)
