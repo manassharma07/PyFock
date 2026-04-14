@@ -25,159 +25,6 @@ from numba import njit, prange
 import sys
 import os
 
-# print(__file__)
-# print(sys.argv[0])
-# print(sys.path[0])
-
-def safe_factorial2(n):
-    if n <= 0:
-        return 1.0
-    return factorial2(n)
-
-@njit(cache=True, parallel=True, fastmath=True)
-def _transform_kernel_sph2cart(
-    D_sph,
-    T_flat, T_offsets, T_rows, T_cols,
-    cart_offsets,
-    sph_offsets,
-    nshells,
-    D_cart,
-):
-    """
-    Compute  D_cart[ci0:ci1, cj0:cj1] = Ti.T @ D_sph[si-block, sj-block] @ Ti
-    for every shell pair (i, j), exploiting symmetry of D_sph.
-
-    The cart2sph transform T has shape (n_sph, n_cart), so:
-        sph -> cart:  T.T @ D_sph @ T   (n_cart x n_cart result)
-    """
-    for i in prange(nshells):
-        si0   = sph_offsets[i]
-        ri    = T_rows[i]          # spherical functions in shell i  (rows of Ti)
-        ci0   = cart_offsets[i]
-        ni    = T_cols[i]          # Cartesian functions in shell i  (cols of Ti)
-        Ti_r0 = T_offsets[i]
-
-        for j in range(i, nshells):        # upper triangle only
-            sj0   = sph_offsets[j]
-            rj    = T_rows[j]
-            cj0   = cart_offsets[j]
-            nj    = T_cols[j]
-            Tj_r0 = T_offsets[j]
-
-            # Pass 1: Ti.T @ D_sph_block  →  tmp  (ni × rj)
-            # Ti.T[k, p] = Ti[p, k] = T_flat[Ti_r0 + p, k]
-            tmp = np.zeros((ni, rj))
-            for k in range(ni):
-                for p in range(ri):
-                    tik = T_flat[Ti_r0 + p, k]   # Ti.T[k,p]
-                    for q in range(rj):
-                        tmp[k, q] += tik * D_sph[si0 + p, sj0 + q]
-
-            # Pass 2: tmp @ Tj  →  out  (ni × nj)
-            # Tj[q, l] = T_flat[Tj_r0 + q, l]
-            for k in range(ni):
-                for l in range(nj):
-                    s = 0.0
-                    for q in range(rj):
-                        s += tmp[k, q] * T_flat[Tj_r0 + q, l]
-                    D_cart[ci0 + k, cj0 + l] = s
-                    if i != j:
-                        D_cart[cj0 + l, ci0 + k] = s   # symmetry
-
-    return D_cart
-
-def _pack_transforms(T_shell):
-    """
-    Stack all per-shell transform matrices into a single 2-D float64 array
-    so Numba can slice into it without touching Python objects.
-
-    Returns
-    -------
-    T_flat   : (total_sph_rows, max_cart_cols) – zero-padded on the right
-    T_offsets: (nshells,) int64  – row offset of shell i inside T_flat
-    T_rows   : (nshells,) int64  – number of spherical functions for shell i
-    T_cols   : (nshells,) int64  – number of Cartesian functions for shell i
-    """
-    nshells  = len(T_shell)
-    T_rows   = np.array([T.shape[0] for T in T_shell], dtype=np.int64)
-    T_cols   = np.array([T.shape[1] for T in T_shell], dtype=np.int64)
-    T_offsets = np.zeros(nshells, dtype=np.int64)
-    T_offsets[1:] = np.cumsum(T_rows[:-1])
-
-    max_cols = int(T_cols.max())
-    total_rows = int(T_rows.sum())
-
-    T_flat = np.zeros((total_rows, max_cols), dtype=np.float64)
-    for i, T in enumerate(T_shell):
-        r0 = T_offsets[i]
-        T_flat[r0 : r0 + T_rows[i], : T_cols[i]] = T
-
-    return T_flat, T_offsets, T_rows, T_cols
-
-@njit(cache=True, parallel=True, fastmath=True)
-def _transform_kernel(
-    A,
-    T_flat, T_offsets, T_rows, T_cols,
-    cart_offsets,
-    sph_offsets,
-    nshells,
-    A_sph,
-):
-    """
-    Compute  A_sph[si0:si1, sj0:sj1] = Ti @ A[i-block, j-block] @ Tj.T
-    for every shell pair (i, j).  Exploits symmetry: only the upper triangle
-    (i <= j) is computed; the lower triangle is filled by transposition.
-    """
-    for i in prange(nshells):
-        i0  = cart_offsets[i]
-        ni  = T_cols[i]          # Cartesian functions in shell i
-        si0 = sph_offsets[i]
-        ri  = T_rows[i]          # spherical functions in shell i
-        Ti_r0 = T_offsets[i]    # row in T_flat where Ti starts
-
-        for j in range(i, nshells):          # upper triangle only
-            j0  = cart_offsets[j]
-            nj  = T_cols[j]
-            sj0 = sph_offsets[j]
-            rj  = T_rows[j]
-            Tj_r0 = T_offsets[j]
-
-            #  tmp = Ti @ A_block  (ri x nj) 
-            for p in range(ri):
-                for q in range(nj):
-                    s = 0.0
-                    for k in range(ni):
-                        s += T_flat[Ti_r0 + p, k] * A[i0 + k, j0 + q]
-                    # ── result = tmp @ Tj.T  (ri x rj), but Tj.T[q,l]=Tj[l,q]
-                    # We fuse the second matmul here:
-                    # A_sph[si0+p, sj0+l] += tmp[p,q] * Tj[l,q]
-                    # → split into two nested loops (see below)
-
-            # Re-do properly with fused loops for cache efficiency
-            # tmp[p, q] = sum_k Ti[p,k] * A[i0+k, j0+q]   (ri × nj)
-            # out[p, l] = sum_q tmp[p,q] * Tj[l,q]          (ri × rj)
-
-            # Pass 1: Ti @ A_block → tmp
-            tmp = np.zeros((ri, nj))
-            for p in range(ri):
-                for k in range(ni):
-                    tik = T_flat[Ti_r0 + p, k]
-                    for q in range(nj):
-                        tmp[p, q] += tik * A[i0 + k, j0 + q]
-
-            # Pass 2: tmp @ Tj.T → block
-            for p in range(ri):
-                for l in range(rj):
-                    s = 0.0
-                    for q in range(nj):
-                        s += tmp[p, q] * T_flat[Tj_r0 + l, q]
-                    A_sph[si0 + p, sj0 + l] = s
-
-                    # Symmetry fill: lower-triangle block is the transpose
-                    if i != j:
-                        A_sph[sj0 + l, si0 + p] = s
-
-    return A_sph
 
 #Class to store basis function properties
 class Basis:
@@ -1158,3 +1005,153 @@ class Basis:
 
         # self.nprims_angmom_list = result
         return result
+
+def safe_factorial2(n):
+    if n <= 0:
+        return 1.0
+    return factorial2(n)
+
+@njit(cache=True, parallel=True, fastmath=True)
+def _transform_kernel_sph2cart(
+    D_sph,
+    T_flat, T_offsets, T_rows, T_cols,
+    cart_offsets,
+    sph_offsets,
+    nshells,
+    D_cart,
+):
+    """
+    Compute  D_cart[ci0:ci1, cj0:cj1] = Ti.T @ D_sph[si-block, sj-block] @ Ti
+    for every shell pair (i, j), exploiting symmetry of D_sph.
+
+    The cart2sph transform T has shape (n_sph, n_cart), so:
+        sph -> cart:  T.T @ D_sph @ T   (n_cart x n_cart result)
+    """
+    for i in prange(nshells):
+        si0   = sph_offsets[i]
+        ri    = T_rows[i]          # spherical functions in shell i  (rows of Ti)
+        ci0   = cart_offsets[i]
+        ni    = T_cols[i]          # Cartesian functions in shell i  (cols of Ti)
+        Ti_r0 = T_offsets[i]
+
+        for j in range(i, nshells):        # upper triangle only
+            sj0   = sph_offsets[j]
+            rj    = T_rows[j]
+            cj0   = cart_offsets[j]
+            nj    = T_cols[j]
+            Tj_r0 = T_offsets[j]
+
+            # Pass 1: Ti.T @ D_sph_block  →  tmp  (ni × rj)
+            # Ti.T[k, p] = Ti[p, k] = T_flat[Ti_r0 + p, k]
+            tmp = np.zeros((ni, rj))
+            for k in range(ni):
+                for p in range(ri):
+                    tik = T_flat[Ti_r0 + p, k]   # Ti.T[k,p]
+                    for q in range(rj):
+                        tmp[k, q] += tik * D_sph[si0 + p, sj0 + q]
+
+            # Pass 2: tmp @ Tj  →  out  (ni × nj)
+            # Tj[q, l] = T_flat[Tj_r0 + q, l]
+            for k in range(ni):
+                for l in range(nj):
+                    s = 0.0
+                    for q in range(rj):
+                        s += tmp[k, q] * T_flat[Tj_r0 + q, l]
+                    D_cart[ci0 + k, cj0 + l] = s
+                    if i != j:
+                        D_cart[cj0 + l, ci0 + k] = s   # symmetry
+
+    return D_cart
+
+def _pack_transforms(T_shell):
+    """
+    Stack all per-shell transform matrices into a single 2-D float64 array
+    so Numba can slice into it without touching Python objects.
+
+    Returns
+    -------
+    T_flat   : (total_sph_rows, max_cart_cols) – zero-padded on the right
+    T_offsets: (nshells,) int64  – row offset of shell i inside T_flat
+    T_rows   : (nshells,) int64  – number of spherical functions for shell i
+    T_cols   : (nshells,) int64  – number of Cartesian functions for shell i
+    """
+    nshells  = len(T_shell)
+    T_rows   = np.array([T.shape[0] for T in T_shell], dtype=np.int64)
+    T_cols   = np.array([T.shape[1] for T in T_shell], dtype=np.int64)
+    T_offsets = np.zeros(nshells, dtype=np.int64)
+    T_offsets[1:] = np.cumsum(T_rows[:-1])
+
+    max_cols = int(T_cols.max())
+    total_rows = int(T_rows.sum())
+
+    T_flat = np.zeros((total_rows, max_cols), dtype=np.float64)
+    for i, T in enumerate(T_shell):
+        r0 = T_offsets[i]
+        T_flat[r0 : r0 + T_rows[i], : T_cols[i]] = T
+
+    return T_flat, T_offsets, T_rows, T_cols
+
+@njit(cache=True, parallel=True, fastmath=True)
+def _transform_kernel(
+    A,
+    T_flat, T_offsets, T_rows, T_cols,
+    cart_offsets,
+    sph_offsets,
+    nshells,
+    A_sph,
+):
+    """
+    Compute  A_sph[si0:si1, sj0:sj1] = Ti @ A[i-block, j-block] @ Tj.T
+    for every shell pair (i, j).  Exploits symmetry: only the upper triangle
+    (i <= j) is computed; the lower triangle is filled by transposition.
+    """
+    for i in prange(nshells):
+        i0  = cart_offsets[i]
+        ni  = T_cols[i]          # Cartesian functions in shell i
+        si0 = sph_offsets[i]
+        ri  = T_rows[i]          # spherical functions in shell i
+        Ti_r0 = T_offsets[i]    # row in T_flat where Ti starts
+
+        for j in range(i, nshells):          # upper triangle only
+            j0  = cart_offsets[j]
+            nj  = T_cols[j]
+            sj0 = sph_offsets[j]
+            rj  = T_rows[j]
+            Tj_r0 = T_offsets[j]
+
+            #  tmp = Ti @ A_block  (ri x nj) 
+            for p in range(ri):
+                for q in range(nj):
+                    s = 0.0
+                    for k in range(ni):
+                        s += T_flat[Ti_r0 + p, k] * A[i0 + k, j0 + q]
+                    # ── result = tmp @ Tj.T  (ri x rj), but Tj.T[q,l]=Tj[l,q]
+                    # We fuse the second matmul here:
+                    # A_sph[si0+p, sj0+l] += tmp[p,q] * Tj[l,q]
+                    # → split into two nested loops (see below)
+
+            # Re-do properly with fused loops for cache efficiency
+            # tmp[p, q] = sum_k Ti[p,k] * A[i0+k, j0+q]   (ri × nj)
+            # out[p, l] = sum_q tmp[p,q] * Tj[l,q]          (ri × rj)
+
+            # Pass 1: Ti @ A_block → tmp
+            tmp = np.zeros((ri, nj))
+            for p in range(ri):
+                for k in range(ni):
+                    tik = T_flat[Ti_r0 + p, k]
+                    for q in range(nj):
+                        tmp[p, q] += tik * A[i0 + k, j0 + q]
+
+            # Pass 2: tmp @ Tj.T → block
+            for p in range(ri):
+                for l in range(rj):
+                    s = 0.0
+                    for q in range(nj):
+                        s += tmp[p, q] * T_flat[Tj_r0 + l, q]
+                    A_sph[si0 + p, sj0 + l] = s
+
+                    # Symmetry fill: lower-triangle block is the transpose
+                    if i != j:
+                        A_sph[sj0 + l, si0 + p] = s
+
+    return A_sph
