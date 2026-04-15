@@ -55,17 +55,7 @@ def overlap_mat_grad_symm(basis, slice=None):
 
 @njit(parallel=True, fastmath=True, cache=True)
 def overlap_mat_grad_symm_internal(natoms, bfs_atoms, bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, start_row, end_row, start_col, end_col):
-    # This function calculates the overlap matrix and uses the symmetry property to only calculate half-ish the elements
-    # and get the remaining half by symmetry.
-    # The reason we need this extra function is because we want the callable function to be simple and not require so many 
-    # arguments. But when using Numba to optimize, we can't have too many custom objects and stuff. Numba likes numpy arrays
-    # so passing those is okay. But lists and custom objects are not okay.
-    # This function calculates the overlap matrix for a given basis object.
-    # The basis object holds the information of basis functions like: exponents, coeffs, etc.
-    # It is possible to only calculate a slice (block) of the complete matrix.
-    # slice is a 4 element list whose first and second elements give the range of the rows to be calculated.
-    # the third and fourth element give the range of columns to be calculated.
-    # The integrals are performed using the formulas here https://pubs.acs.org/doi/full/10.1021/acs.jchemed.8b00255
+
 
     # Infer the matrix shape from the start and end indices
     num_rows = end_row - start_row 
@@ -263,17 +253,6 @@ def overlap_mat_grad_symm_internal(natoms, bfs_atoms, bfs_coords, bfs_contr_prim
 
 @njit(parallel=True, fastmath=True, cache=True)
 def overlap_mat_grad_symm_internal_new(natoms, bfs_atoms, bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, start_row, end_row, start_col, end_col):
-    # This function calculates the overlap matrix and uses the symmetry property to only calculate half-ish the elements
-    # and get the remaining half by symmetry.
-    # The reason we need this extra function is because we want the callable function to be simple and not require so many 
-    # arguments. But when using Numba to optimize, we can't have too many custom objects and stuff. Numba likes numpy arrays
-    # so passing those is okay. But lists and custom objects are not okay.
-    # This function calculates the overlap matrix for a given basis object.
-    # The basis object holds the information of basis functions like: exponents, coeffs, etc.
-    # It is possible to only calculate a slice (block) of the complete matrix.
-    # slice is a 4 element list whose first and second elements give the range of the rows to be calculated.
-    # the third and fourth element give the range of columns to be calculated.
-    # The integrals are performed using the formulas here https://pubs.acs.org/doi/full/10.1021/acs.jchemed.8b00255
 
     # Infer the matrix shape from the start and end indices
     num_rows = end_row - start_row 
