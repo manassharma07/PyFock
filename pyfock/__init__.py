@@ -30,6 +30,6 @@ from .Basis import Basis
 from .Mol import Mol
 from .Grids import Grids
 from .DFT import DFT
+from .DFT_NumGrad import DFT_NumGrad
 from .HF_atoms import HF_atoms
 # from .PBC_ring import ring
-
