@@ -92,10 +92,10 @@ molPySCF.build()
 #print(molPySCF.cart_labels())
 
 
-#Overlap mat
+#Kinetic mat
 start=timer()
 dT_pyscf = -molPySCF.intor_symmetric('int1e_ipkin', comp=3)
-dT_pyscf = dT_pyscf #+ dS_pyscf.transpose(0,2,1)
+dT_pyscf = dT_pyscf #+ dT_pyscf.transpose(0,2,1)
 duration = timer() - start
 print('\n\nPySCF')
 # print(dT_pyscf)
