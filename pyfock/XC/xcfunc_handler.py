@@ -46,6 +46,25 @@ _FUNCTIONAL_FAMILY = {
     132: 2,  # GGA_C_P86    → GGA
     133: 2,  # GGA_C_PBE_SOL→ GGA
     134: 2,  # GGA_C_PW91   → GGA
+    74:  4,  # MGGA_C_MN12_L   → MGGA
+    75:  4,  # MGGA_C_M11_L    → MGGA
+    202: 4,  # MGGA_X_TPSS     → MGGA
+    203: 4,  # MGGA_X_M06_L    → MGGA
+    212: 4,  # MGGA_X_REVTPSS  → MGGA
+    226: 4,  # MGGA_X_M11_L    → MGGA
+    227: 4,  # MGGA_X_MN12_L   → MGGA
+    231: 4,  # MGGA_C_TPSS     → MGGA
+    233: 4,  # MGGA_C_M06_L    → MGGA
+    241: 4,  # MGGA_C_REVTPSS  → MGGA
+    497: 4,  # MGGA_X_R2SCAN   → MGGA
+    498: 4,  # MGGA_C_R2SCAN   → MGGA
+    642: 4,  # MGGA_C_R2SCAN01 → MGGA
+    645: 4,  # MGGA_X_R2SCAN01 → MGGA
+    700: 4,  # MGGA_X_SCANL    → MGGA
+    702: 4,  # MGGA_C_SCANL    → MGGA
+    707: 4,  # MGGA_X_TASK     → MGGA
+    718: 4,  # MGGA_X_R2SCANL  → MGGA
+    719: 4,  # MGGA_C_R2SCANL  → MGGA
 }
 
 FAMILY_LDA    = 1
@@ -127,6 +146,82 @@ _FUNCTIONAL_DATA = {
         "J. P. Perdew, J. A. Chevary, S. H. Vosko, K. A. Jackson, M. R. Pederson, D. J. Singh, "
         "and C. Fiolhais, Phys. Rev. B 46, 6671 (1992).",
     ),
+    74: (
+        "MGGA_C_MN12_L",
+        "R. Peverati and D. G. Truhlar, Phys. Chem. Chem. Phys. 14, 16187 (2012).",
+    ),
+    75: (
+        "MGGA_C_M11_L",
+        "R. Peverati and D. G. Truhlar, J. Phys. Chem. Lett. 3, 117 (2012).",
+    ),
+    202: (
+        "MGGA_X_TPSS",
+        "J. Tao, J. P. Perdew, V. N. Staroverov, and G. E. Scuseria, Phys. Rev. Lett. 91, 146401 (2003).",
+    ),
+    203: (
+        "MGGA_X_M06_L",
+        "Y. Zhao and D. G. Truhlar, J. Chem. Phys. 125, 194101 (2006).",
+    ),
+    212: (
+        "MGGA_X_REVTPSS",
+        "J. P. Perdew, A. Ruzsinszky, G. I. Csonka, L. A. Constantin, and J. Sun, Phys. Rev. Lett. 103, 026403 (2009).",
+    ),
+    226: (
+        "MGGA_X_M11_L",
+        "R. Peverati and D. G. Truhlar, J. Phys. Chem. Lett. 3, 117 (2012).",
+    ),
+    227: (
+        "MGGA_X_MN12_L",
+        "R. Peverati and D. G. Truhlar, Phys. Chem. Chem. Phys. 14, 16187 (2012).",
+    ),
+    231: (
+        "MGGA_C_TPSS",
+        "J. Tao, J. P. Perdew, V. N. Staroverov, and G. E. Scuseria, Phys. Rev. Lett. 91, 146401 (2003).",
+    ),
+    233: (
+        "MGGA_C_M06_L",
+        "Y. Zhao and D. G. Truhlar, J. Chem. Phys. 125, 194101 (2006).",
+    ),
+    241: (
+        "MGGA_C_REVTPSS",
+        "J. P. Perdew, A. Ruzsinszky, G. I. Csonka, L. A. Constantin, and J. Sun, Phys. Rev. Lett. 103, 026403 (2009).",
+    ),
+    497: (
+        "MGGA_X_R2SCAN",
+        "F. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, J. Phys. Chem. Lett. 11, 8208 (2020).",
+    ),
+    498: (
+        "MGGA_C_R2SCAN",
+        "F. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, J. Phys. Chem. Lett. 11, 8208 (2020).",
+    ),
+    642: (
+        "MGGA_C_R2SCAN01",
+        "P. Bartok and J. R. Yates, J. Chem. Phys. 150, 161101 (2019).",
+    ),
+    645: (
+        "MGGA_X_R2SCAN01",
+        "P. Bartok and J. R. Yates, J. Chem. Phys. 150, 161101 (2019).",
+    ),
+    700: (
+        "MGGA_X_SCANL",
+        "A. Mejia-Rodriguez and S. B. Trickey, Phys. Rev. A 96, 052512 (2017).",
+    ),
+    702: (
+        "MGGA_C_SCANL",
+        "A. Mejia-Rodriguez and S. B. Trickey, Phys. Rev. A 96, 052512 (2017).",
+    ),
+    707: (
+        "MGGA_X_TASK",
+        "D. Mejia-Rodriguez and S. B. Trickey, Phys. Rev. A 98, 052509 (2018).",
+    ),
+    718: (
+        "MGGA_X_R2SCANL",
+        "A. P. Bartok and J. R. Yates, J. Chem. Phys. 150, 161101 (2019).",
+    ),
+    719: (
+        "MGGA_C_R2SCANL",
+        "A. P. Bartok and J. R. Yates, J. Chem. Phys. 150, 161101 (2019).",
+    ),
 }
 
 # Reverse map: upper-cased canonical name → LibXC ID
@@ -146,6 +241,19 @@ _ALIAS_TO_IDS = {
     "SPZ":      [1,   9],     # LDA_X         + LDA_C_PZ
     "SPW":      [1,  12],     # LDA_X         + LDA_C_PW
     "PW91C":    [12],         # bare PW correlation (no common exchange alias here)
+    "R2SCAN":   [497, 498],   # MGGA_X_R2SCAN   + MGGA_C_R2SCAN
+    "TPSS":     [202, 231],   # MGGA_X_TPSS     + MGGA_C_TPSS
+    "TASK":     [707],        # MGGA_X_TASK     only
+    "MN12L":    [227, 74],    # MGGA_X_MN12_L   + MGGA_C_MN12_L
+    "MN12-L":   [227, 74],
+    "M06L":     [203, 233],   # MGGA_X_M06_L    + MGGA_C_M06_L
+    "M06-L":    [203, 233],
+    "M11L":     [226, 75],    # MGGA_X_M11_L    + MGGA_C_M11_L
+    "M11-L":    [226, 75],
+    "REVTPSS":  [212, 241],   # MGGA_X_REVTPSS  + MGGA_C_REVTPSS
+    "SCANL":    [700, 702],   # MGGA_X_SCANL    + MGGA_C_SCANL
+    "R2SCANL":  [718, 719],   # MGGA_X_R2SCANL  + MGGA_C_R2SCANL
+    "R2SCAN01": [645, 642],   # MGGA_X_R2SCAN01 + MGGA_C_R2SCAN01
 }
 
 

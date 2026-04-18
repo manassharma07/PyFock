@@ -895,14 +895,19 @@ class DFT:
         if xc!='HF':
             if self.use_libxc:
                 import pylibxc
-            if not self.use_libxc:
-                if isinstance(xc, list):
-                    if all(isinstance(v, int) for v in xc):
-                        xc = xc  # already like [1, 7], do nothing
-                    elif all(isinstance(v, str) for v in xc):
-                        xc = [XC.get_functional_id(name) for name in xc]  # ['LDA_X', 'LDA_C_VWN'] → [1, 7]
-                elif isinstance(xc, str):
-                    xc = XC.resolve_functional(xc)  # 'LDA' → [1, 7]
+            if isinstance(xc, list):
+                if all(isinstance(v, str) for v in xc):
+                    xc = [XC.get_functional_id(name) for name in xc]  # ['LDA_X', 'LDA_C_VWN'] → [1, 7]
+            elif isinstance(xc, str):
+                xc = XC.resolve_functional(xc)  # 'LDA' → [1, 7]
+
+            if isinstance(xc, list):
+                if all(isinstance(v, int) for v in xc):
+                    if any(XC.get_family(v)==4 for v in xc):
+                        if not self.use_libxc:
+                            self.use_libxc = True
+                            print('Meta-GGA functionals are currently supported only through pylibxc. Turning on pylibxc support.', flush=True)
+                            import pylibxc
 
         if xc=='HF' and isDF:
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
@@ -1548,6 +1553,12 @@ class DFT:
                                                     list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
                                                         list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
                 else: # GPU
+                    if self.use_libxc:
+                        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
+                        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+                        if funcx.get_family()==4 or funcc.get_family()==4:
+                            print('ERROR: Meta-GGA functionals are not yet supported on the GPU path.')
+                            exit()
                     if XC_algo==1:
                         Exc, Vxc = Integrals.eval_xc_1_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
                                                     list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
@@ -1795,4 +1806,3 @@ class DFT:
         
 
         
-

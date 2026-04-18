@@ -1,5 +1,5 @@
 ####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
-####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_LDA_DF.py'
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_M06L_DF.py'
 ####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
 ####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
 ####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
@@ -54,59 +54,38 @@ from pyscf import gto, dft, df, scf
 #Benchmarking and performance assessment and comparison using various techniques and different softwares
 
 # ------------------------------------------------------------------------------
-# LDA Functionals
+# meta-GGA Functionals
 # ------------------------------------------------------------------------------
 
-# LDA_X + LDA_C_VWN (SVWN / LDA)
-# funcx = 1
-# funcc = 7
+# # MGGA_X_M06_L + MGGA_C_M06_L (M06-L)
+# funcx = 203
+# funcc = 233
 
-# LDA_X + LDA_C_PZ (SPZ)
-# funcx = 1
-# funcc = 9
+# funcidcrysx = [funcx, funcc]
+# funcidpyscf = str(funcx)+','+str(funcc)
 
-# LDA_X + LDA_C_PZ_MOD 
-# funcx = 1
-# funcc = 10
+# # Same thing using aliases instead of LibXC ids
+# funcidcrysx = 'M06-L'
+# funcidpyscf = 'M06-L'
 
-# LDA_X + LDA_C_PW
-# funcx = 1
-# funcc = 12
+# #  M11-L
+# funcx = 226
+# funcc = 75
 
-# LDA_X + LDA_C_PW_MOD
-# funcx = 1
-# funcc = 13
+# funcidcrysx = [funcx, funcc]
+# funcidpyscf = str(funcx)+','+str(funcc)
 
-# ------------------------------------------------------------------------------
-# GGA Functionals
-# ------------------------------------------------------------------------------
+# r2SCAN
+# funcx = 497
+# funcc = 498
 
-# GGA_X_PBE + GGA_C_PBE (PBE)
-funcx = 101
-funcc = 130
+# funcidcrysx = [funcx, funcc]
+# funcidpyscf = str(funcx)+','+str(funcc)
 
-# GGA_X_PBE_SOL + GGA_C_PBE_SOL (PBEsol)
-# funcx = 116
-# funcc = 133
+# r2SCAN using aliases instead of LibXC ids
+funcidcrysx = 'r2SCAN'
+funcidpyscf = 'r2SCAN'
 
-# GGA_X_RPBE + GGA_C_PBE (RPBE)
-# funcx = 117
-# funcc = 130
-
-# GGA_X_PW91 + GGA_C_PW91 (PW91) !!TODO: Wrong
-# funcx = 109
-# funcc = 134
-
-# GGA_X_B88 + GGA_C_LYP (BLYP)
-# funcx = 106
-# funcc = 131
-
-# GGA_X_B88 + GGA_C_P86 (BP86) !!TODO: Wrong
-# funcx = 106
-# funcc = 132
-
-funcidcrysx = [funcx, funcc]
-funcidpyscf = str(funcx)+','+str(funcc)
 
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
@@ -140,7 +119,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_TPP.xyz'
 # xyzFilename = 'H2O.xyz'
 
-xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'
@@ -150,7 +129,7 @@ xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Ubiquitin.xyz'
 
 ### 1D Carbon Alkanes
-# xyzFilename = 'Decane_C10H22.xyz'
+xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -274,7 +253,7 @@ dftObj.sao = True
 # GPU acceleration
 dftObj.use_gpu = False
 dftObj.keep_ao_in_gpu = False
-dftObj.use_libxc = False
+dftObj.use_libxc = True
 dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
 dftObj.n_gpus = 1 # Specify the number of GPUs
 dftObj.free_gpu_mem = True

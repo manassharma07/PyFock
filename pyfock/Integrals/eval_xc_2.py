@@ -25,8 +25,9 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
     parallelizing the operations within the batch, which is suboptimal.
 
     This function evaluates the XC energy and potential matrix elements for a given
-    density matrix using grid-based numerical integration. It supports LDA and GGA 
-    functionals (via LibXC), parallel execution with `joblib`, and sparse AO matrix blocks.
+    density matrix using grid-based numerical integration. It supports LDA, GGA and
+    meta-GGA functionals (via LibXC), parallel execution with `joblib`, and sparse AO
+    matrix blocks.
 
     Parameters
     ----------
@@ -83,7 +84,7 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
 
     Notes
     -----
-    - Only supports LDA and GGA functionals currently. meta-GGA and hybrid support is in development.
+    - Supports LDA, GGA and meta-GGA functionals currently. Hybrid support is in development.
     - Works with or without LibXC for energy and derivative functional evaluation.
     - Blocks are randomly shuffled before processing to balance parallel load.
     - Grid-based DFT evaluation using precomputed AO and gradient matrices is supported.
@@ -211,8 +212,10 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
     expr_Fy = numexpr.NumExpr('Ftemp*rho_grad_block_y')
     expr_Fz = numexpr.NumExpr('Ftemp*rho_grad_block_z')
     expr_z_grad = numexpr.NumExpr('Fx*ao_value_gradx_block_T + Fy*ao_value_grady_block_T + Fz*ao_value_gradz_block_T')
+    expr_tau_block = numexpr.NumExpr('0.5*(tau_block_x + tau_block_y + tau_block_z)')
     numexpr_expr = {'expr_den':expr_den, 'expr_F':expr_F, 'expr_z':expr_z, 'expr_v':expr_v, 'expr_sigma_block':expr_sigma_block, \
-                    'expr_Fx':expr_Fx, 'expr_Fy':expr_Fy, 'expr_Fz':expr_Fz, 'expr_z_grad':expr_z_grad, 'expr_Ftemp':expr_Ftemp}
+                    'expr_Fx':expr_Fx, 'expr_Fy':expr_Fy, 'expr_Fz':expr_Fz, 'expr_z_grad':expr_z_grad, 'expr_Ftemp':expr_Ftemp, \
+                    'expr_tau_block':expr_tau_block}
 
 
     if list_nonzero_indices is not None:
@@ -304,7 +307,8 @@ def _get_worker_objects(funcid, x_family_code, c_family_code):
             'expr_Fx': numexpr.NumExpr('Ftemp*rho_grad_block_x'),
             'expr_Fy': numexpr.NumExpr('Ftemp*rho_grad_block_y'),
             'expr_Fz': numexpr.NumExpr('Ftemp*rho_grad_block_z'),
-            'expr_z_grad': numexpr.NumExpr('Fx*ao_value_gradx_block_T + Fy*ao_value_grady_block_T + Fz*ao_value_gradz_block_T')
+            'expr_z_grad': numexpr.NumExpr('Fx*ao_value_gradx_block_T + Fy*ao_value_grady_block_T + Fz*ao_value_gradz_block_T'),
+            'expr_tau_block': numexpr.NumExpr('0.5*(tau_block_x + tau_block_y + tau_block_z)')
         }
         
         # Set numba to use single thread per worker
@@ -368,6 +372,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
 
     rho_block = None
     sigma_block = None
+    tau_block = None
 
     if debug:
         startAO = timer()
@@ -417,6 +422,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
         # rho_block = numexpr.evaluate('sum(Fmj * ao_value_block, axis=1)')
         
     else:
+        Fmj = ao_value_block @ dmat
         rho_block = Integrals.bf_val_helpers.eval_rho(ao_value_block, dmat) # This is by-far the fastest now (when not using non_zero_indices) <-----
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values too
     if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
@@ -435,6 +441,9 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
         rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('mj,kmj->km', Fmj, ao_values_grad_block) 
         # sigma_block = numexpr.evaluate('(rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2)')
         sigma_block = numexpr_expr['expr_sigma_block'](rho_grad_block_x, rho_grad_block_y, rho_grad_block_z)
+        if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+            tau_block_x, tau_block_y, tau_block_z = contract('ij,kmi,kmj->km', dmat, ao_values_grad_block, ao_values_grad_block)
+            tau_block = numexpr_expr['expr_tau_block'](tau_block_x, tau_block_y, tau_block_z)
         
     if debug:
         durationRho = timer() - startRho
@@ -454,6 +463,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     if xc_family_dict[x_family_code]!='LDA':
         # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
         inp['sigma'] = sigma_block
+    if xc_family_dict[x_family_code]=='MGGA':
+        inp['tau'] = tau_block
     # Calculate the necessary quantities using LibXC
     if use_libxc:
         retx = funcx.compute(inp)
@@ -472,6 +483,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     if xc_family_dict[c_family_code]!='LDA':
         # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
         inp['sigma'] = sigma_block
+    if xc_family_dict[c_family_code]=='MGGA':
+        inp['tau'] = tau_block
     # Calculate the necessary quantities using LibXC
     if use_libxc:
         retc = funcc.compute(inp)
@@ -511,6 +524,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
         vrho = retx[1] + retc[1]
     # vrho = numexpr.evaluate('x_vrho + c_vrho', {'x_vrho':retx['vrho'], 'c_vrho': retc['vrho']})
     vsigma = 0
+    vtau = 0
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values
     if xc_family_dict[x_family_code]!='LDA':
         # The derivative of functional wrt grad \rho square.
@@ -518,6 +532,9 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
             vsigma += retx['vsigma']
         else:
             vsigma += retx[2]
+    if xc_family_dict[x_family_code]=='MGGA':
+        if use_libxc:
+            vtau += retx['vtau']
         
     if xc_family_dict[c_family_code]!='LDA':
         # The derivative of functional wrt grad \rho square.
@@ -525,6 +542,9 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
             vsigma += retc['vsigma']
         else:
             vsigma += retc[2]
+    if xc_family_dict[c_family_code]=='MGGA':
+        if use_libxc:
+            vtau += retc['vtau']
     retx = 0
     retc = 0
     func = 0
@@ -592,6 +612,11 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     # v = v_temp + v_temp_T
     # v = numexpr.evaluate('(v_temp + v_temp_T)')
     v = numexpr_expr['expr_v'](v_temp, v_temp.T)
+    if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+        if use_libxc:
+            v += contract('m,kmi,kmj->ij', 0.5*weights_block*vtau[:,0], ao_values_grad_block, ao_values_grad_block)
+        else:
+            v += contract('m,kmi,kmj->ij', 0.5*weights_block*vtau, ao_values_grad_block, ao_values_grad_block)
     
     
     if debug:
