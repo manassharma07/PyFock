@@ -8,18 +8,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Raw data
-cores = np.array([1, 2, 4, 8, 16, 32, 48, 64])
-time_pyfock_total = np.array([8265.656, 4300.769, 2505.805, 1371.796,
-                              840.332, 587.816, 527.458, 476.245])
-time_pyfock_J = np.array([5186.064, 2647.520, 1572.094, 814.812,
-                          448.830, 273.503, 209.090, 145.506])
-time_pyfock_XC = np.array([1246.379, 653.984, 340.340, 190.672,
-                           125.339, 103.408, 110.146, 120.418])
-time_pyscf_total  = np.array([15698.977, 8119.609, 4344.811, 2490.722,
-                              1455.911, 965.482, 829.167, 773.742])
+cores = np.array([1, 2, 4, 8, 16, 24, 32])
+
+time_pyscf_total = np.array([
+    13191.86, 6684.68, 3432.17, 1859.45, 1006.68, 724.96, 586.13
+])
+time_pyfock_J = np.array([
+    2056.62, 1092.38, 713.90, 355.90, 187.48, 147.10, 119.59
+])
+
+time_pyfock_XC = np.array([
+    1089.47, 600.01, 298.32, 169.99, 112.85, 92.33, 90.46
+])
+
+time_pyfock_total = np.array([
+    4771.88, 2594.16, 1550.15, 851.76, 535.78, 444.94, 403.04
+])
 
 # Choose max number of cores to display
-max_cores = 64  # change to 32, 16, etc. if needed
+max_cores = 32  # change to 32, 16, etc. if needed
 mask = cores <= max_cores
 
 cores = cores[mask]

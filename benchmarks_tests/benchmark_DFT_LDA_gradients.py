@@ -23,9 +23,11 @@ from pyscf import gto
 
 Utils.print_sys_info()
 
+# basis_set_name = "sto-3g"
 basis_set_name = "def2-SVP"
 auxbasis_name = "def2-universal-jfit"
 xyz_filename = "H2O.xyz"
+# xyz_filename = "Caffeine.xyz"
 xc_pyfock = "PBE"
 xc_pyscf = "101,130"
 

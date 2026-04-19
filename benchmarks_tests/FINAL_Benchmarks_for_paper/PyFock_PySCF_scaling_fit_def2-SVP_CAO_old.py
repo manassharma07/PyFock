@@ -5,19 +5,15 @@ from scipy.optimize import curve_fit
 # -----------------
 # Data from the table (PyFock)
 # -----------------
-nbf = np.array([25, 125, 250, 500, 800, 1175, 1900, 2500, 3475], dtype=float)
-total_time = np.array([0.091779917, 0.251879828, 0.829753874, 3.32694805, 7.512214625,
-                       17.15226698, 41.32841003, 82.38475342, 154.2059581], dtype=float)
-j_time = np.array([0.013566, 0.08225514, 0.35319341, 1.91062789, 4.40820322,
-                   10.75980486, 24.7638173, 54.0653728, 97.1046283], dtype=float)
-xc_time = np.array([0.01539, 0.10870471, 0.33446765, 0.95263881, 1.99390185,
-                    3.76085967, 8.61741557, 12.6850703, 21.373439], dtype=float)
+nbf = np.array([125, 250, 500, 800, 1175, 1900, 2500, 3475], dtype=float)
+total_time = np.array([0.240, 0.629, 2.348, 5.508, 11.662, 28.205, 55.254, 103.132], dtype=float)
+j_time = np.array([0.049, 0.186, 0.937, 2.188, 5.273, 11.879, 25.985, 46.390], dtype=float)
+xc_time = np.array([0.108, 0.299, 0.930, 2.114, 3.778, 8.648, 13.007, 21.473], dtype=float)
 
 # -----------------
 # PySCF total wall times
 # -----------------
-pyscf_total_time = np.array([0.059873508, 0.351985034, 1.545247587, 5.655018284, 13.58711019,
-                             28.77391837, 67.70287694, 129.9493543, 262.5715926], dtype=float)
+pyscf_total_time = np.array([0.325, 1.477, 5.386, 12.869, 27.131, 62.184, 120.327, 232.729], dtype=float)
 
 # Function to fit
 def scaling_law(N, a, p):
@@ -67,7 +63,7 @@ def plot_fit(method_name):
         a, p = results[label][method_name]
         N_fit = np.linspace(min(nbf), max(nbf), 200)
         plt.plot(nbf, data, 'o', color=color, label=f"{label}")
-        if label=='XC' or label=='J':
+        if label=='XC' or label=='ERI':
             plt.plot(N_fit, scaling_law(N_fit, a, p), '--', color=color, 
                     label=f"{label} fit (N^{p:.2f})")
         else:
