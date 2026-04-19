@@ -8,3 +8,6 @@ pyfock.egg-info/
 pyfock/.DS_Store
 docs/.DS_Store
 dist
+examples/ase_water_optimization/
+examples/calculations
+calculations

@@ -249,7 +249,7 @@ class DFT:
         self.auxbasis = auxbasis
         """ Basis object to be used as the auxiliary basis for DF. Use universal by default. """
         if self.auxbasis is None:
-            auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+            self.auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-universal-jfit')})
 
         self.rys = True
         """ Use rys quadrature for the evaluation of two electron integrals (with and without DF)
