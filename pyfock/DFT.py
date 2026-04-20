@@ -1259,6 +1259,7 @@ class DFT:
 
                 grids.coords = coordsNew
                 grids.weights = weightsNew
+                self.grids = grids
                 print('done!', flush=True)
                 durationgrids_prune_rho = timer() - startGrids_prune_rho
                 print('Time taken '+str(round(durationgrids_prune_rho, 2))+' seconds.\n', flush=True)
