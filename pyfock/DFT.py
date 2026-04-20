@@ -87,6 +87,10 @@ class DFT:
     gridsLevel : int, optional
         Level of numerical integration grid refinement (default is 3).
 
+    use_pyscf_grids : bool, optional
+        If True, generate PySCF DFT grids internally when no explicit `grids`
+        object is supplied.
+
     blocksize : int, optional
         Block size for XC grid evaluations. Defaults depend on whether GPU is used.
 
@@ -193,7 +197,7 @@ class DFT:
     >>> dft.run_scf()
     """
     def __init__(self, mol, basis, auxbasis=None, conv_crit=1e-7, dmat_guess_method=None, 
-                xc=None, grids=None, gridsLevel=3, blocksize=None, 
+                xc=None, grids=None, gridsLevel=3, use_pyscf_grids=False, blocksize=None, 
                 save_ao_values=False, use_gpu=False, ncores=1): 
          
         self.mol = mol
@@ -241,6 +245,8 @@ class DFT:
         """ Atomic grids for DFT calculation (If None or not supplied, will be generated using NumGrid) """
         self.gridsLevel = gridsLevel
         """ Atomic grids for DFT calculation """
+        self.use_pyscf_grids = use_pyscf_grids
+        """ Whether to generate PySCF grids when no explicit grids are supplied. """
 
         self.isDF = True
         """ Use density fitting (DF) for two-electron Coulomb integrals by default. 
@@ -368,6 +374,50 @@ class DFT:
         """ Whether to return data needed for efficient real-time TDDFT calculation after the DFT SCF calculation.
         If True, the following additional data will be returned after the SCF calculation: list_nonzero_indices, count_nonzero_indices, list_ao_values, list_ao_grad_values. 
         These are needed for efficient evaluation of the XC term during RT-TDDFT propagation. """
+        
+    def _generate_pyscf_grids(self, gridsLevel=None):
+        """
+        Generate PySCF grids for the current molecule.
+
+        Parameters
+        ----------
+        gridsLevel : int, optional
+            Requested PySCF grid level. If None, uses `self.gridsLevel`.
+
+        Returns
+        -------
+        object
+            A PySCF grids object with `coords` and `weights` attributes.
+        """
+        if gridsLevel is None:
+            gridsLevel = self.gridsLevel
+
+        try:
+            from pyscf import dft as pyscf_dft
+            from pyscf import gto as pyscf_gto
+        except Exception as exc:
+            raise ImportError(
+                "PySCF grids were requested (`use_pyscf_grids=True`), but PySCF is not installed."
+            ) from exc
+
+        atom_spec = [
+            [species, tuple(coords)]
+            for species, coords in zip(self.mol.atomicSpecies, self.mol.coords)
+        ]
+
+        mol_pyscf = pyscf_gto.Mole()
+        mol_pyscf.atom = atom_spec
+        mol_pyscf.unit = 'Angstrom'
+        mol_pyscf.charge = self.mol.charge
+        mol_pyscf.spin = self.mol.nelectrons % 2
+        mol_pyscf.basis = 'sto-3g'
+        mol_pyscf.cart = not self.sao
+        mol_pyscf.build()
+
+        mf = pyscf_dft.rks.RKS(mol_pyscf)
+        mf.grids.level = gridsLevel
+        mf.grids.build()
+        return mf.grids
         
     
     def nuclear_rep_energy(self, mol=None):
@@ -1220,9 +1270,13 @@ class DFT:
                 # pruning by density with threshold = 1e-011
                 # alpha_min and alpha_max corresponding to QZVP
                 print('Grids level: ', gridsLevel)
-                # Generate grids for XC term
-                basisGrids = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-QZVP')})
-                grids = Grids(mol, basis=basisGrids, level = gridsLevel, ncores=ncores)
+                if self.use_pyscf_grids:
+                    print('Using PySCF to generate the DFT grids.', flush=True)
+                    grids = self._generate_pyscf_grids(gridsLevel=gridsLevel)
+                else:
+                    # Generate grids for XC term
+                    basisGrids = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-QZVP')})
+                    grids = Grids(mol, basis=basisGrids, level = gridsLevel, ncores=ncores)
 
                 print('done!', flush=True)
                 durationgrids = timer() - startGrids
