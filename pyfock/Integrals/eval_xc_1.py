@@ -154,6 +154,7 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
     # bf_values = Integrals.bf_val_helpers.eval_bfs(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
     rho_block = None
     sigma_block = None
+    tau_block = None
 
     # For debugging and benchmarking purposes
     durationLibxc = 0.0
@@ -235,6 +236,12 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
                                     contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[2])
             sigma_block = np.zeros((3,weights_block.shape[0]))
             sigma_block[1] = rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2
+            if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+                tau_block = np.zeros(weights_block.shape[0])
+                tau_block += contract('ij,mi,mj->m', dmat, ao_values_grad_block[0], ao_values_grad_block[0])
+                tau_block += contract('ij,mi,mj->m', dmat, ao_values_grad_block[1], ao_values_grad_block[1])
+                tau_block += contract('ij,mi,mj->m', dmat, ao_values_grad_block[2], ao_values_grad_block[2])
+                tau_block *= 0.5
 
         if debug:
             durationRho = durationRho + timer() - startRho
@@ -250,6 +257,8 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
             inp['rho'] = rho_block
             # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
             inp['sigma'] = sigma_block[1]
+            if xc_family_dict[x_family_code]=='MGGA':
+                inp['tau'] = tau_block
         # Calculate the necessary quantities using LibXC
         if use_libxc:
             retx = funcx.compute(inp)
@@ -257,6 +266,8 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
             if xc_family_dict[x_family_code]=='LDA':
                 retx = XC.func_compute(funcid[0], rho_block, sigma=None, use_gpu=False)
             elif xc_family_dict[x_family_code]=='GGA':
+                retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block[1], use_gpu=False)
+            elif xc_family_dict[x_family_code]=='MGGA':
                 retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block[1], use_gpu=False)
         # print('Duration for LibXC computations at grid points: ',durationLibxc)
 
@@ -268,13 +279,17 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
             inp['rho'] = rho_block
             # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
             inp['sigma'] = sigma_block[1]
+            if xc_family_dict[c_family_code]=='MGGA':
+                inp['tau'] = tau_block
         # Calculate the necessary quantities using LibXC
         if use_libxc:
             retc = funcc.compute(inp)
         else:
-            if xc_family_dict[x_family_code]=='LDA':
+            if xc_family_dict[c_family_code]=='LDA':
                 retc = XC.func_compute(funcid[1], rho_block, sigma=None, use_gpu=False)
-            elif xc_family_dict[x_family_code]=='GGA':
+            elif xc_family_dict[c_family_code]=='GGA':
+                retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block[1], use_gpu=False)
+            elif xc_family_dict[c_family_code]=='MGGA':
                 retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block[1], use_gpu=False)
 
         if debug:
@@ -306,6 +321,7 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
         else:
             vrho = retx[1] + retc[1]
         vsigma = 0
+        vtau = 0
         # If either x or c functional is of GGA/MGGA type we need rho_grad_values
         if xc_family_dict[x_family_code]!='LDA':
             # The derivative of functional wrt grad \rho square.
@@ -313,12 +329,18 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
                 vsigma += retx['vsigma']
             else:
                 vsigma += retx[2]
+        if xc_family_dict[x_family_code]=='MGGA':
+            if use_libxc:
+                vtau += retx['vtau']
         if xc_family_dict[c_family_code]!='LDA':
             # The derivative of functional wrt grad \rho square.
             if use_libxc:
                 vsigma += retc['vsigma']
             else:
                 vsigma += retc[2]
+        if xc_family_dict[c_family_code]=='MGGA':
+            if use_libxc:
+                vtau += retc['vtau']
         
         if debug:
             startF = timer()
@@ -368,10 +390,20 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
         # Numexpr
         v_temp = z @ ao_value_block  
         v_temp_T = v_temp.T
+        v_update = numexpr.evaluate('(v_temp + v_temp_T)')
+        if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+            if use_libxc:
+                v_update += contract('m,mi,mj->ij', 0.5*weights_block*vtau[:,0], ao_values_grad_block[0], ao_values_grad_block[0])
+                v_update += contract('m,mi,mj->ij', 0.5*weights_block*vtau[:,0], ao_values_grad_block[1], ao_values_grad_block[1])
+                v_update += contract('m,mi,mj->ij', 0.5*weights_block*vtau[:,0], ao_values_grad_block[2], ao_values_grad_block[2])
+            else:
+                v_update += contract('m,mi,mj->ij', 0.5*weights_block*vtau, ao_values_grad_block[0], ao_values_grad_block[0])
+                v_update += contract('m,mi,mj->ij', 0.5*weights_block*vtau, ao_values_grad_block[1], ao_values_grad_block[1])
+                v_update += contract('m,mi,mj->ij', 0.5*weights_block*vtau, ao_values_grad_block[2], ao_values_grad_block[2])
         if list_nonzero_indices is not None:
-            v[np.ix_(non_zero_indices, non_zero_indices)] += numexpr.evaluate('(v_temp + v_temp_T)')
+            v[np.ix_(non_zero_indices, non_zero_indices)] += v_update
         else:
-            v = numexpr.evaluate('(v + v_temp + v_temp_T)')
+            v += v_update
 
         
         if debug:

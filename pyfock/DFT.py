@@ -1611,9 +1611,6 @@ class DFT:
                     if self.use_libxc:
                         funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
                         funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-                        if funcx.get_family()==4 or funcc.get_family()==4:
-                            print('ERROR: Meta-GGA functionals are not yet supported on the GPU path.')
-                            exit()
                     if XC_algo==1:
                         Exc, Vxc = Integrals.eval_xc_1_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \
                                                     list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \

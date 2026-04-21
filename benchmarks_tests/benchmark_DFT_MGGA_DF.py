@@ -117,7 +117,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -129,7 +129,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Ubiquitin.xyz'
 
 ### 1D Carbon Alkanes
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -239,7 +239,7 @@ dftObj.rys = True
 dftObj.isDF = True
 dftObj.DF_algo = 10
 dftObj.blocksize = 5000
-dftObj.XC_algo = 2
+dftObj.XC_algo = 1
 dftObj.debug = False
 dftObj.sortGrids = False
 dftObj.xc_bf_screen = True
@@ -283,7 +283,10 @@ import threadpoolctl
 import opt_einsum
 import pylibxc
 import llvmlite 
-import cupy
+try:
+    import cupy
+except ModuleNotFoundError:
+    cupy = None
 import numexpr
 import pyscf
 print('\n\n\n Package versions')
@@ -296,6 +299,9 @@ print('threadpoolctl version', threadpoolctl.__version__)
 print('opt_einsum version', opt_einsum.__version__)
 # print('pylibxc version', pylibxc.__version__)
 print('llvmlite version', llvmlite.__version__)
-print('cupy version', cupy.__version__)
+if cupy is None:
+    print('cupy version', 'not installed')
+else:
+    print('cupy version', cupy.__version__)
 print('numexpr version', numexpr.__version__)
 print('scipy version', scipy.__version__)

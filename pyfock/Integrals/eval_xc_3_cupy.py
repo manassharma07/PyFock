@@ -347,6 +347,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
 
 
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values too
+    tau_block = None
     if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
         # rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = ( contract('ij,kmi,mj->km',dmat,ao_values_grad_block,ao_value_block, backend='cupy')+\
         #                     contract('ij,mi,kmj->km',dmat,ao_value_block,ao_values_grad_block, backend='cupy') )[:]
@@ -357,8 +358,12 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         # rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('jm,kmj->km', Fjm, ao_values_grad_block, backend='cupy')[:] 
         rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('mj,kmj->km', Fmj, ao_values_grad_block, backend='cupy')[:] 
         sigma_block = calc_sigma(rho_grad_block_x, rho_grad_block_y, rho_grad_block_z)
+        if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+            tau_block = 0.5*contract('ij,kmi,kmj->m', dmat, ao_values_grad_block, ao_values_grad_block, backend='cupy')
         if use_libxc:
             sigma_block = cp.asnumpy(sigma_block)
+            if tau_block is not None:
+                tau_block = cp.asnumpy(tau_block)
     if debug:
         stream.synchronize()
         durationRho = timer() - startRho
@@ -378,6 +383,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         if xc_family_dict[x_family_code]!='LDA':
             # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
             inp['sigma'] = sigma_block
+        if xc_family_dict[x_family_code]=='MGGA':
+            inp['tau'] = tau_block
         # Calculate the necessary quantities using LibXC
         retx = funcx.compute(inp)
         # durationLibxc = durationLibxc + timer() - startLibxc
@@ -386,12 +393,14 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         # Correlation
         # startLibxc = timer()
         # Input dictionary for libxc
-        #inp = {}
+        inp = {}
         # Input dictionary needs density values at grid points
-        #inp['rho'] = rho_block
+        inp['rho'] = cp.asnumpy(rho_block)
         if xc_family_dict[c_family_code]!='LDA':
             # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
             inp['sigma'] = sigma_block
+        if xc_family_dict[c_family_code]=='MGGA':
+            inp['tau'] = tau_block
         # Calculate the necessary quantities using LibXC
         retc = funcc.compute(inp)
         if debug:
@@ -407,11 +416,13 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         # retx = gga_x_b88(rho_block, sigma_block)
         if xc_family_dict[x_family_code]=='LDA':
             retx = XC.func_compute(funcid[0], rho_block, use_gpu=True)
-        else:
+        elif xc_family_dict[x_family_code]=='GGA':
             retx = XC.func_compute(funcid[0], rho_block, sigma_block, use_gpu=True)
             # print(retx[0])
             # print(retx[1])
             # print(retx[2])
+        else:
+            retx = XC.func_compute(funcid[0], rho_block, sigma_block, use_gpu=True)
 
         # Correlation
         # Calculate the necessary quantities using own implementation
@@ -419,6 +430,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         # retc = gga_c_lyp(rho_block, sigma_block)
         if xc_family_dict[c_family_code]=='LDA':
             retc = XC.func_compute(funcid[1], rho_block, use_gpu=True)
+        elif xc_family_dict[c_family_code]=='GGA':
+            retc = XC.func_compute(funcid[1], rho_block, sigma_block, use_gpu=True)
         else:
             retc = XC.func_compute(funcid[1], rho_block, sigma_block, use_gpu=True)
         if debug:
@@ -456,6 +469,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     else:
         vrho = retx[1] + retc[1]
     vsigma = 0
+    vtau = 0
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values
     if xc_family_dict[x_family_code]!='LDA':
         # The derivative of functional wrt grad \rho square.
@@ -463,6 +477,9 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
             vsigma += retx['vsigma']
         else:
             vsigma += retx[2]
+    if xc_family_dict[x_family_code]=='MGGA':
+        if use_libxc:
+            vtau += retx['vtau']
         
     if xc_family_dict[c_family_code]!='LDA':
         # The derivative of functional wrt grad \rho square.
@@ -470,6 +487,9 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
             vsigma += retc['vsigma']
         else:
             vsigma += retc[2]
+    if xc_family_dict[c_family_code]=='MGGA':
+        if use_libxc:
+            vtau += retc['vtau']
     
     # F = np.multiply(weights_block,vrho[:,0]) #This is fast enough.
     if use_libxc:
@@ -522,6 +542,9 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     # v_temp = z @ ao_value_block  # The fastest uptil now
     v_temp = cp.matmul(z, ao_value_block)  
     v = v_temp + v_temp.T
+    if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+        vtau_weights = 0.5*weights_block*cp.asarray(vtau[:,0] if use_libxc else vtau)
+        v += contract('m,kmi,kmj->ij', vtau_weights, ao_values_grad_block, ao_values_grad_block, backend='cupy')
     if debug:
         durationV = durationV + timer() - startV
     
