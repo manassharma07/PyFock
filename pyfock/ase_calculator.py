@@ -103,6 +103,8 @@ class PyFockCalculator(Calculator):
         "auxbasis": None,
         "charge": 0,
         "convergence_check": "error",
+        "dispersion": False,
+        "dispersion_kwargs": None,
         "force_step_size": 1.0e-3,
         "force_step_unit": "bohr",
         "force_method": "central",
@@ -117,6 +119,8 @@ class PyFockCalculator(Calculator):
         charge=0,
         directory="pyfock_calc",
         convergence_check="error",
+        dispersion=False,
+        dispersion_kwargs=None,
         force_step_size=1.0e-3,
         force_step_unit="bohr",
         force_method="central",
@@ -138,6 +142,10 @@ class PyFockCalculator(Calculator):
         self.parameters["auxbasis"] = auxbasis
         self.parameters["charge"] = charge
         self.parameters["convergence_check"] = convergence_check
+        self.parameters["dispersion"] = dispersion
+        self.parameters["dispersion_kwargs"] = (
+            None if dispersion_kwargs is None else dict(dispersion_kwargs)
+        )
         self.parameters["force_step_size"] = force_step_size
         self.parameters["force_step_unit"] = force_step_unit
         self.parameters["force_method"] = force_method
@@ -209,6 +217,32 @@ class PyFockCalculator(Calculator):
 
     def _to_eang_dipole(self, dipole_au):
         return np.asarray(dipole_au, dtype=np.float64) * Data.Bohr2AngsFactor
+
+    def _compute_dispersion_correction(self, atoms, compute_forces):
+        try:
+            from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
+        except ImportError as exc:
+            raise ImportError(
+                "Dispersion correction requires the optional 'torch-dftd' package. "
+                "Install it with: pip install torch-dftd"
+            ) from exc
+
+        dispersion_kwargs = self.parameters.get("dispersion_kwargs")
+        if dispersion_kwargs is None:
+            dispersion_kwargs = {}
+        else:
+            dispersion_kwargs = dict(dispersion_kwargs)
+
+        dispersion_kwargs.setdefault("atoms", atoms.copy())
+        disp_atoms = dispersion_kwargs["atoms"]
+        disp_calc = TorchDFTD3Calculator(**dispersion_kwargs)
+        disp_atoms.calc = disp_calc
+
+        disp_energy = float(disp_atoms.get_potential_energy())
+        disp_forces = None
+        if compute_forces:
+            disp_forces = np.asarray(disp_atoms.get_forces(), dtype=np.float64)
+        return disp_energy, disp_forces
 
     def _next_step_dir(self):
         self._iteration += 1
@@ -415,6 +449,7 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
             "nuclear_repulsion_energy_au": summary.get("nuclear_repulsion_energy_au"),
             "homo_lumo_gap_au": summary.get("homo_lumo_gap_au"),
             "homo_lumo_gap_ev": summary.get("homo_lumo_gap_ev"),
+            "dispersion_enabled": bool(self.parameters.get("dispersion", False)),
         }
         self._last_homo_lumo_gap_au = summary.get("homo_lumo_gap_au")
         self._last_homo_lumo_gap_ev = summary.get("homo_lumo_gap_ev")
@@ -447,6 +482,28 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
                     f"Forces were requested but not found in '{output_path}'."
                 )
             self.results["forces"] = self._to_ev_forces(summary["forces_au_bohr"])
+
+        self.pyfock_results["base_energy_ev"] = float(self.results["energy"])
+        self.pyfock_results["base_free_energy_ev"] = float(self.results["free_energy"])
+        if compute_forces:
+            self.pyfock_results["base_forces_ev_ang"] = np.asarray(
+                self.results["forces"], dtype=np.float64
+            ).tolist()
+
+        if self.parameters["dispersion"]:
+            disp_energy, disp_forces = self._compute_dispersion_correction(
+                self.atoms, compute_forces
+            )
+            self.results["energy"] += disp_energy
+            self.results["free_energy"] = self.results["energy"]
+            self.pyfock_results["dispersion_energy_ev"] = disp_energy
+            self.pyfock_results["total_energy_ev"] = float(self.results["energy"])
+            if compute_forces:
+                self.results["forces"] = self.results["forces"] + disp_forces
+                self.pyfock_results["dispersion_forces_ev_ang"] = disp_forces.tolist()
+                self.pyfock_results["total_forces_ev_ang"] = np.asarray(
+                    self.results["forces"], dtype=np.float64
+                ).tolist()
 
         self._last_energy_token = state_token
         self._last_dipole_token = None
