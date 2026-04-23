@@ -11,3 +11,14 @@ dist
 examples/ase_water_optimization/
 examples/calculations
 calculations
+examples/Notebook_Tutorial/caffeine.xyz
+examples/Notebook_Tutorial/decane.xyz
+examples/Notebook_Tutorial/h2o_exported.xyz
+examples/Notebook_Tutorial/h2o.xyz
+examples/Notebook_Tutorial/sto-3g.dat
+examples/Notebook_Tutorial/water_density.cube
+examples/Notebook_Tutorial/water_HOMO.cube
+examples/Notebook_Tutorial/water_LUMO.cube
+examples/Notebook_Tutorial/ase_water_optimization/
+
+
