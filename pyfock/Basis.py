@@ -535,7 +535,7 @@ class Basis:
         #If mol is provided then load the same basis set to all atoms
         if not mol is None:
             for i in range(mol.natoms):
-                basisSet = basisSet + Basis.readBasisSetFromFile( mol.atomicSpecies[i], basis_name)
+                basisSet = basisSet + Basis.readBasisSetFromFile( mol.basisSpecies[i], basis_name)
         elif atom is not None:
             basisSet = Basis.readBasisSetFromFile(atom, basis_name)
         basisSet =  basisSet.replace('D+', 'E+')
@@ -564,7 +564,7 @@ class Basis:
         #If mol is provided then load the same basis set to all atoms
         if not mol is None:
             for i in range(mol.natoms):
-                basisSet = basisSet + Basis.readBasisSetFromFile( mol.atomicSpecies[i], basis_name)
+                basisSet = basisSet + Basis.readBasisSetFromFile( mol.basisSpecies[i], basis_name)
         elif atom is not None:
             basisSet = Basis.readBasisSetFromFile(atom, basis_name)
         basisSet =  basisSet.replace('D+', 'E+')
@@ -597,7 +597,7 @@ class Basis:
                 #TODO For even further generality let users label atoms, so that different basis may be used for same atoms with different labels
                 for i in range(mol.natoms):
                     if mol.atomicSpecies[i].lower() in basis:
-                        totBasisSet = totBasisSet+ basis[mol.atomicSpecies[i].lower()]+'\n'
+                        totBasisSet = totBasisSet+ basis[mol.basisSpecies[i].lower()]+'\n'
                 totBasisSet =  totBasisSet.replace('D+', 'E+')
                 totBasisSet =  totBasisSet.replace('D-', 'E-')
                 return totBasisSet
@@ -892,9 +892,9 @@ class Basis:
             pattern = re.compile('\*\n(.*)\n\*')
             result = pattern.findall(basisSet)
             if len(result)==0:
-                print('The basis set corresponding to atom ',mol.atomicSpecies[i], ' was not found in the provided basis set.')
+                print('The basis set corresponding to atom ',mol.basisSpecies[i], ' was not found in the provided basis set.')
             for res in result:
-                if res.split()[0].lower()==mol.atomicSpecies[i].lower():
+                if res.split()[0].lower()==mol.basisSpecies[i].lower():
                     lookfor = res
             startReading = False
             #print(lines)

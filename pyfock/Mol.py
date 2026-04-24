@@ -17,6 +17,7 @@
 from . import Data
 from . import Basis
 import numpy as np
+import re
 #Class to store molecular properties
 class Mol:
     """
@@ -117,6 +118,11 @@ class Mol:
         """list of str: List of atomic symbols as strings (e.g., ['H', 'C', 'N', 'O']).
         Ordered the same as atoms appear in the molecule. Length equals natoms. 
         Used for identifying atom types and output formatting."""
+        self.basisSpecies = []
+        """list of str: Basis-label species for each atom.
+        Real atoms match `atomicSpecies`; ghost atoms retain the underlying element
+        label (for example `Ghost-O` stores `O`) so basis lookup can still use the
+        correct atomic basis while the nuclear charge remains zero."""
 
         self.Zcharges = []
         """list of int: List of atomic numbers (nuclear charges) for each atom in the molecule.
@@ -178,22 +184,42 @@ class Mol:
         Raises:
             Prints error messages for invalid atomic symbols, coordinates, or formatting.
         """
+        def _parse_ghost_label(label):
+            match = re.match(r'^(?:ghost|gh|x)[-_()]?([A-Za-z]{1,2})\)?$', label.strip(), flags=re.IGNORECASE)
+            if match is None:
+                return None
+            underlying = match.group(1).capitalize()
+            if underlying.lower() == 'ghost':
+                return None
+            elementSymbols = [x.lower() for x in Data.elementSymbols]
+            if underlying.lower() in elementSymbols:
+                return underlying
+            return None
+
         #Validate atomic symbols
         for i in range(len(atoms)):
             if isinstance(atoms[i][0], str):
                 elementSymbols = [x.lower() for x in Data.elementSymbols]
                 if atoms[i][0].lower() in elementSymbols:
                     self.atomicSpecies.append(atoms[i][0])
+                    self.basisSpecies.append(atoms[i][0])
                     Z = elementSymbols.index(atoms[i][0].lower())
                     self.Zcharges.append(Z)
                     self.nelectrons = self.nelectrons + Z 
                     self.natoms = self.natoms + 1
                 else:
-                    print('Error: Unknown atomic symbols found')
-                    return False
+                    ghost_basis_species = _parse_ghost_label(atoms[i][0])
+                    if ghost_basis_species is None:
+                        print('Error: Unknown atomic symbols found')
+                        return False
+                    self.atomicSpecies.append('Ghost')
+                    self.basisSpecies.append(ghost_basis_species)
+                    self.Zcharges.append(0)
+                    self.natoms = self.natoms + 1
             elif isinstance(atoms[i][0], int):
                 if atoms[i][0]<=118 and atoms[i][0]>=0:
                     self.atomicSpecies.append(Data.elementSymbols[atoms[i][0]])
+                    self.basisSpecies.append(Data.elementSymbols[atoms[i][0]])
                     Z = atoms[i][0]
                     self.Zcharges.append(Z)
                     self.nelectrons = self.nelectrons + Z 
