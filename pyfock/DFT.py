@@ -375,7 +375,7 @@ class DFT:
         If True, the following additional data will be returned after the SCF calculation: list_nonzero_indices, count_nonzero_indices, list_ao_values, list_ao_grad_values. 
         These are needed for efficient evaluation of the XC term during RT-TDDFT propagation. """
         
-    def _generate_pyscf_grids(self, gridsLevel=None):
+    def generate_pyscf_grids(self, gridsLevel=None):
         """
         Generate PySCF grids for the current molecule.
 
@@ -1064,6 +1064,11 @@ class DFT:
             c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
             # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
             sph2c_mat_pseudo = basis.sph2cart_basis() # SAO --> CAO
+            if self.use_gpu:
+                c2sph_mat_cp = cp.asarray(c2sph_mat, dtype=cp.float64)
+                sph2c_mat_pseudo_cp = cp.asarray(sph2c_mat_pseudo, dtype=cp.float64)
+                streams[0].synchronize()
+                cp.cuda.Stream.null.synchronize()
             print('\n\nNumber of Spherical atomic orbitals (5d, 7f, 10g and so on): ', c2sph_mat.shape[0])
         else:
             print('\n\nCartesian Atomic Orbitals (6d, 10f, 15g...) are being used!\n\n')
@@ -1137,9 +1142,14 @@ class DFT:
             # It is possible that the supplied density matrix to the SCF was in SAO format already.
             # In such a case we need to transform this density matrix to CAO basis so that the J and XC term evaluations can be done properly 
             if not dmat.shape==S.shape:
-                dmat = c2sph_mat.T @ dmat @ c2sph_mat # Convert to CAO from SAO (SAO --> CAO)
-                # dmat = np.dot(sph2c_mat_pseudo, np.dot(dmat, sph2c_mat_pseudo.T)) # Convert to CAO from SAO (SAO --> CAO)
-                # Later the dmat will be converted back to SAO after J and XC term evaluations
+                if not self.use_gpu:
+                    # Note: the formula for dmat transformation from SAO to CAO is 
+                    # dmat_CAO = C2SA.T @ dmat_SAO @ C2SA, where C2SA is the transformation matrix from CAO to SAO. 
+                    # This is different from the other matrices' transformation.
+                    # dmat = c2sph_mat.T @ dmat @ c2sph_mat # Convert from SAO to CAO (SAO --> CAO) 
+                    dmat = basis.sph2cart_dmat_blockwise(dmat) # Convert from SAO to CAO (SAO --> CAO) 
+                else:
+                    dmat_cp = c2sph_mat_cp.T @ dmat_cp @ c2sph_mat_cp # Convert from SAO to CAO (SAO --> CAO)
 
         if rys:
             print("\n\nUser requested to use Rys Quadrature Algorithm for the evaluation of ERIs")
@@ -1272,7 +1282,7 @@ class DFT:
                 print('Grids level: ', gridsLevel)
                 if self.use_pyscf_grids:
                     print('Using PySCF to generate the DFT grids.', flush=True)
-                    grids = self._generate_pyscf_grids(gridsLevel=gridsLevel)
+                    grids = self.generate_pyscf_grids(gridsLevel=gridsLevel)
                 else:
                     # Generate grids for XC term
                     basisGrids = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-QZVP')})
@@ -1504,9 +1514,14 @@ class DFT:
 
             #########
             # Convert the overlap matrix from CAO to SAO basis as it is needed for diagonalization
-            S_sao = basis.cart2sph_operator_blockwise(S)
-            # Convert back to CAO so that now we lose the extra information that the CAO basis had
-            S = np.dot(sph2c_mat_pseudo, np.dot(S_sao, sph2c_mat_pseudo.T))
+            if not self.use_gpu:
+                S_sao = basis.cart2sph_operator_blockwise(S)
+                # Convert back to CAO so that now we lose the extra information that the CAO basis had
+                S = np.dot(sph2c_mat_pseudo, np.dot(S_sao, sph2c_mat_pseudo.T))
+            else:
+                S_sao = c2sph_mat_cp @ S @ c2sph_mat_cp.T # Convert from CAO to SAO (CAO --> SAO)
+                # Convert back to CAO so that now we lose the extra information that the CAO basis had
+                S = sph2c_mat_pseudo_cp @ S_sao @ sph2c_mat_pseudo_cp.T
         if orthogonalize:
             if not self.use_gpu:
                 if self.sao:
@@ -1715,9 +1730,14 @@ class DFT:
                     # The following gets rid of the extra information in the CAO basis KS matrix by going to SAO and then back to CAO.
                     # This way even though the matrix dimensions would be that of CAO but the information would be the same as SAO
                     # leading to the same energy as SAO basis PySCF or TURBOMOLE calculations
-                    KS_sao = basis.cart2sph_operator_blockwise(KS)
-                    # The following is needed for DIIS
-                    KS = np.dot(sph2c_mat_pseudo, np.dot(KS_sao, sph2c_mat_pseudo.T)) #SAO --> CAO
+                    if not self.use_gpu:
+                        KS_sao = basis.cart2sph_operator_blockwise(KS)
+                        # The following is needed for DIIS
+                        KS = np.dot(sph2c_mat_pseudo, np.dot(KS_sao, sph2c_mat_pseudo.T)) #SAO --> CAO
+                    else:
+                        KS_sao = c2sph_mat_cp @ KS @ c2sph_mat_cp.T # Convert from CAO to SAO (CAO --> SAO)
+                        # The following is needed for DIIS
+                        KS = sph2c_mat_pseudo_cp @ KS_sao @ sph2c_mat_pseudo_cp.T #SAO --> CAO
                     
 
                 #### DIIS (Currently performed in CAO basis)
@@ -1735,19 +1755,28 @@ class DFT:
                 durationDIIS = durationDIIS + timer() - startDIIS
                 if self.sao:
                     # Convert the DIISed KS matrix to SAO for diagonalization
-                    KS_sao = basis.cart2sph_operator_blockwise(KS) # CAO --> SAO 
+                    if not self.use_gpu:
+                        KS_sao = basis.cart2sph_operator_blockwise(KS) # CAO --> SAO 
+                    else:
+                        KS_sao = c2sph_mat_cp @ KS @ c2sph_mat_cp.T # Convert from CAO to SAO (CAO --> SAO)
                     
 
                 #### Solve KS equation (Diagonalize KS matrix)
                 startKS = timer()
                 if self.use_gpu:
-                    eigvalues, eigvectors = self.solve_cupy(KS, S, orthogonalize=True) # Orthogonalization is necessary with CUDA
+                    if self.sao:
+                        eigvalues, eigvectors = self.solve_cupy(KS_sao, S_sao, orthogonalize=True) # Orthogonalization is necessary with CUDA
+                    else:
+                        eigvalues, eigvectors = self.solve_cupy(KS, S, orthogonalize=True) # Orthogonalization is necessary with CUDA
                     mo_occ = self.getOcc_cupy(mol, eigvalues, eigvectors)
                     dmat = self.gen_dm_cupy(eigvectors, mo_occ)
                     dmat_cp = dmat
                     dmat = cp.asnumpy(dmat)
                     streams[0].synchronize()
                     cp.cuda.Stream.null.synchronize()
+                    if self.sao:
+                        dmat_cp = c2sph_mat_cp.T @ dmat_cp @ c2sph_mat_cp # Convert from SAO to CAO (SAO --> CAO)
+                        dmat = basis.sph2cart_dmat_blockwise(dmat) #SAO --> CAO
                     # HOMO-LUMO gap
                     occupied = cp.where(mo_occ > 1e-8)[0]
                     if len(occupied) < len(eigvalues):
@@ -1765,9 +1794,9 @@ class DFT:
                     mo_occ = self.getOcc(mol, eigvalues, eigvectors)
                     dmat = self.gen_dm(eigvectors, mo_occ)
                     if self.sao:
-                        dmat = basis.sph2cart_operator_blockwise(dmat) #SAO --> CAO
+                        dmat = basis.sph2cart_dmat_blockwise(dmat) #SAO --> CAO
+                        # The above is the same as this
                         # dmat = c2sph_mat.T @ dmat @ c2sph_mat 
-                        # dmat = np.dot(sph2c_mat_pseudo, np.dot(dmat, sph2c_mat_pseudo.T)) #SAO --> CAO (not the right way for density matrix)
                     
                     # HOMO-LUMO gap
                     occupied = np.where(mo_occ > 1e-8)[0]

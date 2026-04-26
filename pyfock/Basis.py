@@ -806,7 +806,7 @@ class Basis:
         return A_sph
 
 
-    def sph2cart_operator_blockwise(self, D_sph):
+    def sph2cart_dmat_blockwise(self, D_sph):
         """
         Blockwise spherical → Cartesian back-transformation of a symmetric operator.
 
