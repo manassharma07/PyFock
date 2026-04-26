@@ -10,7 +10,7 @@ except Exception as e:
             return func 
         return decorator
 import numpy as np
-from pyfock.XC import lda_x
+from pyfock.XC import lda_x, lda_x_cupy
 from numba import njit
 
 # The following implementation of the PBE exchange has been taken from this repository (https://github.com/wangenau/eminus/blob/main/eminus/xc/)
@@ -239,7 +239,7 @@ def gga_x_pbe_cupy(rho, sigma):
     # rho_cutoff = 1e-12  # define rho_cutoff constant
     rho = cp.maximum(rho, 1e-12)
 
-    ex, vx = lda_x(rho)
+    ex, vx = lda_x_cupy(rho)
     gex, gvx, vsigmax = pbe_x_temp_cupy(rho, sigma)
 
     ex += gex/rho

@@ -1062,7 +1062,7 @@ class DFT:
                 threshold_schwarz = 1e-11
             # Get the CAO to SAO transformation matrix
             c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
-            # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
+            # Calculate the pseudoinverse transformation matrix 
             sph2c_mat_pseudo = basis.sph2cart_basis() # SAO --> CAO
             if self.use_gpu:
                 c2sph_mat_cp = cp.asarray(c2sph_mat, dtype=cp.float64)
@@ -1149,6 +1149,7 @@ class DFT:
                     # dmat = c2sph_mat.T @ dmat @ c2sph_mat # Convert from SAO to CAO (SAO --> CAO) 
                     dmat = basis.sph2cart_dmat_blockwise(dmat) # Convert from SAO to CAO (SAO --> CAO) 
                 else:
+                    dmat = basis.sph2cart_dmat_blockwise(dmat) # Convert from SAO to CAO (SAO --> CAO)
                     dmat_cp = c2sph_mat_cp.T @ dmat_cp @ c2sph_mat_cp # Convert from SAO to CAO (SAO --> CAO)
 
         if rys:
