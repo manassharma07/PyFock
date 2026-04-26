@@ -1,5 +1,6 @@
 pyfock/Integrals/__pycache__/
 pyfock/XC/__pycache__/
+pyfock/Utils/__pycache__/
 pyfock/__pycache__/
 pyfock/benchmark_tests/__pycache__/
 __pycache__/
