@@ -48,7 +48,11 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
     if dftObj.sao:
         c2sph_mat_aux = auxbasis.cart2sph_basis() # CAO --> SAO
         sph2c_mat_pseudo_aux = auxbasis.sph2cart_basis() # SAO --> CAO
-
+        if dftObj.use_gpu:
+            c2sph_mat_aux_cp = cp.asarray(c2sph_mat_aux, dtype=cp.float64)
+            sph2c_mat_pseudo_aux_cp = cp.asarray(sph2c_mat_pseudo_aux, dtype=cp.float64)
+            # streams[0].synchronize()
+            cp.cuda.Stream.null.synchronize()
 
     print('Stricter version of Schwarz screening: ', strict_schwarz, flush=True)
     print('\nCalculating three centered two electron and two-centered two-electron integrals...\n\n', flush=True)
@@ -64,6 +68,9 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
                 ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
         else:
             ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis)
+            if dftObj.sao:
+                ints2c2e = cp.dot(c2sph_mat_aux_cp, np.dot(ints2c2e, c2sph_mat_aux_cp.T)) # CAO --> SAO
+                ints2c2e = cp.dot(sph2c_mat_pseudo_aux_cp, np.dot(ints2c2e, sph2c_mat_pseudo_aux_cp.T))
         duration2c2e = timer() - start2c2e
         print('Time taken for two-centered two-electron integrals '+str(round(duration2c2e, 2))+' seconds.\n', flush=True)
         if DF_algo==4: #Triangular version
@@ -498,7 +505,10 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
 
             if use_gpu:
-                ints3c2e = Integrals.schwarz_helpers_cupy.rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
+                if dftObj.sao:
+                    ints3c2e = Integrals.schwarz_helpers_cupy.rys_3c2e_tri_schwarz_sparse_algo10_sao_cupy(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
+                else:
+                    ints3c2e = Integrals.schwarz_helpers_cupy.rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
                 if not keep_ints3c2e_in_gpu:
                     ints3c2e = cp.asnumpy(ints3c2e)
             else:

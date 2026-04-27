@@ -488,6 +488,313 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda_new(bfs_coords, bfs_contr_p
                     out[offset_+index_k] += val
                     index_k += 1
 
+def rys_3c2e_tri_schwarz_sparse_algo10_sao_cupy(basis, auxbasis, indicesA, indicesB, offsets, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, nsignificant, cp_stream=None):
+    # Wrapper for hybrid Rys+conv. 3c2e integral calculator
+    # using a list of significant contributions obtained via Schwarz screening.
+    # It returns the 3c2e integrals in triangular form.
+
+    # print('preprocessing starts', flush=True)
+
+    #We convert the required properties to numpy arrays as this is what Numba likes.
+    bfs_coords = cp.array([basis.bfs_coords])
+    bfs_contr_prim_norms = cp.array([basis.bfs_contr_prim_norms])
+    bfs_lmn =cp.array([basis.bfs_lmn])
+    bfs_nprim = cp.array([basis.bfs_nprim])
+
+    #We convert the required properties to numpy arrays as this is what Numba likes.
+    aux_bfs_coords = cp.array([auxbasis.bfs_coords])
+    aux_bfs_contr_prim_norms = cp.array([auxbasis.bfs_contr_prim_norms])
+    aux_bfs_lmn = cp.array([auxbasis.bfs_lmn])
+    aux_bfs_nprim = cp.array([auxbasis.bfs_nprim])
+        
+
+    #The remaining properties like bfs_coeffs are a list of lists of unequal sizes.
+    #Numba won't be able to work with these efficiently.
+    #So, we convert them to a numpy 2d array by applying a trick,
+    #that the second dimension is that of the largest list. So that
+    #it can accomadate all the lists.
+    maxnprim = max(basis.bfs_nprim)
+    bfs_coeffs = cp.zeros([basis.bfs_nao, maxnprim])
+    bfs_expnts = cp.zeros([basis.bfs_nao, maxnprim])
+    bfs_prim_norms = cp.zeros([basis.bfs_nao, maxnprim])
+    shell_indices = cp.array([basis.bfs_shell_index], dtype=cp.uint16)[0]
+    aux_shell_indices = cp.array([auxbasis.bfs_shell_index], dtype=cp.uint16)[0]
+    for i in range(basis.bfs_nao):
+        for j in range(basis.bfs_nprim[i]):
+            bfs_coeffs[i,j] = basis.bfs_coeffs[i][j]
+            bfs_expnts[i,j] = basis.bfs_expnts[i][j]
+            bfs_prim_norms[i,j] = basis.bfs_prim_norms[i][j]
+
+    maxnprimaux = max(auxbasis.bfs_nprim)
+    aux_bfs_coeffs = cp.zeros([auxbasis.bfs_nao, maxnprimaux])
+    aux_bfs_expnts = cp.zeros([auxbasis.bfs_nao, maxnprimaux])
+    aux_bfs_prim_norms = cp.zeros([auxbasis.bfs_nao, maxnprimaux])
+    for i in range(auxbasis.bfs_nao):
+        for j in range(auxbasis.bfs_nprim[i]):
+            aux_bfs_coeffs[i,j] = auxbasis.bfs_coeffs[i][j]
+            aux_bfs_expnts[i,j] = auxbasis.bfs_expnts[i][j]
+            aux_bfs_prim_norms[i,j] = auxbasis.bfs_prim_norms[i][j]
+
+    DATA_X_cuda = cp.asarray(DATA_X)
+    DATA_W_cuda = cp.asarray(DATA_W)
+
+    sqrt_ints4c2e_diag = cp.asarray(sqrt_ints4c2e_diag) 
+    sqrt_diag_ints2c2e = cp.asarray(sqrt_diag_ints2c2e) 
+    offsets = cp.asarray(offsets) 
+    
+
+    # Initialize the matrix with zeros
+    threeC2E = cp.zeros(int(nsignificant), dtype=cp.float64)
+
+    if cp_stream is None:
+        device = 0
+        cp.cuda.Device(device).use()
+        cp_stream = cp.cuda.Stream(non_blocking = True)
+        nb_stream = cuda.external_stream(cp_stream.ptr)
+        cp_stream.use()
+    else:
+        nb_stream = cuda.external_stream(cp_stream.ptr)
+        cp_stream.use()
+
+    thread_x = 8
+    thread_y = 8
+    blocks_per_grid = ((basis.bfs_nao + (thread_x - 1))//thread_x, (basis.bfs_nao + (thread_y - 1))//thread_y) 
+    #rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda[blocks_per_grid, (thread_x, thread_y), nb_stream](bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
+    #             bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], \
+    #             aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, 0, basis.bfs_nao, 0, basis.bfs_nao, 0, auxbasis.bfs_nao, DATA_X_cuda, \
+    #             DATA_W_cuda, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, offsets, strict_schwarz, threeC2E)
+    rys_3c2e_tri_schwarz_sparse_algo10_sao_internal_cuda_new[blocks_per_grid, (thread_x, thread_y), nb_stream](bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], \
+                bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], \
+                aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, 0, basis.bfs_nao, 0, basis.bfs_nao, 0, auxbasis.bfs_nao, DATA_X_cuda, \
+                DATA_W_cuda, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, offsets, strict_schwarz, aux_shell_indices, threeC2E)
+    
+    cp_stream.synchronize()
+    cp.cuda.Stream.null.synchronize()
+    cp._default_memory_pool.free_all_blocks()
+    return threeC2E
+
+# Define global numpy arrays so Numba can load them into __constant__ memory
+a = 10.0/19.0
+b = 14.0/19.0
+c = 5.0/19.0
+d = 3.0*math.sqrt(5.0)/19.0
+
+M_f_arr = np.array([
+    [ a,  0,  0, -d,  0, -d,  0,  0,  0,  0],
+    [ 0,  b,  0,  0,  0,  0, -d,  0, -c,  0],
+    [ 0,  0,  b,  0,  0,  0,  0, -c,  0, -d],
+    [-d,  0,  0,  b,  0, -c,  0,  0,  0,  0],
+    [ 0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
+    [-d,  0,  0, -c,  0,  b,  0,  0,  0,  0],
+    [ 0, -d,  0,  0,  0,  0,  a,  0, -d,  0],
+    [ 0,  0, -c,  0,  0,  0,  0,  b,  0, -d],
+    [ 0, -c,  0,  0,  0,  0, -d,  0,  b,  0],
+    [ 0,  0, -d,  0,  0,  0,  0, -d,  0,  a]
+], dtype=np.float64)
+
+M_g_arr = np.array([
+    [ 0.3513422061809158,  0.0,  0.0, -0.3085873961776689,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256711,  0.0,  0.1213545940024541,  0.0,  0.1065869614256711],
+    [ 0.0,  0.6086956521739131,  0.0,  0.0,  0.0,  0.0, -0.3913043478260871,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [-0.3085873961776690,  0.0,  0.0,  0.6486577938190843,  0.0, -0.1065869614256711,  0.0,  0.0,  0.0,  0.0, -0.3085873961776689,  0.0, -0.1065869614256713,  0.0,  0.1213545940024542],
+    [ 0.0,  0.0,  0.0,  0.0,  0.7826086956521738,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0, -0.2916610405434507,  0.0],
+    [-0.3085873961776688,  0.0,  0.0, -0.1065869614256711,  0.0,  0.6486577938190838,  0.0,  0.0,  0.0,  0.0,  0.1213545940024540,  0.0, -0.1065869614256710,  0.0, -0.3085873961776688],
+    [ 0.0, -0.3913043478260871,  0.0,  0.0,  0.0,  0.0,  0.6086956521739131,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0,  0.0, -0.2916610405434507,  0.0,  0.0,  0.0,  0.0,  0.7826086956521741,  0.0, -0.2916610405434510,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0, -0.2916610405434509,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.7826086956521741,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.0,  0.0, -0.3913043478260869,  0.0,  0.0,  0.0,  0.0, -0.2916610405434509,  0.0,  0.6086956521739130,  0.0,  0.0,  0.0,  0.0,  0.0],
+    [ 0.1065869614256711,  0.0,  0.0, -0.3085873961776689,  0.0,  0.1213545940024540,  0.0,  0.0,  0.0,  0.0,  0.3513422061809157,  0.0, -0.3085873961776687,  0.0,  0.1065869614256710],
+    [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.6086956521739130,  0.0, -0.3913043478260869,  0.0],
+    [ 0.1213545940024541,  0.0,  0.0, -0.1065869614256714,  0.0, -0.1065869614256709,  0.0,  0.0,  0.0,  0.0, -0.3085873961776687,  0.0,  0.6486577938190840,  0.0, -0.3085873961776689],
+    [ 0.0,  0.0,  0.0,  0.0, -0.2916610405434508,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.3913043478260868,  0.0,  0.6086956521739129,  0.0],
+    [ 0.1065869614256710,  0.0,  0.0,  0.1213545940024542,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256710,  0.0, -0.3085873961776688,  0.0,  0.3513422061809157]
+], dtype=np.float64)
+
+@cuda.jit(fastmath=True, cache=True, max_registers=800)
+def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal_cuda_new(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, DATA_X, DATA_W, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, schwarz_threshold, offsets, strict_schwarz, aux_shell_indices, out):
+    
+    i, j = cuda.grid(2)
+    pi = 3.141592653589793
+    pisq = 9.869604401089358
+    twopisq = 19.739208802178716
+
+    # Map transformation matrices to fast read-only constant memory
+    M_f = cuda.const.array_like(M_f_arr)
+    M_g = cuda.const.array_like(M_g_arr)
+
+    L = cuda.local.array((3), numba.float64)
+    L[0] = 0.0
+    L[1] = 0.0
+    L[2] = 0.0
+    ld, md, nd = int(0), int(0), int(0)
+    alphalk = 0.0
+
+    if i>=indx_startA and i<indx_endA and j>=indx_startB and j<indx_endB and (j<=i):  
+        sqrt_ints4c2e_diag_ij = sqrt_ints4c2e_diag[i,j]
+        if strict_schwarz:
+            if sqrt_ints4c2e_diag_ij*sqrt_ints4c2e_diag_ij<1e-13:
+                return
+        linear_index = j + i*(i+1)//2
+        offset_ = offsets[linear_index]
+        IJ = cuda.local.array((3), numba.float64)
+        P = cuda.local.array((3), numba.float64)
+        PQ = cuda.local.array((3), numba.float64)
+        I = bfs_coords[i]
+        Ni = bfs_contr_prim_norms[i]
+        lmni = bfs_lmn[i]
+        la, ma, na = lmni
+        nprimi = bfs_nprim[i]
+
+        J = bfs_coords[j]
+        IJ[0] = I[0] - J[0]
+        IJ[1] = I[1] - J[1]
+        IJ[2] = I[2] - J[2]
+        IJsq = IJ[0]**2 + IJ[1]**2 + IJ[2]**2
+        Nj = bfs_contr_prim_norms[j]
+        lmnj = bfs_lmn[j]
+        lb, mb, nb = lmnj
+        tempcoeff1 = Ni*Nj
+        nprimj = bfs_nprim[j]
+        
+        G = cuda.local.array((13, 13), numba.float64)
+        roots = cuda.local.array((20,10), numba.float64)
+        weights = cuda.local.array((20,10), numba.float64)
+
+        # Local SAO Buffers
+        d_buffer = cuda.local.array((6), numba.float64)
+        f_buffer = cuda.local.array((10), numba.float64)
+        g_buffer = cuda.local.array((15), numba.float64)
+
+        # Loop over primitives
+        for ik in range(nprimi):   
+            dik = bfs_coeffs[i][ik]
+            Nik = bfs_prim_norms[i][ik]
+            alphaik = bfs_expnts[i][ik]
+            tempcoeff2 = tempcoeff1*dik*Nik
+                
+            for jk in range(nprimj):
+                alphajk = bfs_expnts[j][jk]
+                gammaP = alphaik + alphajk
+                prod_alphaikjk = alphaik*alphajk
+                screenfactorAB = math.exp(-prod_alphaikjk/gammaP*IJsq)
+                if abs(screenfactorAB)<1.0e-8:   
+                    continue
+                djk = bfs_coeffs[j][jk] 
+                Njk = bfs_prim_norms[j][jk]      
+                P[0] = (alphaik*I[0] + alphajk*J[0])/gammaP
+                P[1] = (alphaik*I[1] + alphajk*J[1])/gammaP
+                P[2] = (alphaik*I[2] + alphajk*J[2])/gammaP
+                tempcoeff3 = tempcoeff2*djk*Njk 
+
+                roots_shell_previous = -1
+                index_k = 0
+                k = indx_startC
+                
+                d_idx = 0; f_idx = 0; g_idx = 0
+                
+                # Switch to a while loop to support skipping entire shell blocks natively
+                while k < indx_endC:
+                    shell_index = aux_shell_indices[k]
+                    lmnk = aux_bfs_lmn[k]
+                    lc, mc, nc = lmnk
+                    tot_ang = lc + mc + nc
+                    
+                    is_new_shell = (shell_index != roots_shell_previous)
+                    
+                    if is_new_shell:
+                        if sqrt_ints4c2e_diag_ij*sqrt_diag_ints2c2e[k] < schwarz_threshold:
+                            if tot_ang == 0: k += 1
+                            elif tot_ang == 1: k += 3
+                            elif tot_ang == 2: k += 6
+                            elif tot_ang == 3: k += 10
+                            elif tot_ang == 4: k += 15
+                            continue
+                            
+                        # Reset tracking pointers when processing a valid new shell
+                        if tot_ang == 2: d_idx = 0
+                        elif tot_ang == 3: f_idx = 0
+                        elif tot_ang == 4: g_idx = 0
+
+                    K = aux_bfs_coords[k]
+                    Nk = aux_bfs_contr_prim_norms[k]
+                    tempcoeff4 = tempcoeff3*Nk
+                    nprimk = aux_bfs_nprim[k]
+
+                    Q = K        
+                    PQ[0] = P[0] - Q[0]
+                    PQ[1] = P[1] - Q[1]
+                    PQ[2] = P[2] - Q[2]
+                    PQsq = PQ[0]**2 + PQ[1]**2 + PQ[2]**2
+                    
+                    norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1) 
+                    val = 0.0
+
+                    if norder <= 10:
+                        n = int(max(la+lb,ma+mb,na+nb))
+                        m = int(max(lc+ld,mc+md,nc+nd))
+                        
+                        for kk in range(nprimk):
+                            dkk = aux_bfs_coeffs[k][kk]
+                            Nkk = aux_bfs_prim_norms[k][kk]
+                            alphakk = aux_bfs_expnts[k][kk]
+                            tempcoeff5 = tempcoeff4*dkk*Nkk 
+                            ABsrt = math.sqrt(gammaP*alphakk)
+                            
+                            gammaQ = alphakk
+                            rho = gammaP*gammaQ/(gammaP+gammaQ)       
+                            X = PQsq*rho  
+                            roots_kk = roots[kk,:]
+                            weights_kk = weights[kk,:]  
+                            
+                            # Only recalculate roots dynamically if transitioning between distinct shells
+                            if is_new_shell:            
+                                roots_kk, weights_kk = Roots(norder,X,DATA_X,DATA_W,roots_kk,weights_kk)
+                            
+                            val += tempcoeff5*coulomb_rys_3c2e(roots_kk,weights_kk,G,PQsq, rho, norder,n,m,la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,alphaik, alphajk,alphakk,alphalk,I,J,K,L,IJ,P, prod_alphaikjk, gammaP,ABsrt)   
+
+                    roots_shell_previous = shell_index
+
+                    # --- SAO Transformation Block ---
+                    if tot_ang == 0 or tot_ang == 1:
+                        out[offset_ + index_k] += val
+                        index_k += 1
+                    
+                    elif tot_ang == 2:
+                        d_buffer[d_idx] = val
+                        d_idx += 1
+                        if d_idx == 6:
+                            out[offset_ + index_k]     += 2.0/3.0 * d_buffer[0] - 1.0/3.0 * (d_buffer[3] + d_buffer[5])
+                            out[offset_ + index_k + 1] += d_buffer[1]
+                            out[offset_ + index_k + 2] += d_buffer[2]
+                            out[offset_ + index_k + 3] += 2.0/3.0 * d_buffer[3] - 1.0/3.0 * (d_buffer[0] + d_buffer[5])
+                            out[offset_ + index_k + 4] += d_buffer[4]
+                            out[offset_ + index_k + 5] += 2.0/3.0 * d_buffer[5] - 1.0/3.0 * (d_buffer[0] + d_buffer[3])
+                            index_k += 6
+                            
+                    elif tot_ang == 3:
+                        f_buffer[f_idx] = val
+                        f_idx += 1
+                        if f_idx == 10:
+                            for r in range(10):
+                                temp_val = 0.0
+                                for c in range(10):
+                                    temp_val += M_f[r, c] * f_buffer[c]
+                                out[offset_ + index_k + r] += temp_val
+                            index_k += 10
+                            
+                    elif tot_ang == 4:
+                        g_buffer[g_idx] = val
+                        g_idx += 1
+                        if g_idx == 15:
+                            for r in range(15):
+                                temp_val = 0.0
+                                for c in range(15):
+                                    temp_val += M_g[r, c] * g_buffer[c]
+                                out[offset_ + index_k + r] += temp_val
+                            index_k += 15
+
+                    k += 1
+
 def J_tri_calculator_algo10_cupy(ints3c2e_1d, df_coeff, size_J_tri, nao, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, naux, strict_schwarz, auxbfs_lm, cp_stream=None):
     # This can also be simply calculated using:
     # J = contract('ijk,k', ints3c2e, df_coeff) # For general 3d and 2d arrays
