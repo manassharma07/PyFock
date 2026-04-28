@@ -360,7 +360,7 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda(bfs_coords, bfs_contr_prim_
             out[offsets[linear_index]+index_k] = val
             index_k += 1
 
-@cuda.jit(fastmath=True, cache=True, max_registers=800)#(device=True)
+@cuda.jit(fastmath=True, cache=True, max_registers=128)#(device=True)
 def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda_new(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, DATA_X, DATA_W, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, schwarz_threshold, offsets, strict_schwarz, aux_shell_indices, out):
     
     i, j = cuda.grid(2)
@@ -402,11 +402,13 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda_new(bfs_coords, bfs_contr_p
         tempcoeff1 = Ni*Nj
         nprimj = bfs_nprim[j]
         
-        # roots = cuda.local.array((10), numba.float64) # Good for upto i shells; i orbitals have an angular momentum of 6;
-        # weights = cuda.local.array((10), numba.float64) # Good for upto i shells; i orbitals have an angular momentum of 6;
-        G = cuda.local.array((13, 13), numba.float64) # Good for upto i shells; i orbitals have an angular momentum of 6;
-        roots = cuda.local.array((20,10), numba.float64) # Good for upto i shells; i orbitals have an angular momentum of 6;
-        weights = cuda.local.array((20,10), numba.float64) # Good for upto i shells; i orbitals have an angular momentum of 6;
+        # norder = (2L + Laux)/2 + 1 = L + Laux/2 + 1
+        # G = cuda.local.array((13, 13), numba.float64)
+        # roots = cuda.local.array((20,10), numba.float64) # Good for upto i shells and i auxshells; i orbitals have an angular momentum of 6;
+        # weights = cuda.local.array((20,10), numba.float64) # Good for upto i shells and i auxshells; i orbitals have an angular momentum of 6;
+        G = cuda.local.array((5, 5), numba.float64)  # Good for upto g auxshells and d shells;
+        roots = cuda.local.array((7,5), numba.float64) # Good for upto g auxshells and d shells; and 7 primitives per bf
+        weights = cuda.local.array((7,5), numba.float64) # Good for upto g auxshells and d shells; and 7 primitives per bf
 
         #Loop over primitives
         for ik in range(nprimi):   
@@ -610,7 +612,7 @@ M_g_arr = np.array([
     [ 0.1065869614256710,  0.0,  0.0,  0.1213545940024542,  0.0, -0.3085873961776688,  0.0,  0.0,  0.0,  0.0,  0.1065869614256710,  0.0, -0.3085873961776688,  0.0,  0.3513422061809157]
 ], dtype=np.float64)
 
-@cuda.jit(fastmath=True, cache=True, max_registers=800)
+@cuda.jit(fastmath=True, cache=True, max_registers=128)
 def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal_cuda_new(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, DATA_X, DATA_W, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, schwarz_threshold, offsets, strict_schwarz, aux_shell_indices, out):
     
     i, j = cuda.grid(2)
@@ -656,9 +658,14 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal_cuda_new(bfs_coords, bfs_con
         tempcoeff1 = Ni*Nj
         nprimj = bfs_nprim[j]
         
-        G = cuda.local.array((13, 13), numba.float64)
-        roots = cuda.local.array((20,10), numba.float64)
-        weights = cuda.local.array((20,10), numba.float64)
+        # norder = (2L + Laux)/2 + 1 = L + Laux/2 + 1
+        # G = cuda.local.array((13, 13), numba.float64)
+        # roots = cuda.local.array((20,10), numba.float64) # Good for upto i shells and i auxshells; i orbitals have an angular momentum of 6;
+        # weights = cuda.local.array((20,10), numba.float64) # Good for upto i shells and i auxshells; i orbitals have an angular momentum of 6;
+        G = cuda.local.array((5, 5), numba.float64)  # Good for upto g auxshells and d shells;
+        roots = cuda.local.array((7,5), numba.float64) # Good for upto g auxshells and d shells; and 7 primitives per bf
+        weights = cuda.local.array((7,5), numba.float64) # Good for upto g auxshells and d shells; and 7 primitives per bf
+        
 
         # Local SAO Buffers
         d_buffer = cuda.local.array((6), numba.float64)

@@ -5,7 +5,7 @@ from pyfock import Mol
 #shells and basis functions
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
-xyzFilename = 'H2O.xyz'
+xyzFilename = 'h2o.xyz'
 # xyzFilename = 'H2.xyz'
 # xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Cholesterol.xyz'

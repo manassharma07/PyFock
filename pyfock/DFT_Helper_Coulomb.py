@@ -71,6 +71,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             if dftObj.sao:
                 ints2c2e = cp.dot(c2sph_mat_aux_cp, np.dot(ints2c2e, c2sph_mat_aux_cp.T)) # CAO --> SAO
                 ints2c2e = cp.dot(sph2c_mat_pseudo_aux_cp, np.dot(ints2c2e, sph2c_mat_pseudo_aux_cp.T))
+                eps = 1e-12
+                ints2c2e += eps * cp.eye(ints2c2e.shape[0])
         duration2c2e = timer() - start2c2e
         print('Time taken for two-centered two-electron integrals '+str(round(duration2c2e, 2))+' seconds.\n', flush=True)
         if DF_algo==4: #Triangular version

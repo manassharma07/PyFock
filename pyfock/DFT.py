@@ -1058,8 +1058,12 @@ class DFT:
         if self.sao:
             print('\n\nSpherical Atomic Orbitals (5d, 7f, 10g...) are being used!\n\n')
             if isSchwarz and threshold_schwarz >= 1e-10:
-                print('Currently, when using SAOs, the Schwarz screening threshold is recommended to be 1e-11 or smaller for correct results. \nSetting it to 1e-11.', flush=True)
-                threshold_schwarz = 1e-11
+                if self.use_gpu:
+                    print('Currently, when using SAOs, the Schwarz screening threshold is recommended to be 1e-10 or smaller for correct results. \nSetting it to 1e-10.', flush=True)
+                    threshold_schwarz = 1e-10
+                else:
+                    print('Currently, when using SAOs, the Schwarz screening threshold is recommended to be 1e-11 or smaller for correct results. \nSetting it to 1e-11.', flush=True)
+                    threshold_schwarz = 1e-11
             # Get the CAO to SAO transformation matrix
             c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
             # Calculate the pseudoinverse transformation matrix 
@@ -1825,6 +1829,11 @@ class DFT:
 
             durationItr = timer() - startIter
             print('\n\nTime taken for the previous iteration: '+str(round(durationItr, 2))+' seconds \n\n', flush=True)
+            if self.use_gpu:
+                # Free memory of all GPUs
+                for igpu in range(self.n_gpus):
+                    cp.cuda.Device(igpu).use()
+                    cp._default_memory_pool.free_all_blocks()
 
         
         self.converged = scf_converged
