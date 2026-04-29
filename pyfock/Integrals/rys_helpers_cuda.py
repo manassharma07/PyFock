@@ -462,6 +462,19 @@ def Roots(n,X,DATA_X_,DATA_W_,roots,weights):
         return Rootn(X,n,DATA_X_,DATA_W_,roots,weights)
 
 @cuda.jit(fastmath=True, cache=True, device=True)
+def Roots_5(n,X,roots,weights):
+    if n == 1:
+        return Root1(X,n,roots,weights)
+    elif n == 2:
+        return Root2(X,n,roots,weights)
+    elif n == 3:
+        return Root3(X,n,roots,weights)
+    elif n == 4:
+        return Root4(X,n,roots,weights)
+    elif n == 5:
+        return Root5(X,n,roots,weights)
+
+@cuda.jit(fastmath=True, cache=True, device=True)
 def clenshaw_d1(roots_or_weights, x, u, n):
     # Reference: https://github.com/sunqm/libcint/blob/master/src/polyfits.c (BSD-2 Clause license)
     i = 0
