@@ -68,10 +68,6 @@ from pyscf import gto, dft, df, scf
 # funcidcrysx = [funcx, funcc]
 # funcidpyscf = str(funcx)+','+str(funcc)
 
-# # Same thing using aliases instead of LibXC ids
-# funcidcrysx = 'M06-L'
-# funcidpyscf = 'M06-L'
-
 # #  M11-L
 # funcx = 226
 # funcc = 75
@@ -91,8 +87,12 @@ from pyscf import gto, dft, df, scf
 # funcidpyscf = 'r2SCAN'
 
 # TPSS using aliases instead of LibXC ids
-funcidcrysx = 'TPSS'
-funcidpyscf = 'TPSS'
+# funcidcrysx = 'TPSS'
+# funcidpyscf = 'TPSS'
+
+# M06-L using aliases instead of LibXC ids
+funcidcrysx = 'M06-L'
+funcidpyscf = 'M06-L'
 
 
 # basis_set_name = 'sto-2g'
@@ -125,9 +125,9 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-xyzFilename = 'H2O.xyz'
+# xyzFilename = 'H2O.xyz'
 
-# xyzFilename = 'Caffeine.xyz'
+xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'

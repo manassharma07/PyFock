@@ -6,6 +6,7 @@ from pyfock.XC import gga_x_rpbe, gga_x_rpbe_cupy
 from pyfock.XC import gga_x_pw91, gga_x_pw91_cupy, gga_c_pw91, gga_c_pw91_cupy
 from pyfock.XC import gga_c_p86, gga_c_p86_cupy
 from pyfock.XC import mgga_x_tpss, mgga_x_tpss_cupy, mgga_c_tpss, mgga_c_tpss_cupy
+from pyfock.XC import mgga_x_m06_l, mgga_x_m06_l_cupy, mgga_c_m06_l, mgga_c_m06_l_cupy
 
 # LibXC IDs of implemented functionals
 # 1   - LDA_X
@@ -25,11 +26,13 @@ from pyfock.XC import mgga_x_tpss, mgga_x_tpss_cupy, mgga_c_tpss, mgga_c_tpss_cu
 # 133 - GGA_C_PBE_SOL
 # 134 - GGA_C_PW91
 # 202 - MGGA_X_TPSS
+# 203 - MGGA_X_M06_L
 # 231 - MGGA_C_TPSS
+# 233 - MGGA_C_M06_L
 _IMPLEMENTED_IDS = {
     1, 7, 9, 10, 12, 13,
     101, 106, 109, 116, 117, 130, 131, 132, 133, 134,
-    202, 231,
+    202, 203, 231, 233,
 }
 
 
@@ -526,12 +529,16 @@ def func_compute(funcid, rho, sigma=None, tau=None, use_gpu=True):
 
     _MGGA_CPU = {
         202: mgga_x_tpss,
+        203: mgga_x_m06_l,
         231: mgga_c_tpss,
+        233: mgga_c_m06_l,
     }
 
     _MGGA_GPU = {
         202: mgga_x_tpss_cupy,
+        203: mgga_x_m06_l_cupy,
         231: mgga_c_tpss_cupy,
+        233: mgga_c_m06_l_cupy,
     }
 
     # ── Look up and call ──────────────────────────────────────────────────
