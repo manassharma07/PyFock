@@ -350,7 +350,7 @@ class DFT:
         """ Whether to keep the atomic orbitals for XC evaluation in GPU memory or CPU memory. Only relevant if save_ao_values = True. """
         self.use_libxc = False
         """ Whether to use LibXC's version of XC functionals or PyFock implementations. 
-        Only relevant when GPU is used. For GPU calculations it is recommended to use PyFock 
+        For GPU calculations it is recommended to use PyFock 
         implementation as it avoids CPU-GPU transfers."""
         self.n_streams = 1
         self.n_gpus = 1
@@ -951,13 +951,26 @@ class DFT:
             elif isinstance(xc, str):
                 xc = XC.resolve_functional(xc)  # 'LDA' → [1, 7]
 
-            if isinstance(xc, list):
-                if all(isinstance(v, int) for v in xc):
-                    if any(XC.get_family(v)==4 for v in xc):
-                        if not self.use_libxc:
-                            self.use_libxc = True
-                            print('Meta-GGA functionals are currently supported only through pylibxc. Turning on pylibxc support.', flush=True)
-                            import pylibxc
+            # if isinstance(xc, list):
+            #     if all(isinstance(v, int) for v in xc):
+            #         if any(XC.get_family(v)==4 for v in xc):
+            #             native_ids = set(XC.get_implemented_ids())
+            #             if not self.use_libxc and not all(v in native_ids for v in xc):
+            #                 self.use_libxc = True
+            #                 print('Meta-GGA functionals are currently supported only through pylibxc. Turning on pylibxc support.', flush=True)
+            #                 import pylibxc
+            if isinstance(xc, list) and all(isinstance(v, int) for v in xc):
+                native_ids = set(XC.get_implemented_ids())
+                missing = [v for v in xc if v not in native_ids]
+                if missing:
+                    if not self.use_libxc:
+                        self.use_libxc = True
+                        print(
+                            f"Functionals {missing} are not implemented natively. "
+                            "Switching to pylibxc.",
+                            flush=True
+                        )
+                        import pylibxc
 
         if xc=='HF' and isDF:
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')

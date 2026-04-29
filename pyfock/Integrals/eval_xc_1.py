@@ -268,7 +268,7 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
             elif xc_family_dict[x_family_code]=='GGA':
                 retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block[1], use_gpu=False)
             elif xc_family_dict[x_family_code]=='MGGA':
-                retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block[1], use_gpu=False)
+                retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block[1], tau=tau_block, use_gpu=False)
         # print('Duration for LibXC computations at grid points: ',durationLibxc)
 
         # Correlation
@@ -290,7 +290,7 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
             elif xc_family_dict[c_family_code]=='GGA':
                 retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block[1], use_gpu=False)
             elif xc_family_dict[c_family_code]=='MGGA':
-                retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block[1], use_gpu=False)
+                retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block[1], tau=tau_block, use_gpu=False)
 
         if debug:
             durationLibxc = durationLibxc + timer() - startLibxc
@@ -332,6 +332,8 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
         if xc_family_dict[x_family_code]=='MGGA':
             if use_libxc:
                 vtau += retx['vtau']
+            else:
+                vtau += retx[3]
         if xc_family_dict[c_family_code]!='LDA':
             # The derivative of functional wrt grad \rho square.
             if use_libxc:
@@ -341,6 +343,8 @@ def eval_xc_1(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
         if xc_family_dict[c_family_code]=='MGGA':
             if use_libxc:
                 vtau += retc['vtau']
+            else:
+                vtau += retc[3]
         
         if debug:
             startF = timer()

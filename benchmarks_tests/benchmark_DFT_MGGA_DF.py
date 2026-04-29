@@ -61,6 +61,10 @@ from pyscf import gto, dft, df, scf
 # funcx = 203
 # funcc = 233
 
+# # MGGA_X_TPSS + MGGA_C_TPSS (TPSS)
+# funcx = 202
+# funcc = 231
+
 # funcidcrysx = [funcx, funcc]
 # funcidpyscf = str(funcx)+','+str(funcc)
 
@@ -83,8 +87,12 @@ from pyscf import gto, dft, df, scf
 # funcidpyscf = str(funcx)+','+str(funcc)
 
 # r2SCAN using aliases instead of LibXC ids
-funcidcrysx = 'r2SCAN'
-funcidpyscf = 'r2SCAN'
+# funcidcrysx = 'r2SCAN'
+# funcidpyscf = 'r2SCAN'
+
+# TPSS using aliases instead of LibXC ids
+funcidcrysx = 'TPSS'
+funcidpyscf = 'TPSS'
 
 
 # basis_set_name = 'sto-2g'
@@ -117,7 +125,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -129,7 +137,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Ubiquitin.xyz'
 
 ### 1D Carbon Alkanes
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -253,7 +261,7 @@ dftObj.sao = True
 # GPU acceleration
 dftObj.use_gpu = False
 dftObj.keep_ao_in_gpu = False
-dftObj.use_libxc = True
+dftObj.use_libxc = False
 dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
 dftObj.n_gpus = 1 # Specify the number of GPUs
 dftObj.free_gpu_mem = True

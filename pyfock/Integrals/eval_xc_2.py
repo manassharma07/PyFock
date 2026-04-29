@@ -469,7 +469,10 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     if use_libxc:
         retx = funcx.compute(inp)
     else:
-        retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, use_gpu=False)
+        if xc_family_dict[x_family_code]=='MGGA':
+            retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
+        else:
+            retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, use_gpu=False)
     # durationLibxc = durationLibxc + timer() - startLibxc
     # print('Duration for LibXC computations at grid points: ',durationLibxc)
 
@@ -489,7 +492,10 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     if use_libxc:
         retc = funcc.compute(inp)
     else:
-        retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, use_gpu=False)
+        if xc_family_dict[c_family_code]=='MGGA':
+            retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
+        else:
+            retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, use_gpu=False)
     if debug:
         durationLibxc = durationLibxc + timer() - startLibxc
     # print('Duration for LibXC computations at grid points: ',durationLibxc)
@@ -535,6 +541,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     if xc_family_dict[x_family_code]=='MGGA':
         if use_libxc:
             vtau += retx['vtau']
+        else:
+            vtau += retx[3]
         
     if xc_family_dict[c_family_code]!='LDA':
         # The derivative of functional wrt grad \rho square.
@@ -545,6 +553,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     if xc_family_dict[c_family_code]=='MGGA':
         if use_libxc:
             vtau += retc['vtau']
+        else:
+            vtau += retc[3]
     retx = 0
     retc = 0
     func = 0

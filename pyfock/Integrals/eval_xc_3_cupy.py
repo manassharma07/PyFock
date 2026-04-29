@@ -422,7 +422,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
             # print(retx[1])
             # print(retx[2])
         else:
-            retx = XC.func_compute(funcid[0], rho_block, sigma_block, use_gpu=True)
+            retx = XC.func_compute(funcid[0], rho_block, sigma_block, tau=tau_block, use_gpu=True)
 
         # Correlation
         # Calculate the necessary quantities using own implementation
@@ -433,7 +433,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         elif xc_family_dict[c_family_code]=='GGA':
             retc = XC.func_compute(funcid[1], rho_block, sigma_block, use_gpu=True)
         else:
-            retc = XC.func_compute(funcid[1], rho_block, sigma_block, use_gpu=True)
+            retc = XC.func_compute(funcid[1], rho_block, sigma_block, tau=tau_block, use_gpu=True)
         if debug:
             stream.synchronize()
             cp.cuda.Stream.null.synchronize()
@@ -480,6 +480,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     if xc_family_dict[x_family_code]=='MGGA':
         if use_libxc:
             vtau += retx['vtau']
+        else:
+            vtau += retx[3]
         
     if xc_family_dict[c_family_code]!='LDA':
         # The derivative of functional wrt grad \rho square.
@@ -490,6 +492,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     if xc_family_dict[c_family_code]=='MGGA':
         if use_libxc:
             vtau += retc['vtau']
+        else:
+            vtau += retc[3]
     
     # F = np.multiply(weights_block,vrho[:,0]) #This is fast enough.
     if use_libxc:

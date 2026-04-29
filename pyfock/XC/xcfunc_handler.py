@@ -5,6 +5,7 @@ from pyfock.XC import gga_x_pbe_sol, gga_x_pbe_sol_cupy, gga_c_pbe_sol, gga_c_pb
 from pyfock.XC import gga_x_rpbe, gga_x_rpbe_cupy
 from pyfock.XC import gga_x_pw91, gga_x_pw91_cupy, gga_c_pw91, gga_c_pw91_cupy
 from pyfock.XC import gga_c_p86, gga_c_p86_cupy
+from pyfock.XC import mgga_x_tpss, mgga_x_tpss_cupy, mgga_c_tpss, mgga_c_tpss_cupy
 
 # LibXC IDs of implemented functionals
 # 1   - LDA_X
@@ -23,6 +24,14 @@ from pyfock.XC import gga_c_p86, gga_c_p86_cupy
 # 132 - GGA_C_P86
 # 133 - GGA_C_PBE_SOL
 # 134 - GGA_C_PW91
+# 202 - MGGA_X_TPSS
+# 231 - MGGA_C_TPSS
+_IMPLEMENTED_IDS = {
+    1, 7, 9, 10, 12, 13,
+    101, 106, 109, 116, 117, 130, 131, 132, 133, 134,
+    202, 231,
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Metadata tables
@@ -156,7 +165,10 @@ _FUNCTIONAL_DATA = {
     ),
     202: (
         "MGGA_X_TPSS",
-        "J. Tao, J. P. Perdew, V. N. Staroverov, and G. E. Scuseria, Phys. Rev. Lett. 91, 146401 (2003).",
+        "J. Tao, J. P. Perdew, V. N. Staroverov, and G. E. Scuseria, "
+        "Phys. Rev. Lett. 91, 146401 (2003); "
+        "J. P. Perdew, J. Tao, V. N. Staroverov, and G. E. Scuseria, "
+        "J. Chem. Phys. 120, 6898 (2004).",
     ),
     203: (
         "MGGA_X_M06_L",
@@ -176,7 +188,10 @@ _FUNCTIONAL_DATA = {
     ),
     231: (
         "MGGA_C_TPSS",
-        "J. Tao, J. P. Perdew, V. N. Staroverov, and G. E. Scuseria, Phys. Rev. Lett. 91, 146401 (2003).",
+        "J. Tao, J. P. Perdew, V. N. Staroverov, and G. E. Scuseria, "
+        "Phys. Rev. Lett. 91, 146401 (2003); "
+        "J. P. Perdew, J. Tao, V. N. Staroverov, and G. E. Scuseria, "
+        "J. Chem. Phys. 120, 6898 (2004).",
     ),
     233: (
         "MGGA_C_M06_L",
@@ -404,7 +419,7 @@ def check_implemented(funcid):
         - 131 : GGA_C_LYP
     For unsupported functionals, you can use LibXC directly.
     """
-    if funcid not in _FUNCTIONAL_DATA:
+    if funcid not in _IMPLEMENTED_IDS:
         print(
             "ERROR: The specified functional is not implemented in PyFock. "
             "You need to use LibXC to calculate the functional values."
@@ -412,7 +427,11 @@ def check_implemented(funcid):
         exit()
 
 
-def func_compute(funcid, rho, sigma=None, use_gpu=True):
+def get_implemented_ids():
+    return sorted(_IMPLEMENTED_IDS)
+
+
+def func_compute(funcid, rho, sigma=None, tau=None, use_gpu=True):
     """
     Compute exchange-correlation energy and potential using the specified functional.
 
@@ -505,11 +524,21 @@ def func_compute(funcid, rho, sigma=None, use_gpu=True):
         134: gga_c_pw91_cupy,
     }
 
+    _MGGA_CPU = {
+        202: mgga_x_tpss,
+        231: mgga_c_tpss,
+    }
+
+    _MGGA_GPU = {
+        202: mgga_x_tpss_cupy,
+        231: mgga_c_tpss_cupy,
+    }
+
     # ── Look up and call ──────────────────────────────────────────────────
     if use_gpu:
-        lda_table, gga_table = _LDA_GPU, _GGA_GPU
+        lda_table, gga_table, mgga_table = _LDA_GPU, _GGA_GPU, _MGGA_GPU
     else:
-        lda_table, gga_table = _LDA_CPU, _GGA_CPU
+        lda_table, gga_table, mgga_table = _LDA_CPU, _GGA_CPU, _MGGA_CPU
 
     if funcid in lda_table:
         return lda_table[funcid](rho)
@@ -522,12 +551,20 @@ def func_compute(funcid, rho, sigma=None, use_gpu=True):
             )
         return gga_table[funcid](rho, sigma)
 
+    if funcid in mgga_table:
+        if sigma is None or tau is None:
+            raise ValueError(
+                f"MGGA functional (ID {funcid}) requires 'sigma' and 'tau', "
+                f"but sigma={sigma is not None} and tau={tau is not None} were provided."
+            )
+        return mgga_table[funcid](rho, sigma, tau)
+
     # ── Functional not found ──────────────────────────────────────────────
     name = _FUNCTIONAL_DATA.get(funcid, (f"ID={funcid}",))[0]
     raise NotImplementedError(
         f"Functional '{name}' (LibXC ID {funcid}) is not implemented in PyFock. "
         f"Use LibXC to compute this functional.\n"
-        f"Implemented IDs: {sorted(set(lda_table) | set(gga_table))}"
+        f"Implemented IDs: {sorted(set(lda_table) | set(gga_table) | set(mgga_table))}"
     )
 
 def get_family(funcid: int) -> int:
