@@ -88,14 +88,14 @@ auxbasis_name = 'def2-universal-jfit'
 # List of all molecules to calculate
 xyz_files = [
 #    '../../../Structures/water_cluster_1.xyz',
-    '../../../Structures/water_cluster_5.xyz',
-    '../../../Structures/water_cluster_10.xyz',
-    '../../../Structures/water_cluster_20.xyz',
-    '../../../Structures/water_cluster_32.xyz',
-    '../../../Structures/water_cluster_47.xyz',
-    '../../../Structures/water_cluster_76.xyz',
-    '../../../Structures/water_cluster_100.xyz',
-#    '../../../Structures/water_cluster_139.xyz',
+    '../../../../Structures/water_cluster_5.xyz',
+    '../../../../Structures/water_cluster_10.xyz',
+    '../../../../Structures/water_cluster_20.xyz',
+    '../../../../Structures/water_cluster_32.xyz',
+    '../../../../Structures/water_cluster_47.xyz',
+    '../../../../Structures/water_cluster_76.xyz',
+    '../../../../Structures/water_cluster_100.xyz',
+#    '../../../../Structures/water_cluster_139.xyz',
 ]
 
 

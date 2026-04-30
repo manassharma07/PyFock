@@ -57,6 +57,10 @@ from pyscf import gto, dft, df, scf
 # meta-GGA Functionals
 # ------------------------------------------------------------------------------
 
+# # MGGA_X_TASK + MGGA_C_TPSS (TASK)
+# funcx = 707
+# funcc = 231
+
 # # MGGA_X_M06_L + MGGA_C_M06_L (M06-L)
 # funcx = 203
 # funcc = 233
@@ -95,6 +99,8 @@ funcidcrysx = 'M06-L'
 funcidpyscf = 'M06-L'
 
 
+
+
 # basis_set_name = 'sto-2g'
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
@@ -125,9 +131,9 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
-xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'C60.xyz'

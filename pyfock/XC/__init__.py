@@ -35,6 +35,8 @@ from .gga_c_lyp import gga_c_lyp, gga_c_lyp_cupy
 from .mgga_x_tpss import mgga_x_tpss, mgga_x_tpss_cupy
 from .mgga_c_tpss import mgga_c_tpss, mgga_c_tpss_cupy
 from .mgga_m06_l import mgga_x_m06_l, mgga_x_m06_l_cupy, mgga_c_m06_l, mgga_c_m06_l_cupy
+from .mgga_r2scan_task import mgga_x_r2scan, mgga_x_r2scan_cupy, mgga_c_r2scan, mgga_c_r2scan_cupy
+from .mgga_r2scan_task import mgga_x_task, mgga_x_task_cupy
 from .xcfunc_handler import check_implemented, func_compute, get_functional_id, resolve_functional, get_implemented_ids
 from .xcfunc_handler import get_family, get_functional_citation
 # get_functional_citation, _ALIAS_TO_IDS, _NAME_TO_ID, _FUNCTIONAL_DATA
@@ -60,6 +62,9 @@ __all__ = [
     'mgga_c_tpss', 'mgga_c_tpss_cupy',
     'mgga_x_m06_l', 'mgga_x_m06_l_cupy',
     'mgga_c_m06_l', 'mgga_c_m06_l_cupy',
+    'mgga_x_r2scan', 'mgga_x_r2scan_cupy',
+    'mgga_c_r2scan', 'mgga_c_r2scan_cupy',
+    'mgga_x_task', 'mgga_x_task_cupy',
     'check_implemented', 'func_compute', 'get_functional_id', 'get_implemented_ids',
     'resolve_functional', 'get_functional_citation', 'get_family'
 ]

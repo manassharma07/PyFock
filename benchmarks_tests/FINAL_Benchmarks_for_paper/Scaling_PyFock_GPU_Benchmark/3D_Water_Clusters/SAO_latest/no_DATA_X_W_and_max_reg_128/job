@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#SBATCH -o output_strict_schwarz_off_def2-SVP_GGA_nosave_ao_gpu-test
+#SBATCH -o output_strict_schwarz_off_def2-SVP_GGA_nosave_ao_gpu-test_run3
 #SBATCH -p gpu-test
 
 ##SBATCH --ntasks=1

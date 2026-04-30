@@ -7,6 +7,8 @@ from pyfock.XC import gga_x_pw91, gga_x_pw91_cupy, gga_c_pw91, gga_c_pw91_cupy
 from pyfock.XC import gga_c_p86, gga_c_p86_cupy
 from pyfock.XC import mgga_x_tpss, mgga_x_tpss_cupy, mgga_c_tpss, mgga_c_tpss_cupy
 from pyfock.XC import mgga_x_m06_l, mgga_x_m06_l_cupy, mgga_c_m06_l, mgga_c_m06_l_cupy
+from pyfock.XC import mgga_x_r2scan, mgga_x_r2scan_cupy, mgga_c_r2scan, mgga_c_r2scan_cupy
+from pyfock.XC import mgga_x_task, mgga_x_task_cupy
 
 # LibXC IDs of implemented functionals
 # 1   - LDA_X
@@ -29,10 +31,13 @@ from pyfock.XC import mgga_x_m06_l, mgga_x_m06_l_cupy, mgga_c_m06_l, mgga_c_m06_
 # 203 - MGGA_X_M06_L
 # 231 - MGGA_C_TPSS
 # 233 - MGGA_C_M06_L
+# 497 - MGGA_X_R2SCAN
+# 498 - MGGA_C_R2SCAN
+# 707 - MGGA_X_TASK
 _IMPLEMENTED_IDS = {
     1, 7, 9, 10, 12, 13,
     101, 106, 109, 116, 117, 130, 131, 132, 133, 134,
-    202, 203, 231, 233,
+    202, 203, 231, 233, 497, 498, 707,
 }
 
 
@@ -206,11 +211,11 @@ _FUNCTIONAL_DATA = {
     ),
     497: (
         "MGGA_X_R2SCAN",
-        "F. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, J. Phys. Chem. Lett. 11, 8208 (2020).",
+        "J. W. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, J. Phys. Chem. Lett. 11, 8208 (2020).",
     ),
     498: (
         "MGGA_C_R2SCAN",
-        "F. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, J. Phys. Chem. Lett. 11, 8208 (2020).",
+        "J. W. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, J. Phys. Chem. Lett. 11, 8208 (2020).",
     ),
     642: (
         "MGGA_C_R2SCAN01",
@@ -230,7 +235,7 @@ _FUNCTIONAL_DATA = {
     ),
     707: (
         "MGGA_X_TASK",
-        "D. Mejia-Rodriguez and S. B. Trickey, Phys. Rev. A 98, 052509 (2018).",
+        "T. Aschebrock and S. Kümmel, Phys. Rev. Res. 1, 033082 (2019).",
     ),
     718: (
         "MGGA_X_R2SCANL",
@@ -532,6 +537,9 @@ def func_compute(funcid, rho, sigma=None, tau=None, use_gpu=True):
         203: mgga_x_m06_l,
         231: mgga_c_tpss,
         233: mgga_c_m06_l,
+        497: mgga_x_r2scan,
+        498: mgga_c_r2scan,
+        707: mgga_x_task,
     }
 
     _MGGA_GPU = {
@@ -539,6 +547,9 @@ def func_compute(funcid, rho, sigma=None, tau=None, use_gpu=True):
         203: mgga_x_m06_l_cupy,
         231: mgga_c_tpss_cupy,
         233: mgga_c_m06_l_cupy,
+        497: mgga_x_r2scan_cupy,
+        498: mgga_c_r2scan_cupy,
+        707: mgga_x_task_cupy,
     }
 
     # ── Look up and call ──────────────────────────────────────────────────
