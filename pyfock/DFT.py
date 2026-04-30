@@ -1598,7 +1598,7 @@ class DFT:
                             if xc=='HF':
                                 J_diff, K_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
                             else:
-                                J_diff, K_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
+                                J_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=False)
                         J += J_diff
                         if xc=='HF':
                             K += K_diff
