@@ -4,27 +4,24 @@ import numpy as np
 # ==== CONFIG FLAGS ====
 x_axis_choice = "water"  # "water" or "basis"
 log_scale = False        # True for log scale, False for linear
-plot_total_only = True  # True for just total times, False for breakdown
+plot_total_only = False  # True for just total times, False for breakdown
 
 # ==== DATA ====
 water_molecules = np.array([47, 76, 100, 139])
-basis_functions = np.array([1175, 1900, 2500, 3475])
+basis_functions = np.array([1128, 1824, 2400, 3336])
 
 # PySCF data
-total_pyscf = np.array([28.77391837, 67.70287694, 129.9493543, 262.5715926])
+total_pyscf = np.array([27.13, 62.18, 120.33, 232.73])
 
 # GPU/CPU data
-total_gpu_old = np.array([1.815790464, 4.110073972, 7.665055265, 14.48421162])
-total_gpu = np.array([1.53661779, 3.292493198, 5.90542049, 10.71981104])
-total_cpu = np.array([17.15226698, 41.32841003, 82.38475342, 154.2059581])
+total_gpu = np.array([1.53, 3.29, 5.88, 10.65])
+total_cpu = np.array([11.66, 28.21, 55.25, 103.13])
 
-j_gpu_old = np.array([0.896369033, 2.172111774, 4.52707693, 8.54460349])
-j_gpu = np.array([0.784328794, 1.87488702, 3.823785722, 7.140085827])
-j_cpu = np.array([10.75980461, 24.7638173, 54.06537282, 97.10462831])
+j_gpu = np.array([0.77, 1.86, 3.77, 7.13])
+j_cpu = np.array([5.27, 11.88, 25.99, 46.39])
 
-xc_gpu_old = np.array([0.48043671, 0.991713577, 1.396709837, 2.243173538])
-xc_gpu = np.array([0.413739246, 0.780230838, 1.078757818, 1.639881885])
-xc_cpu = np.array([3.76085967, 8.61741557, 12.6850703, 21.373439])
+xc_gpu = np.array([0.41, 0.78, 1.08, 1.64])
+xc_cpu = np.array([3.78, 8.65, 13.01, 21.47])
 
 # Derived values for "Other" = Total - (J + XC)
 other_gpu = total_gpu - (j_gpu + xc_gpu)
@@ -57,11 +54,11 @@ else:
     # Stacked bars: J, XC, Other (keeping original layout but adjusting positions)
     bars_pyscf = ax.bar(x_values - width, total_pyscf, width, label="PySCF (CPU, Total)", color="tab:green", edgecolor='black', linewidth=1.2)
     
-    bars_cpu = ax.bar(x_values, j_cpu, width, label="PyFock J (CPU)", color="tab:orange", edgecolor='black', linewidth=1.2)
+    bars_cpu = ax.bar(x_values, j_cpu, width, label="PyFock ERI (CPU)", color="tab:orange", edgecolor='black', linewidth=1.2)
     ax.bar(x_values, xc_cpu, width, bottom=j_cpu, label="PyFock XC (CPU)", color="tab:red", edgecolor='black', linewidth=1.2)
     ax.bar(x_values, other_cpu, width, bottom=j_cpu+xc_cpu, label="PyFock Other (CPU)", color="tab:gray", edgecolor='black', linewidth=1.2)
 
-    bars_gpu = ax.bar(x_values + width, j_gpu, width, label="PyFock J (GPU)", color="tab:orange", alpha=0.6, edgecolor='black', linewidth=1.2)
+    bars_gpu = ax.bar(x_values + width, j_gpu, width, label="PyFock ERI (GPU)", color="tab:orange", alpha=0.6, edgecolor='black', linewidth=1.2)
     ax.bar(x_values + width, xc_gpu, width, bottom=j_gpu, label="PyFock XC (GPU)", color="tab:red", alpha=0.6, edgecolor='black', linewidth=1.2)
     ax.bar(x_values + width, other_gpu, width, bottom=j_gpu+xc_gpu, label="PyFock Other (GPU)", color="tab:gray", alpha=0.6, edgecolor='black', linewidth=1.2)
 
@@ -72,7 +69,7 @@ ax.set_ylabel("Time per Iteration (s)", fontsize=16, fontweight='bold')
 if log_scale:
     ax.set_yscale("log")
 
-title = "PySCF vs PyFock Timing Breakdown" if not plot_total_only else "PySCF vs PyFock Total Time per Iteration"
+title = "PySCF (CPU) vs PyFock (CPU and GPU)" if not plot_total_only else "PySCF vs PyFock Total Time per Iteration"
 ax.set_title(title, fontsize=16, fontweight='bold')
 
 # Set custom x-tick labels
@@ -96,23 +93,23 @@ for text in legend.get_texts():
 # ==== Annotate total times ====
 if plot_total_only:
     for x, val in zip(x_values - width, total_pyscf):
-        ax.text(x, val * 1.01, f"{val:.0f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
+        ax.text(x*1.005, val * 1.005, f"{val:.1f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
 
     for x, val in zip(x_values, total_cpu):
-        ax.text(x, val * 1.01, f"{val:.0f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
+        ax.text(x*1.005, val * 1.005, f"{val:.1f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
     
     for x, val in zip(x_values + width, total_gpu):
-        ax.text(x, val * 1.01, f"{val:.0f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
+        ax.text(x*1.005, val * 1.005, f"{val:.1f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
 else:
     # For breakdown view, annotate total times
     for x, val in zip(x_values - width, total_pyscf):
-        ax.text(x, val * 1.01, f"{val:.0f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
+        ax.text(x*1.005, val * 1.005, f"{val:.1f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
 
     for x, val in zip(x_values, total_cpu):
-        ax.text(x, val * 1.01, f"{val:.0f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
+        ax.text(x*1.005, val * 1.005, f"{val:.1f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
     
     for x, val in zip(x_values + width, total_gpu):
-        ax.text(x, val * 1.01, f"{val:.0f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
+        ax.text(x*1.005, val * 1.005, f"{val:.1f}", ha='center', va='bottom', fontsize=12, fontweight='bold', rotation=0)
 
 plt.tight_layout()
 plt.show()

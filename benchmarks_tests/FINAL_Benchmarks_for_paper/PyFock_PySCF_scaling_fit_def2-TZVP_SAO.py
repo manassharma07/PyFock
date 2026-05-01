@@ -43,7 +43,7 @@ xc_time = np.array([
 # -----------------
 # PySCF total wall times
 # -----------------
-pyscf_total_time = np.array([0.617, 2.832, 11.425, 29.348, 59.514, 167.122, 288.464, 558.541], dtype=float)
+pyscf_total_time = np.array([0.67856106,2.814279293,11.19144063,26.46585026,56.46778881,159.3207063,286.4399823,562.4774555], dtype=float)
 # Function to fit
 def scaling_law(N, a, p):
     return a * N**p
@@ -112,13 +112,13 @@ def plot_fit(method_name):
         spine.set_linewidth(1.8)
 
     plt.legend(fontsize=12, prop={'weight': 'bold'})
-    plt.xscale('log')
-    plt.yscale('log')
+    # plt.xscale('log')
+    # plt.yscale('log')
     plt.grid(True)
     plt.tight_layout()
 
 
 # Plot for both fit methods
-# plot_fit("nonlinear")
+plot_fit("nonlinear")
 plot_fit("log-log")
 plt.show()
