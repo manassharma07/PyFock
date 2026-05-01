@@ -34,7 +34,7 @@ basis_set_name = 'sto-3g'
 # basis_set_name = 'ano-rcc'
 
 # xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
-xyzFilename = 'H2.xyz'
+# xyzFilename = 'H2.xyz'
 # xyzFilename = 'H2O.xyz'
 # xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Cholesterol.xyz'
@@ -43,7 +43,7 @@ xyzFilename = 'H2.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
-# xyzFilename = 'Octacontane_C80H162.xyz'
+xyzFilename = 'Octacontane_C80H162.xyz'
 # xyzFilename = 'Hectane_C100H202.xyz'
 # xyzFilename = 'Icosahectane_C120H242.xyz'
 
@@ -62,10 +62,23 @@ print('NAO: ', basis.bfs_nao)
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
 start=timer()
 dS = Integrals.overlap_mat_grad_symm(basis)
-print(dS) 
+# print(dS) 
 duration = timer() - start
 print('Matrix dimensions: ', dS.shape)
 print('Duration for dS using PyFock: ',duration)
+
+start=timer()
+dS_r = Integrals.overlap_mat_grad_r_symm(basis)
+duration = timer() - start
+print('Matrix dimensions (dS/dr): ', dS_r.shape)
+print('Duration for dS/dr using PyFock: ', duration)
+
+start=timer()
+dS_from_r = Integrals.overlap_mat_grad_r_symm(basis, wrt_atoms=True)
+duration = timer() - start
+print('Matrix dimensions (dS/dRA from dS/dr): ', dS_from_r.shape)
+print('Duration for dS/dRA from dS/dr using PyFock: ', duration)
+print('Difference b/w direct dS/dRA and dS/dRA from dS/dr: ', abs(dS - dS_from_r).max())
 
 if bench_GPU:
     print('\n\n\n')
@@ -94,44 +107,23 @@ molPySCF.build()
 
 #Overlap mat
 start=timer()
-dS_pyscf = -molPySCF.intor_symmetric('int1e_ipovlp', comp=3)
-dS_pyscf = dS_pyscf #+ dS_pyscf.transpose(0,2,1)
+dS_pyscf = -molPySCF.intor('int1e_ipovlp', comp=3)
 duration = timer() - start
 print('\n\nPySCF')
 # print(dS_pyscf)
-print('Matrix dimensions (partial dS): ', dS_pyscf.shape)
-print('Duration for dS (partial) using PySCF: ', duration)
+print('Matrix dimensions (dS/dr): ', dS_pyscf.shape)
+print('Duration for dS/dr using PySCF: ', duration)
+print('Difference b/w PyFock dS/dr and PySCF dS/dr: ', abs(dS_pyscf - dS_r).max())
 
-# https://github.com/pyscf/pyscf/issues/1067
-# https://github.com/jcandane/HF_Gradient/blob/main/PySCF_Gradients.ipynb
-def S_deriv(atom_id, S_xAB, mol):
-    shl0, shl1, p0, p1 = mol.aoslice_by_atom()[atom_id]
-#     print(p0, p1)
+def atom_deriv_from_r(grad_r, mol):
+    aoslices = mol.aoslice_by_atom()
+    grad_atoms = np.zeros((len(aoslices),) + grad_r.shape)
+    for atom_id, (_, _, p0, p1) in enumerate(aoslices):
+        grad_atoms[atom_id, :, p0:p1, :] += grad_r[:, p0:p1, :]
+        grad_atoms[atom_id, :, :, p0:p1] -= grad_r[:, :, p0:p1]
+    return grad_atoms
 
-    vrinv = np.zeros(S_xAB.shape)
-    vrinv[:, p0:p1, :] += S_xAB[:, p0:p1, :]
-    # vrinv[:, :, p0:p1] = S_xAB[:, :, p0:p1]
-    
-    final = vrinv + vrinv.swapaxes(1,2)#vrinv.transpose(0, 2, 1)
-    # Set derivatives to zero for basis functions on the same atom using numpy indexing
-    final[:, p0:p1, p0:p1] = 0.0
-    # if atom_id!=0:
-        # final = -final
-    # if atom_id!=0:
-    #     for i in range(0, atom_id):
-    #         shl0, shl1, p0, p1 = mol.aoslice_by_atom()[i]
-    #         final[:, p0:p1, :] = -final[:, p0:p1, :]
-    #         final[:, :, p0:p1] = -final[:, :, p0:p1]
-    if atom_id != 0:
-        slices = np.array([mol.aoslice_by_atom()[i] for i in range(atom_id)])
-        for shl0, shl1, p0, p1 in slices:
-            final[:, p0:p1, :] = -final[:, p0:p1, :]
-            final[:, :, p0:p1] = -final[:, :, p0:p1]
-    return final
-# S_xAB    = -mol.intor('int1e_ipovlp', comp=3)
-dS_pyscf_full = np.zeros(((len(molPySCF.aoslice_by_atom()),) + dS_pyscf.shape))
-for iatom in range(len(molPySCF.aoslice_by_atom())):
-    dS_pyscf_full[iatom] = S_deriv(iatom, dS_pyscf, molPySCF)
+dS_pyscf_full = atom_deriv_from_r(dS_pyscf, molPySCF)
     
 duration = timer() - start
 print('Duration for dS (full) using PySCF: ',duration)
