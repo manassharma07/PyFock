@@ -88,6 +88,7 @@ from .kin_mat_grad_symm import kin_mat_grad_symm
 from .overlap_mat_grad_r_symm import overlap_mat_grad_r_symm
 from .kin_mat_grad_r_symm import kin_mat_grad_r_symm
 from .nuc_mat_grad_symm import nuc_mat_grad_symm
+from .nuc_mat_grad_r_symm import nuc_mat_grad_r_symm
 from .rys_3c2e_grad_symm import rys_3c2e_grad_symm
 
 # __all__ = ['fac', 'fastFactorial', 'comb', 'doublefactorial', 'c2k', 'calcS', 'vlriPartial', 'calcCgamminc', 'Fboys', 'comb'\
@@ -97,7 +98,7 @@ __all__ = ['integral_helpers', 'mmd_nuc_mat_symm', 'nuc_mat_symm', 'kin_mat_symm
      'rys_4c2e_symm_old', 'rys_4c2e_schwarz_symm', 'conv_3c2e_symm', 'rys_3c2e_symm', 'conv_2c2e_symm', 'rys_2c2e_symm', 'rys_3c2e_tri', 'rys_nuc_mat_symm', 'schwarz_helpers', 'rys_3c2e_tri_schwarz'\
         'bf_val_helpers', 'eval_xc_1', 'eval_xc_2', 'eval_xc_1_cupy', 'eval_xc_2_cupy', 'eval_xc_3_cupy', 'dipole_moment_mat_symm', 'kin_mat_symm_cupy'\
         , 'overlap_mat_symm_cupy', 'dipole_moment_mat_symm_cupy', 'nuc_mat_symm_cupy', 'kin_mat_symm_shell_cupy', 'rys_2c2e_symm_cupy', 'rys_3c2e_symm_cupy',\
-        'rys_3c2e_symm_cupy_fp32', 'schwarz_helpers_cupy', 'overlap_mat_grad_symm', 'kin_mat_grad_symm', 'overlap_mat_grad_r_symm', 'kin_mat_grad_r_symm', 'nuc_mat_grad_symm', 'cross_overlap_mat_symm', 'rys_coulomb_matrix',\
+        'rys_3c2e_symm_cupy_fp32', 'schwarz_helpers_cupy', 'overlap_mat_grad_symm', 'kin_mat_grad_symm', 'overlap_mat_grad_r_symm', 'kin_mat_grad_r_symm', 'nuc_mat_grad_symm', 'nuc_mat_grad_r_symm', 'cross_overlap_mat_symm', 'rys_coulomb_matrix',\
          'rys_4c2e_schwarz_sparse_symm', 'rys_coulomb_matrix_sparse', 'rys_2c2e_diag', 'os_4c2e_symm', 'os_4c2e_symm_old', 'os_3c2e_symm', 'rys_3c2e_grad_symm']
 
 # # This code will import all of the modules in the library directory and expose all of 
