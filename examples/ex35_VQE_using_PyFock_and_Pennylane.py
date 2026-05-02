@@ -58,7 +58,7 @@ if __name__ == "__main__":
     coordinates = np.array([[0.0, 0.0, 0.0], [0.74, 0.0, 0.0]])
     # symbols = ["Li", "H"]
     # coordinates = np.array([[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]])
-    data = pyfock_hf_quantities(symbols, coordinates, basis_name='def2-SV(P)') # try sto-3g, 6-31G basis sets too
+    data = pyfock_hf_quantities(symbols, coordinates, basis_name='sto-3g') # try sto-3g, 6-31G, def2-SV(P)basis sets too
     print('\n\n HF done! Starting VQE...')
     print("\nSystem info:")
     print(f"Number of electrons: {data['electrons']}")
