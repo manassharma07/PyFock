@@ -1,0 +1,100 @@
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
+import os
+
+import numpy as np
+
+from pyfock import Basis, DFT, Integrals, Mol
+
+
+def pyfock_hf_quantities(symbols, coordinates, charge=0, basis_name="sto-3g"):
+    """Return HF orbitals and MO integrals in PennyLane's qchem convention."""
+    atoms = [[symbol, *xyz] for symbol, xyz in zip(symbols, coordinates)]
+    mol = Mol(atoms=atoms, charge=charge)
+    basis = Basis(mol, {"all": Basis.load(mol=mol, basis_name=basis_name)})
+
+    hf = DFT(mol, basis, xc="HF")
+    hf.isDF = False
+    hf.rys = True
+    hf.direct_scf = False
+    hf.coul_algo = 1
+    hf.conv_crit = 1e-8
+    hf.max_itr = 50
+    hf.ncores = 1
+    hf.threshold_schwarz = 1e-12
+
+    hf_energy, _ = hf.scf()
+
+    mo_coeff = hf.mo_coefficients
+    h_core_ao = Integrals.kin_mat_symm(basis) + Integrals.nuc_mat_symm(basis, mol)
+    eri_ao = Integrals.rys_4c2e_symm(basis)
+
+    one_mo = np.einsum("qr,rs,st->qt", mo_coeff.T, h_core_ao, mo_coeff)
+    two_mo = np.swapaxes(
+        np.einsum(
+            "ab,cd,bdeg,ef,gh->acfh", mo_coeff.T, mo_coeff.T, eri_ao, mo_coeff, mo_coeff
+        ),
+        1,
+        3,
+    )
+    core_constant = np.array([hf.nuclear_rep_energy(mol)])
+
+    return {
+        "hf_energy": hf_energy,
+        "core_constant": core_constant,
+        "one_mo": one_mo,
+        "two_mo": two_mo,
+        "mo_coeff": mo_coeff,
+        "mo_energies": hf.mo_energies,
+        "electrons": mol.nelectrons,
+        "qubits": 2 * one_mo.shape[0],
+    }
+
+
+if __name__ == "__main__":
+    import pennylane as qml
+    from pennylane import numpy as pnp
+
+    symbols = ["H", "H"]
+    coordinates = np.array([[0.0, 0.0, 0.0], [0.74, 0.0, 0.0]])
+    # symbols = ["Li", "H"]
+    # coordinates = np.array([[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]])
+    data = pyfock_hf_quantities(symbols, coordinates, basis_name='def2-SV(P)') # try sto-3g, 6-31G basis sets too
+    print('\n\n HF done! Starting VQE...')
+    print("\nSystem info:")
+    print(f"Number of electrons: {data['electrons']}")
+    print(f"Number of qubits:    {data['qubits']}")
+    print(f"Number of basis functions: {data['one_mo'].shape[0]}")
+
+    fermionic_h = qml.qchem.fermionic_observable(
+        data["core_constant"], data["one_mo"], data["two_mo"]
+    )
+    H = qml.qchem.qubit_observable(fermionic_h, mapping="jordan_wigner")
+
+    electrons = data["electrons"]
+    qubits = data["qubits"]
+    hf_state = qml.qchem.hf_state(electrons, qubits)
+    singles, doubles = qml.qchem.excitations(electrons, qubits)
+    s_wires, d_wires = qml.qchem.excitations_to_wires(singles, doubles)
+
+    dev = qml.device("lightning.qubit", wires=qubits)
+
+    @qml.qnode(dev)
+    def circuit(params):
+        qml.UCCSD(
+            params, wires=range(qubits), s_wires=s_wires, d_wires=d_wires, init_state=hf_state
+        )
+        return qml.expval(H)
+
+    params = pnp.zeros(len(singles) + len(doubles))
+    opt = qml.AdagradOptimizer(stepsize=0.1)
+
+    energy = circuit(params)
+    for step in range(50):
+        params, energy = opt.step_and_cost(circuit, params)
+        print(f"Step {step+1:2d}: Energy = {energy:.12f} Ha")
+        if step and abs(energy - prev_energy) < 1e-7:
+            break
+        prev_energy = energy
+
+    print("HF energy from PyFock: ", data["hf_energy"])
+    print("VQE energy:           ", energy)
