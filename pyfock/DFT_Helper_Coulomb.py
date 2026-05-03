@@ -815,3 +815,13 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         cp.cuda.Device(0).use()
         cp._default_memory_pool.free_all_blocks()
     return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
+
+
+def Kmat_from_density_fitting_algo1(dmat, df_coeff0, ints3c2e):
+    """
+    Build the RI Hartree-Fock exchange matrix for DF algorithm 1.
+
+    DF_algo=1 stores both (ij|P) and (P|Q)^-1 (Q|ij), so the fitted ERI is
+    available by contracting these two tensors over the auxiliary index.
+    """
+    return contract('Pij,ik,klP->jl', df_coeff0, dmat, ints3c2e)
