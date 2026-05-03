@@ -17,6 +17,8 @@ except Exception as e:
 from threadpoolctl import ThreadpoolController, threadpool_info, threadpool_limits
 from opt_einsum import contract
 
+
+
 def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T, dmat, use_gpu=False, keep_ints3c2e_in_gpu=True, threshold_schwarz=1e-9, strict_schwarz=False, rys=True, DF_algo=6, cholesky=True):
     startCoulomb = timer()
     if not rys:
@@ -66,6 +68,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
                 # ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
                 # Convert back to CAO so that now we lose the extra information that the CAO basis had
                 ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
+                eps = 1e-12
+                ints2c2e += eps * np.eye(ints2c2e.shape[0])
         else:
             ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis)
             if dftObj.sao:
@@ -537,6 +541,9 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
     else:
         start2c2e = timer()
         ints2c2e = Integrals.conv_2c2e_symm(auxbasis) 
+        if dftObj.sao:
+            eps = 1e-12
+            ints2c2e += eps * np.eye(ints2c2e.shape[0])
         duration2c2e = timer() - start2c2e
         print('Time taken for two-centered two-electron integrals '+str(round(duration2c2e, 2))+' seconds.\n', flush=True)
         ints3c2e = Integrals.conv_3c2e_symm(basis, auxbasis)
@@ -554,28 +561,12 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
 
     # Compute the intermediate DF coefficients (df_coeff0) 
     if DF_algo==1:
-        #The following solve step is very sloww and makes the Coulomb time much longer.
         if dftObj.sao:
-            # Get the CAO to SAO transformation matrix
-            c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
-            # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
-            sph2c_mat_pseudo = basis.sph2cart_basis() # SAO --> CAO
-            # Get the CAO to SAO transformation matrix
-            c2sph_mat_aux = auxbasis.cart2sph_basis() # CAO --> SAO
-            # Calculate the pseudoinverse transformation matrix (for back transformation of SAO dmat to CAO dmat)
-            sph2c_mat_pseudo_aux = auxbasis.sph2cart_basis() # SAO --> CAO
-            # Convert the 2c2e matrix from CAO to SAO basis
-            ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
-            # Convert back to CAO so that now we lose the extra information that the CAO basis had
-            ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
-            # Convert the 3c2e matrix from CAO to SAO basis
-            # ints3c2e = np.einsum('pm,qn,rk,mnk->pqr', c2sph_mat, c2sph_mat, c2sph_mat_aux, ints3c2e, optimize=True)
-            # Convert back to CAO so that now we lose the extra information that the CAO basis had
-            # ints3c2e = np.einsum('pm,qn,rk,mnk->pqr', sph2c_mat_pseudo, sph2c_mat_pseudo, sph2c_mat_pseudo_aux, ints3c2e, optimize=True)
             # Convert the only the aux bfs of 3c2e matrix from CAO to SAO basis
             ints3c2e = np.einsum('rk,mnk->mnr', c2sph_mat_aux, ints3c2e, optimize=True)
             # Convert back to CAO so that now we lose the extra information that the CAO basis had
             ints3c2e = np.einsum('rk,mnk->mnr', sph2c_mat_pseudo_aux, ints3c2e, optimize=True)
+        #The following solve step is very sloww and makes the Coulomb time much longer.
         df_coeff0 = scipy.linalg.solve(ints2c2e, ints3c2e.T)
         
         
@@ -588,36 +579,31 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         ##### This version requires double the memory of a 3c2e array, as the result of the scipy solve (Qpq) is also of the same size.
         ##### We later don't require the ints3c2e array and get rid of it to free memory but still we did require it at some point so 
         ##### the memory requirement of the program as a whole is still 2x int3c2e array. 
-        # # metric_sqrt = scipy.linalg.fractional_matrix_power(ints2c2e, 0.5)
-        # metric_sqrt = scipy.linalg.sqrtm(ints2c2e)
-        # print('Sqrt done!')
-        # #TODO: The following solve step is very sloww and makes the Coulomb time much longer. Try to make it faster.
-        # Qpq = scipy.linalg.solve(metric_sqrt, ints3c2e.reshape(basis.bfs_nao*basis.bfs_nao, auxbasis.bfs_nao).T, \
-        #                         assume_a='pos', overwrite_a=False, overwrite_b=True)
-        # print('Solve done!')
-        # Qpq =  Qpq.reshape(auxbasis.bfs_nao, basis.bfs_nao, basis.bfs_nao)
-        # print('Reshape done!')
-        # # metric_inverse_sqrt = scipy.linalg.fractional_matrix_power(ints2c2e, -0.5) #Unstable
-        # # print('Sqrt inverse done!')
-        # # # Build the Qpq object
-        # # Qpq = contract('QP,pqP->Qpq', metric_inverse_sqrt, ints3c2e)
-        # # print('Contraction done!')
-        # ints3c2e = 0
-        # print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
-        # print('Intermediate Auxiliary Density fitting coefficients size in GB ',Qpq.nbytes/1e9, flush=True)
-
+        
         ##### New version, that as far as I can understand doesn't involve any creation of new arrays of the size of int3c2e array
         ##### This is done by not storing the result of scipy solve in an array but rather overwriting the original array.
         ##### A lot of reshaping is involved, but it is checked that it does not result in copies of arrays by using 
         ##### np.shares_memory(a,b) https://stackoverflow.com/questions/69447431/numpy-reshape-copying-data-or-not
-        metric_sqrt = scipy.linalg.sqrtm(ints2c2e)
+        if dftObj.sao:
+            ints3c2e = np.einsum('rk,mnk->mnr', c2sph_mat_aux, ints3c2e, optimize=True)
+            ints3c2e = np.einsum('rk,mnk->mnr', sph2c_mat_pseudo_aux, ints3c2e, optimize=True)
+        try:
+            metric_sqrt = scipy.linalg.cholesky(ints2c2e, lower=True)
+            use_triangular_metric_sqrt = True
+        except scipy.linalg.LinAlgError:
+            metric_sqrt = np.real_if_close(scipy.linalg.sqrtm(ints2c2e), tol=1000)
+            use_triangular_metric_sqrt = False
         print('Sqrt done!')
         ints3c2e_reshape = ints3c2e.reshape(basis.bfs_nao*basis.bfs_nao, auxbasis.bfs_nao).T
         print('Reshape done!')
         print(np.shares_memory(ints3c2e_reshape, ints3c2e))
         #TODO: The following solve step is very sloww and makes the Coulomb time much longer. Try to make it faster.
-        scipy.linalg.solve(metric_sqrt, ints3c2e_reshape, \
-                                assume_a='pos', overwrite_a=False, overwrite_b=True)
+        if use_triangular_metric_sqrt:
+            ints3c2e_reshape = scipy.linalg.solve_triangular(metric_sqrt, ints3c2e_reshape, \
+                                    lower=True, overwrite_b=True)
+        else:
+            ints3c2e_reshape = scipy.linalg.solve(metric_sqrt, ints3c2e_reshape, \
+                                    assume_a='pos', overwrite_a=False, overwrite_b=True)
         print('Solve done!')
         Qpq =  ints3c2e_reshape.reshape(auxbasis.bfs_nao, basis.bfs_nao, basis.bfs_nao)
         print(np.shares_memory(Qpq, ints3c2e_reshape))
@@ -629,6 +615,9 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
 
     if DF_algo==3: # Best algorithm (Memory efficient and fast without any prefactor linalg.solve)
         #https://aip.scitation.org/doi/pdf/10.1063/1.1567253
+        if dftObj.sao:
+            ints3c2e = np.einsum('rk,mnk->mnr', c2sph_mat_aux, ints3c2e, optimize=True)
+            ints3c2e = np.einsum('rk,mnk->mnr', sph2c_mat_pseudo_aux, ints3c2e, optimize=True)
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
         print('Three Center Two electron ERI size in GB ',ints3c2e.nbytes/1e9, flush=True)
     if DF_algo==4 or DF_algo==5 or DF_algo==6 or DF_algo==8 or DF_algo==10:
@@ -648,14 +637,6 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         if use_gpu:
             cho_decomp_ints2c2e = scipy.linalg.cho_factor(cp.asnumpy(ints2c2e))
         else:
-            if dftObj.sao:
-                # w = np.linalg.eigvalsh(ints2c2e)
-                # print('Lowest eigenvalue of the 2c2e matrix: ', flush=True)
-                # print(w.min())
-                # In case of SAO --> CAO --> SAO transformations some numerical noise gets introduced. 
-                # Fix that to make the ints2c2e matrix positive definite.
-                eps = 1e-12  # or 1e-10 if needed
-                ints2c2e += eps * np.eye(ints2c2e.shape[0])
             cho_decomp_ints2c2e = scipy.linalg.cho_factor(ints2c2e)
         durationDF_cholesky = timer() - startDF_cholesky
         print('Time taken for Cholesky factorization of two-centered two-electron integrals '+str(round(durationDF_cholesky, 2))+' seconds.\n', flush=True)
@@ -700,7 +681,7 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         J = contract('ijk,i',Qpq,df_coeff)
     if DF_algo==3: # Fastest      
         df_coeff = contract('pqP,pq->P', ints3c2e, dmat) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-        scipy.linalg.solve(ints2c2e, df_coeff, assume_a='pos', overwrite_a=False, overwrite_b=True) # This gives the actual df coeff
+        df_coeff = scipy.linalg.solve(ints2c2e, df_coeff, assume_a='pos', overwrite_a=False, overwrite_b=True) # This gives the actual df coeff
         J = contract('ijk,k', ints3c2e, df_coeff)
     if DF_algo==4 or DF_algo==5: # Fastest and triangular (half the memory of algo 3)
         dmat_temp = dmat.copy()
