@@ -54,7 +54,7 @@ except Exception as e:
     pass
 from pyfock.DFT_Helper_Coulomb import density_fitting_prelims_for_DFT_development
 from pyfock.DFT_Helper_Coulomb import Jmat_from_density_fitting
-from pyfock.DFT_Helper_Coulomb import Kmat_from_density_fitting_algo1
+from pyfock.DFT_Helper_Coulomb import Kmat_from_density_fitting
 
 
 class DFT:
@@ -973,9 +973,9 @@ class DFT:
                         )
                         import pylibxc
 
-        if xc=='HF' and isDF and DF_algo!=1:
+        if xc=='HF' and isDF and DF_algo not in (1, 2, 3):
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('ERROR: RI-HF is currently implemented only for DF_algo=1!')
+            print('ERROR: RI-HF is currently implemented only for DF_algo=1, 2, or 3!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             exit()
         if xc=='HF' and isDF and self.use_gpu:
@@ -1588,7 +1588,7 @@ class DFT:
                 else:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
                     if xc=='HF':
-                        K = Kmat_from_density_fitting_algo1(dmat, df_coeff0, ints3c2e)
+                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e)
 
 
                     
@@ -1624,7 +1624,7 @@ class DFT:
                 else:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
                     if xc=='HF':
-                        K = Kmat_from_density_fitting_algo1(dmat, df_coeff0, ints3c2e)
+                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e)
                 # J += J_diff
             if self.use_gpu:
                 J = cp.asarray(J, dtype=cp.float64)

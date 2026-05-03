@@ -817,11 +817,27 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
     return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
 
 
-def Kmat_from_density_fitting_algo1(dmat, df_coeff0, ints3c2e):
+def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e):
     """
-    Build the RI Hartree-Fock exchange matrix for DF algorithm 1.
+    Build the RI Hartree-Fock exchange matrix for full-tensor DF algorithms.
 
-    DF_algo=1 stores both (ij|P) and (P|Q)^-1 (Q|ij), so the fitted ERI is
-    available by contracting these two tensors over the auxiliary index.
+    DF_algo=1 stores both (ij|P) and (P|Q)^-1 (Q|ij).
+    DF_algo=2 stores the orthonormalized three-center tensor Q_Pij.
+    DF_algo=3 stores only (ij|P), so it solves against the DF metric here.
     """
-    return contract('Pij,ik,klP->jl', df_coeff0, dmat, ints3c2e)
+    if DF_algo==1:
+        return contract('Pij,ik,klP->jl', df_coeff0, dmat, ints3c2e)
+    if DF_algo==2:
+        return contract('Pij,ik,Pkl->jl', Qpq, dmat, Qpq)
+    if DF_algo==3:
+        nbf = ints3c2e.shape[0]
+        naux = ints3c2e.shape[2]
+        df_coeff = scipy.linalg.solve(
+            ints2c2e,
+            ints3c2e.reshape(nbf*nbf, naux).T,
+            assume_a='pos',
+            overwrite_a=False,
+            overwrite_b=False,
+        ).reshape(naux, nbf, nbf)
+        return contract('Pij,ik,klP->jl', df_coeff, dmat, ints3c2e)
+    raise ValueError('RI-HF exchange is currently implemented only for DF_algo=1, 2, or 3.')

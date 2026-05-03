@@ -1,5 +1,5 @@
 ####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
-####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_DFT_RI_HF_DF.py'
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_RI_HF.py'
 ####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
 ####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
 ####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
@@ -190,14 +190,18 @@ print('\n\nNAO :',basis.bfs_nao)
 auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
 print('\n\naux NAO :',auxbasis.bfs_nao)
 
+M = Integrals.dipole_moment_mat_symm(basis)
+
+df_algo = 1
+print('\n\nPyFock RI-HF Results with DF_algo =', df_algo)
 dftObj = DFT(molCrysX, basis, auxbasis, xc='HF')
-dftObj.dmat = dmat_init
+dftObj.dmat = dmat_init.copy()
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35
 dftObj.ncores = ncores
 dftObj.rys = True
 dftObj.isDF = True
-dftObj.DF_algo = 1
+dftObj.DF_algo = df_algo
 dftObj.debug = False
 dftObj.threshold_schwarz = 1e-9
 dftObj.strict_schwarz = False
@@ -210,7 +214,7 @@ dftObj.sao = True
 dftObj.use_gpu = False
 dftObj.keep_ao_in_gpu = False
 dftObj.use_libxc = False
-dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
+dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference
 dftObj.n_gpus = 1 # Specify the number of GPUs
 dftObj.free_gpu_mem = True
 dftObj.threads_x = 32
@@ -218,17 +222,14 @@ dftObj.threads_y = 32
 dftObj.dynamic_precision = False
 dftObj.keep_ints3c2e_in_gpu = True
 
-# Using PySCF grids to compare the energies
 energyCrysX, dmat_pyfock = dftObj.scf()
 
-
-print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
+print('DF_algo', df_algo, 'Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
 
 print('\n\nPyFock Dipole moment')
-M = Integrals.dipole_moment_mat_symm(basis)
 mol_dip = molCrysX.get_dipole_moment(M, dmat_pyfock)
 print('Dipole moment(X, Y, Z, A.U.):', *mol_dip)
-print('Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
+print('DF_algo', df_algo, 'Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
 
 
 #Print package versions
