@@ -1101,13 +1101,14 @@ class DFT:
         # DF_algo = 1 # Worst algorithm for more than 500 bfs/auxbfs (requires 2x mem of 3c2e integrals and a large prefactor)
         # DF_algo = 2 # Sligthly better (2x memory efficient) algorithm than above (requires 1x mem of 3c2e integrals and a large prefactor)
         # DF_algo = 3 # Memory effcient without any prefactor. (Can easily be converted into a sparse version, unlike the others) (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-        # DF_algo = 4 # Same as 3, except now we use triangular version of ints3c2e to save on memory
-        # DF_algo = 5 # Same as 4 in terms of memory requirements, however faster in performance due to the use of Schwarz screening.
-        # DF_algo = 6 # Much cheaper than 4 and 5 in terms of memory requirements because the indices of significant (ij|P) are efficiently calculated without duplicates/temporary arrays. 
+        # DF_algo = 4 (no longer works or maintained) # Same as 3, except now we use triangular version of ints3c2e to save on memory
+        # DF_algo = 5 (no longer works or maintained) # Same as 4 in terms of memory requirements, however faster in performance due to the use of Schwarz screening.
+        # DF_algo = 6 (no longer works or maintained) # Much cheaper than 4 and 5 in terms of memory requirements because the indices of significant (ij|P) are efficiently calculated without duplicates/temporary arrays. 
         #               The speed maybe same or just slightly slower. 
-        # DF_algo = 7 # The significant indices (ij|P) are stored even more efficiently by using shell indices instead of bf indices.
-        # DF_algo = 8 # Similar to 6, except that here the significant indices are not stored resulting in 50% memory savings. The drawback is that it only works in serial which is useful for Google colab or Kaggle perhaps.
-        # DF_algo = 9 # 
+        # DF_algo = 7 (no longer works or maintained) # The significant indices (ij|P) are stored even more efficiently by using shell indices instead of bf indices.
+        # DF_algo = 8 (no longer works or maintained) # Similar to 6, except that here the significant indices are not stored resulting in 50% memory savings. The drawback is that it only works in serial which is useful for Google colab or Kaggle perhaps.
+        # DF_algo = 9 (no longer works or maintained) # 
+        # DF_algo = 10 # Best and default: Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
 
         if not strict_schwarz: # If a stricter variant of Schwarz screening is not requested
             start1e = timer()

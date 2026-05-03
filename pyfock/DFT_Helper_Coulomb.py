@@ -576,10 +576,6 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         print('Intermediate Auxiliary Density fitting coefficients size in GB ',df_coeff0.nbytes/1e9, flush=True)
 
     if DF_algo==2:
-        ##### This version requires double the memory of a 3c2e array, as the result of the scipy solve (Qpq) is also of the same size.
-        ##### We later don't require the ints3c2e array and get rid of it to free memory but still we did require it at some point so 
-        ##### the memory requirement of the program as a whole is still 2x int3c2e array. 
-        
         ##### New version, that as far as I can understand doesn't involve any creation of new arrays of the size of int3c2e array
         ##### This is done by not storing the result of scipy solve in an array but rather overwriting the original array.
         ##### A lot of reshaping is involved, but it is checked that it does not result in copies of arrays by using 
@@ -593,22 +589,21 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         except scipy.linalg.LinAlgError:
             metric_sqrt = np.real_if_close(scipy.linalg.sqrtm(ints2c2e), tol=1000)
             use_triangular_metric_sqrt = False
-        print('Sqrt done!')
+        # print('Sqrt done!')
         ints3c2e_reshape = ints3c2e.reshape(basis.bfs_nao*basis.bfs_nao, auxbasis.bfs_nao).T
-        print('Reshape done!')
-        print(np.shares_memory(ints3c2e_reshape, ints3c2e))
-        #TODO: The following solve step is very sloww and makes the Coulomb time much longer. Try to make it faster.
+        # print('Reshape done!')
+        # print(np.shares_memory(ints3c2e_reshape, ints3c2e))
         if use_triangular_metric_sqrt:
             ints3c2e_reshape = scipy.linalg.solve_triangular(metric_sqrt, ints3c2e_reshape, \
                                     lower=True, overwrite_b=True)
         else:
             ints3c2e_reshape = scipy.linalg.solve(metric_sqrt, ints3c2e_reshape, \
                                     assume_a='pos', overwrite_a=False, overwrite_b=True)
-        print('Solve done!')
+        # print('Solve done!')
         Qpq =  ints3c2e_reshape.reshape(auxbasis.bfs_nao, basis.bfs_nao, basis.bfs_nao)
-        print(np.shares_memory(Qpq, ints3c2e_reshape))
-        print(np.shares_memory(Qpq, ints3c2e))
-        print('Reshape done!')
+        # print(np.shares_memory(Qpq, ints3c2e_reshape))
+        # print(np.shares_memory(Qpq, ints3c2e))
+        # print('Reshape done!')
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
         print('Intermediate Auxiliary Density fitting coefficients size in GB ',Qpq.nbytes/1e9, flush=True)
 
@@ -817,6 +812,26 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
     return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
 
 
+def _density_matrix_factor(dmat, tol=1e-10):
+    """
+    Return L such that ``dmat ~= L @ L.T`` for the occupied-density subspace.
+
+    RI-HF exchange is much cheaper if it is built through a low-rank density
+    factor instead of contracting the full AO density matrix.  For RHF/closed
+    shell densities this factor has roughly nocc columns.
+    """
+    dmat_sym = np.asarray((dmat + dmat.T) * 0.5, dtype=np.float64)
+    occ, vec = scipy.linalg.eigh(dmat_sym, check_finite=False)
+    max_occ = np.max(occ) if occ.size else 0.0
+    if max_occ <= 0.0:
+        return np.zeros((dmat_sym.shape[0], 0), dtype=dmat_sym.dtype)
+
+    keep = occ > max(tol, tol * max_occ)
+    if not np.any(keep):
+        return np.zeros((dmat_sym.shape[0], 0), dtype=dmat_sym.dtype)
+    return vec[:, keep] * np.sqrt(occ[keep])
+
+
 def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e):
     """
     Build the RI Hartree-Fock exchange matrix for full-tensor DF algorithms.
@@ -825,10 +840,17 @@ def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e)
     DF_algo=2 stores the orthonormalized three-center tensor Q_Pij.
     DF_algo=3 stores only (ij|P), so it solves against the DF metric here.
     """
+    dmat_factor = _density_matrix_factor(dmat)
+    if dmat_factor.shape[1] == 0:
+        return np.zeros_like(dmat)
+
     if DF_algo==1:
-        return contract('Pij,ik,klP->jl', df_coeff0, dmat, ints3c2e)
+        left = contract('Pij,io->Pjo', df_coeff0, dmat_factor, optimize=True)
+        right = contract('klP,ko->Plo', ints3c2e, dmat_factor, optimize=True)
+        return contract('Pjo,Plo->jl', left, right, optimize=True)
     if DF_algo==2:
-        return contract('Pij,ik,Pkl->jl', Qpq, dmat, Qpq)
+        transformed = contract('Pij,io->Pjo', Qpq, dmat_factor, optimize=True)
+        return contract('Pjo,Plo->jl', transformed, transformed, optimize=True)
     if DF_algo==3:
         nbf = ints3c2e.shape[0]
         naux = ints3c2e.shape[2]
@@ -839,5 +861,7 @@ def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e)
             overwrite_a=False,
             overwrite_b=False,
         ).reshape(naux, nbf, nbf)
-        return contract('Pij,ik,klP->jl', df_coeff, dmat, ints3c2e)
+        left = contract('Pij,io->Pjo', df_coeff, dmat_factor, optimize=True)
+        right = contract('klP,ko->Plo', ints3c2e, dmat_factor, optimize=True)
+        return contract('Pjo,Plo->jl', left, right, optimize=True)
     raise ValueError('RI-HF exchange is currently implemented only for DF_algo=1, 2, or 3.')
