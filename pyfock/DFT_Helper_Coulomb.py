@@ -535,7 +535,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
                 print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', round(duration_strict_schwarz_nuc_mat, 2), flush=True)
             
         else:
-            ints3c2e = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True, threshold_schwarz=threshold_schwarz)
+            # ints3c2e = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True, threshold_schwarz=threshold_schwarz)
+            ints3c2e = Integrals.rys_3c2e_symm_test(basis, auxbasis, schwarz=True, threshold_schwarz=threshold_schwarz)
             
         
     else:
