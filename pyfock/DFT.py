@@ -646,6 +646,8 @@ class DFT:
         Vmat = Integrals.nuc_mat_symm(basis, mol)
         Tmat = Integrals.kin_mat_symm(basis)
         H = Vmat + Tmat
+        if getattr(basis, 'has_ecp', False):
+            H = H + Integrals.ecp_mat_symm(basis)
 
         return H
 
@@ -1110,6 +1112,7 @@ class DFT:
         # DF_algo = 9 (no longer works or maintained) # 
         # DF_algo = 10 # Best and default: Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
 
+        V_ecp = None
         if not strict_schwarz: # If a stricter variant of Schwarz screening is not requested
             start1e = timer()
             print('\nCalculating one electron integrals...\n\n', flush=True)
@@ -1118,14 +1121,25 @@ class DFT:
                 S = Integrals.overlap_mat_symm(basis)
                 V = Integrals.nuc_mat_symm(basis, mol)
                 T = Integrals.kin_mat_symm(basis)
+                if getattr(basis, 'has_ecp', False):
+                    print('Calculating ECP integrals...', flush=True)
+                    # V_ecp = Integrals.ecp_mat_symm(basis)
+                    V_ecp = Integrals.ecp_mat_symm_test(basis)
                 # Core hamiltonian
                 H = T + V
+                if V_ecp is not None:
+                    H = H + V_ecp
             else:
                 S = Integrals.overlap_mat_symm_cupy(basis, cp_stream=streams[0])
                 V = Integrals.nuc_mat_symm_cupy(basis, mol, cp_stream = streams[0])
                 T = Integrals.kin_mat_symm_cupy(basis, cp_stream = streams[0])
+                if getattr(basis, 'has_ecp', False):
+                    print('Calculating ECP integrals on CPU and transferring to GPU...', flush=True)
+                    V_ecp = cp.asarray(Integrals.ecp_mat_symm(basis), dtype=cp.float64)
                 # Core hamiltonian
                 H = T + V
+                if V_ecp is not None:
+                    H = H + V_ecp
 
             print('Core H size in GB ',round(H.nbytes/1e9, 4), flush=True)
             print('done!', flush=True)
@@ -1138,13 +1152,23 @@ class DFT:
             if not self.use_gpu:
                 S = Integrals.overlap_mat_symm(basis)
                 T = Integrals.kin_mat_symm(basis)
+                if getattr(basis, 'has_ecp', False):
+                    print('Calculating ECP integrals...', flush=True)
+                    V_ecp = Integrals.ecp_mat_symm(basis)
                 # Core hamiltonian
-                H = T 
+                H = T
+                if V_ecp is not None:
+                    H = H + V_ecp
             else:
                 S = Integrals.overlap_mat_symm_cupy(basis, cp_stream = streams[0])
                 T = Integrals.kin_mat_symm_cupy(basis, cp_stream = streams[0])
+                if getattr(basis, 'has_ecp', False):
+                    print('Calculating ECP integrals on CPU and transferring to GPU...', flush=True)
+                    V_ecp = cp.asarray(Integrals.ecp_mat_symm(basis), dtype=cp.float64)
                 # Core hamiltonian
-                H = T 
+                H = T
+                if V_ecp is not None:
+                    H = H + V_ecp
 
             print('Core H size in GB ',(round(H.nbytes/1e9, 4))*2, flush=True) # Factor of 2 because nuclear matrix will also be included here later
             print('done!', flush=True)
@@ -1276,6 +1300,8 @@ class DFT:
             H_temp, V_temp, ints3c2e, ints2c2e, nsignificant, indicesA, indicesB, indicesC, offsets_3c2e, indices, ints4c2e_diag, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, indices_dmat_tri, indices_dmat_tri_2, df_coeff0, Qpq, cho_decomp_ints2c2e, durationDF_cholesky, durationCoulomb = density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, self, T, dmat, self.use_gpu, self.keep_ints3c2e_in_gpu, threshold_schwarz, strict_schwarz, rys, DF_algo, cholesky)
             if not H_temp is None:
                 H = H_temp
+                if V_ecp is not None:
+                    H = H + V_ecp
             if not V_temp is None:
                 V = V_temp
             if cholesky:
@@ -1683,12 +1709,18 @@ class DFT:
 
             if self.use_gpu:
                 Enuc = contract('ij,ji->', dmat_cp, V)
+                Eecp = 0.0
+                if V_ecp is not None:
+                    Eecp = contract('ij,ji->', dmat_cp, V_ecp)
                 Ekin = contract('ij,ji->', dmat_cp, T)
                 Ecoul = contract('ij,ji->', dmat_cp, J)*0.5
             else:
                 with threadpool_limits(limits=ncores, user_api='blas'):
                     # print('Energy contractions', controller.info())
                     Enuc = contract('ij,ji->', dmat, V)
+                    Eecp = 0.0
+                    if V_ecp is not None:
+                        Eecp = contract('ij,ji->', dmat, V_ecp)
                     Ekin = contract('ij,ji->', dmat, T)
                     Ecoul = contract('ij,ji->', dmat, J)*0.5
                     if xc=='HF':
@@ -1697,9 +1729,9 @@ class DFT:
                 Ecoul = Ecoul*2 - 0.5*Ecoul_temp # This is the correct formula for Coulomb energy with DF
             
             if xc!='HF':
-                Etot_new = Exc + Enuc + Ekin + Enn + Ecoul
+                Etot_new = Exc + Enuc + Eecp + Ekin + Enn + Ecoul
             else:
-                Etot_new = Eexchange + Enuc + Ekin + Enn + Ecoul
+                Etot_new = Eexchange + Enuc + Eecp + Ekin + Enn + Ecoul
             self.scf_energies.append(Etot_new)
             self.Total_energy = Etot_new
             if xc!='HF':
@@ -1708,6 +1740,7 @@ class DFT:
             self.Nuclear_repulsion_energy = Enn
             self.J_energy = Ecoul
             self.Nuc_energy = Enuc
+            self.ECP_energy = Eecp
 
             # Set label width and numeric format
             label_w = 30
@@ -1716,6 +1749,8 @@ class DFT:
             print(f"\n\n\n------Iteration {itr}--------\n\n", flush=True)
             print("Energies (in Hartrees)\n")
             print(f"{'Electron-Nuclear Energy':<{label_w}}{num_fmt.format(Enuc)}")
+            if V_ecp is not None:
+                print(f"{'ECP Energy':<{label_w}}{num_fmt.format(Eecp)}")
             print(f"{'Nuclear repulsion Energy':<{label_w}}{num_fmt.format(Enn)}")
             print(f"{'Kinetic Energy':<{label_w}}{num_fmt.format(Ekin)}")
             print(f"{'Coulomb Energy':<{label_w}}{num_fmt.format(Ecoul)}")

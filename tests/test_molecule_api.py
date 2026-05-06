@@ -29,6 +29,24 @@ def test_molecule_from_atoms_matches_xyz_geometry():
     np.testing.assert_allclose(mol_from_atoms.coords, mol_from_file.coords, atol=1e-12, rtol=0.0)
 
 
+def test_default_basis_falls_back_to_def2_svp_when_sto3g_is_missing():
+    atoms = [
+        ["Pb", 0.0, 0.0, 0.0],
+        ["H", 0.999, 0.999, 0.999],
+        ["H", 0.999, -0.999, -0.999],
+        ["H", -0.999, 0.999, -0.999],
+        ["H", -0.999, -0.999, 0.999],
+    ]
+    mol = Mol(atoms=atoms)
+
+    assert mol.success is True
+    assert mol.basis.has_ecp
+    assert mol.basis.ecps[0]["symbol"] == "Pb"
+    assert mol.basis.ecps[0]["ncore"] == 60
+    assert mol.Zcharges[0] == 22
+    assert mol.nelectrons == 26
+
+
 def test_molecule_dipole_helpers_are_consistent():
     mol = build_h2o_mol()
     basis = build_basis(mol, "def2-SVP")

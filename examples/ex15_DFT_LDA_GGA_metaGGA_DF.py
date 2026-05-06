@@ -22,8 +22,22 @@ from pyfock import DFT
 #
 # or using predefined strings
 # funcidpyfock = 'LDA' # [1, 7]
-funcidpyfock = 'SPZ' # [1, 9]
+# funcidpyfock = 'SPZ' # [1, 9]
 # funcidpyfock = 'SPW' # [1, 12]
+#
+# Natively implemented GGA functionals
+funcidpyfock = 'PBE' # [101, 130]
+# funcidpyfock = 'PBESOL' # [116, 133]
+# funcidpyfock = 'RPBE' # [117, 130]
+# funcidpyfock = 'PW91' # [109, 134]
+# funcidpyfock = 'BP86' # [106, 132]
+# funcidpyfock = 'BLYP' # [106, 131]
+#
+# Natively implemented metaGGA functionals
+# funcidpyfock = 'R2SCAN' # [497, 498]
+# funcidpyfock = 'TPSS' # [202, 231]
+# funcidpyfock = 'M06L' # [203, 233]
+# funcidpyfock = 'TASK' # [707]
 
 
 

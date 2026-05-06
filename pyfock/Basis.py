@@ -26,6 +26,14 @@ import sys
 import os
 
 
+def _looks_like_float(value):
+    try:
+        float(value.replace('D+', 'E+').replace('D-', 'E-'))
+        return True
+    except ValueError:
+        return False
+
+
 #Class to store basis function properties
 class Basis:
     """
@@ -259,6 +267,19 @@ class Basis:
         Type: Boolean
         """
         #---------------------------------
+        #Effective core potential data
+        #---------------------------------
+        self.ecps = []
+        """Parsed effective core potentials, one dictionary for each ECP atom."""
+        self.ecp_by_atom = {}
+        """Dictionary mapping atom index to the parsed ECP for that atom."""
+        self.ecp_atoms = []
+        """Atom indices that carry an ECP."""
+        self.ecp_total_core_electrons = 0
+        """Total number of electrons removed from the explicit calculation by ECPs."""
+        self.has_ecp = False
+        """Whether this basis object carries any ECP data."""
+        #---------------------------------
         #If all data was parsed successfully.
         self.success = False
         """Indicates if basis parsing was successful.
@@ -267,6 +288,8 @@ class Basis:
         #Convert the keys of basis dictionary to lower case to avoid ambiguity
         self.basisSet = self.createCompleteBasisSet(mol, basis)
         self.readBasisFunctionInfo(mol, self.basisSet)
+        self.readECPInfo(mol, self.basisSet)
+        self.applyECPToMol(mol)
         self.totalnprims = sum(self.nprims)
         self.nshells = len(self.nprims)
         # Now lets create information about the basis functions
@@ -438,50 +461,117 @@ class Basis:
         return factor
 
 
-    def readBasisSetFromFile(key, filename):
+    def _readTurbomoleBlocks(text):
+        blocks = []
+        lines = text.splitlines()
+        section = 'basis'
+        i = 0
+
+        while i < len(lines):
+            line = lines[i].strip()
+            lower = line.lower()
+            if lower.startswith('$basis'):
+                section = 'basis'
+                i += 1
+                continue
+            if lower.startswith('$ecp'):
+                section = 'ecp'
+                i += 1
+                continue
+            if lower.startswith('$end'):
+                i += 1
+                continue
+
+            if line == '*':
+                if i + 1 >= len(lines):
+                    break
+                header = lines[i + 1].strip()
+                if header == '' or header == '*' or header.startswith('$'):
+                    i += 1
+                    continue
+
+                j = i + 2
+                if j < len(lines) and lines[j].strip() == '*':
+                    j += 1
+
+                block_lines = []
+                while j < len(lines) and lines[j].strip() != '*':
+                    block_line = lines[j].strip()
+                    if block_line.lower().startswith('$basis'):
+                        section = 'basis'
+                    elif block_line.lower().startswith('$ecp'):
+                        section = 'ecp'
+                    else:
+                        block_lines.append(block_line)
+                    j += 1
+
+                if len(header.split()) > 0:
+                    blocks.append({
+                        'section': section,
+                        'header': header,
+                        'lines': block_lines,
+                    })
+                i = j
+                continue
+
+            i += 1
+
+        return blocks
+
+    def _findTurbomoleBlock(text, key, block_type='basis'):
+        blocks = Basis._readTurbomoleBlocks(text)
+        key_lower = key.lower()
+        block_type = block_type.lower()
+
+        for block in blocks:
+            header_words = block['header'].split()
+            if len(header_words) == 0:
+                continue
+            if header_words[0].lower() != key_lower:
+                continue
+
+            header_lower = block['header'].lower()
+            is_ecp = block['section'] == 'ecp' or 'ecp' in header_lower
+            if block_type == 'ecp' and is_ecp:
+                return block
+            if block_type == 'basis' and not is_ecp:
+                return block
+
+        return None
+
+    def _turbomoleBlockToString(block):
+        if block is None:
+            return ''
+        block_string = '\n*\n' + block['header'] + '\n*'
+        for line in block['lines']:
+            block_string += '\n' + line
+        block_string += '\n*'
+        return block_string
+
+    def readBasisSetFromFile(key, filename, block_type='basis', quiet=False):
         """
         Read the basis set block corresponding to a particular atom from a TURBOMOLE format file.
         
         Args:
             key (str): Atomic species symbol to search for
             filename (str): Path to the basis set file
+            block_type (str): Either 'basis' or 'ecp'
+            quiet (bool): Suppress missing-basis messages when True
             
         Returns:
             str or bool: Basis set string for the atom, or False if not found
         """
         #This functions returns the basis set block corresponding to a particular atom (key)
         #The file to be read from is assumed to follow TURBOMOLE's format
-        basisString = ''
-        lookfor = ''
         file = open(filename, 'r')
         fileContentsInString=file.read()
         file.close()
-        lines = fileContentsInString.splitlines()
-        pattern = re.compile('\*\n(.*)\n\*')
-        result = pattern.findall(fileContentsInString)
-        if len(result)==0:
-            print('The basis set corresponding to atom',key, ' was not found in ',filename)
+        block = Basis._findTurbomoleBlock(fileContentsInString, key, block_type=block_type)
+        if block is None:
+            if block_type == 'basis' and not quiet:
+                print('The basis set corresponding to atom',key, ' was not found in ',filename)
             return False
-        for res in result:
-            if res.split()[0].lower()==key.lower():
-                lookfor = res
-                basisString = '\n*\n'+lookfor+'\n*'
-
-        currentLineNo = 0
-        startReading = False
-        for line in lines:
-            line = line.strip()
-            if line==lookfor:
-                startReading = True
-                currentLineNo = 1
-            if startReading and currentLineNo>=3:
-                if line.strip()=='*':
-                    break
-                else:
-                    basisString = basisString + '\n'+line
-            currentLineNo = currentLineNo + 1
-        basisString = basisString + '\n*'
-        return basisString
+        return Basis._turbomoleBlockToString(block)
         
         
 
@@ -489,7 +579,7 @@ class Basis:
       
     #Loads the complete basis set as a string for a given mol/atom and a standard basis set available in the 
     #CrysX library or same directory as the python script.
-    def load( atom=None, mol=None, basis_name=None):
+    def load( atom=None, mol=None, basis_name=None, quiet=False):
         """
         Load the complete basis set as a string for a given atom/molecule from the CrysX library.
         
@@ -497,6 +587,7 @@ class Basis:
             atom (str, optional): Atomic species symbol
             mol (Mol, optional): Mol object containing molecular information
             basis_name (str, optional): Name of the basis set to load
+            quiet (bool): Suppress missing-basis messages when True
             
         Returns:
             str: Complete basis set string in TURBOMOLE format
@@ -535,16 +626,25 @@ class Basis:
         #If mol is provided then load the same basis set to all atoms
         if not mol is None:
             for i in range(mol.natoms):
-                basisSet = basisSet + Basis.readBasisSetFromFile( mol.basisSpecies[i], basis_name)
+                basis_block = Basis.readBasisSetFromFile(mol.basisSpecies[i], basis_name, block_type='basis', quiet=quiet)
+                if basis_block is not False:
+                    basisSet = basisSet + basis_block
+                ecp_block = Basis.readBasisSetFromFile(mol.basisSpecies[i], basis_name, block_type='ecp', quiet=True)
+                if ecp_block is not False:
+                    basisSet = basisSet + ecp_block
         elif atom is not None:
-            basisSet = Basis.readBasisSetFromFile(atom, basis_name)
+            basis_block = Basis.readBasisSetFromFile(atom, basis_name, block_type='basis', quiet=quiet)
+            basisSet = basis_block if basis_block is not False else ''
+            ecp_block = Basis.readBasisSetFromFile(atom, basis_name, block_type='ecp', quiet=True)
+            if ecp_block is not False:
+                basisSet = basisSet + ecp_block
         basisSet =  basisSet.replace('D+', 'E+')
         basisSet =  basisSet.replace('D-', 'E-')
         return basisSet
 
     #Loads the complete basis set as a string for a given mol/atom from a file
     #specified by the user.
-    def loadfromfile( atom=None, mol=None, basis_name=None):
+    def loadfromfile( atom=None, mol=None, basis_name=None, quiet=False):
         """
         Load the complete basis set as a string for a given atom/molecule from a user-specified file.
         
@@ -552,6 +652,7 @@ class Basis:
             atom (str, optional): Atomic species symbol
             mol (Mol, optional): Mol object containing molecular information  
             basis_name (str, optional): Path to the basis set file
+            quiet (bool): Suppress missing-basis messages when True
             
         Returns:
             str: Complete basis set string in TURBOMOLE format
@@ -564,9 +665,18 @@ class Basis:
         #If mol is provided then load the same basis set to all atoms
         if not mol is None:
             for i in range(mol.natoms):
-                basisSet = basisSet + Basis.readBasisSetFromFile( mol.basisSpecies[i], basis_name)
+                basis_block = Basis.readBasisSetFromFile(mol.basisSpecies[i], basis_name, block_type='basis', quiet=quiet)
+                if basis_block is not False:
+                    basisSet = basisSet + basis_block
+                ecp_block = Basis.readBasisSetFromFile(mol.basisSpecies[i], basis_name, block_type='ecp', quiet=True)
+                if ecp_block is not False:
+                    basisSet = basisSet + ecp_block
         elif atom is not None:
-            basisSet = Basis.readBasisSetFromFile(atom, basis_name)
+            basis_block = Basis.readBasisSetFromFile(atom, basis_name, block_type='basis', quiet=quiet)
+            basisSet = basis_block if basis_block is not False else ''
+            ecp_block = Basis.readBasisSetFromFile(atom, basis_name, block_type='ecp', quiet=True)
+            if ecp_block is not False:
+                basisSet = basisSet + ecp_block
         basisSet =  basisSet.replace('D+', 'E+')
         basisSet =  basisSet.replace('D-', 'E-')
         return basisSet
@@ -887,73 +997,60 @@ class Basis:
         #Read the basis set and set the basis set information
         indx_shell = 0
         for i in range(mol.natoms):
-            lookfor = ''
-            lines = basisSet.splitlines()
-            pattern = re.compile('\*\n(.*)\n\*')
-            result = pattern.findall(basisSet)
-            if len(result)==0:
+            block = Basis._findTurbomoleBlock(basisSet, mol.basisSpecies[i], block_type='basis')
+            if block is None:
                 print('The basis set corresponding to atom ',mol.basisSpecies[i], ' was not found in the provided basis set.')
-            for res in result:
-                if res.split()[0].lower()==mol.basisSpecies[i].lower():
-                    lookfor = res
-            startReading = False
-            #print(lines)
+                continue
+
+            lines = block['lines']
             currentLineNo = 0
-            while currentLineNo<len(lines):
+            while currentLineNo < len(lines):
                 line = lines[currentLineNo].strip()
-                #print(line)
-                if line==lookfor:
-                    startReading = True
-                    currentLineNo = currentLineNo + 2
-                if startReading:
+                splitLine = line.split()
+                if len(splitLine) < 2:
+                    currentLineNo = currentLineNo + 1
+                    continue
+
+                try:
+                    nprim_shell = int(splitLine[0])
+                except ValueError:
+                    currentLineNo = currentLineNo + 1
+                    continue
+
+                shell_label = splitLine[1].lower()
+                if shell_label not in Data.shell_dict:
+                    currentLineNo = currentLineNo + 1
+                    continue
+
+                #Read the shell information
+                #Read the number of primitives in the given shell  Ex: '3  s'
+                self.nprims.append(nprim_shell)
+                #Read the shell type Ex: '3  s'
+                self.shellsLabel.append(shell_label)
+                #Get the angular momentum 'l' corresponding to the shell type.
+                #Ex: 's'->1, 'p'->2, 'd'->3, etc.
+                l = Data.shell_dict[shell_label]
+                self.shells.append(l)
+                self.shell_degen.append(Data.shell_degen[l-1])
+                self.shell_coords.append(mol.coordsBohrs[i])
+
+                for k in range(nprim_shell):
+                    currentLineNo = currentLineNo + 1
                     line = lines[currentLineNo].strip()
                     splitLine = line.split()
-                    if '*' in line:
-                        startReading = False
-                        currentLineNo = currentLineNo + 1
-                        break
-                    #print(line)
-                    #Check if the line looks like ' 3  s'
-                    if isinstance(int(splitLine[0]), int) and isinstance(str(splitLine[1]), str):
-                        #print('here')
-                        #Read the shell information
-                        #Read the number of primitives in the given shell  Ex: '3  s'
-                        self.nprims.append(int(splitLine[0]))  #Read '3'
-                        #Read the shell type Ex: '3  s'
-                        self.shellsLabel.append(str(splitLine[1])) #Read 's'
-                        #Get the angular momentum 'l' corresponding to the shell type.
-                        #Ex: 's'->1, 'p'->2, 'd'->3, etc.
-                        l = Data.shell_dict[splitLine[1]]
-                        self.shells.append(l)
-                        self.shell_degen.append(Data.shell_degen[l-1])
-                        self.shell_coords.append(mol.coordsBohrs[i])
-                        #create the information for basis functions
-                        #for ibf in range(int(l*(l+1)/2.0)):
-                        #    self.bfcoords.append(mol.coords[i])
-                        #Run a loop over the number of primitives in the current shell
-                        #and read the exponents and contraction coefficients
-                        for k in range(int(splitLine[0])):
-                            currentLineNo = currentLineNo + 1
-                            line = lines[currentLineNo].strip()
-                            splitLine = line.split()
-                            if '*' in line:
-                                startReading = False
-                                currentLineNo = currentLineNo + 1
-                                break
-                            splitLine[0] = splitLine[0].replace('D+', 'E+')
-                            splitLine[1] = splitLine[1].replace('D-', 'E-')
-                            self.prim_expnts.append(float(splitLine[0]))
-                            self.prim_coeffs.append(float(splitLine[1]))
-                            self.prim_coords.append(mol.coordsBohrs[i])
-                            self.prim_atoms.append(i)
-                            self.prim_shells.append(indx_shell)
-                            #self.prim_norms.append(float(normalizationFactor()))
-                            #print(self.prim_coeffs, self.prim_expnts)
-                            #print(currentLineNo)
+                    splitLine[0] = splitLine[0].replace('D+', 'E+')
+                    splitLine[0] = splitLine[0].replace('D-', 'E-')
+                    splitLine[1] = splitLine[1].replace('D+', 'E+')
+                    splitLine[1] = splitLine[1].replace('D-', 'E-')
+                    self.prim_expnts.append(float(splitLine[0]))
+                    self.prim_coeffs.append(float(splitLine[1]))
+                    self.prim_coords.append(mol.coordsBohrs[i])
+                    self.prim_atoms.append(i)
+                    self.prim_shells.append(indx_shell)
 
-                        indx_shell +=1
-                        for ibf in range(int(l*(l+1)/2.0)):
-                            self.bfs_atoms.append(i)
+                indx_shell +=1
+                for ibf in range(int(l*(l+1)/2.0)):
+                    self.bfs_atoms.append(i)
 
                 currentLineNo = currentLineNo + 1
 
@@ -964,6 +1061,115 @@ class Basis:
         #Run a loop over shells, and create information for 
         # basis functions
         #for i in range(shells
+
+    def readECPInfo(self, mol, basisSet):
+        """
+        Read TURBOMOLE-style effective core potential blocks from the basis string.
+        """
+        for i in range(mol.natoms):
+            block = Basis._findTurbomoleBlock(basisSet, mol.basisSpecies[i], block_type='ecp')
+            if block is None:
+                continue
+
+            ncore = 0
+            lmax = -1
+            local_l = -1
+            local_label = ''
+            local_terms = []
+            projector_terms = {}
+            current_channel = None
+
+            for line in block['lines']:
+                line = line.strip()
+                if line == '':
+                    continue
+                lower = line.lower()
+                if 'ncore' in lower:
+                    ncore_match = re.search(r'ncore\s*=\s*([0-9]+)', lower)
+                    lmax_match = re.search(r'lmax\s*=\s*([0-9]+)', lower)
+                    if ncore_match is not None:
+                        ncore = int(ncore_match.group(1))
+                    if lmax_match is not None:
+                        lmax = int(lmax_match.group(1))
+                    continue
+
+                splitLine = line.split()
+                if len(splitLine) == 0:
+                    continue
+
+                first = splitLine[0].lower()
+                if len(splitLine) == 1 and not _looks_like_float(first):
+                    if '-' in first:
+                        channel_label = first.split('-')[0]
+                        current_channel = ('projector', Data.shell_dict[channel_label] - 1)
+                        if current_channel[1] not in projector_terms:
+                            projector_terms[current_channel[1]] = []
+                    else:
+                        local_label = first
+                        local_l = Data.shell_dict[local_label] - 1
+                        current_channel = ('local', local_l)
+                    continue
+
+                if current_channel is None or len(splitLine) < 3:
+                    continue
+
+                coeff = float(splitLine[0].replace('D+', 'E+').replace('D-', 'E-'))
+                power = int(float(splitLine[1]))
+                exponent = float(splitLine[2].replace('D+', 'E+').replace('D-', 'E-'))
+                term = (coeff, power, exponent)
+                if current_channel[0] == 'local':
+                    local_terms.append(term)
+                else:
+                    projector_terms[current_channel[1]].append(term)
+
+            if ncore == 0 and len(local_terms) == 0 and len(projector_terms) == 0:
+                continue
+
+            ecp = {
+                'atom_index': i,
+                'symbol': mol.basisSpecies[i],
+                'header': block['header'],
+                'ncore': ncore,
+                'lmax': lmax,
+                'local_l': local_l,
+                'local_label': local_label,
+                'local_terms': local_terms,
+                'projector_terms': projector_terms,
+                'coords': np.array(mol.coordsBohrs[i], dtype=np.float64),
+            }
+            self.ecps.append(ecp)
+            self.ecp_by_atom[i] = ecp
+            self.ecp_atoms.append(i)
+            self.ecp_total_core_electrons += ncore
+
+        self.has_ecp = len(self.ecps) > 0
+
+    def applyECPToMol(self, mol):
+        """
+        Apply parsed ECP core counts to the molecule's active charges and electron count.
+        """
+        if not self.has_ecp:
+            return
+
+        if not hasattr(mol, 'Zcharges_all_electron'):
+            mol.Zcharges_all_electron = list(mol.Zcharges)
+        if not hasattr(mol, 'ecp_core_electrons'):
+            mol.ecp_core_electrons = [0 for _ in range(mol.natoms)]
+
+        for ecp in self.ecps:
+            iatom = ecp['atom_index']
+            ncore = ecp['ncore']
+            previous_ncore = mol.ecp_core_electrons[iatom]
+            if previous_ncore == ncore:
+                continue
+            if previous_ncore != 0 and previous_ncore != ncore:
+                raise ValueError('Conflicting ECP core electron counts for atom ' + str(iatom))
+
+            mol.ecp_core_electrons[iatom] = ncore
+            mol.Zcharges[iatom] = mol.Zcharges_all_electron[iatom] - ncore
+            mol.nelectrons = mol.nelectrons - ncore
+
+        mol.Zcharges_effective = list(mol.Zcharges)
 
     def calc_nprim_for_each_angular_momentum_l(self, tuple_list):
         """

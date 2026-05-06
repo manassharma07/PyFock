@@ -1,0 +1,182 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1in]{geometry}
+
+\title{Effective Core Potential Integrals in PyFock}
+\author{PyFock implementation notes}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Semilocal ECP Operator}
+
+The scalar semilocal effective core potential on center \(C\) is written as
+\begin{equation}
+  \hat U_C =
+  U_L(r_C) +
+  \sum_{\ell=0}^{L-1}\sum_{m=-\ell}^{\ell}
+  |\ell m\rangle
+  \left[ U_\ell(r_C)-U_L(r_C) \right]
+  \langle \ell m | ,
+\end{equation}
+where \(r_C = |\mathbf r-\mathbf C|\), \(L\) is the local channel, and
+\(|\ell m\rangle\) denotes a normalized real spherical harmonic projector.
+The TURBOMOLE/def2 data in PyFock are parsed as Gaussian radial expansions
+\begin{equation}
+  U_\ell(r) = \sum_k c_{\ell k} r^{n_{\ell k}-2}
+  \exp(-\alpha_{\ell k} r^2).
+\end{equation}
+For the def2 Cd ECP all tabulated radial powers are \(n=2\), so the radial
+terms used by the local analytic path are ordinary Gaussians
+\(c_k\exp(-\alpha_k r^2)\).
+
+\section{Local Channel}
+
+For Cartesian Gaussian primitives
+\begin{align}
+  \chi_a(\mathbf r) &=
+  N_a (x-A_x)^{l_a}(y-A_y)^{m_a}(z-A_z)^{n_a}
+  \exp[-\alpha|\mathbf r-\mathbf A|^2],\\
+  \chi_b(\mathbf r) &=
+  N_b (x-B_x)^{l_b}(y-B_y)^{m_b}(z-B_z)^{n_b}
+  \exp[-\beta|\mathbf r-\mathbf B|^2],
+\end{align}
+and a local ECP Gaussian \(c\exp[-\gamma|\mathbf r-\mathbf C|^2]\), the integral is
+\begin{equation}
+  V^{\mathrm{loc}}_{ab,k}
+  =
+  c N_a N_b
+  \exp\left[-\alpha A^2-\beta B^2-\gamma C^2
+  + p P^2\right]
+  S_x S_y S_z,
+\end{equation}
+with
+\begin{equation}
+  p=\alpha+\beta+\gamma,\qquad
+  \mathbf P = \frac{\alpha\mathbf A+\beta\mathbf B+\gamma\mathbf C}{p}.
+\end{equation}
+The one-dimensional Hermite overlap factors are
+\begin{equation}
+  S_x =
+  \int_{-\infty}^{\infty}
+  (x-A_x)^{l_a}(x-B_x)^{l_b}
+  \exp[-p(x-P_x)^2]\,dx ,
+\end{equation}
+and similarly for \(S_y\) and \(S_z\). PyFock evaluates these with the same
+\texttt{calcS} helper used by the overlap integrals, then sums over primitive
+pairs and ECP primitives.
+
+\section{Projector Channels}
+
+For a projector channel \(\ell\), the matrix contribution is
+\begin{equation}
+  V^{\ell}_{ab}
+  =
+  \sum_m \int_0^\infty r^2
+  \left[U_\ell(r)-U_L(r)\right]
+  q_{a\ell m}(r)\,q_{b\ell m}(r)\,dr ,
+\end{equation}
+where
+\begin{equation}
+  q_{a\ell m}(r)
+  =
+  \int_{S^2}
+  \chi_a(\mathbf C+r\Omega)\,Y_{\ell m}(\Omega)\,d\Omega .
+\end{equation}
+The implementation in \texttt{ecp\_mat\_symm.py} uses normalized real spherical harmonics and forms these
+projector amplitudes for all AOs at a radial node as a dense matrix product.
+The angular integral is evaluated on a product grid that is exact for the low
+angular momenta appearing in the def2 Cd basis at practical grid sizes. The
+radial integral uses the same Gauss--Chebyshev mapping used in established ECP
+implementations, but implemented natively in Python/Numba and without PySCF,
+libcint, or libint calls.
+
+\section{Analytical Projector Series}
+
+The implementation in \texttt{ecp\_mat\_symm\_analytical.py} removes the
+spatial quadrature from the projector channels. By the addition theorem,
+\begin{equation}
+  \sum_m Y_{\ell m}(\Omega)Y_{\ell m}(\Omega')
+  =
+  \frac{2\ell+1}{4\pi}P_\ell(\Omega\cdot\Omega'),
+\end{equation}
+so the two angular projections can be written as moments of monomials in
+\(\Omega\) and \(\Omega'\). For an AO centered at \(\mathbf A\), define
+\(\mathbf D=\mathbf A-\mathbf C\). Around the ECP center,
+\begin{equation}
+  \chi_a(\mathbf C+r\Omega)
+  =
+  N_a (\mathbf r_\Omega-\mathbf D)^{\mathbf l_a}
+  \exp[-\alpha(r^2+D^2)]
+  \exp[2\alpha r\,\mathbf D\cdot\Omega],
+\end{equation}
+where \(\mathbf r_\Omega=r\Omega\). The off-center exponential is expanded as
+\begin{equation}
+  \exp[2\alpha r\,\mathbf D\cdot\Omega]
+  =
+  \sum_{t_x,t_y,t_z\ge 0}
+  \frac{(2\alpha r)^{t_x+t_y+t_z}
+  D_x^{t_x}D_y^{t_y}D_z^{t_z}
+  \Omega_x^{t_x}\Omega_y^{t_y}\Omega_z^{t_z}}
+  {t_x!t_y!t_z!}.
+\end{equation}
+Every retained term has an exact angular integral over the unit sphere,
+\begin{equation}
+  \int_{S^2}\Omega_x^{2a}\Omega_y^{2b}\Omega_z^{2c}\,d\Omega
+  =
+  4\pi
+  \frac{(2a-1)!!(2b-1)!!(2c-1)!!}
+       {(2a+2b+2c+1)!!},
+\end{equation}
+with odd powers vanishing. The remaining radial integral is also closed form:
+\begin{equation}
+  \int_0^\infty r^q \exp[-p r^2]\,dr
+  =
+  \frac{1}{2}\Gamma\left(\frac{q+1}{2}\right)
+  p^{-(q+1)/2}.
+\end{equation}
+Thus the analytical code performs no radial or angular quadrature. For
+off-center AO/ECP pairs the exact expression is an infinite analytical series;
+the \texttt{series\_order} parameter controls the truncation. Centered
+AO/ECP terms are exact at order zero. For Cd\(_2\)/def2-TZVP at 2.98
+\AA, order 12 reaches about \(10^{-8}\) maximum matrix-element error versus
+PySCF, and order 20 reaches about \(10^{-11}\).
+
+\section{Molecular Bookkeeping}
+
+When an ECP block is found, PyFock stores the atom index, local channel, core
+electron count, and projector channels on the \texttt{Basis} object. The
+molecule's active nuclear charge is reduced by \(n_{\mathrm{core}}\), and the
+active electron count is reduced by the same amount. Thus a neutral Cd atom with
+a 28-electron def2 ECP has active charge 20 and contributes 20 valence
+electrons. The ordinary nuclear attraction and nuclear repulsion terms then use
+the valence charges, while \(\hat U_C\) supplies the core replacement operator.
+
+\section{Validation}
+
+For Cd/def2-TZVP, PyFock's Cartesian functions are internally normalized before
+the Cartesian-to-spherical transformation. Therefore direct Cartesian matrices
+do not numerically match PySCF's unnormalized Cartesian integral convention.
+After transforming to the spherical AO basis used in the benchmark, the native
+PyFock ECP matrix agrees with PySCF's \texttt{ECPscalar\_sph} matrix to
+roundoff for an isolated Cd atom.
+
+\begin{thebibliography}{9}
+\bibitem{mclean1976}
+A. D. McLean and M. Yoshimine, ``Theory of molecular integrals over Gaussian
+functions,'' \emph{J. Chem. Phys.} \textbf{65}, 3826 (1976).
+
+\bibitem{mitin1999}
+A. V. Mitin, C. van Wüllen, and G. Hirsch, ``Two-component relativistic
+effective core potentials,'' \emph{J. Chem. Phys.} \textbf{111}, 8778 (1999).
+
+\bibitem{mura1996}
+M. E. Mura and P. J. Knowles, ``Improved radial grids for quadrature in
+molecular density-functional calculations,'' \emph{J. Chem. Phys.}
+\textbf{104}, 9848 (1996).
+\end{thebibliography}
+
+\end{document}

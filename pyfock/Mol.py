@@ -147,8 +147,8 @@ class Mol:
             #Or one can specify a particular basis set for a particular atom.
             #'basis' is a dictionary specifying the basis set to be used for a particular atom
             if basis is None:
-                #Default basis set is sto-3g for all atoms
-                self.basis = {'all':Basis.load(mol=self, basis_name='sto-3g')}#{'all','sto-3g'}
+                #Default basis set is sto-3g where available, with def2-SVP as a fallback.
+                self.basis = self.defaultBasis()
                 self.basis = Basis(self, self.basis)
             else:
                 self.basis = Basis(self, basis)
@@ -156,6 +156,39 @@ class Mol:
 
         
         
+
+    def defaultBasis(self):
+        """
+        Build the default basis assignment for a molecule.
+
+        STO-3G remains the default for atoms covered by the bundled STO-3G file.
+        For atoms missing from STO-3G, fall back to def2-SVP so that molecule
+        construction can still succeed for heavier elements.
+        """
+        basisSet = ''
+        fallback_atoms = []
+
+        for i in range(self.natoms):
+            atom_basis = Basis.load(atom=self.basisSpecies[i], basis_name='sto-3g', quiet=True)
+            if atom_basis.strip() == '':
+                atom_basis = Basis.load(atom=self.basisSpecies[i], basis_name='def2-SVP', quiet=True)
+                if atom_basis.strip() != '':
+                    fallback_atoms.append(self.basisSpecies[i])
+
+            if atom_basis.strip() == '':
+                print('Error: No default basis found for atom', self.basisSpecies[i])
+            else:
+                basisSet = basisSet + atom_basis
+
+        if len(fallback_atoms) > 0:
+            fallback_atoms_unique = []
+            for atom in fallback_atoms:
+                if atom not in fallback_atoms_unique:
+                    fallback_atoms_unique.append(atom)
+            print('Default STO-3G basis not found for atoms', fallback_atoms_unique, '. Using def2-SVP for those atoms.', sep='')
+
+        return {'all': basisSet}
+
 
     def validateAtoms(self, atoms):
         """

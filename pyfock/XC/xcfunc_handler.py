@@ -266,7 +266,7 @@ _ALIAS_TO_IDS = {
     "PW91C":    [12],         # bare PW correlation (no common exchange alias here)
     "R2SCAN":   [497, 498],   # MGGA_X_R2SCAN   + MGGA_C_R2SCAN
     "TPSS":     [202, 231],   # MGGA_X_TPSS     + MGGA_C_TPSS
-    "TASK":     [707],        # MGGA_X_TASK     only
+    "TASK":     [707, 7],        # MGGA_X_TASK     only
     "MN12L":    [227, 74],    # MGGA_X_MN12_L   + MGGA_C_MN12_L
     "MN12-L":   [227, 74],
     "M06L":     [203, 233],   # MGGA_X_M06_L    + MGGA_C_M06_L

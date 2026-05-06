@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import numpy as np
+from types import SimpleNamespace
 
 from pyfock import Basis
+from pyfock import Mol
 
 from .conftest import H2O_XYZ, build_basis, build_h2o_mol
 
@@ -44,3 +46,20 @@ def test_basis_coordinates_follow_parent_molecule():
     bfs_atoms = np.asarray(basis.bfs_atoms, dtype=int)
 
     np.testing.assert_allclose(bfs_coords, atom_coords[bfs_atoms], atol=1e-12, rtol=0.0)
+
+
+def test_def2_cd_ecp_is_parsed_and_applied():
+    atoms = [["Cd", 0.0, 0.0, -1.49], ["Cd", 0.0, 0.0, 1.49]]
+    loader_mol = SimpleNamespace(natoms=2, basisSpecies=["Cd", "Cd"])
+    basis_string = Basis.load(mol=loader_mol, basis_name="def2-TZVP")
+    mol = Mol(atoms=atoms, basis={"all": basis_string})
+    basis = mol.basis
+
+    assert basis.has_ecp
+    assert len(basis.ecps) == 2
+    assert basis.bfs_nao == 92
+    assert mol.Zcharges == [20, 20]
+    assert mol.nelectrons == 40
+    assert [ecp["ncore"] for ecp in basis.ecps] == [28, 28]
+    assert [ecp["local_label"] for ecp in basis.ecps] == ["f", "f"]
+    assert set(basis.ecps[0]["projector_terms"]) == {0, 1, 2}

@@ -112,9 +112,9 @@ funcidpyscf = str(funcx)+','+str(funcc)
 # basis_set_name = 'sto-3g'
 # basis_set_name = 'sto-6g'
 # basis_set_name = '6-31G'
-basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVP'
 # basis_set_name = 'def2-SVPD'
-# basis_set_name = 'def2-TZVP'
+basis_set_name = 'def2-TZVP'
 # basis_set_name = 'def2-QZVP'
 # basis_set_name = 'def2-TZVPP'
 # basis_set_name = 'def2-QZVPP'
@@ -150,7 +150,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Ubiquitin.xyz'
 
 ### 1D Carbon Alkanes
-xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Icosane_C20H42.xyz'
 # xyzFilename = 'Tetracontane_C40H82.xyz'
 # xyzFilename = 'Pentacontane_C50H102.xyz'
@@ -174,12 +174,26 @@ xyzFilename = 'Decane_C10H22.xyz'
 # xyzFilename = 'Graphene_C210.xyz'
 # xyzFilename = 'Graphene_C294.xyz'
 
+### def2 ECP benchmark systems
+# xyzFilename = 'AgCl.xyz'
+# xyzFilename = 'AuCl.xyz'
+# xyzFilename = 'BiH3.xyz'
+# xyzFilename = 'HgCl2.xyz'
+# xyzFilename = 'I2.xyz'
+# xyzFilename = 'PbH4.xyz'
+# xyzFilename = 'RbCl.xyz'
+xyzFilename = 'SnCl4.xyz'
+# xyzFilename = 'W_CO6.xyz'
+# xyzFilename = 'XeF2.xyz'
+# xyzFilename = 'Cd_dimer.xyz'
+
 
 # ---------PySCF---------------
 #Comparison with PySCF
 molPySCF = gto.Mole()
 molPySCF.atom = xyzFilename
 molPySCF.basis = basis_set_name
+molPySCF.ecp = basis_set_name
 molPySCF.cart = False
 molPySCF.verbose = 4
 molPySCF.max_memory=5000
@@ -258,7 +272,7 @@ dftObj.ncores = ncores
 dftObj.save_ao_values = True
 dftObj.rys = True
 dftObj.isDF = True
-dftObj.DF_algo = 1
+dftObj.DF_algo = 10
 dftObj.blocksize = 5000
 dftObj.XC_algo = 2
 dftObj.debug = False
@@ -302,11 +316,19 @@ import scipy
 import numba
 import threadpoolctl
 import opt_einsum
-import pylibxc
 import llvmlite 
-import cupy
 import numexpr
 import pyscf
+try:
+    import pylibxc
+    pylibxc_version = pylibxc.__version__
+except Exception:
+    pylibxc_version = 'not installed'
+try:
+    import cupy
+    cupy_version = cupy.__version__
+except Exception:
+    cupy_version = 'not installed'
 print('\n\n\n Package versions')
 print('pyscf version', pyscf.__version__)
 # print('psi4 version', psi4.__version__)
@@ -315,8 +337,8 @@ print('joblib version', joblib.__version__)
 print('numba version', numba.__version__)
 print('threadpoolctl version', threadpoolctl.__version__)
 print('opt_einsum version', opt_einsum.__version__)
-# print('pylibxc version', pylibxc.__version__)
+print('pylibxc version', pylibxc_version)
 print('llvmlite version', llvmlite.__version__)
-print('cupy version', cupy.__version__)
+print('cupy version', cupy_version)
 print('numexpr version', numexpr.__version__)
 print('scipy version', scipy.__version__)
