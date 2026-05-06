@@ -46,7 +46,7 @@ def gga_x_b88_v(rho, sigma):
     # Corresponds to 106 id in Libxc
 
     rho = np.maximum(rho, 1e-12)
-    sigma = np.maximum(sigma, 1e-12)
+    sigma = np.maximum(sigma, 1e-30)
 
     beta = 0.0042  # beta parameter
     beta2 = 2 * beta
@@ -116,7 +116,7 @@ def gga_x_b88_v_cupy(rho, sigma):
     # Corresponds to 106 id in Libxc
 
     # rho = cp.maximum(rho, 1e-12)
-    # sigma = cp.maximum(sigma, 1e-12)
+    sigma = cp.maximum(sigma, 1e-30)
 
     beta = 0.0042  # beta parameter
     beta2 = 2 * beta

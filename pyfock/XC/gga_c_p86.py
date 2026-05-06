@@ -27,8 +27,8 @@ def gga_c_p86_(rho, sigma):
                                 / (1 + gamma*rs + delta*rs^2 + 1e4*beta*rs^3)
              alpha=0.023266, beta=7.389e-6, gamma=8.723, delta=0.472
 
-    Eq. (9): Phi = 1.745 * f_tilde * C(inf)/C(n) * |grad n| / n^{7/6}
-             f_tilde = 0.11, C(inf) = 0.001667
+    Eq. (9): Phi = 1.745 * f_tilde * (0.001667 + 0.002568)/C(n) * |grad n| / n^{7/6}
+             f_tilde = 0.11
 
     Eq. (4): d = 2^{1/3} * [(1+zeta)/2)^{5/3} + ((1-zeta)/2)^{5/3}]^{1/2}
              For zeta=0 (unpolarized): d = 1
@@ -58,6 +58,7 @@ def gga_c_p86_(rho, sigma):
 
     # C(rs) from Eq. (6)
     Cinf = 0.001667
+    C0 = 0.002568
     alpha_c = 0.023266
     beta_c = 7.389e-6
     gamma_c = 8.723
@@ -66,7 +67,7 @@ def gga_c_p86_(rho, sigma):
     rs2 = rs * rs
     rs3 = rs * rs2
 
-    num_C = 0.002568 + alpha_c * rs + beta_c * rs2
+    num_C = C0 + alpha_c * rs + beta_c * rs2
     den_C = 1.0 + gamma_c * rs + delta_c * rs2 + 1e4 * beta_c * rs3
     Crs = Cinf + num_C / den_C
 
@@ -80,7 +81,7 @@ def gga_c_p86_(rho, sigma):
     rho76 = rho ** (7.0 / 6.0)
     rho43 = rho ** (4.0 / 3.0)
 
-    Phi = prefac_Phi * Cinf / Crs * norm_dn / rho76
+    Phi = prefac_Phi * (Cinf + C0) / Crs * norm_dn / rho76
 
     exp_phi = np.exp(-Phi)
 
@@ -104,12 +105,12 @@ def gga_c_p86_(rho, sigma):
     F = delta_ec * rho  
     dF_dn = F * (dCrs_dn / Crs - dPhi_dn - 4.0 / 3.0 / rho)
 
-    vc = vc_lda + delta_ec + dF_dn
+    vc = vc_lda + dF_dn
 
 
     vsigmac = Crs * exp_phi / (d_factor * rho43) * (1.0 - Phi / 2.0)
 
-    vsigma = 0.5 * vsigmac
+    vsigma = vsigmac
 
     return ec, vc, vsigma
 
@@ -142,6 +143,7 @@ def gga_c_p86_cupy_(rho, sigma):
     rs = pi34 * rho ** (-1.0 / 3.0)
 
     Cinf = 0.001667
+    C0 = 0.002568
     alpha_c = 0.023266
     beta_c = 7.389e-6
     gamma_c = 8.723
@@ -150,7 +152,7 @@ def gga_c_p86_cupy_(rho, sigma):
     rs2 = rs * rs
     rs3 = rs * rs2
 
-    num_C = 0.002568 + alpha_c * rs + beta_c * rs2
+    num_C = C0 + alpha_c * rs + beta_c * rs2
     den_C = 1.0 + gamma_c * rs + delta_c * rs2 + 1e4 * beta_c * rs3
     Crs = Cinf + num_C / den_C
 
@@ -164,7 +166,7 @@ def gga_c_p86_cupy_(rho, sigma):
     rho76 = rho ** (7.0 / 6.0)
     rho43 = rho ** (4.0 / 3.0)
 
-    Phi = prefac_Phi * Cinf / Crs * norm_dn / rho76
+    Phi = prefac_Phi * (Cinf + C0) / Crs * norm_dn / rho76
 
     exp_phi = cp.exp(-Phi)
 
@@ -185,10 +187,10 @@ def gga_c_p86_cupy_(rho, sigma):
     F = delta_ec * rho
     dF_dn = F * (dCrs_dn / Crs - dPhi_dn - 4.0 / 3.0 / rho)
 
-    vc = vc_lda + delta_ec + dF_dn
+    vc = vc_lda + dF_dn
 
     vsigmac = Crs * exp_phi / (d_factor * rho43) * (1.0 - Phi / 2.0)
-    vsigma = 0.5 * vsigmac
+    vsigma = vsigmac
 
     return ec, vc, vsigma
 

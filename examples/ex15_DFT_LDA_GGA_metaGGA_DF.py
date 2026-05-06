@@ -23,7 +23,9 @@ from pyfock import DFT
 # or using predefined strings
 # funcidpyfock = 'LDA' # [1, 7]
 # funcidpyfock = 'SPZ' # [1, 9]
+# funcidpyfock = 'SPZMOD' # [1, 10]
 # funcidpyfock = 'SPW' # [1, 12]
+# funcidpyfock = 'SPWMOD' # [1, 12]
 #
 # Natively implemented GGA functionals
 funcidpyfock = 'PBE' # [101, 130]

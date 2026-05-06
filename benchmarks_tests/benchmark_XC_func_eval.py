@@ -14,8 +14,11 @@ FUNCTIONALS = [
     (13,  False),   # LDA_C_PW_MOD
     (101, True),    # GGA_X_PBE
     (106, True),    # GGA_X_B88
+    (109, True),    # GGA_X_PW91
     (130, True),    # GGA_C_PBE
     (131, True),    # GGA_C_LYP
+    (132, True),    # GGA_C_P86
+    (134, True),    # GGA_C_PW91
 ]
 
 RHO_CASES = {

@@ -8,7 +8,7 @@ except Exception as e:
             return func
         return decorator
 import numpy as np
-from pyfock.XC import lda_x
+from pyfock.XC import lda_x, lda_x_cupy
 from numba import njit
 
 
@@ -24,8 +24,9 @@ def pw91_x_temp(rho, sigma):
     a3 = 0.2743
     a4 = 0.1508
     a5 = 100.0
-    a = 6 * a1
+    a = 0.004
 
+    sigma = np.maximum(sigma, 1e-30)
     norm_dn = np.sqrt(sigma)
     kf = (3 * np.pi**2 * rho) ** (1 / 3)
     divkf = 1.0 / kf
@@ -118,8 +119,9 @@ def pw91_x_temp_cupy(rho, sigma):
     a3 = 0.2743
     a4 = 0.1508
     a5 = 100.0
-    a = 6 * a1
+    a = 0.004
 
+    sigma = cp.maximum(sigma, 1e-30)
     norm_dn = cp.sqrt(sigma)
     kf = (3 * cp.pi**2 * rho) ** (1 / 3)
     divkf = 1.0 / kf
@@ -161,7 +163,7 @@ def gga_x_pw91_cupy(rho, sigma):
     """
     rho = cp.maximum(rho, 1e-12)
 
-    ex, vx = lda_x(rho)
+    ex, vx = lda_x_cupy(rho)
     gex, gvx, vsigmax = pw91_x_temp_cupy(rho, sigma)
 
     ex += gex / rho

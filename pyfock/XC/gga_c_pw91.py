@@ -1,255 +1,183 @@
 try:
     import cupy as cp
-    from cupy import fuse
-except Exception as e:
+except Exception:
     cp = None
-    def fuse(kernel_name):
-        def decorator(func):
-            return func
-        return decorator
+
 import numpy as np
-from pyfock.XC.lda_c_pw_mod import lda_c_pw_mod_, lda_c_pw_mod_cupy_
-from numba import njit
 
 
-@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
-def gga_c_pw91_(rho, sigma):
-    """
-    Perdew-Wang 91 correlation functional (spin-unpolarized).
-    Corresponds to GGA_C_PW91 with ID 134 in LibXC.
-    Reference: Phys. Rev. B 46, 6671 (1992).
-    """
-    rho = np.maximum(rho, 1e-12)
-
-    # PW91 correlation parameters
-    alpha = 0.09
-    Cc0 = 0.004235
-    Cx = -0.001667212
-    nu = 15.755920
-    # beta coefficient from the PW91 paper
-    beta_pw91 = nu * Cc0
-
-    pi34 = (3 / (4 * np.pi)) ** (1 / 3)
-    rs = pi34 * rho ** (-1 / 3)
-    norm_dn = np.sqrt(sigma)
-    ec, vc = lda_c_pw_mod_(rho)
-
-    kf = (9 / 4 * np.pi) ** (1 / 3) / rs
-    ks = np.sqrt(4 * kf / np.pi)
-    divt = 2 * ks * rho
-    t = norm_dn / divt
-    t2 = t * t
-
-    # Cc(rs) parametrization
-    Cc = Cc0 + (0.002568 + rs * (0.023266 + rs * 7.389e-6)) / (1 + rs * (8.723 + rs * (0.472 + rs * 7.389e-2)))
-    # Simplified: use standard PW91 A(ec) same structure as PBE
-    # Actually PW91 correlation uses a different form than PBE
-
-    # PW91 uses:
-    # H = H0 + H1
-    # H0 = beta^2/(2*alpha) * ln(1 + 2*alpha/beta * t^2 * (1 + A*t^2)/(1 + A*t^2 + A^2*t^4))
-    # A = 2*alpha/beta * 1/(exp(-2*alpha*ec/beta^2) - 1)
-
-    beta = beta_pw91
-    beta2 = beta * beta
-
-    expec = np.exp(-2 * alpha * ec / beta2)
-    A = 2 * alpha / beta / (expec - 1)
-
-    At2 = A * t2
-    A2t4 = At2 * At2
-    divsum = 1 + At2 + A2t4
-
-    H0_arg = 1 + 2 * alpha / beta * t2 * (1 + At2) / divsum
-    H0 = beta2 / (2 * alpha) * np.log(H0_arg)
-
-    # H1 = nu * (Cc - Cc0 - 3/7 * Cx) * t^2 * exp(-100 * ks^2 * t^2 / kf^2)
-    ks2_over_kf2 = ks**2 / kf**2
-    exp_H1 = np.exp(-100 * ks2_over_kf2 * t2)
-    H1 = nu * (Cc - Cc0 - 3.0 / 7.0 * Cx) * t2 * exp_H1
-
-    gec = H0 + H1
-
-    # Derivatives for vc
-    # dH0/dt, dH0/dec, dH0/drs need to be computed
-    # For the potential, we need d(n*(ec+gec))/dn
-
-    div = (1 + At2) / divsum
-    factor = A2t4 * (2 + At2) / divsum**2
-
-    # dA/dec = A * 2 * alpha / beta2 * expec / (expec - 1)
-    dA_dec = 2 * alpha / beta * expec / (expec - 1)**2 * 2 * alpha / beta2
-    # Simplify: dA/dec = A^2 * beta / (2*alpha) * expec * 2*alpha/beta2
-    # = A^2 * expec / beta * ... let me just compute numerically
-
-    dA_dec_v2 = A * expec / (expec - 1) * (2 * alpha / beta2)
-
-    # dH0/dt = beta^2/(2*alpha) * 1/H0_arg * 2*alpha/beta * d/dt[t^2*(1+At2)/divsum]
-    # d/dt[t^2*(1+At2)/(1+At2+A2t4)] 
-    # Let u = t^2, du/dt = 2t
-    # d/du[(u + A*u^2)/(1 + A*u + A^2*u^2)]
-    # = [(1 + 2*A*u)*(1+A*u+A^2*u^2) - (u+A*u^2)*(A+2*A^2*u)] / denom^2
-    u = t2
-    num_inner = (1 + 2*A*u)*(1+A*u+A**2*u**2) - (u+A*u**2)*(A+2*A**2*u)
-    d_inner_du = num_inner / divsum**2
-
-    dH0_dt = beta2 / (2 * alpha) / H0_arg * (2 * alpha / beta) * 2 * t * d_inner_du
-
-    # dH0/dec through A
-    # dH0/dA = beta^2/(2*alpha) / H0_arg * 2*alpha/beta * t^2 * d/dA[(1+At2)/(1+At2+A2t4)]
-    # d/dA[(1+A*u)/(1+A*u+A^2*u^2)] = [u*(1+Au+A^2u^2) - (1+Au)*(u+2Au^2)] / denom^2
-    d_inner_dA = (u * divsum - (1 + A*u) * (u + 2*A*u**2)) / divsum**2
-    dH0_dA = beta2 / (2 * alpha) / H0_arg * (2 * alpha / beta) * t2 * d_inner_dA
-    dH0_dec = dH0_dA * dA_dec_v2
-
-    # dH1/dt = nu * (Cc-Cc0-3/7*Cx) * (2*t*exp_H1 + t2 * exp_H1 * (-200*ks2_over_kf2*t))
-    dH1_dt = nu * (Cc - Cc0 - 3.0/7.0*Cx) * exp_H1 * (2*t - 200*ks2_over_kf2*t*t2)
-
-    # dt/dn: t = |grad n| / (2*ks*n), where ks depends on n
-    # ks = sqrt(4*kf/pi), kf ~ n^{1/3}, so ks ~ n^{1/6}
-    # t ~ |grad n| * n^{-7/6} (up to constants)
-    # dt/dn = -7/6 * t / n
-    dtdn = -7.0 / 6.0 * t / rho
-
-    # dec/dn = vc (the LDA correlation potential)
-    # drs/dn = -rs/(3n)
-
-    dgec_dn = (dH0_dt + dH1_dt) * dtdn + dH0_dec * vc
-
-    # For H1, there's also a dCc/drs * drs/dn contribution
-    # But this is a higher-order correction; for simplicity in this implementation:
-    # dCc/drs contribution to H1
-    # dCc/drs * drs/dn * nu * t^2 * exp_H1
-    drs_dn = -rs / (3 * rho)
-
-    # dCc/drs (numerical form)
-    num_Cc = 0.002568 + rs * (0.023266 + rs * 7.389e-6)
-    den_Cc = 1 + rs * (8.723 + rs * (0.472 + rs * 7.389e-2))
-    dnum_Cc = 0.023266 + 2 * rs * 7.389e-6
-    dden_Cc = 8.723 + rs * (2 * 0.472 + rs * 3 * 7.389e-2)
-    dCc_drs = (dnum_Cc * den_Cc - num_Cc * dden_Cc) / den_Cc**2
-
-    dgec_dn += nu * dCc_drs * drs_dn * t2 * exp_H1
-
-    gvc = gec + dgec_dn * rho  # This is an approximation; full derivative is complex
-
-    # Actually, the standard way: vc_total = ec + gec + rho * d(ec+gec)/drho
-    # But following the PBE pattern: vc = ec + gec + correction
-    # Let me follow a simpler approach similar to PBE:
-
-    # For vsigma:
-    # d(n*(ec+gec))/dsigma = n * d(gec)/dsigma
-    # d(gec)/d(sigma) = d(gec)/dt * dt/dsigma
-    # t = sqrt(sigma)/(2*ks*rho), dt/dsigma = 1/(2*sqrt(sigma)*2*ks*rho) = 1/(4*ks*rho*sqrt(sigma))
-    dt_dsigma = 1.0 / (4 * ks * rho * norm_dn)
-    dgec_dsigma = (dH0_dt + dH1_dt) * dt_dsigma
-
-    ec_out = ec + gec
-    vc_out = vc + gec + dgec_dn  # simplified
-    vsigma = 0.5 * dgec_dsigma
-
-    return ec_out, vc_out, vsigma
+_RHO_CUTOFF = 1e-12
+_COMPLEX_STEP = 1e-30
 
 
-@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
+def _sanitize_rho(rho, xp):
+    if xp is np:
+        rho = np.asarray(rho)
+        if np.iscomplexobj(rho):
+            return np.where(
+                np.real(rho) > _RHO_CUTOFF,
+                rho,
+                _RHO_CUTOFF + 1j * np.imag(rho),
+            )
+        return np.maximum(rho, _RHO_CUTOFF)
+
+    rho = xp.asarray(rho)
+    if rho.dtype.kind == "c":
+        return xp.where(
+            xp.real(rho) > _RHO_CUTOFF,
+            rho,
+            _RHO_CUTOFF + 1j * xp.imag(rho),
+        )
+    return xp.maximum(rho, _RHO_CUTOFF)
+
+
+def _finite_or_zero(values, xp):
+    if xp is np:
+        return np.where(np.isfinite(values), values, 0.0)
+    return xp.where(xp.isfinite(values), values, 0.0)
+
+
+def _gga_c_pw91_energy_density(rho, sigma, xp):
+    """LibXC-equivalent unpolarized PW91 correlation energy density."""
+    rho = _sanitize_rho(rho, xp)
+    sigma = xp.asarray(sigma)
+
+    third = 1.0 / 3.0
+    cbrt2 = 2.0**third
+    cbrt3 = 3.0**third
+    cbrt4 = 4.0**third
+    cbrt9 = 9.0**third
+    invpi = 1.0 / xp.pi
+
+    t3 = invpi**third
+    t4 = cbrt3 * t3
+    t6 = cbrt4 * cbrt4
+    t7 = rho**third
+    t10 = t4 * t6 / t7
+    t12 = 1.0 + 0.053425 * t10
+    t13 = xp.sqrt(t10)
+    t16 = t10**1.5
+    t18 = cbrt3 * cbrt3
+    t19 = t3 * t3
+    t20 = t18 * t19
+    t21 = t7 * t7
+    t24 = t20 * cbrt4 / t21
+    t26 = 3.79785 * t13 + 0.8969 * t10 + 0.204775 * t16 + 0.123235 * t24
+    t29 = 1.0 + 16.081824322151104822 / t26
+    t32 = 0.062182 * t12 * xp.log(t29)
+    ec_lda = -t32
+
+    pi2_cbrt = (xp.pi * xp.pi) ** third
+    pi2_cbrt2 = pi2_cbrt * pi2_cbrt
+    t61 = t18 * pi2_cbrt2
+    t66 = 1.0 / pi2_cbrt
+    t67 = t18 * t66
+    rho2 = rho * rho
+    t70 = 1.0 / (t7 * rho2)
+    t72 = sigma * t70 * cbrt2
+    t75 = 1.0 / t3
+    t76 = t75 * cbrt4
+    t77 = t18 * t76
+    t83 = 1.0 / pi2_cbrt2
+    t87 = xp.exp(-128.97460341341234505 * ec_lda * cbrt3 * t83)
+    t88 = t87 - 1.0
+    t89 = 1.0 / t88
+    t90 = t66 * t89
+    sigma2 = sigma * sigma
+    rho4 = rho2 * rho2
+    t94 = 1.0 / (t21 * rho4)
+    t95 = sigma2 * t94
+    t97 = cbrt2 * cbrt2
+    t101 = 1.0 / t19
+    t102 = t101 * t6
+    t103 = t97 * t102
+    t106 = t72 * t77 / 96.0 + 0.0027166129655589868296 * t90 * t95 * t103
+    t107 = cbrt3 * t66
+    t109 = t107 * t89 * sigma
+    t110 = t70 * cbrt2
+    t112 = t75 * cbrt4
+    t116 = t18 * t83
+    t118 = 1.0 / (t88 * t88)
+    t120 = t116 * t118 * sigma2
+    t121 = t94 * t97
+    t123 = t101 * t6
+    t124 = t121 * t123
+    t127 = (
+        1.0
+        + 0.086931614897887578546 * t109 * t110 * t112
+        + 0.0075571056687546295931 * t120 * t124
+    )
+    t132 = 1.0 + 2.7818116767324025134 * t67 * t106 / t127
+    h0 = 0.0025844881434903430496 * t61 * xp.log(t132)
+
+    t137 = invpi * pi2_cbrt
+    t140 = 2.568 + 5.8165 * t10 + 0.00184725 * t24
+    t143 = 1000.0 + 2180.75 * t10 + 118.0 * t24
+    t146 = t140 / t143 - 0.0018535714285714285714
+    t149 = t137 * t146 * sigma
+    t152 = cbrt9 * cbrt9
+    t156 = 1.0 / (t21 * rho2)
+    t158 = sigma * cbrt2
+    t162 = xp.exp(-25.0 / 18.0 * invpi * cbrt4 * t152 * t3 * t156 * t158)
+    h1 = t149 * (t110 * t76 * t162) / 2.0
+
+    return ec_lda + h0 + h1
+
+
 def gga_c_pw91(rho, sigma):
     """
-    PW91 correlation functional with NaN handling.
-    Corresponds to GGA_C_PW91 with ID 134 in LibXC.
-    Reference: Phys. Rev. B 46, 6671 (1992).
+    Perdew-Wang 91 correlation functional (spin-unpolarized).
+
+    Returns the same ``zk``, ``vrho``, and ``vsigma`` convention as LibXC.
     """
-    ec, vc, vsigma = gga_c_pw91_(rho, sigma)
-    vsigma[np.isnan(vsigma)] = 0
-    vc[np.isnan(vc)] = 0
-    ec[np.isnan(ec)] = 0
-    return ec, vc, vsigma
+    rho = np.maximum(np.asarray(rho), _RHO_CUTOFF)
+    sigma = np.asarray(sigma)
 
+    ec = np.real(_gga_c_pw91_energy_density(rho, sigma, np))
 
-def gga_c_pw91_cupy_(rho, sigma):
-    """
-    CuPy version of PW91 correlation.
-    Corresponds to GGA_C_PW91 with ID 134 in LibXC.
-    Reference: Phys. Rev. B 46, 6671 (1992).
-    """
-    rho = cp.maximum(rho, 1e-12)
+    h = _COMPLEX_STEP
+    rho_complex = rho.astype(np.complex128) + 1j * h
+    sigma_complex = sigma.astype(np.complex128) + 1j * h
 
-    Cc0 = 0.004235
-    Cx = -0.001667212
-    nu = 15.755920
-    alpha = 0.09
-    beta = nu * Cc0
-    beta2 = beta * beta
+    vrho = np.imag(
+        rho_complex * _gga_c_pw91_energy_density(rho_complex, sigma, np)
+    ) / h
+    vsigma = np.imag(
+        rho * _gga_c_pw91_energy_density(rho, sigma_complex, np)
+    ) / h
 
-    pi34 = (3 / (4 * cp.pi)) ** (1 / 3)
-    rs = pi34 * rho ** (-1 / 3)
-    norm_dn = cp.sqrt(sigma)
-    ec, vc = lda_c_pw_mod_cupy_(rho)
-
-    kf = (9 / 4 * cp.pi) ** (1 / 3) / rs
-    ks = cp.sqrt(4 * kf / cp.pi)
-    divt = 2 * ks * rho
-    t = norm_dn / divt
-    t2 = t * t
-
-    num_Cc = 0.002568 + rs * (0.023266 + rs * 7.389e-6)
-    den_Cc = 1 + rs * (8.723 + rs * (0.472 + rs * 7.389e-2))
-    Cc = Cc0 + num_Cc / den_Cc
-
-    expec = cp.exp(-2 * alpha * ec / beta2)
-    A = 2 * alpha / beta / (expec - 1)
-
-    At2 = A * t2
-    A2t4 = At2 * At2
-    divsum = 1 + At2 + A2t4
-
-    H0_arg = 1 + 2 * alpha / beta * t2 * (1 + At2) / divsum
-    H0 = beta2 / (2 * alpha) * cp.log(H0_arg)
-
-    ks2_over_kf2 = ks**2 / kf**2
-    exp_H1 = cp.exp(-100 * ks2_over_kf2 * t2)
-    H1 = nu * (Cc - Cc0 - 3.0 / 7.0 * Cx) * t2 * exp_H1
-
-    gec = H0 + H1
-
-    # Derivatives
-    u = t2
-    num_inner = (1 + 2*A*u)*(1+A*u+A**2*u**2) - (u+A*u**2)*(A+2*A**2*u)
-    d_inner_du = num_inner / divsum**2
-    dH0_dt = beta2 / (2 * alpha) / H0_arg * (2 * alpha / beta) * 2 * t * d_inner_du
-
-    dA_dec_v2 = A * expec / (expec - 1) * (2 * alpha / beta2)
-    d_inner_dA = (u * divsum - (1 + A*u) * (u + 2*A*u**2)) / divsum**2
-    dH0_dA = beta2 / (2 * alpha) / H0_arg * (2 * alpha / beta) * t2 * d_inner_dA
-    dH0_dec = dH0_dA * dA_dec_v2
-
-    dH1_dt = nu * (Cc - Cc0 - 3.0/7.0*Cx) * exp_H1 * (2*t - 200*ks2_over_kf2*t*t2)
-
-    dtdn = -7.0 / 6.0 * t / rho
-    drs_dn = -rs / (3 * rho)
-
-    dnum_Cc = 0.023266 + 2 * rs * 7.389e-6
-    dden_Cc = 8.723 + rs * (2 * 0.472 + rs * 3 * 7.389e-2)
-    dCc_drs = (dnum_Cc * den_Cc - num_Cc * dden_Cc) / den_Cc**2
-
-    dgec_dn = (dH0_dt + dH1_dt) * dtdn + dH0_dec * vc + nu * dCc_drs * drs_dn * t2 * exp_H1
-
-    dt_dsigma = 1.0 / (4 * ks * rho * norm_dn)
-    dgec_dsigma = (dH0_dt + dH1_dt) * dt_dsigma
-
-    ec_out = ec + gec
-    vc_out = vc + gec + dgec_dn
-    vsigma = 0.5 * dgec_dsigma
-
-    return ec_out, vc_out, vsigma
+    return (
+        _finite_or_zero(ec, np),
+        _finite_or_zero(vrho, np),
+        _finite_or_zero(vsigma, np),
+    )
 
 
 def gga_c_pw91_cupy(rho, sigma):
     """
-    CuPy version of PW91 correlation with NaN handling.
-    Corresponds to GGA_C_PW91 with ID 134 in LibXC.
+    CuPy version of the Perdew-Wang 91 correlation functional.
     """
-    ec, vc, vsigma = gga_c_pw91_cupy_(rho, sigma)
-    vsigma[cp.isnan(vsigma)] = 0
-    vc[cp.isnan(vc)] = 0
-    ec[cp.isnan(ec)] = 0
-    return ec, vc, vsigma
+    if cp is None:
+        raise ImportError("CuPy is required for gga_c_pw91_cupy")
+
+    rho = cp.maximum(cp.asarray(rho), _RHO_CUTOFF)
+    sigma = cp.asarray(sigma)
+
+    ec = cp.real(_gga_c_pw91_energy_density(rho, sigma, cp))
+
+    h = _COMPLEX_STEP
+    rho_complex = rho.astype(cp.complex128) + 1j * h
+    sigma_complex = sigma.astype(cp.complex128) + 1j * h
+
+    vrho = cp.imag(
+        rho_complex * _gga_c_pw91_energy_density(rho_complex, sigma, cp)
+    ) / h
+    vsigma = cp.imag(
+        rho * _gga_c_pw91_energy_density(rho, sigma_complex, cp)
+    ) / h
+
+    return (
+        _finite_or_zero(ec, cp),
+        _finite_or_zero(vrho, cp),
+        _finite_or_zero(vsigma, cp),
+    )

@@ -57,7 +57,7 @@ from pyscf import gto, dft, df, scf
 # LDA Functionals
 # ------------------------------------------------------------------------------
 
-# LDA_X + LDA_C_VWN (SVWN / LDA)
+# LDA_X + LDA_C_VWN (SVWN5 / SVWN / LDA)
 # funcx = 1
 # funcc = 7
 
@@ -73,7 +73,7 @@ from pyscf import gto, dft, df, scf
 # funcx = 1
 # funcc = 12
 
-# LDA_X + LDA_C_PW_MOD
+# LDA_X + LDA_C_PZ_MOD
 # funcx = 1
 # funcc = 13
 
@@ -93,7 +93,7 @@ funcc = 130
 # funcx = 117
 # funcc = 130
 
-# GGA_X_PW91 + GGA_C_PW91 (PW91) !!TODO: Wrong
+# GGA_X_PW91 + GGA_C_PW91 (PW91) 
 # funcx = 109
 # funcc = 134
 
@@ -101,7 +101,7 @@ funcc = 130
 # funcx = 106
 # funcc = 131
 
-# GGA_X_B88 + GGA_C_P86 (BP86) !!TODO: Wrong
+# GGA_X_B88 + GGA_C_P86 (BP86)
 # funcx = 106
 # funcc = 132
 
@@ -138,7 +138,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'Zn_dimer.xyz'
 # xyzFilename = 'TPP.xyz'
 # xyzFilename = 'Zn_TPP.xyz'
-# xyzFilename = 'H2O.xyz'
+xyzFilename = 'H2O.xyz'
 
 # xyzFilename = 'Caffeine.xyz'
 # xyzFilename = 'Serotonin.xyz'
@@ -182,7 +182,7 @@ auxbasis_name = 'def2-universal-jfit'
 # xyzFilename = 'I2.xyz'
 # xyzFilename = 'PbH4.xyz'
 # xyzFilename = 'RbCl.xyz'
-xyzFilename = 'SnCl4.xyz'
+# xyzFilename = 'SnCl4.xyz'
 # xyzFilename = 'W_CO6.xyz'
 # xyzFilename = 'XeF2.xyz'
 # xyzFilename = 'Cd_dimer.xyz'
