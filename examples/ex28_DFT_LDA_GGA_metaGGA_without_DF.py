@@ -14,7 +14,6 @@ from pyfock import Mol
 from pyfock import DFT
 
 
-#LDA
 
 # DFT functional can be specified either like [1, 7]
 # funcx = 1
@@ -23,8 +22,25 @@ from pyfock import DFT
 #
 # or using predefined strings
 # funcidpyfock = 'LDA' # [1, 7]
-funcidpyfock = 'SPZ' # [1, 9]
+# funcidpyfock = 'SPZ' # [1, 9]
+# funcidpyfock = 'SPZMOD' # [1, 10]
 # funcidpyfock = 'SPW' # [1, 12]
+# funcidpyfock = 'SPWMOD' # [1, 12]
+#
+# Natively implemented GGA functionals
+# funcidpyfock = 'PBE' # [101, 130]
+# funcidpyfock = 'PBESOL' # [116, 133]
+# funcidpyfock = 'RPBE' # [117, 130]
+# funcidpyfock = 'PW91' # [109, 134]
+# funcidpyfock = 'BP86' # [106, 132]
+# funcidpyfock = 'BLYP' # [106, 131]
+#
+# Natively implemented metaGGA functionals
+funcidpyfock = 'R2SCAN' # [497, 498]
+# funcidpyfock = 'TPSS' # [202, 231]
+# funcidpyfock = 'M06L' # [203, 233]
+# funcidpyfock = 'TASK' # [707]
+
 
 
 # basis_set_name = 'sto-2g'
@@ -41,22 +57,7 @@ basis_set_name = 'def2-SVP'
 
 auxbasis_name = 'def2-universal-jfit'
 
-# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
-# xyzFilename = 'Zn.xyz'
-# xyzFilename = 'Zn_dimer.xyz'
-# xyzFilename = 'TPP.xyz'
-# xyzFilename = 'Zn_TPP.xyz'
 xyzFilename = 'H2O.xyz'
-# xyzFilename = 'Ethane.xyz'
-# xyzFilename = 'Cholesterol.xyz'
-# xyzFilename = 'Serotonin.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
-# xyzFilename = 'Icosane_C20H42.xyz'
-# xyzFilename = 'Tetracontane_C40H82.xyz'
-# xyzFilename = 'Pentacontane_C50H102.xyz'
-# xyzFilename = 'Octacontane_C80H162.xyz'
-# xyzFilename = 'Hectane_C100H202.xyz'
-# xyzFilename = 'Icosahectane_C120H242.xyz'
 
 
 # Initialize a Mol object 

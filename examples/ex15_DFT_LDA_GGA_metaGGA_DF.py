@@ -13,8 +13,6 @@ from pyfock import Basis
 from pyfock import Mol
 from pyfock import DFT
 
-#LDA
-
 # DFT functional can be specified either like [1, 7]
 # funcx = 1
 # funcc = 7

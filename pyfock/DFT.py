@@ -401,10 +401,13 @@ class DFT:
                 "PySCF grids were requested (`use_pyscf_grids=True`), but PySCF is not installed."
             ) from exc
 
-        atom_spec = [
-            [species, tuple(coords)]
-            for species, coords in zip(self.mol.atomicSpecies, self.mol.coords)
-        ]
+        atom_spec = []
+        for species, basis_species, coords in zip(
+            self.mol.atomicSpecies, self.mol.basisSpecies, self.mol.coords
+        ):
+            if species.lower() == 'ghost':
+                species = 'Ghost-' + basis_species
+            atom_spec.append([species, tuple(coords)])
 
         mol_pyscf = pyscf_gto.Mole()
         mol_pyscf.atom = atom_spec
