@@ -184,7 +184,7 @@ def _shell_intersects(start, count, lo, hi):
     return start < hi and start + count > lo
 
 
-@njit(cache=True, fastmath=True, nogil=True, error_model="numpy")
+@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline="always")
 def _build_shift_tables(
     shift_x,
     shift_y,
