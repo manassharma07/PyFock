@@ -1,7 +1,6 @@
 from contextlib import nullcontext, redirect_stderr, redirect_stdout
 import os
 
-os.environ.setdefault("MPLCONFIGDIR", "/tmp/pyfock_matplotlib")
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,7 +20,7 @@ def pyfock_hf_quantities(symbols, coordinates, charge=0, basis_name="sto-3g", ve
     hf.direct_scf = False
     hf.coul_algo = 1
     hf.conv_crit = 1e-8
-    hf.max_itr = 50
+    hf.max_itr = 80
     hf.ncores = 1
     hf.threshold_schwarz = 1e-12
 
@@ -55,10 +54,14 @@ def pyfock_hf_quantities(symbols, coordinates, charge=0, basis_name="sto-3g", ve
     }
 
 
-def vqe_energy(data, params=None, max_iter=80, conv_tol=1e-7, verbose=False):
+def vqe_energy(data, params=None, max_iter=200, conv_tol=1e-7, verbose=False):
     import pennylane as qml
     from pennylane import numpy as pnp
 
+    print(data["hf_energy"])
+    print(data["core_constant"])
+    print(data["electrons"])
+    print(data["qubits"])
     fermionic_h = qml.qchem.fermionic_observable(
         data["core_constant"], data["one_mo"], data["two_mo"]
     )
@@ -98,7 +101,7 @@ def vqe_energy(data, params=None, max_iter=80, conv_tol=1e-7, verbose=False):
 
 
 if __name__ == "__main__":
-    bond_lengths = np.linspace(1.2, 2.44, 10)
+    bond_lengths = [1.0, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2.2, 2.6, 3.0, 4.0] #np.linspace(1.2, 2.44, 10)
     energies = []
     params = None
 
@@ -106,7 +109,7 @@ if __name__ == "__main__":
         symbols = ["Li", "H"]
         coordinates = np.array([[0.0, 0.0, 0.0], [r, 0.0, 0.0]])
         data = pyfock_hf_quantities(symbols, coordinates, basis_name="sto-3g")
-        energy, params = vqe_energy(data, params=params, max_iter=80, conv_tol=1e-7, verbose=True)
+        energy, params = vqe_energy(data, params=params, max_iter=200, conv_tol=1e-7, verbose=True)
         energies.append(energy)
         print(f"R = {r:5.2f} A   E_VQE = {energy: .10f} Ha")
 
@@ -128,5 +131,5 @@ if __name__ == "__main__":
     plt.title("LiH dissociation curve from PyFock integrals + PennyLane VQE")
     plt.legend()
     plt.tight_layout()
-    # plt.savefig("ex37_LiH_VQE_dissociation_curve.png", dpi=200)
+    plt.savefig("ex37_LiH_VQE_dissociation_curve.png", dpi=200)
     plt.show()

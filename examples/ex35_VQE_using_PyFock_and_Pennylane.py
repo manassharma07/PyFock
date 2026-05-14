@@ -57,7 +57,7 @@ if __name__ == "__main__":
     symbols = ["H", "H"]
     coordinates = np.array([[0.0, 0.0, 0.0], [0.74, 0.0, 0.0]])
     # symbols = ["Li", "H"]
-    # coordinates = np.array([[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]])
+    # coordinates = np.array([[0.0, 0.0, 0.0], [1.6, 0.0, 0.0]])
     data = pyfock_hf_quantities(symbols, coordinates, basis_name='sto-3g') # try sto-3g, 6-31G, def2-SV(P)basis sets too
     print('\n\n HF done! Starting VQE...')
     print("\nSystem info:")
@@ -68,6 +68,7 @@ if __name__ == "__main__":
     fermionic_h = qml.qchem.fermionic_observable(
         data["core_constant"], data["one_mo"], data["two_mo"]
     )
+    print(data["two_mo"])
     H = qml.qchem.qubit_observable(fermionic_h, mapping="jordan_wigner")
 
     electrons = data["electrons"]

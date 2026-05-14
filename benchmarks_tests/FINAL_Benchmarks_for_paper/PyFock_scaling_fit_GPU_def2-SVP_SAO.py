@@ -36,9 +36,9 @@ def nonlinear_fit(N, t):
 # Fit for each quantity
 results = {}
 for label, data in zip(["Total", "ERI", "XC"], [total_time, j_time, xc_time]):
-    mask = nbf > 2000  # or whatever threshold
-    a_log, p_log = loglog_fit(nbf[mask], data[mask])
-    # a_log, p_log = loglog_fit(nbf, data)
+    # mask = nbf > 2000  # or whatever threshold
+    # a_log, p_log = loglog_fit(nbf[mask], data[mask])
+    a_log, p_log = loglog_fit(nbf, data)
     a_nonlin, p_nonlin = nonlinear_fit(nbf, data)
     results[label] = {
         "log-log": (a_log, p_log),
