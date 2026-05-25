@@ -362,50 +362,90 @@ def eval_bfs_and_grad_sparse_internal_serial(bfs_coords, bfs_contr_prim_norms, b
     return result1, result2
 
 
+# @njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
+# def eval_gto_and_grad(alpha, coeff, lmn, x, y, z, exponent_dist_sq):
+#     # https://www.wolframalpha.com/input?i=dy%2FdA+for+y%3D%28x-A%29%5E%28l%29*%28y-B%29%5E%28m%29*%28z-C%29%5E%28n%29*exp%28-alpha*%28%28x-A%29%5E%282%29%2B%28y-B%29%5E%282%29%2B%28z-C%29%5E%282%29%29+
+#     # https://www.wolframalpha.com/input?i=derivative+of+%28x-A%29%5E%28l%29*%28y-B%29%5E%28m%29*%28z-C%29%5E%28n%29*exp%28-alpha*%28%28x-A%29%5E%282%29%2B%28y-B%29%5E%282%29%2B%28z-C%29%5E%282%29%29
+#     # A very low-level way to calculate the ao values as well as their gradients simultaneously, without 
+#     # running similar calls again and again.
+#     # value = np.zeros((4))
+#     # Prelims
+#     # x = coord[0]-coordCenter[0]
+#     # y = coord[1]-coordCenter[1]
+#     # z = coord[2]-coordCenter[2]
+#     xl = x**lmn[0]
+#     ym = y**lmn[1]
+#     zn = z**lmn[2]
+#     exp = math.exp(-alpha*(exponent_dist_sq))
+#     factor2 = coeff*exp
+
+#     # AO Value
+#     value0 = factor2*xl*ym*zn
+#     # Grad x
+#     if np.abs(x-0)<1e-14:
+#         value1 = 0.0
+#     else:
+#         xl = x**(lmn[0]-1)
+#         factor = (lmn[0]-2*alpha*x**2)
+#         value1 = factor2*xl*ym*zn*factor
+#     # Grad y
+#     if np.abs(y-0)<1e-14:
+#         value2 = 0.0
+#     else:
+#         xl = x**lmn[0]
+#         ym = y**(lmn[1]-1)
+#         factor = (lmn[1]-2*alpha*y**2)
+#         value2 = factor2*xl*ym*zn*factor 
+#     # Grad z 
+#     if np.abs(z-0)<1e-14:
+#         value3 = 0.0
+#     else:
+#         zn = z**(lmn[2]-1)
+#         xl = x**lmn[0]
+#         ym = y**lmn[1]  
+#         factor = (lmn[2]-2*alpha*z**2)
+#         value3 = factor2*xl*ym*zn*factor
+        
+#     return value0, value1, value2, value3
 @njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def eval_gto_and_grad(alpha, coeff, lmn, x, y, z, exponent_dist_sq):
-    # https://www.wolframalpha.com/input?i=dy%2FdA+for+y%3D%28x-A%29%5E%28l%29*%28y-B%29%5E%28m%29*%28z-C%29%5E%28n%29*exp%28-alpha*%28%28x-A%29%5E%282%29%2B%28y-B%29%5E%282%29%2B%28z-C%29%5E%282%29%29+
-    # https://www.wolframalpha.com/input?i=derivative+of+%28x-A%29%5E%28l%29*%28y-B%29%5E%28m%29*%28z-C%29%5E%28n%29*exp%28-alpha*%28%28x-A%29%5E%282%29%2B%28y-B%29%5E%282%29%2B%28z-C%29%5E%282%29%29
-    # A very low-level way to calculate the ao values as well as their gradients simultaneously, without 
-    # running similar calls again and again.
-    # value = np.zeros((4))
-    # Prelims
-    # x = coord[0]-coordCenter[0]
-    # y = coord[1]-coordCenter[1]
-    # z = coord[2]-coordCenter[2]
-    xl = x**lmn[0]
-    ym = y**lmn[1]
-    zn = z**lmn[2]
-    exp = math.exp(-alpha*(exponent_dist_sq))
-    factor2 = coeff*exp
+    lx = lmn[0]
+    ly = lmn[1]
+    lz = lmn[2]
 
-    # AO Value
-    value0 = factor2*xl*ym*zn
-    # Grad x
-    if np.abs(x-0)<1e-14:
-        value1 = 0.0
+    xl = x**lx
+    ym = y**ly
+    zn = z**lz
+
+    exp_term = math.exp(-alpha * exponent_dist_sq)
+    pref = coeff * exp_term
+
+    value0 = pref * xl * ym * zn
+
+    # d/dx [x^lx y^ly z^lz exp(-alpha r^2)]
+    if lx == 0:
+        poly_dx = 0.0
     else:
-        xl = x**(lmn[0]-1)
-        factor = (lmn[0]-2*alpha*x**2)
-        value1 = factor2*xl*ym*zn*factor
-    # Grad y
-    if np.abs(y-0)<1e-14:
-        value2 = 0.0
+        poly_dx = lx * x**(lx - 1) * ym * zn
+    exp_dx = -2.0 * alpha * x * xl * ym * zn
+    value1 = pref * (poly_dx + exp_dx)
+
+    # d/dy [x^lx y^ly z^lz exp(-alpha r^2)]
+    if ly == 0:
+        poly_dy = 0.0
     else:
-        xl = x**lmn[0]
-        ym = y**(lmn[1]-1)
-        factor = (lmn[1]-2*alpha*y**2)
-        value2 = factor2*xl*ym*zn*factor 
-    # Grad z 
-    if np.abs(z-0)<1e-14:
-        value3 = 0.0
+        poly_dy = ly * xl * y**(ly - 1) * zn
+    exp_dy = -2.0 * alpha * y * xl * ym * zn
+    value2 = pref * (poly_dy + exp_dy)
+
+    # d/dz [x^lx y^ly z^lz exp(-alpha r^2)]
+    if lz == 0:
+        poly_dz = 0.0
     else:
-        zn = z**(lmn[2]-1)
-        xl = x**lmn[0]
-        ym = y**lmn[1]  
-        factor = (lmn[2]-2*alpha*z**2)
-        value3 = factor2*xl*ym*zn*factor
-        
+        poly_dz = lz * xl * ym * z**(lz - 1)
+    exp_dz = -2.0 * alpha * z * xl * ym * zn
+    value3 = pref * (poly_dz + exp_dz)
+
     return value0, value1, value2, value3
 
 @njit(parallel=True, cache=True, nogil=True, fastmath=True, error_model="numpy")

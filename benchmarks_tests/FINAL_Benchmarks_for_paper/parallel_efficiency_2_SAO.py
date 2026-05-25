@@ -38,6 +38,8 @@ eta_pyfock_J = time_pyfock_J[0] / (cores * time_pyfock_J)
 eta_pyfock_XC = time_pyfock_XC[0] / (cores * time_pyfock_XC)
 eta_pyscf  = time_pyscf[0]  / (cores * time_pyscf)
 print(eta_pyfock)
+print(eta_pyfock_J)
+print(eta_pyfock_XC)
 print(eta_pyscf)
 
 # Plot

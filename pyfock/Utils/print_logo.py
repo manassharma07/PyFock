@@ -59,11 +59,11 @@ def print_pyfock_logo():
     
     print("\n" + "="*70)
     print("\nVersion: ", pyfock.__version__)
-    print("Citation: M. Sharma, PyFock: A Pure Python Gaussian Basis\nDFT Code for CPU and GPU")
+    print("Citation: M. Sharma and M. Sierka, PyFock: A Just-In-Time Compiled \nGaussian Basis DFT Python Code for CPU and GPU Architectures")
     print("\n" + "="*70)
     print("\n📧 Contact Information:")
     print("   Developer: Dr. Manas Sharma (PhD Physics)")
-    print("   Email: manassharma07@live.com")
+    print("   Email: manas.sharma@uni-jena.de")
     print("   Website: https://manas.bragitoff.com/")
     print("\n📚 Resources:")
     print("   Documentation: https://pyfock-docs.bragitoff.com")

@@ -7,7 +7,16 @@ from .integral_helpers import calcS
 
 
 
-def ecp_mat_symm(basis, slice=None, series_order=20, coeff_tol=1.0e-16, power_shift=2):
+def ecp_mat_symm(
+    basis,
+    slice=None,
+    series_order=12,
+    coeff_tol=1.0e-16,
+    power_shift=2,
+    n_radial=None,
+    n_theta=None,
+    n_phi=None,
+):
     """
     Compute scalar semilocal ECP integrals without spatial quadrature.
 
@@ -30,6 +39,9 @@ def ecp_mat_symm(basis, slice=None, series_order=20, coeff_tol=1.0e-16, power_sh
     power_shift : int
         Interpret ECP powers as r**(power - power_shift). The def2 files use
         power_shift=2.
+    n_radial, n_theta, n_phi : optional
+        Accepted for compatibility with the quadrature implementation. They
+        are not used by the analytical implementation.
     """
     if not getattr(basis, 'has_ecp', False):
         if slice is None:
@@ -214,10 +226,13 @@ def ecp_local_gaussian_mat_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_l
 
     return V
 
-def _ecp_projector_series_mat(basis, ecp_data, series_order=20, coeff_tol=1.0e-16, power_shift=2):
+ecp_mat_symm_analytical = ecp_mat_symm
+
+
+def _ecp_projector_series_mat(basis, ecp_data, series_order=12, coeff_tol=1.0e-16, power_shift=2):
     nao = basis.bfs_nao
     V = np.zeros((nao, nao), dtype=np.float64)
-    ao_primitives = _ao_primitives(basis)
+    arrays = basis_to_arrays(basis)
 
     channels_by_ecp = {}
     for channel in ecp_data['channels']:
@@ -234,14 +249,20 @@ def _ecp_projector_series_mat(basis, ecp_data, series_order=20, coeff_tol=1.0e-1
                 moment_powers.add(power)
         moment_powers = sorted(moment_powers)
 
-        moment_cache = _build_moment_cache(
-            ao_primitives,
+        moment_power_array = np.array(moment_powers, dtype=np.int64)
+        term_counts, term_alphas, term_powers, term_coeffs = _build_moment_arrays_internal(
+            arrays['coords'],
+            arrays['contr_norms'],
+            arrays['lmn'],
+            arrays['nprim'],
+            arrays['coeffs'],
+            arrays['prim_norms'],
+            arrays['expnts'],
             center,
-            moment_powers,
-            series_order=series_order,
-            coeff_tol=coeff_tol,
+            moment_power_array,
+            series_order,
+            coeff_tol,
         )
-        term_counts, term_alphas, term_powers, term_coeffs = _moment_cache_to_arrays(moment_cache, moment_powers)
         channel_arrays = _channel_arrays(channels, kernel_by_l, moment_powers)
         gamma_half = _gamma_half_table(_max_radial_power(term_counts, term_powers, channel_arrays[5], power_shift))
         V += _assemble_projector_series_internal(
@@ -261,6 +282,158 @@ def _ecp_projector_series_mat(basis, ecp_data, series_order=20, coeff_tol=1.0e-1
         )
 
     return V
+
+
+@njit(cache=True, fastmath=True, error_model='numpy')
+def _build_moment_arrays_internal(
+    bfs_coords,
+    bfs_contr_prim_norms,
+    bfs_lmn,
+    bfs_nprim,
+    bfs_coeffs,
+    bfs_prim_norms,
+    bfs_expnts,
+    ecp_center,
+    moment_powers,
+    series_order,
+    coeff_tol,
+):
+    nao = bfs_coords.shape[0]
+    nmoment = moment_powers.shape[0]
+    max_nprim = bfs_coeffs.shape[1]
+    max_l = 0
+    for i in range(nao):
+        lsum = bfs_lmn[i, 0] + bfs_lmn[i, 1] + bfs_lmn[i, 2]
+        if lsum > max_l:
+            max_l = lsum
+
+    max_r_power = max_l + series_order
+    max_terms = max_nprim*(max_r_power + 1)
+    if max_terms < 1:
+        max_terms = 1
+
+    term_counts = np.zeros((nao, nmoment), dtype=np.int64)
+    term_alphas = np.zeros((nao, nmoment, max_terms), dtype=np.float64)
+    term_powers = np.zeros((nao, nmoment, max_terms), dtype=np.int64)
+    term_coeffs = np.zeros((nao, nmoment, max_terms), dtype=np.float64)
+    power_coeffs = np.zeros(max_r_power + 1, dtype=np.float64)
+
+    for i in range(nao):
+        lx = bfs_lmn[i, 0]
+        ly = bfs_lmn[i, 1]
+        lz = bfs_lmn[i, 2]
+        dx = bfs_coords[i, 0] - ecp_center[0]
+        dy = bfs_coords[i, 1] - ecp_center[1]
+        dz = bfs_coords[i, 2] - ecp_center[2]
+        d2 = dx*dx + dy*dy + dz*dz
+        contr_norm = bfs_contr_prim_norms[i]
+
+        for imoment in range(nmoment):
+            mx = moment_powers[imoment, 0]
+            my = moment_powers[imoment, 1]
+            mz = moment_powers[imoment, 2]
+            iterm = 0
+
+            for iprim in range(bfs_nprim[i]):
+                alpha = bfs_expnts[i, iprim]
+                prim_coeff = bfs_coeffs[i, iprim]*bfs_prim_norms[i, iprim]*contr_norm
+                prefactor = prim_coeff*math.exp(-alpha*d2)
+                if prefactor == 0.0:
+                    continue
+
+                for ir_power in range(max_r_power + 1):
+                    power_coeffs[ir_power] = 0.0
+
+                two_alpha = 2.0*alpha
+                for ax in range(lx + 1):
+                    cx = _comb_int_nb(lx, ax)*_pow_int_nb(-dx, lx - ax)
+                    for ay in range(ly + 1):
+                        cy = _comb_int_nb(ly, ay)*_pow_int_nb(-dy, ly - ay)
+                        for az in range(lz + 1):
+                            cz = _comb_int_nb(lz, az)*_pow_int_nb(-dz, lz - az)
+                            poly_coeff = cx*cy*cz
+                            if poly_coeff == 0.0:
+                                continue
+                            poly_power = ax + ay + az
+
+                            for tx in range(series_order + 1):
+                                x_factor = _pow_int_nb(dx, tx)/_factorial_int_nb(tx)
+                                for ty in range(series_order + 1 - tx):
+                                    y_factor = _pow_int_nb(dy, ty)/_factorial_int_nb(ty)
+                                    for tz in range(series_order + 1 - tx - ty):
+                                        t = tx + ty + tz
+                                        exp_coeff = _pow_int_nb(two_alpha, t)*x_factor*y_factor
+                                        exp_coeff *= _pow_int_nb(dz, tz)/_factorial_int_nb(tz)
+                                        if exp_coeff == 0.0:
+                                            continue
+                                        angular = _sphere_monomial_integral_nb(mx + ax + tx, my + ay + ty, mz + az + tz)
+                                        if angular == 0.0:
+                                            continue
+                                        r_power = poly_power + t
+                                        power_coeffs[r_power] += prefactor*poly_coeff*exp_coeff*angular
+
+                for r_power in range(max_r_power + 1):
+                    coeff = power_coeffs[r_power]
+                    if abs(coeff) > coeff_tol:
+                        term_alphas[i, imoment, iterm] = alpha
+                        term_powers[i, imoment, iterm] = r_power
+                        term_coeffs[i, imoment, iterm] = coeff
+                        iterm += 1
+            term_counts[i, imoment] = iterm
+
+    return term_counts, term_alphas, term_powers, term_coeffs
+
+
+@njit(cache=True, fastmath=True)
+def _pow_int_nb(x, n):
+    value = 1.0
+    for _ in range(n):
+        value *= x
+    return value
+
+
+@njit(cache=True)
+def _factorial_int_nb(n):
+    value = 1.0
+    for i in range(2, n + 1):
+        value *= i
+    return value
+
+
+@njit(cache=True)
+def _comb_int_nb(n, k):
+    if k < 0 or k > n:
+        return 0.0
+    if k > n - k:
+        k = n - k
+    value = 1.0
+    for i in range(1, k + 1):
+        value *= (n - k + i)/i
+    return value
+
+
+@njit(cache=True)
+def _odd_double_factorial_nb(n):
+    if n <= 0:
+        return 1.0
+    value = 1.0
+    for k in range(n, 0, -2):
+        value *= k
+    return value
+
+
+@njit(cache=True)
+def _sphere_monomial_integral_nb(ax, ay, az):
+    if (ax % 2) or (ay % 2) or (az % 2):
+        return 0.0
+    nx = ax//2
+    ny = ay//2
+    nz = az//2
+    numerator = _odd_double_factorial_nb(2*nx - 1)
+    numerator *= _odd_double_factorial_nb(2*ny - 1)
+    numerator *= _odd_double_factorial_nb(2*nz - 1)
+    denominator = _odd_double_factorial_nb(2*(nx + ny + nz) + 1)
+    return 4.0*math.pi*numerator/denominator
 
 
 def _moment_cache_to_arrays(moment_cache, moment_powers):

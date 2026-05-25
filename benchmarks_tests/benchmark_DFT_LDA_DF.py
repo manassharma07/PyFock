@@ -265,6 +265,7 @@ print('\n\naux NAO :',auxbasis.bfs_nao)
 
 # dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx)
 dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
+# dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, use_pyscf_grids=True)
 dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35

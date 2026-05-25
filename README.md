@@ -85,12 +85,16 @@
 - ✅ **Multiple Integration Schemes**: 
   - Classical Taketa-Huzinaga-O-ohata scheme
   - Rys quadrature method (roots 1–10) for efficient ERI evaluation
-- ✅ **XC Functionals**: Support for LDA and GGA functionals via LibXC integration
+  - Obara-Saika method for ERI evaluation
+- ✅ **XC Functionals**: Support for LDA, GGA and meta-GGA functionals natively and via LibXC integration
 - ✅ **DIIS Convergence**: Direct inversion of iterative subspace for SCF acceleration
 - ✅ **Parallel Execution**: Multi-core CPU and multi-GPU support via Numba and Joblib
 - ✅ **Modular Design**: Standalone integral modules for benchmarking and embedding
 - ✅ **Web-based GUI**: Interactive interface for visualization and input generation
 - ✅ **Cartesian and Spherical Basis**: Support for both CAO and SAO representations
+- ✅ **Effective Core Potentials**: Support for evaluation of ECP integrals
+- ✅ **Analytical gradients**: for one-electron integrals and three-centered two-electron integrals
+- ✅ **ASE Calculator**: for access to ASE ecosystem
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
 
 ## Installation
@@ -119,9 +123,9 @@ cd pyfock
 pip install -e .
 ```
 
-### Installing LibXC (Required Dependency)
+### Installing LibXC (Optional Dependency)
 
-PyFock requires LibXC for exchange-correlation functionals. The installation method depends on your system:
+PyFock can use LibXC for exchange-correlation functionals not available natively in PyFock. The installation method depends on your system:
 
 #### Using Conda (Recommended - Easiest Method)
 
@@ -166,10 +170,8 @@ mol = Mol(coordfile='h2o.xyz')
 basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
 auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
 
-# Configure DFT calculation (PBE functional)
-funcx = 101  # PBE exchange (LibXC code)
-funcc = 130  # PBE correlation (LibXC code)
-dftObj = DFT(mol, basis, auxbasis, xc=[funcx, funcc])
+# Create DFT calculation object
+dftObj = DFT(mol, basis, auxbasis, xc='PBE')
 
 # Set calculation parameters
 dftObj.conv_crit = 1e-7
@@ -205,7 +207,7 @@ ERI_slow = Integrals.conv_4c2e_symm(basis)
 ERI_fast = Integrals.rys_4c2e_symm(basis)
 
 # Three-center integrals for density fitting
-ERI_3c2e = Integrals.rys_3c2e_symm(basis)
+ERI_3c2e = Integrals.rys_3c2e_symm(basis, auxbasis)
 
 # Two-center integrals
 ERI_2c2e = Integrals.rys_2c2e_symm(basis)
@@ -218,7 +220,7 @@ ERI_2c2e = Integrals.rys_2c2e_symm(basis)
 S_ovlp_gpu = Integrals.overlap_mat_symm_cupy(basis)
 V_kin_gpu = Integrals.kin_mat_symm_cupy(basis)
 V_nuc_gpu = Integrals.nuc_mat_symm_cupy(basis, mol)
-ERI_3c2e_gpu = Integrals.rys_3c2e_symm_cupy(basis)
+ERI_3c2e_gpu = Integrals.rys_3c2e_symm_cupy(basis, auxbasis)
 ```
 
 ### Converting Between Cartesian and Spherical Basis
@@ -314,17 +316,17 @@ streamlit run app.py
 🚀 **Coming Soon**: Interactive tutorials on Kaggle and Google Colab
 
 - [x] [Kaggle Notebook: Introduction to PyFock](https://www.kaggle.com/code/ducktape07/pyfock-tutorial) 
-- [ ] Google Colab: GPU-Accelerated DFT with PyFock
+- [x] [Kaggle Notebook: Advanced Features and GPU accelerated computations](https://www.kaggle.com/code/ducktape07/introduction-to-pyfock-tutorial-2)
+- [ ] Google Colab Notebook
 - [ ] Kaggle Notebook: Molecular Orbital Visualization
-- [ ] Google Colab: Advanced Features and Benchmarking
+
 
 ## Documentation
 
 📚 **Full Documentation**: [https://pyfock-docs.bragitoff.com](https://pyfock-docs.bragitoff.com)
 
-- [Getting Started Guide](https://pyfock-docs.bragitoff.com)
+- [Getting Started Guide](https://pyfock.bragitoff.com)
 - [API Reference](https://pyfock-docs.bragitoff.com)
-- [Theory and Implementation](https://github.com/manassharma07/pyfock/blob/main/Documentation.md)
 - [Examples and Tutorials](https://github.com/manassharma07/pyfock/tree/main/examples)
 
 ## Roadmap
@@ -368,10 +370,10 @@ If you use PyFock in your research, please cite:
 
 ```bibtex
 @article{sharma2025pyfock,
-  title={PyFock: A Pure Python Gaussian Basis DFT Code for CPU and GPU},
-  author={Sharma, Manas},
+  title={PyFock: A Just-In-Time Compiled Gaussian Basis DFT Python Code for CPU and GPU Architectures},
+  author={Sharma, Manas; Sierka Marek},
   journal={[Journal Name]},
-  year={2025},
+  year={2026},
   note={Manuscript in preparation}
 }
 ```
@@ -381,16 +383,12 @@ If you use PyFock in your research, please cite:
 ## Contact
 
 **Manas Sharma**
-- Email: manassharma07@live.com
+- Email: manas.sharma@uni-jena.de
 - Website: [manas.bragitoff.com](https://manas.bragitoff.com)
 - LinkedIn: [linkedin.com/in/manassharma07](https://www.linkedin.com/in/manassharma07)
 - Project Homepage: [https://pyfock.bragitoff.com](https://pyfock.bragitoff.com)
 - Project Link: [https://github.com/manassharma07/pyfock](https://github.com/manassharma07/pyfock)
 
-## Acknowledgments
-
-* Prof. Dr. Marek Sierka and Friedrich Schiller University Jena for HPC access
-* The open-source quantum chemistry community
 
 ---
 

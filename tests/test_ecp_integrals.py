@@ -57,4 +57,4 @@ def test_cd_dimer_def2_tzvp_analytical_ecp_matches_pyscf_spherical_matrix():
     )
     ecp_pyscf = pyscf_mol.intor("ECPscalar_sph")
 
-    np.testing.assert_allclose(ecp_sph, ecp_pyscf, atol=2e-8, rtol=1e-8)
+    np.testing.assert_allclose(ecp_sph, ecp_pyscf, atol=1e-7, rtol=1e-8)

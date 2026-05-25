@@ -41,7 +41,7 @@ Example:
 from .mmd_nuc_mat_symm import mmd_nuc_mat_symm
 from .nuc_mat_symm import nuc_mat_symm
 from .nuc_mat_symm_cupy import nuc_mat_symm_cupy
-from .ecp_mat_symm import ecp_mat_symm
+from .ecp_mat_symm import ecp_mat_symm, ecp_mat_symm_analytical
 from .ecp_mat_symm_test import ecp_mat_symm_test
 from .kin_mat_symm import kin_mat_symm
 from .kin_mat_symm_cupy import kin_mat_symm_cupy

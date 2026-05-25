@@ -1126,8 +1126,8 @@ class DFT:
                 T = Integrals.kin_mat_symm(basis)
                 if getattr(basis, 'has_ecp', False):
                     print('Calculating ECP integrals...', flush=True)
-                    # V_ecp = Integrals.ecp_mat_symm(basis)
-                    V_ecp = Integrals.ecp_mat_symm_test(basis)
+                    V_ecp = Integrals.ecp_mat_symm(basis)
+                    # V_ecp = Integrals.ecp_mat_symm_test(basis)
                 # Core hamiltonian
                 H = T + V
                 if V_ecp is not None:

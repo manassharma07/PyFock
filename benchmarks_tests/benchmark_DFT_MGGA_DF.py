@@ -87,16 +87,16 @@ from pyscf import gto, dft, df, scf
 # funcidpyscf = str(funcx)+','+str(funcc)
 
 # r2SCAN using aliases instead of LibXC ids
-# funcidcrysx = 'r2SCAN'
-# funcidpyscf = 'r2SCAN'
+funcidcrysx = 'r2SCAN'
+funcidpyscf = 'r2SCAN'
 
 # TPSS using aliases instead of LibXC ids
 # funcidcrysx = 'TPSS'
 # funcidpyscf = 'TPSS'
 
 # M06-L using aliases instead of LibXC ids
-funcidcrysx = 'M06-L'
-funcidpyscf = 'M06-L'
+# funcidcrysx = 'M06-L'
+# funcidpyscf = 'M06-L'
 
 
 
@@ -244,6 +244,7 @@ print('\n\naux NAO :',auxbasis.bfs_nao)
 
 # dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx)
 dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
+# dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, use_pyscf_grids=True)
 dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 35
