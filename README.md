@@ -413,7 +413,7 @@ If you use PyFock in your research, please cite:
 [license-url]: https://github.com/manassharma07/PyFock/blob/main/LICENSE
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/manassharma07
-[product-screenshot]: https://github.com/manassharma07/PyFock/blob/main/logo_crysx_pyfock.webp
+[product-screenshot]: https://github.com/manassharma07/PyFock/blob/main/TOC_pyfock.webp
 [documentation-url]: https://pyfock-docs.bragitoff.com
 [docs-shield]: https://img.shields.io/badge/-docs-blue.svg?style=for-the-badge&logo=documentation&colorB=389
 [Python-badge]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white
