@@ -316,7 +316,7 @@ streamlit run app.py
 🚀 **Coming Soon**: Interactive tutorials on Kaggle and Google Colab
 
 - [x] [Kaggle Notebook: Introduction to PyFock](https://www.kaggle.com/code/ducktape07/pyfock-tutorial) 
-- [x] [Kaggle Notebook: Advanced Features and GPU accelerated computations](https://www.kaggle.com/code/ducktape07/introduction-to-pyfock-tutorial-2)
+- [x] [Kaggle Notebook: Advanced Features and GPU accelerated computations](https://www.kaggle.com/code/ducktape07/introduction-to-pyfock-tutorial)
 - [ ] Google Colab Notebook
 - [ ] Kaggle Notebook: Molecular Orbital Visualization
 
