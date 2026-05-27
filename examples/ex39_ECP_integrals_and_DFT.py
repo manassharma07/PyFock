@@ -19,6 +19,7 @@ from pyfock import DFT
 atoms = [['Cd', 0.0, 0.0, 0.0]]
 
 basis_set_name = 'def2-SVP'
+ecp_name = 'def2-ECP'
 auxbasis_name = 'def2-universal-jfit'
 
 #First of all we need a mol object with some geometry
@@ -27,6 +28,16 @@ mol = Mol(atoms=atoms)
 # Next we need to specify some basis
 # The def2 basis sets include ECP data for elements that need it.
 basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basis_set_name)})
+
+# Alternatively, the orbital basis and ECP can be loaded separately and combined.
+# Note: Basis.load("def2-SVP") already includes matching ECP blocks, so use
+# readBasisSetFromFile when you specifically want only the orbital basis block.
+mol_custom_ecp = Mol(atoms=atoms)
+basissets_dir = os.path.join(os.path.dirname(Basis.load.__code__.co_filename), 'BasisSets')
+orb = Basis.readBasisSetFromFile('Cd', os.path.join(basissets_dir, 'def2-svp.1.tm'), block_type='basis')
+ecp = Basis.readBasisSetFromFile('Cd', os.path.join(basissets_dir, 'def2-ecp.1.tm'), block_type='ecp', quiet=True)
+basis_custom_ecp = Basis(mol_custom_ecp, {'all':orb + ecp})
+print('Number of ECP centers with separate orbital basis + ECP: ', len(basis_custom_ecp.ecps))
 
 print('\n\n\n')
 print('Integrals')
