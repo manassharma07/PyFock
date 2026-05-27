@@ -369,14 +369,16 @@ Distributed under the **MIT License**. See `LICENSE` file for more information.
 If you use PyFock in your research, please cite:
 
 ```bibtex
-@article{sharma2025pyfock,
-  title={PyFock: A Just-In-Time Compiled Gaussian Basis DFT Python Code for CPU and GPU Architectures},
-  author={Sharma, Manas; Sierka Marek},
-  journal={[Journal Name]},
-  year={2026},
-  note={Manuscript in preparation}
+@misc{sharma2026pyfock,
+  title        = {PyFock: A Just-In-Time Compiled Gaussian Basis DFT Python Code for CPU and GPU Architectures},
+  author       = {Sharma, Manas and Sierka, Marek},
+  year         = {2026},
+  publisher    = {ChemRxiv},
+  note         = {Preprint},
+  doi          = {https://doi.org/10.26434/chemrxiv.15003943/v1}
 }
 ```
+[Preprint Link](https://doi.org/10.26434/chemrxiv.15003943/v1)
 
 **PyPI Package**: [https://pypi.org/project/pyfock/](https://pypi.org/project/pyfock/)
 
