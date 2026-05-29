@@ -1,24 +1,10 @@
 from pyfock import Basis
 from pyfock import Mol
 from pyfock import Integrals
-# from timeit import default_timer as timer
-import numpy as np
 
-#NUCLEAR POTENTIAL MATRIX BENCHMARK and comparison with PySCF
-#Benchmarking and performance assessment and comparison using various techniques and different softwares
+#NUCLEAR POTENTIAL MATRIX 
 
-# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 xyzFilename = 'h2o.xyz'
-# xyzFilename = 'Ethane.xyz'
-# xyzFilename = 'Cholesterol.xyz'
-# xyzFilename = 'Serotonin.xyz'
-# xyzFilename = 'Decane_C10H22.xyz'
-# xyzFilename = 'Icosane_C20H42.xyz'
-# xyzFilename = 'Tetracontane_C40H82.xyz'
-# xyzFilename = 'Pentacontane_C50H102.xyz'
-# xyzFilename = 'Octacontane_C80H162.xyz'
-# xyzFilename = 'Hectane_C100H202.xyz'
-# xyzFilename = 'Icosahectane_C120H242.xyz'
 
 #First of all we need a mol object with some geometry
 mol = Mol(coordfile = xyzFilename)
@@ -47,8 +33,8 @@ print('Nuclear matrix\n')
 Vnuc = Integrals.nuc_mat_symm(basis, mol)
 print(Vnuc) 
 
-#Instead of calculating the complete KE matrix you can also just calculate a specific element or a continuous block of the kinetic matrix
-#This is done by specifying an additional argument that contains the start and indices of the block of the kinetic matrix 
+#Instead of calculating the complete potential matrix you can also just calculate a specific element or a continuous block of the nuclear matrix
+#This is done by specifying an additional argument that contains the start and indices of the block of the nuclear matrix 
 #that you want to calculate.
 print('\n\n\n')
 print('Integrals')

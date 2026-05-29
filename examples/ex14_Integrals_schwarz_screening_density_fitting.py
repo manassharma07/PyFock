@@ -32,12 +32,6 @@ print('Compilation done!\n\n')
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'Serotonin.xyz'
 xyzFilename = 'Decane_C10H22.xyz'
-# xyzFilename = 'Icosane_C20H42.xyz'
-# xyzFilename = 'Tetracontane_C40H82.xyz'
-# xyzFilename = 'Pentacontane_C50H102.xyz'
-# xyzFilename = 'Octacontane_C80H162.xyz'
-# xyzFilename = 'Hectane_C100H202.xyz'
-# xyzFilename = 'Icosahectane_C120H242.xyz'
 
 # basisName = 'sto-3g'
 # basisName = 'sto-6g'
@@ -53,7 +47,6 @@ mol = Mol(coordfile = xyzFilename)
 # Next we need to specify some basis
 # The basis set can then be used to calculate things like Overlap, KE, integrals/matrices.
 basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basisName)})
-#basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-svp')})
 
 # We also need an auxiliary basis for density fitting
 auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=auxbasisName)})
@@ -61,9 +54,8 @@ auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=auxbasisName)})
 # Calculate two-centered two electron integrals (Coulomb metric) for the density fitting procedure
 ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
 
-start = timer()
 print('\n\nPerforming Schwarz screening...')
-threshold_schwarz = 1e-11
+threshold_schwarz = 1e-9
 print('Threshold ', threshold_schwarz)
 
 # Size of the 3c2e array naively
@@ -94,8 +86,6 @@ print('No. of elements in the standard three-centered two electron ERI tensor: '
 print('No. of elements in the triangular three-centered two electron ERI tensor: ', nints3c2e_tri, flush=True)
 print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints3c2e*100,1)) + '% of original', flush=True)
 print('Schwarz screening done!')
-duration = timer() - start
-print('Time taken ', duration)
 
 # Calculate the 3c2e integrals for only the significant pairs
 start = timer()
@@ -108,21 +98,15 @@ size = ints3c2e.nbytes/1e9
 print('Size (GB) ', size)
 
 # Calculate the unique (triangular) 3c2e integrals without Schwarz screening
-start = timer()
 ints3c2e = Integrals.rys_3c2e_tri(basis, auxbasis)
-duration = timer() - start
 print('\nUnique (triangular) 3c2e integral without Schwarz screening')
 print(ints3c2e)
-print('Time taken ', duration)
 size = ints3c2e.nbytes/1e9
 print('Size (GB) ', size)
 
 # Calculate the full 3c2e integrals without Schwarz screening
-start = timer()
 ints3c2e = Integrals.rys_3c2e_symm(basis, auxbasis)
-duration = timer() - start
 print('\nFull 3c2e integral without Schwarz screening')
 print(ints3c2e)
-print('Time taken ', duration)
 size = ints3c2e.nbytes/1e9
 print('Size (GB) ', size)

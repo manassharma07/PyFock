@@ -13,12 +13,6 @@ xyzFilename = 'h2o.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Decane_C10H22.xyz'
-# xyzFilename = 'Icosane_C20H42.xyz'
-# xyzFilename = 'Tetracontane_C40H82.xyz'
-# xyzFilename = 'Pentacontane_C50H102.xyz'
-# xyzFilename = 'Octacontane_C80H162.xyz'
-# xyzFilename = 'Hectane_C100H202.xyz'
-# xyzFilename = 'Icosahectane_C120H242.xyz'
 
 # basisName = 'sto-3g'
 # basisName = 'sto-6g'
@@ -34,10 +28,9 @@ mol = Mol(coordfile = xyzFilename)
 # Next we need to specify some basis
 # The basis set can then be used to calculate things like Overlap, KE, integrals/matrices.
 basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=basisName)})
-#basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-svp')})
 
 #Now we can calculate integrals.
-# This example shows how to calculate the 4c2e ERI array using the basis set object created.
+# This example shows how to calculate the 2c2e ERI array using the basis set object created.
 # One can specify exactly which elements of the ERI array they want to calculate.
 # So, one can either calculate a single element or a continuous block of the matrix using the slice.
 
@@ -80,29 +73,3 @@ print('Integrals')
 print('\n2c2e ERI array in def2-SVP basis\n')
 print('NAO: ', basisBig.bfs_nao)
 print(Integrals.rys_2c2e_symm(basisBig))
-
-
-#Comparison with PySCF
-from pyscf import gto, dft, df
-from timeit import default_timer as timer
-molPySCF = gto.Mole()
-molPySCF.atom = 'h2o.xyz'
-molPySCF.basis = basisName
-molPySCF.cart = True
-molPySCF.build()
-#print(molPySCF.cart_labels())
-
-# auxmol = df.addons.make_auxmol(molPySCF, auxbasis='weigend')
-auxmol = df.addons.make_auxmol(molPySCF, auxbasis='6-31G')
-
-
-#Nuclear mat
-start=timer()
-# V = molPySCF.intor('int1e_nuc')
-ERI_pyscf = df.incore.aux_e2(molPySCF, auxmol, intor='int2c2e')
-duration = timer() - start
-print('\n\nPySCF')
-print(ERI_pyscf)
-print('Array dimensions: ', ERI_pyscf.shape)
-print(abs(ERI_pyscf - ERI).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
-print('Duration for ERI using PySCF: ',duration)

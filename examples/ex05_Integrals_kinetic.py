@@ -12,12 +12,6 @@ xyzFilename = 'Ethane.xyz'
 # xyzFilename = 'Cholesterol.xyz'
 # xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Decane_C10H22.xyz'
-# xyzFilename = 'Icosane_C20H42.xyz'
-# xyzFilename = 'Tetracontane_C40H82.xyz'
-# xyzFilename = 'Pentacontane_C50H102.xyz'
-# xyzFilename = 'Octacontane_C80H162.xyz'
-# xyzFilename = 'Hectane_C100H202.xyz'
-# xyzFilename = 'Icosahectane_C120H242.xyz'
 
 #First of all we need a mol object with some geometry
 mol = Mol(coordfile = xyzFilename)

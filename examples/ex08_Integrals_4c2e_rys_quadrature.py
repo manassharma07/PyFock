@@ -2,22 +2,12 @@ from pyfock import Basis
 from pyfock import Mol
 from pyfock import Integrals
 
-import numpy as np
 
 # 4c2e ERI via Rys Quadrature (Faster than the conventional implementation) 
 
-# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
 xyzFilename = 'h2o.xyz'
 # xyzFilename = 'Ethane.xyz'
-# xyzFilename = 'Cholesterol.xyz'
-# xyzFilename = 'Serotonin.xyz'
 # xyzFilename = 'Decane_C10H22.xyz'
-# xyzFilename = 'Icosane_C20H42.xyz'
-# xyzFilename = 'Tetracontane_C40H82.xyz'
-# xyzFilename = 'Pentacontane_C50H102.xyz'
-# xyzFilename = 'Octacontane_C80H162.xyz'
-# xyzFilename = 'Hectane_C100H202.xyz'
-# xyzFilename = 'Icosahectane_C120H242.xyz'
 
 # basisName = 'sto-3g'
 # basisName = 'sto-6g'
@@ -32,7 +22,7 @@ mol = Mol(coordfile = xyzFilename)
 basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=small_basisName)})
 #basis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-svp')})
 
-#Now we can calculate integrals.
+# Now we can calculate integrals.
 # This example shows how to calculate the 4c2e ERI array using the basis set object created.
 # One can specify exactly which elements of the ERI array they want to calculate.
 # So, one can either calculate a single element or a continuous block of the matrix using the slice.
@@ -65,7 +55,6 @@ print('Slice',[indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx
 ERI_subset = Integrals.rys_4c2e_symm(basis, slice=[indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, indx_startD, indx_endD])
 print(ERI_subset[:, :, 0, 0]) 
 print('\nSlice from the original array\n')
-# print(ERI[indx_startA:indx_endA, indx_startB:indx_endB, 0, 0]) 
 print(ERI[indx_startA:indx_endA, indx_startB:indx_endB, indx_startC, indx_startD]) 
 
 # Compare with the slice of the original full matrix
@@ -81,25 +70,3 @@ print('\n4c2e ERI array in def2-SVP basis\n')
 print('NAO: ', basisBig.bfs_nao)
 print(Integrals.rys_4c2e_symm(basisBig)[0:7,0:7,0,0])
 
-
-#Comparison with PySCF
-from pyscf import gto, dft
-from timeit import default_timer as timer
-molPySCF = gto.Mole()
-molPySCF.atom = 'h2o.xyz'
-molPySCF.basis = small_basisName
-molPySCF.cart = True
-molPySCF.build()
-#print(molPySCF.cart_labels())
-
-
-#Nuclear mat
-start=timer()
-# V = molPySCF.intor('int1e_nuc')
-ERI_pyscf = molPySCF.intor('int2e')
-duration = timer() - start
-print('\n\nPySCF')
-print(ERI_pyscf[0:7,0:7,0,0])
-print('Array dimensions: ', ERI_pyscf.shape)
-print(abs(ERI_pyscf - ERI).max())  #There will sometimes be a difference b/w PySCF and CrysX values because PySCF doesn't normalize d,f,g orbitals.
-print('Duration for ERI using PySCF: ',duration)
