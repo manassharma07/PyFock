@@ -25,10 +25,16 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
     where this function returns ``dexc_dbf`` with
 
         dexc_dbf[d, mu] = sum_g d_d(chi_mu)(g) * aow_D[g, mu]
-                          + sum_g (sum_k Fk(g) * d_k d_d chi_mu(g)) * (chi D)[g, mu]   (GGA only)
+                          + sum_g (sum_k Fk(g) * d_k d_d chi_mu(g)) * (chi D)[g, mu]   (GGA)
+                          + sum_g G_tau(g) * sum_k (d_d d_k chi_mu)(g) * Hk[g, mu]     (MGGA)
 
         aow[g, nu] = F(g) chi_nu(g) + sum_k Fk(g) d_k chi_nu(g)
         aow_D = aow @ D ;  F = w * vrho ;  Fk = 2 * w * vsigma * (grad rho)_k
+        G_tau = 0.5 * w * vtau ;  Hk[g, mu] = (d_k chi @ D)[g, mu]
+
+    This supports LDA, GGA and meta-GGA (tau-dependent) functionals, using
+    either the native PyFock functionals or pylibxc. Laplacian-dependent
+    meta-GGAs are not supported (the SCF does not use the Laplacian either).
 
     Parameters
     ----------
@@ -87,9 +93,6 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
         c_family_code = XC.get_family(funcid[1])
         funcx = None
         funcc = None
-
-    if xc_family_dict[x_family_code] == 'MGGA' or xc_family_dict[c_family_code] == 'MGGA':
-        raise NotImplementedError('Analytical XC gradients are currently implemented for LDA and GGA functionals only.')
 
     numba.set_num_threads(1)
 
@@ -158,8 +161,9 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
     bfs_expnts = bfs_data_as_np_arrays[6]
 
     is_gga = (xc_family_dict[x_family_code] != 'LDA' or xc_family_dict[c_family_code] != 'LDA')
+    is_mgga = (xc_family_dict[x_family_code] == 'MGGA' or xc_family_dict[c_family_code] == 'MGGA')
 
-    # AO values, gradients (and Hessians for GGA)
+    # AO values, gradients (and Hessians for GGA/MGGA)
     if is_gga:
         ao_value_block, ao_grad_block, ao_hess_block = Integrals.bf_val_helpers.eval_bfs_grad_and_hess_sparse_internal_serial(
             bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
@@ -167,26 +171,41 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
         ao_value_block, ao_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_sparse_internal_serial(
             bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
 
-    # Density (and gradient of density for GGA)
+    # Density (and gradient of density for GGA, kinetic energy density for MGGA)
     Fmj = ao_value_block @ dmat  # Fmj[g, mu] = sum_nu D_mu_nu chi_nu(g)
     rho_block = np.einsum('mj,mj->m', Fmj, ao_value_block)
 
     sigma_block = None
+    tau_block = None
+    Hgrad = None
     if is_gga:
         rho_grad_x = 2.0 * np.einsum('mj,mj->m', Fmj, ao_grad_block[0])
         rho_grad_y = 2.0 * np.einsum('mj,mj->m', Fmj, ao_grad_block[1])
         rho_grad_z = 2.0 * np.einsum('mj,mj->m', Fmj, ao_grad_block[2])
         sigma_block = rho_grad_x**2 + rho_grad_y**2 + rho_grad_z**2
+    if is_mgga:
+        # Hk[g, mu] = sum_nu D_mu_nu (d_k chi_nu)(g) = (d_k chi @ D)[g, mu]
+        Hgrad = [ao_grad_block[0] @ dmat, ao_grad_block[1] @ dmat, ao_grad_block[2] @ dmat]
+        # tau = 0.5 sum_k sum_munu D_munu (d_k chi_mu)(d_k chi_nu)
+        tau_block = 0.5 * (
+            np.einsum('mj,mj->m', ao_grad_block[0], Hgrad[0])
+            + np.einsum('mj,mj->m', ao_grad_block[1], Hgrad[1])
+            + np.einsum('mj,mj->m', ao_grad_block[2], Hgrad[2])
+        )
 
     # XC functional derivatives
     if use_libxc:
         inp = {'rho': rho_block}
         if xc_family_dict[x_family_code] != 'LDA':
             inp['sigma'] = sigma_block
+        if xc_family_dict[x_family_code] == 'MGGA':
+            inp['tau'] = tau_block
         retx = funcx.compute(inp)
         inp = {'rho': rho_block}
         if xc_family_dict[c_family_code] != 'LDA':
             inp['sigma'] = sigma_block
+        if xc_family_dict[c_family_code] == 'MGGA':
+            inp['tau'] = tau_block
         retc = funcc.compute(inp)
         vrho = (retx['vrho'] + retc['vrho'])[:, 0]
         vsigma = 0.0
@@ -194,15 +213,25 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
             vsigma = vsigma + retx['vsigma'][:, 0]
         if xc_family_dict[c_family_code] != 'LDA':
             vsigma = vsigma + retc['vsigma'][:, 0]
+        vtau = 0.0
+        if xc_family_dict[x_family_code] == 'MGGA':
+            vtau = vtau + retx['vtau'][:, 0]
+        if xc_family_dict[c_family_code] == 'MGGA':
+            vtau = vtau + retc['vtau'][:, 0]
     else:
-        retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, use_gpu=False)
-        retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, use_gpu=False)
+        retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
+        retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
         vrho = retx[1] + retc[1]
         vsigma = 0.0
         if xc_family_dict[x_family_code] != 'LDA':
             vsigma = vsigma + retx[2]
         if xc_family_dict[c_family_code] != 'LDA':
             vsigma = vsigma + retc[2]
+        vtau = 0.0
+        if xc_family_dict[x_family_code] == 'MGGA':
+            vtau = vtau + retx[3]
+        if xc_family_dict[c_family_code] == 'MGGA':
+            vtau = vtau + retc[3]
 
     F = weights_block * vrho
 
@@ -239,5 +268,25 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
         res[1] += np.einsum('mj,mj->j', hessF, Fmj)
         hessF = Fx[:, None] * ao_hess_block[2] + Fy[:, None] * ao_hess_block[4] + Fz[:, None] * ao_hess_block[5]
         res[2] += np.einsum('mj,mj->j', hessF, Fmj)
+
+        if is_mgga:
+            # tau term: dexc_dbf[d, mu] += sum_k sum_g G_tau (d_d d_k chi_mu) Hk[g, mu]
+            # G_tau = 0.5 w vtau ; Hk = (d_k chi) @ D
+            # d=x : (xx, xy, xz) . (Hx, Hy, Hz)
+            # d=y : (xy, yy, yz) . (Hx, Hy, Hz)
+            # d=z : (xz, yz, zz) . (Hx, Hy, Hz)
+            Gtau = 0.5 * weights_block * vtau
+            GHx = Gtau[:, None] * Hgrad[0]
+            GHy = Gtau[:, None] * Hgrad[1]
+            GHz = Gtau[:, None] * Hgrad[2]
+            res[0] += (np.einsum('mj,mj->j', ao_hess_block[0], GHx)
+                       + np.einsum('mj,mj->j', ao_hess_block[1], GHy)
+                       + np.einsum('mj,mj->j', ao_hess_block[2], GHz))
+            res[1] += (np.einsum('mj,mj->j', ao_hess_block[1], GHx)
+                       + np.einsum('mj,mj->j', ao_hess_block[3], GHy)
+                       + np.einsum('mj,mj->j', ao_hess_block[4], GHz))
+            res[2] += (np.einsum('mj,mj->j', ao_hess_block[2], GHx)
+                       + np.einsum('mj,mj->j', ao_hess_block[4], GHy)
+                       + np.einsum('mj,mj->j', ao_hess_block[5], GHz))
 
     return res

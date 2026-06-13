@@ -32,8 +32,9 @@ class DFT_Grad:
 
     Currently supported: restricted KS-DFT with density fitting (the DF
     gradient corresponds to the robust-fit Coulomb energy used by all DF
-    algorithms), LDA and GGA functionals, CPU only. ECPs are not yet
-    supported.
+    algorithms), LDA, GGA and meta-GGA (tau-dependent) functionals via either
+    the native PyFock functionals or pylibxc, CPU only. ECPs and
+    Laplacian-dependent meta-GGAs are not yet supported.
 
     Parameters
     ----------

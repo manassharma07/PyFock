@@ -105,24 +105,39 @@ xyzFilename = 'H2O.xyz'
 # xyzFilename = 'Graphene_C210.xyz'
 # xyzFilename = 'Graphene_C294.xyz'
 
-xc_pyfock = "PBE"
-xc_pyscf = "PBE" # "101,130" is the PySCF code for PBE, "1,7" is LDA (VWN)
+# xc_pyfock = "PBE"
+# xc_pyscf = "PBE" # "101,130" is the PySCF code for PBE, "1,7" is LDA (VWN)
 # xc_pyfock = "LDA"
 # xc_pyscf = "1,7"
+xc_pyfock = "r2SCAN"
+xc_pyscf = "r2SCAN"
+# xc_pyfock = "TPSS"
+# xc_pyscf = "TPSS"
 
 run_numerical = False  # Finite-difference forces need 6*natoms SCF runs
 
+# Native vs pylibxc XC for the PyFock SCF + analytical gradient.
+# Both paths are supported for LDA/GGA/MGGA; analytical forces are identical.
+use_libxc = False
+
 # Optional command line overrides:
-#   python3 benchmark_DFT_analytical_gradients.py [xyz_file] [LDA|PBE] [skip_numerical]
+#   python3 benchmark_DFT_analytical_gradients.py [xyz_file] [LDA|PBE|TPSS|R2SCAN] [skip_numerical]
 if len(sys.argv) > 1:
     xyzFilename = sys.argv[1]
 if len(sys.argv) > 2:
-    if sys.argv[2].upper() == "LDA":
+    func = sys.argv[2].upper()
+    if func == "LDA":
         xc_pyfock = "LDA"
         xc_pyscf = "1,7"
-    elif sys.argv[2].upper() == "PBE":
+    elif func == "PBE":
         xc_pyfock = "PBE"
         xc_pyscf = "101,130"
+    elif func == "TPSS":
+        xc_pyfock = [202, 231]   # MGGA_X_TPSS + MGGA_C_TPSS
+        xc_pyscf = "TPSS"
+    elif func == "R2SCAN":
+        xc_pyfock = [497, 498]   # MGGA_X_R2SCAN + MGGA_C_R2SCAN
+        xc_pyscf = "R2SCAN"
 if len(sys.argv) > 3 and sys.argv[3] == "skip_numerical":
     run_numerical = False
 
@@ -185,7 +200,7 @@ dft_obj.cholesky = True
 dft_obj.orthogonalize = True
 dft_obj.sao = True
 dft_obj.use_gpu = False
-dft_obj.use_libxc = False
+dft_obj.use_libxc = use_libxc
 dft_obj.dmat = dm0_pyscf
 
 start = timer()

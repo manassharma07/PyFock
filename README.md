@@ -93,8 +93,8 @@
 - ✅ **Web-based GUI**: Interactive interface for visualization and input generation
 - ✅ **Cartesian and Spherical Basis**: Support for both CAO and SAO representations
 - ✅ **Effective Core Potentials**: Support for evaluation of ECP integrals
-- ✅ **Analytical gradients**: for one-electron integrals and three-centered two-electron integrals
-- ✅ **ASE Calculator**: for access to ASE ecosystem
+- ✅ **Analytical gradients & forces**: Fast analytical nuclear gradients for density-fitted DFT — one-electron (overlap/kinetic/nuclear), DF Coulomb (3c2e + 2c2e), and XC for LDA, GGA and meta-GGA (native or LibXC) — matching PySCF forces and faster
+- ✅ **ASE Calculator**: Optional ASE interface (geometry optimization and the wider ASE ecosystem), using analytical forces by default
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
 
 ## Installation
@@ -155,6 +155,12 @@ For GPU acceleration:
 ```bash
 pip install cupy-cuda11x  # Replace 11x with your CUDA version
 ```
+
+For the ASE calculator (geometry optimization and the ASE ecosystem):
+```bash
+pip install ase           # or: pip install pyfock[ase]
+```
+PyFock itself imports and runs without ASE installed; ASE is only required when you use `PyFockCalculator`.
 
 ## Quick Start
 
@@ -273,6 +279,36 @@ energyCrysX, dmat = dftObj.scf()
 print(f"SCF Energy: {energyCrysX} Ha")
 ```
 
+### Analytical Forces & Geometry Optimization
+
+After a converged DFT calculation, analytical nuclear gradients (and forces)
+are available directly via `DFT_Grad` (density fitting; LDA/GGA/meta-GGA; CPU):
+
+```python
+from pyfock import DFT_Grad
+
+# dftObj must already be converged (dftObj.scf() called)
+grad = DFT_Grad(dftObj)
+result = grad.calculate()
+forces = result["forces"]      # (natoms, 3) in Ha/Bohr
+gradient = result["gradient"]  # = -forces
+```
+
+For geometry optimization, use the ASE calculator (requires `ase`). It uses
+the analytical forces by default and falls back to finite differences only for
+configurations the analytical gradients do not yet cover (e.g. HF, no DF):
+
+```python
+from ase import Atoms
+from ase.optimize import BFGS
+from pyfock import PyFockCalculator
+
+water = Atoms("OHH", positions=[[0, 0, 0.119], [0, 0.763, -0.477], [0, -0.763, -0.477]])
+water.calc = PyFockCalculator(functional="PBE", basis="def2-SVP",
+                              auxbasis="def2-universal-jfit", ncores=4)
+BFGS(water).run(fmax=0.02)
+```
+
 ### Generating Visualization Files
 
 ```python
@@ -336,7 +372,9 @@ streamlit run app.py
 - [x] DIIS convergence acceleration
 - [x] Web-based GUI
 - [x] Rys quadrature (roots 1–10)
-- [ ] Analytical gradients (in progress)
+- [x] Analytical nuclear gradients & forces (density fitting; LDA/GGA/meta-GGA; CPU)
+- [x] ASE calculator & geometry optimization
+- [ ] Analytical gradients on GPU and for non-DF / ECP calculations
 - [ ] Electron dynamics & Excited state calculations (RT-TDDFT)
 - [ ] Periodic boundary conditions
 - [ ] Hybrid functionals with exact exchange
