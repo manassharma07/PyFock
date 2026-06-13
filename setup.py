@@ -34,6 +34,11 @@ setup(
     long_description=read('README.md'),
     long_description_content_type='text/markdown',
     install_requires=requirements,
+    extras_require={
+        # Optional features: the ASE calculator interface and D3 dispersion
+        "ase": ["ase"],
+        "dispersion": ["ase", "torch-dftd"],
+    },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Topic :: Scientific/Engineering :: Chemistry",

@@ -185,6 +185,73 @@ def eval_bfs_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_
 
     return result
 
+@njit(parallel=False, cache=True, nogil=True, fastmath=True, error_model="numpy")
+def eval_bfs_sparse_internal_serial(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, bf_indices):
+    # Serial version of eval_bfs_sparse_internal, safe to call concurrently
+    # from multiple Python threads (e.g. the joblib-threading XC evaluation),
+    # unlike the parallel=True variants which can crash Numba's workqueue
+    # threading layer when entered concurrently.
+    nao = bf_indices.shape[0]
+    ncoord = coord.shape[0]
+    result = np.zeros((ncoord, nao))
+
+    # Loop over grid points
+    for k in range(ncoord):
+        coord_grid = coord[k]
+        # Loop over BFs
+        for i in range(nao):
+            ibf = bf_indices[i]
+            value = 0.0
+            coord_bf = bfs_coords[ibf]
+            x = coord_grid[0]-coord_bf[0]
+            y = coord_grid[1]-coord_bf[1]
+            z = coord_grid[2]-coord_bf[2]
+            Ni = bfs_contr_prim_norms[ibf]
+            lmni = bfs_lmn[ibf]
+            exponent_dist_sq = x**2 + y**2 + z**2
+            for ik in range(bfs_nprim[ibf]):
+                dik = bfs_coeffs[ibf][ik]
+                Nik = bfs_prim_norms[ibf][ik]
+                alphaik = bfs_expnts[ibf][ik]
+                value += eval_gto(alphaik, Ni*Nik*dik, lmni, x, y, z, exponent_dist_sq)
+            result[k, i] = value
+
+    return result
+
+
+@njit(parallel=False, cache=True, nogil=True, fastmath=True, error_model="numpy")
+def eval_bfs_internal_serial(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord):
+    # Serial version of eval_bfs_internal (see eval_bfs_sparse_internal_serial
+    # for why this exists).
+    nao = bfs_coords.shape[0]
+    ncoord = coord.shape[0]
+    result = np.zeros((ncoord, nao))
+
+    # Loop over grid points
+    for k in range(ncoord):
+        coord_grid = coord[k]
+        # Loop over BFs
+        for i in range(nao):
+            value = 0.0
+            coord_bf = bfs_coords[i]
+            x = coord_grid[0]-coord_bf[0]
+            y = coord_grid[1]-coord_bf[1]
+            z = coord_grid[2]-coord_bf[2]
+            if (np.sqrt(x**2+y**2+z**2)>bfs_radius_cutoff[i]):
+                continue
+            Ni = bfs_contr_prim_norms[i]
+            lmni = bfs_lmn[i]
+            exponent_dist_sq = x**2 + y**2 + z**2
+            for ik in range(bfs_nprim[i]):
+                dik = bfs_coeffs[i][ik]
+                Nik = bfs_prim_norms[i][ik]
+                alphaik = bfs_expnts[i][ik]
+                value += eval_gto(alphaik, Ni*Nik*dik, lmni, x, y, z, exponent_dist_sq)
+            result[k, i] = value
+
+    return result
+
+
 @njit(parallel=True, cache=True, nogil=True, fastmath=True, error_model="numpy")
 def eval_bfs_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, bf_indices):
     # This function evaluates the values of the specific (significant) basis functions (bf_indices) on a set of grid points (coord).
@@ -272,6 +339,50 @@ def eval_bfs_and_grad_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_
             result2[2,k,i] = valuez
             
     return result1, result2
+
+@njit(parallel=False, cache=True, nogil=True, fastmath=True, error_model="numpy")
+def eval_bfs_and_grad_internal_serial(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord):
+    # Serial version of eval_bfs_and_grad_internal, safe to call concurrently
+    # from multiple Python threads (see eval_bfs_sparse_internal_serial).
+    nao = bfs_coords.shape[0]
+    ncoord = coord.shape[0]
+    result1 = np.zeros((ncoord, nao))
+    result2 = np.zeros((3, ncoord, nao))
+
+    # Loop over grid points
+    for k in range(ncoord):
+        coord_grid = coord[k]
+        # Loop over BFs
+        for i in range(nao):
+            value_ao = 0.0
+            valuex = 0.0
+            valuey = 0.0
+            valuez = 0.0
+            coord_bf = bfs_coords[i]
+            x = coord_grid[0]-coord_bf[0]
+            y = coord_grid[1]-coord_bf[1]
+            z = coord_grid[2]-coord_bf[2]
+            if (np.sqrt(x**2+y**2+z**2)>bfs_radius_cutoff[i]):
+                continue
+            Ni = bfs_contr_prim_norms[i]
+            lmni = bfs_lmn[i]
+            exponent_dist_sq = x**2 + y**2 + z**2
+            for ik in range(bfs_nprim[i]):
+                dik = bfs_coeffs[i, ik]
+                Nik = bfs_prim_norms[i, ik]
+                alphaik = bfs_expnts[i, ik]
+                a,b,c,d = eval_gto_and_grad(alphaik, Ni*Nik*dik, lmni, x, y, z, exponent_dist_sq)
+                value_ao = value_ao + a
+                valuex += b
+                valuey += c
+                valuez += d
+            result1[k,i] = value_ao
+            result2[0,k,i] = valuex
+            result2[1,k,i] = valuey
+            result2[2,k,i] = valuez
+
+    return result1, result2
+
 
 @njit(parallel=True, cache=True, nogil=True, fastmath=True, error_model="numpy")
 def eval_bfs_and_grad_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, bf_indices):

@@ -32,6 +32,25 @@ from .Grids import Grids
 from .DFT import DFT
 from .DFT_NumGrad import DFT_NumGrad
 from .DFT_Grad import DFT_Grad
-from .ase_calculator import PyFockCalculator
 from .HF_atoms import HF_atoms
 # from .PBC_ring import ring
+
+
+def __getattr__(name):
+    # Lazy import of the ASE calculator (PEP 562) so that ASE remains an
+    # optional dependency: `import pyfock` and all integral/DFT functionality
+    # work without ASE installed; only accessing PyFockCalculator requires it.
+    if name == "PyFockCalculator":
+        try:
+            from .ase_calculator import PyFockCalculator
+        except ImportError as exc:
+            raise ImportError(
+                "PyFockCalculator requires the optional 'ase' package. "
+                "Install it with: pip install ase"
+            ) from exc
+        return PyFockCalculator
+    raise AttributeError(f"module 'pyfock' has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(list(globals().keys()) + ["PyFockCalculator"])
