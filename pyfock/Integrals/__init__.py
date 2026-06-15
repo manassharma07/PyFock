@@ -93,6 +93,9 @@ from .overlap_mat_grad_r_symm import overlap_mat_grad_r_symm
 from .kin_mat_grad_r_symm import kin_mat_grad_r_symm
 from .nuc_mat_grad_symm import nuc_mat_grad_symm
 from .nuc_mat_grad_r_symm import nuc_mat_grad_r_symm
+from .overlap_mat_grad_r_symm_cupy import overlap_mat_grad_r_symm_cupy
+from .kin_mat_grad_r_symm_cupy import kin_mat_grad_r_symm_cupy
+from .nuc_mat_grad_r_symm_cupy import nuc_mat_grad_r_symm_cupy
 from .rys_3c2e_grad_symm import rys_3c2e_grad_symm
 from .rys_3c2e_grad_contract import rys_3c2e_grad_contract
 from .rys_2c2e_grad_contract import rys_2c2e_grad_contract
@@ -108,7 +111,8 @@ __all__ = ['integral_helpers', 'mmd_nuc_mat_symm', 'nuc_mat_symm', 'ecp_mat_symm
         , 'overlap_mat_symm_cupy', 'dipole_moment_mat_symm_cupy', 'nuc_mat_symm_cupy', 'kin_mat_symm_shell_cupy', 'rys_2c2e_symm_cupy', 'rys_3c2e_symm_cupy',\
         'rys_3c2e_symm_cupy_fp32', 'schwarz_helpers_cupy', 'overlap_mat_grad_symm', 'kin_mat_grad_symm', 'overlap_mat_grad_r_symm', 'kin_mat_grad_r_symm', 'nuc_mat_grad_symm', 'nuc_mat_grad_r_symm', 'cross_overlap_mat_symm', 'rys_coulomb_matrix',\
          'rys_4c2e_schwarz_sparse_symm', 'rys_coulomb_matrix_sparse', 'rys_2c2e_diag', 'os_4c2e_symm', 'os_4c2e_symm_old', 'os_3c2e_symm', 'rys_3c2e_grad_symm',\
-         'rys_3c2e_grad_contract', 'rys_2c2e_grad_contract', 'rys_nuc_grad_contract', 'eval_xc_grad_2']
+         'rys_3c2e_grad_contract', 'rys_2c2e_grad_contract', 'rys_nuc_grad_contract', 'eval_xc_grad_2',\
+         'overlap_mat_grad_r_symm_cupy', 'kin_mat_grad_r_symm_cupy', 'nuc_mat_grad_r_symm_cupy']
 
 # # This code will import all of the modules in the library directory and expose all of 
 # # the functions in those modules to the user. The user can then use the functions just 
