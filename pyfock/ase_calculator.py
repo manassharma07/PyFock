@@ -98,10 +98,10 @@ class PyFockCalculator(Calculator):
 
     Forces are computed analytically by default (``force_mode="analytical"``,
     using :class:`pyfock.DFT_Grad`), which supports LDA, GGA and meta-GGA
-    functionals (native or pylibxc) with density fitting. If the analytical
-    gradients do not support the requested configuration (e.g. HF, no density
-    fitting, GPU or ECPs), the calculation automatically falls back to
-    finite-difference forces and notes this in ``pyfock_results``. Pass
+    functionals (native or pylibxc) with density fitting, including ECPs. If
+    the analytical gradients do not support the requested configuration (e.g.
+    HF, no density fitting, or GPU), the calculation automatically falls back
+    to finite-difference forces and notes this in ``pyfock_results``. Pass
     ``force_mode="numerical"`` to explicitly request finite-difference
     forces; the ``force_step_size``/``force_step_unit``/``force_method``/
     ``force_use_fixed_grids`` parameters apply to the numerical path only.

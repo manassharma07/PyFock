@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import scipy
 import numba
@@ -8,6 +10,9 @@ from threadpoolctl import threadpool_limits
 
 import pyfock.Integrals as Integrals
 from pyfock import XC
+from pyfock import Data
+from pyfock.Basis import Basis
+from pyfock.Mol import Mol
 
 
 class DFT_Grad:
@@ -24,16 +29,26 @@ class DFT_Grad:
               - sum_ij W_ij dS_ij/dR                  (Pulay / overlap)
               + sum_ijP D_ij c_P d(ij|P)/dR
               - 0.5 sum_PQ c_P c_Q d(P|Q)/dR          (DF Coulomb)
+              + sum_ij D_ij dV_ecp_ij/dR              (ECP, if present)
               + dExc/dR                               (XC, fixed grid)
 
     where W is the energy-weighted density matrix and c_P are the density
     fitting coefficients of the converged density. The grid-weight response
     of the XC term is neglected (same approximation as PySCF's default).
 
+    When effective core potentials (ECPs) are present, ``mol.Zcharges`` already
+    holds the reduced (Z - n_core) charges, so the nuclear-repulsion and
+    nuclear-attraction gradient terms above are automatically consistent. The
+    extra ECP energy term ``Tr(D V_ecp)`` contributes ``sum_ij D_ij
+    dV_ecp_ij/dR``, which is evaluated by central finite differences of the
+    (cheap) ECP integral matrix at fixed density (all other terms remain fully
+    analytical). This is the exact derivative of the ECP energy at fixed D; the
+    orbital response is already captured by the energy-weighted W term.
+
     Currently supported: restricted KS-DFT with density fitting (the DF
     gradient corresponds to the robust-fit Coulomb energy used by all DF
     algorithms), LDA, GGA and meta-GGA (tau-dependent) functionals via either
-    the native PyFock functionals or pylibxc, CPU only. ECPs and
+    the native PyFock functionals or pylibxc, and ECPs, CPU only.
     Laplacian-dependent meta-GGAs are not yet supported.
 
     Parameters
@@ -43,11 +58,14 @@ class DFT_Grad:
     threshold_schwarz_grad : float, optional
         Screening threshold used for the contracted 3c2e derivative
         integrals (includes density/coefficient weighting).
+    ecp_fd_step : float, optional
+        Finite-difference step (in Bohr) for the ECP gradient term. Only used
+        when the basis carries ECPs. Default 1e-3.
     verbose : bool, optional
         Print timing information.
     """
 
-    def __init__(self, dft_obj, threshold_schwarz_grad=1e-11, verbose=True):
+    def __init__(self, dft_obj, threshold_schwarz_grad=1e-11, ecp_fd_step=1e-3, verbose=True):
         if dft_obj is None:
             raise ValueError('ERROR: A PyFock DFT object is required.')
         if not getattr(dft_obj, 'converged', False):
@@ -56,13 +74,12 @@ class DFT_Grad:
             raise NotImplementedError('Analytical gradients are currently implemented for CPU only.')
         if not dft_obj.isDF:
             raise NotImplementedError('Analytical gradients are currently implemented for density-fitted (isDF=True) calculations only.')
-        if getattr(dft_obj.basis, 'has_ecp', False):
-            raise NotImplementedError('Analytical gradients with ECPs are not yet supported.')
         if dft_obj.xc == 'HF':
             raise NotImplementedError('Analytical gradients are currently implemented for pure DFT functionals only.')
 
         self.dft_obj = dft_obj
         self.threshold_schwarz_grad = threshold_schwarz_grad
+        self.ecp_fd_step = ecp_fd_step
         self.verbose = verbose
 
         # Resolve the functional specification the same way DFT.scf does
@@ -105,6 +122,46 @@ class DFT_Grad:
                 rij = coords[i] - coords[j]
                 dist = np.sqrt(np.sum(rij**2))
                 grad[i] -= Z[i] * Z[j] * rij / dist**3
+        return grad
+
+    def _ecp_matrix_at(self, coords_angstrom):
+        """Build the ECP integral matrix (CAO basis) at a displaced geometry."""
+        dft_obj = self.dft_obj
+        atoms = []
+        for iatom, symbol in enumerate(dft_obj.mol.atomicSpecies):
+            x, y, z = coords_angstrom[iatom]
+            atoms.append([symbol, float(x), float(y), float(z)])
+        mol = Mol(atoms=atoms, charge=dft_obj.mol.charge)
+        basis = Basis(mol, copy.deepcopy(dft_obj.basis.basis))
+        return Integrals.ecp_mat_symm(basis)
+
+    def _ecp_grad(self, dmat):
+        """
+        ECP contribution to the gradient: G[A,d] = sum_ij D_ij dV_ecp_ij/dR_{A,d}.
+
+        Evaluated by central finite differences of the ECP integral matrix
+        (cheap, one-electron) at the fixed converged density. Displacing an
+        atom moves both its basis functions and its ECP operator center, so the
+        recomputed ECP matrix captures every contribution to the ECP energy
+        derivative.
+        """
+        mol = self.dft_obj.mol
+        natoms = mol.natoms
+        step_bohr = self.ecp_fd_step
+        step_ang = step_bohr / Data.Angs2BohrFactor  # displace coordinates (Angstrom)
+        coords0 = np.asarray(mol.coords, dtype=np.float64)
+
+        grad = np.zeros((natoms, 3))
+        for iatom in range(natoms):
+            for icart in range(3):
+                coords_plus = coords0.copy()
+                coords_plus[iatom, icart] += step_ang
+                coords_minus = coords0.copy()
+                coords_minus[iatom, icart] -= step_ang
+                Vp = self._ecp_matrix_at(coords_plus)
+                Vm = self._ecp_matrix_at(coords_minus)
+                # derivative w.r.t. Bohr -> forces in Ha/Bohr
+                grad[iatom, icart] = np.sum(dmat * (Vp - Vm)) / (2.0 * step_bohr)
         return grad
 
     def calculate(self):
@@ -238,7 +295,14 @@ class DFT_Grad:
         np.add.at(grad_xc, bfs_atoms, -2.0 * dexc_dbf.T)
         timings['xc'] = timer() - start
 
-        gradient = grad_nn + grad_T + grad_V + grad_S + grad_J + grad_xc
+        # ---------------- ECP (if present) ----------------
+        grad_ecp = np.zeros((natoms, 3))
+        if getattr(basis, 'has_ecp', False):
+            start = timer()
+            grad_ecp = self._ecp_grad(dmat)
+            timings['ecp'] = timer() - start
+
+        gradient = grad_nn + grad_T + grad_V + grad_S + grad_J + grad_xc + grad_ecp
         forces = -gradient
 
         if self.verbose:
@@ -262,6 +326,7 @@ class DFT_Grad:
                 'overlap_pulay': grad_S,
                 'coulomb_df': grad_J,
                 'xc': grad_xc,
+                'ecp': grad_ecp,
             },
             'timings': timings,
         }
