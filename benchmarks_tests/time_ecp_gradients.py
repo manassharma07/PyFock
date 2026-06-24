@@ -121,7 +121,7 @@ print("\n\n" + "=" * 118)
 print("Analytical DFT force timings for ECP systems (def2-SVP, PBE, DF_algo=10, 4 cores)  [seconds]")
 print("=" * 118)
 hdr = (f"{'system':<14}{'atoms':>6}{'nbf':>5}{'ncore':>6}{'SCF':>8}"
-       f"{'GRAD(ana)':>10}{'  1e':>8}{'Coulomb':>9}{'XC':>8}{'ECP(fd)':>9}{'PySCF grad':>12}{'GRAD(num)':>11}")
+       f"{'GRAD(ana)':>10}{'  1e':>8}{'Coulomb':>9}{'XC':>8}{'ECP':>9}{'PySCF grad':>12}{'GRAD(num)':>11}")
 print(hdr)
 print("-" * 118)
 for (xyz, nat, nbf, ncore, t_scf, t_ana, t_1e, t_coul, t_xc, t_ecp, t_py, t_num) in rows:

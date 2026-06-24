@@ -40,9 +40,12 @@ class DFT_Grad:
     holds the reduced (Z - n_core) charges, so the nuclear-repulsion and
     nuclear-attraction gradient terms above are automatically consistent. The
     extra ECP energy term ``Tr(D V_ecp)`` contributes ``sum_ij D_ij
-    dV_ecp_ij/dR``, which is evaluated by central finite differences of the
-    (cheap) ECP integral matrix at fixed density (all other terms remain fully
-    analytical). This is the exact derivative of the ECP energy at fixed D; the
+    dV_ecp_ij/dR``, evaluated analytically (``ecp_grad_mode='analytical'``,
+    default) by differentiating the series ECP integrals via angular-momentum
+    shifts (local part) and derivative moment arrays (projector part), with the
+    ECP-center term obtained from translational invariance. A finite-difference
+    fallback (``ecp_grad_mode='fd'``) differentiates the ECP integral matrix
+    directly. Both give the exact derivative of the ECP energy at fixed D; the
     orbital response is already captured by the energy-weighted W term.
 
     Currently supported: restricted KS-DFT with density fitting (the DF
@@ -58,14 +61,24 @@ class DFT_Grad:
     threshold_schwarz_grad : float, optional
         Screening threshold used for the contracted 3c2e derivative
         integrals (includes density/coefficient weighting).
+    ecp_grad_mode : {'analytical', 'fd'}, optional
+        How to evaluate the ECP gradient term. 'analytical' (default)
+        differentiates the series ECP integrals; 'fd' differentiates the ECP
+        integral matrix by finite differences. Both are consistent with the
+        SCF energy.
+    ecp_series_order : int, optional
+        Power-series order for the analytical ECP gradient. Should match the
+        order used by the SCF energy (``ecp_mat_symm`` default = 12) so the
+        force is consistent with the energy. Default 12.
     ecp_fd_step : float, optional
-        Finite-difference step (in Bohr) for the ECP gradient term. Only used
-        when the basis carries ECPs. Default 1e-3.
+        Finite-difference step (in Bohr) for the 'fd' ECP gradient mode.
+        Default 1e-3.
     verbose : bool, optional
         Print timing information.
     """
 
-    def __init__(self, dft_obj, threshold_schwarz_grad=1e-11, ecp_fd_step=1e-3, verbose=True):
+    def __init__(self, dft_obj, threshold_schwarz_grad=1e-11, ecp_grad_mode='analytical',
+                 ecp_series_order=12, ecp_fd_step=1e-3, verbose=True):
         if dft_obj is None:
             raise ValueError('ERROR: A PyFock DFT object is required.')
         if not getattr(dft_obj, 'converged', False):
@@ -76,9 +89,13 @@ class DFT_Grad:
             raise NotImplementedError('Analytical gradients are currently implemented for density-fitted (isDF=True) calculations only.')
         if dft_obj.xc == 'HF':
             raise NotImplementedError('Analytical gradients are currently implemented for pure DFT functionals only.')
+        if ecp_grad_mode not in ('analytical', 'fd'):
+            raise ValueError("ecp_grad_mode must be 'analytical' or 'fd'.")
 
         self.dft_obj = dft_obj
         self.threshold_schwarz_grad = threshold_schwarz_grad
+        self.ecp_grad_mode = ecp_grad_mode
+        self.ecp_series_order = ecp_series_order
         self.ecp_fd_step = ecp_fd_step
         self.verbose = verbose
 
@@ -299,7 +316,11 @@ class DFT_Grad:
         grad_ecp = np.zeros((natoms, 3))
         if getattr(basis, 'has_ecp', False):
             start = timer()
-            grad_ecp = self._ecp_grad(dmat)
+            if self.ecp_grad_mode == 'analytical':
+                grad_ecp = Integrals.ecp_grad_contract(
+                    basis, mol, dmat, series_order=self.ecp_series_order)
+            else:
+                grad_ecp = self._ecp_grad(dmat)
             timings['ecp'] = timer() - start
 
         gradient = grad_nn + grad_T + grad_V + grad_S + grad_J + grad_xc + grad_ecp
