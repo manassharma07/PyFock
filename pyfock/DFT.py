@@ -1024,7 +1024,7 @@ class DFT:
                 if self.dynamic_precision:
                     print('\n\nWill use dynamic precision. ')
                     print('This means that the XC term will be evaluated in single precision until the ')
-                    print('relative energy difference b/w successive iterations is less than 5.0E-7.')
+                    print('relative energy difference b/w successive iterations is less than 5.0E-6.')
                     precision_XC = cp.float32
                 else:
                     precision_XC = cp.float64
@@ -1769,6 +1769,13 @@ class DFT:
 
             print('Energy difference : ',abs(Etot_new-Etot), flush=True)
 
+            # Check when to switch to double precision for XC
+            if self.use_gpu:
+                if precision_XC is cp.float32:
+                    if abs(Etot_new-Etot)/abs(Etot_new)<5e-7:
+                        precision_XC = cp.float64
+                        print('\nSwitching to double precision for XC evaluation after '+str(itr) +' iterations!', flush=True)
+
             # Check convergence criteria
             if abs(Etot_new-Etot)<conv_crit:
                 scf_converged = True
@@ -1880,12 +1887,7 @@ class DFT:
                 self.mo_energies = eigvalues
                 self.mo_occupations = mo_occ
 
-                # Check when to switch to double precision for XC
-                if self.use_gpu:
-                    if precision_XC is cp.float32:
-                        if abs(Etot_new-Etot)/abs(Etot_new)<5e-7:
-                            precision_XC = cp.float64
-                            print('\nSwitching to double precision for XC evaluation after '+str(itr) +' iterations!', flush=True)
+                
                             
 
 
