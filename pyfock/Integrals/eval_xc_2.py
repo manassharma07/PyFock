@@ -186,8 +186,6 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
         funcc = None
 
     #### Set number of cores for numba related evaluations within 'block_dens_func()' for example bf_value evaluations 
-    #### Apparently, it was still using as many cores as possible and creating a serial version of thise functions as I have 
-    #### currently done doesn't work  
     numba.set_num_threads(1)
     # Shuffle the blocks (for load balancing)
     block_indices = list(range(nblocks+1))
@@ -382,14 +380,17 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
         if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
             ao_value_block = ao_values
         else:
-            # ao_value_block = Integrals.evalBFsNumbawrap(basis, coords_block, parallel=False)
+            # NOTE: serial (parallel=False) evaluators are used here because this
+            # function runs concurrently in multiple joblib threads; calling
+            # parallel=True Numba functions from multiple Python threads crashes
+            # Numba's workqueue threading layer. (Same as the GGA branch below.)
             if non_zero_indices is not None:
-                # ao_value_block = Integrals.bf_val_helpers.eval_bfs_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
-                ao_value_block = Integrals.bf_val_helpers.eval_bfs_sparse_vectorized_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
+                # ao_value_block = Integrals.bf_val_helpers.eval_bfs_sparse_vectorized_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
+                ao_value_block = Integrals.bf_val_helpers.eval_bfs_sparse_internal_serial(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
             else:
-                
-                ao_value_block = Integrals.bf_val_helpers.eval_bfs_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block)
-                
+
+                ao_value_block = Integrals.bf_val_helpers.eval_bfs_internal_serial(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block)
+
     # GGA/MGGA (# If either x or c functional is of GGA/MGGA type we need ao_grad_values)
     # If either x or c functional is of GGA/MGGA type we need ao_grad_values
     if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
@@ -402,7 +403,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
                 # ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
                 ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_sparse_internal_serial(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
             else:
-                ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block) 
+                # Serial variant: this runs inside joblib threads (see the LDA branch note)
+                ao_value_block, ao_values_grad_block = Integrals.bf_val_helpers.eval_bfs_and_grad_internal_serial(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block)
     if debug:
         durationAO = durationAO + timer() - startAO
     # print('Duration for AO values: ', durationAO) 

@@ -95,6 +95,16 @@ class PyFockCalculator(Calculator):
     The calculator writes a ``run_pyfock.py`` script using PyFock's normal
     Python API, runs it as a subprocess, saves the full PyFock stdout to a
     text file, and parses a final JSON marker from that output.
+
+    Forces are computed analytically by default (``force_mode="analytical"``,
+    using :class:`pyfock.DFT_Grad`), which supports LDA, GGA and meta-GGA
+    functionals (native or pylibxc) with density fitting, including ECPs. If
+    the analytical gradients do not support the requested configuration (e.g.
+    HF, no density fitting, or GPU), the calculation automatically falls back
+    to finite-difference forces and notes this in ``pyfock_results``. Pass
+    ``force_mode="numerical"`` to explicitly request finite-difference
+    forces; the ``force_step_size``/``force_step_unit``/``force_method``/
+    ``force_use_fixed_grids`` parameters apply to the numerical path only.
     """
 
     implemented_properties = ["energy", "forces"]
@@ -105,6 +115,7 @@ class PyFockCalculator(Calculator):
         "convergence_check": "error",
         "dispersion": False,
         "dispersion_kwargs": None,
+        "force_mode": "analytical",
         "force_step_size": 1.0e-3,
         "force_step_unit": "bohr",
         "force_method": "central",
@@ -121,6 +132,7 @@ class PyFockCalculator(Calculator):
         convergence_check="error",
         dispersion=False,
         dispersion_kwargs=None,
+        force_mode="analytical",
         force_step_size=1.0e-3,
         force_step_unit="bohr",
         force_method="central",
@@ -133,6 +145,8 @@ class PyFockCalculator(Calculator):
             raise ValueError(
                 "convergence_check must be 'error', 'warning', or 'ignore'."
             )
+        if force_mode not in ("analytical", "numerical"):
+            raise ValueError("force_mode must be 'analytical' or 'numerical'.")
 
         canonical_options = self._canonicalize_options(kwargs)
         self._validate_option_names(canonical_options)
@@ -146,6 +160,7 @@ class PyFockCalculator(Calculator):
         self.parameters["dispersion_kwargs"] = (
             None if dispersion_kwargs is None else dict(dispersion_kwargs)
         )
+        self.parameters["force_mode"] = force_mode
         self.parameters["force_step_size"] = force_step_size
         self.parameters["force_step_unit"] = force_step_unit
         self.parameters["force_method"] = force_method
@@ -316,6 +331,7 @@ import numpy as np
 
 from pyfock import Basis
 from pyfock import DFT
+from pyfock import DFT_Grad
 from pyfock import DFT_NumGrad
 from pyfock import Integrals
 from pyfock import Mol
@@ -377,15 +393,28 @@ result = {{
 }}
 
 if {self._render_value(compute_forces)}:
-    grad_obj = DFT_NumGrad(
-        dft_obj,
-        step_size={self._render_value(self.parameters["force_step_size"])},
-        step_unit={self._render_value(self.parameters["force_step_unit"])},
-        method={self._render_value(self.parameters["force_method"])},
-        use_fixed_grids={self._render_value(self.parameters["force_use_fixed_grids"])},
-        verbose=False,
-    )
-    force_results = grad_obj.calculate()
+    force_mode = {self._render_value(self.parameters["force_mode"])}
+    force_results = None
+    if force_mode == "analytical":
+        try:
+            grad_obj = DFT_Grad(dft_obj)
+            force_results = grad_obj.calculate()
+            result["force_method_used"] = "analytical"
+        except (NotImplementedError, ValueError) as exc:
+            print("WARNING: Analytical gradients are not available for this "
+                  "configuration: " + str(exc))
+            print("Falling back to numerical finite-difference forces.")
+    if force_results is None:
+        grad_obj = DFT_NumGrad(
+            dft_obj,
+            step_size={self._render_value(self.parameters["force_step_size"])},
+            step_unit={self._render_value(self.parameters["force_step_unit"])},
+            method={self._render_value(self.parameters["force_method"])},
+            use_fixed_grids={self._render_value(self.parameters["force_use_fixed_grids"])},
+            verbose=False,
+        )
+        force_results = grad_obj.calculate()
+        result["force_method_used"] = "numerical"
     result["forces_au_bohr"] = np.asarray(force_results["forces"]).tolist()
 
 if {self._render_value(compute_dipole)}:
@@ -482,6 +511,7 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
                     f"Forces were requested but not found in '{output_path}'."
                 )
             self.results["forces"] = self._to_ev_forces(summary["forces_au_bohr"])
+            self.pyfock_results["force_method_used"] = summary.get("force_method_used")
 
         self.pyfock_results["base_energy_ev"] = float(self.results["energy"])
         self.pyfock_results["base_free_energy_ev"] = float(self.results["free_energy"])
