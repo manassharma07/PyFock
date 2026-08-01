@@ -15,6 +15,7 @@ log_scale = False        # True for log scale, False for linear
 bar_enabled = {
     "PySCF 4 core": True,
     "PySCF 32 core": True,
+    "PySCF GPU": True,
     "PyFock 4 core CPU": True,
     "PyFock 32 core CPU": True,
     "PyFock GPU": True,
@@ -22,6 +23,8 @@ bar_enabled = {
 
 # ==== DATA SOURCE ====
 workbook_path = Path(__file__).with_suffix(".xlsx")
+pyscf_gpu_workbook_path = Path(__file__).with_name("PySCF_scaling_behavior_SAO.xlsx")
+pyscf_gpu_sheet = "def2-SVP GPU"
 water_molecules = np.array([47, 76, 100, 139])
 
 series_specs = [
@@ -62,6 +65,17 @@ series_specs = [
         "alpha": 1.0,
     },
     {
+        "key": "PySCF GPU",
+        "section": ("PySCF", "GPU"),
+        "label": "PySCF (GPU)",
+        "short_label": "PySCF GPU",
+        "kind": "pyscf",
+        "color": "#17324D",
+        "edgecolor": "#0B1F33",
+        "allow_missing": True,
+        "missing_label": "OOM",
+    },
+    {
         "key": "PyFock GPU",
         "section": ("GPU",),
         "label": "PyFock GPU",
@@ -91,6 +105,8 @@ def load_timing_sections(path):
     headers = None
 
     for row in ws.iter_rows(values_only=True):
+        if not row:
+            continue
         first = clean_cell(row[0])
 
         if first in {"GPU", "PyFock", "PySCF"}:
@@ -119,19 +135,58 @@ def load_timing_sections(path):
     return sections
 
 
-def values_for_section(sections, section_key, column_name):
-    missing = [water for water in water_molecules if water not in sections.get(section_key, {})]
-    if missing:
-        raise ValueError(f"Missing water clusters {missing} for section {section_key}")
+def load_pyscf_gpu_section(path, sheet_name):
+    ws = load_workbook(path, data_only=True, read_only=True)[sheet_name]
+    rows_by_water = {}
+    headers = None
+
+    for row in ws.iter_rows(values_only=True):
+        if not row or all(value is None for value in row):
+            if headers is not None and rows_by_water:
+                break
+            continue
+        first = clean_cell(row[0])
+
+        if first == "H2O molecules":
+            headers = [clean_cell(value) for value in row]
+            continue
+
+        if headers is None or not isinstance(row[0], (int, float)):
+            continue
+
+        values = dict(zip(headers, row))
+        rows_by_water[int(row[0])] = {
+            "No. of basis functions": values["Basis functions"],
+            # The latest GPU sheet reports grid-excluded wall time directly.
+            "Total Time Taken (s) / iter": values["Grid-excl. time / iter (s)"],
+            "Status": values["Status"],
+        }
+
+    return {("PySCF", "GPU"): rows_by_water}
+
+
+def values_for_section(sections, section_key, column_name, allow_missing=False):
+    section = sections.get(section_key, {})
+    missing = [
+        int(water)
+        for water in water_molecules
+        if water not in section or section[int(water)].get(column_name) is None
+    ]
+    if missing and not allow_missing:
+        raise ValueError(
+            f"Missing {column_name!r} for water clusters {missing} "
+            f"in section {section_key}"
+        )
 
     values = [
-        sections[section_key][int(water)][column_name]
+        section.get(int(water), {}).get(column_name, np.nan)
         for water in water_molecules
     ]
     return np.array(values, dtype=float)
 
 
 sections = load_timing_sections(workbook_path)
+sections.update(load_pyscf_gpu_section(pyscf_gpu_workbook_path, pyscf_gpu_sheet))
 
 series = []
 for spec in series_specs:
@@ -142,6 +197,7 @@ for spec in series_specs:
         sections,
         spec["section"],
         "Total Time Taken (s) / iter",
+        allow_missing=spec.get("allow_missing", False),
     )
     basis = values_for_section(
         sections,
@@ -167,22 +223,23 @@ if not series:
 basis_functions = series[0]["basis"]
 
 # ==== Choose x-axis ====
+cluster_spacing = 1.40
 if x_axis_choice == "water":
-    x_values = np.arange(len(water_molecules))
+    x_values = np.arange(len(water_molecules)) * cluster_spacing
     x_label = "Number of Water Molecules"
     x_tick_labels = [f"(H$_2$O)$_{{{n}}}$" for n in water_molecules]
 elif x_axis_choice == "basis":
-    x_values = np.arange(len(basis_functions))
+    x_values = np.arange(len(basis_functions)) * cluster_spacing
     x_label = "Number of Basis Functions"
     x_tick_labels = [str(n) for n in basis_functions]
 else:
     raise ValueError("x_axis_choice must be 'water' or 'basis'")
 
 # ==== Plot ====
-bar_width = min(0.21, 0.94 / len(series))
+bar_width = min(0.22, 1.20 / len(series))
 offsets = (np.arange(len(series)) - (len(series) - 1) / 2) * bar_width
 
-fig, ax = plt.subplots(figsize=(10.6, 6.8))
+fig, ax = plt.subplots(figsize=(12.4, 6.8))
 ax.set_axisbelow(True)
 ax.grid(axis="y", color="#D5DAE0", linewidth=0.8, alpha=0.8)
 
@@ -215,16 +272,29 @@ for offset, item in zip(offsets, series):
             bottom += values
 
     for x, val in zip(bar_positions, item["times"]):
-        ax.text(
-            x,
-            val * 1.01,
-            f"{val:.1f}",
-            ha="center",
-            va="bottom",
-            fontsize=12,
-            fontweight="bold",
-            rotation=0,
-        )
+        if np.isfinite(val):
+            ax.text(
+                x,
+                val * 1.01,
+                f"{val:.1f}",
+                ha="center",
+                va="bottom",
+                fontsize=12,
+                fontweight="bold",
+                rotation=0,
+            )
+        else:
+            ax.text(
+                x,
+                0.012,
+                item.get("missing_label", "N/A"),
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+                rotation=90,
+                transform=ax.get_xaxis_transform(),
+            )
 
     for x in bar_positions:
         ax.text(
@@ -240,7 +310,7 @@ for offset, item in zip(offsets, series):
             clip_on=False,
         )
 
-max_time = max(item["times"].max() for item in series)
+max_time = max(np.nanmax(item["times"]) for item in series)
 if not log_scale:
     ax.set_ylim(top=max_time * 1.14)
 
@@ -251,7 +321,7 @@ if log_scale:
     ax.set_yscale("log")
 
 ax.set_title(
-    "PySCF vs PyFock CPU/GPU Total Time per Iteration",
+    "PyFock (CPU and GPU) vs PySCF (CPU and GPU)",
     fontsize=16,
     fontweight="bold",
 )
@@ -272,7 +342,8 @@ for spine in ax.spines.values():
 
 # Legend styling
 component_handles = [
-    Patch(facecolor="#9BB7D4", edgecolor="#1F4E79", label="PySCF total"),
+    Patch(facecolor="#9BB7D4", edgecolor="#1F4E79", label="PySCF CPU total"),
+    Patch(facecolor="#17324D", edgecolor="#0B1F33", label="PySCF GPU total"),
 ]
 component_handles.extend(
     Patch(facecolor=color, edgecolor="black", label=f"PyFock {label}")

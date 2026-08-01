@@ -1,0 +1,1460 @@
+Sun Jul 26 15:10:58 2026       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 530.30.02              Driver Version: 530.30.02    CUDA Version: 12.1     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                  Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf            Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA A100-SXM4-80GB           On | 00000000:C1:00.0 Off |                    0 |
+| N/A   30C    P0               63W / 500W|      0MiB / 81920MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|  No running processes found                                                           |
++---------------------------------------------------------------------------------------+
+Anaconda loaded. Run "conda activate <env>" to activate a conda environment (base, ..).
+Number of cores being actually used/requested for the benchmark: 2
+Confirming that the environment variables are properly set...
+OMP_NUM_THREADS = 2
+OPENBLAS_NUM_THREADS = 2
+MKL_NUM_THREADS = 2
+VECLIB_MAXIMUM_THREADS = 2
+NUMEXPR_NUM_THREADS = 2
+
+============================================================
+Processing: ../../../../Structures/water_cluster_5.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.17 sec, wall time      0.29 sec, GPU time    292.82 ms
+    CPU time for setting up grids                                        0.05 sec, wall time      0.08 sec, GPU time     78.13 ms
+nelec by numeric integration = 49.90596261778305
+    CPU time for vxc                                                     0.66 sec, wall time      0.74 sec, GPU time    735.26 ms
+    CPU time for veff                                                   49.24 sec, wall time     49.85 sec, GPU time  49846.70 ms
+E1 = -893.1121196249363  Ecoul = 368.7175979965599  Exc = -45.38217604746204
+init E= -381.11872063222
+cond(S) = 142.7301682449643
+    CPU time for SCF initialization                                     50.08 sec, wall time     50.89 sec, GPU time  50890.78 ms
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.20 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.89 ms
+  HOMO = -0.402709971490606  LUMO = -0.0566225940126225  gap = 9.41752 eV
+nelec by numeric integration = 50.000006956684715
+    CPU time for vxc                                                     0.04 sec, wall time      0.04 sec, GPU time     41.29 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.56 ms
+    CPU time for veff                                                    0.05 sec, wall time      0.05 sec, GPU time     50.84 ms
+E1 = -912.3520782200204  Ecoul = 390.44645501942017  Exc = -47.656043346925
+    CPU time for cycle=1                                                 0.05 sec, wall time      0.06 sec, GPU time     62.19 ms
+cycle= 1 E= -380.903689503907  delta_E= 0.215  |g|= 1.66  |ddm|= 3.11
+diis-c [-2.76523242  1.        ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.01 sec, GPU time      8.98 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.81 ms
+  HOMO = 0.00652289148808599  LUMO = 0.0472328824447091  gap = 1.10778 eV
+nelec by numeric integration = 50.00002812658019
+    CPU time for vxc                                                     0.03 sec, wall time      0.04 sec, GPU time     35.08 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.36 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     41.84 ms
+E1 = -878.9180090016793  Ecoul = 354.1184235703894  Exc = -43.57681866170924
+    CPU time for cycle=2                                                 0.04 sec, wall time      0.06 sec, GPU time     56.46 ms
+cycle= 2 E= -379.718427049381  delta_E= 1.19  |g|= 2.92  |ddm|= 3.39
+diis-c [-0.06947386  0.6395412   0.3604588 ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.37 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.90 ms
+  HOMO = -0.196218831106406  LUMO = -0.0161477628327532  gap = 4.89998 eV
+nelec by numeric integration = 50.00001180777864
+    CPU time for vxc                                                     0.02 sec, wall time      0.03 sec, GPU time     25.25 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.46 ms
+    CPU time for veff                                                    0.03 sec, wall time      0.03 sec, GPU time     31.92 ms
+E1 = -901.8556104166865  Ecoul = 377.9995371583999  Exc = -46.21734141462383
+    CPU time for cycle=3                                                 0.03 sec, wall time      0.04 sec, GPU time     38.36 ms
+cycle= 3 E= -381.415437629292  delta_E= -1.7  |g|= 0.124  |ddm|= 2.46
+diis-c [-0.00680223  0.11400895  0.08344969  0.80254137]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.53 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.97 ms
+  HOMO = -0.197359604616589  LUMO = -0.00822963919646184  gap = 5.14649 eV
+nelec by numeric integration = 50.00001191239964
+    CPU time for vxc                                                     0.02 sec, wall time      0.03 sec, GPU time     26.01 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.51 ms
+    CPU time for veff                                                    0.03 sec, wall time      0.03 sec, GPU time     32.56 ms
+E1 = -901.2545503034563  Ecoul = 377.3305951220126  Exc = -46.14985638779941
+    CPU time for cycle=4                                                 0.03 sec, wall time      0.04 sec, GPU time     39.04 ms
+cycle= 4 E= -381.415834525625  delta_E= -0.000397  |g|= 0.125  |ddm|= 0.171
+diis-c [-4.61734989e-04  1.91441104e-02  2.37873338e-02  5.39488168e-01
+  4.17580388e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.57 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.75 ms
+  HOMO = -0.190160103484227  LUMO = -0.00889678470409029  gap = 4.93243 eV
+nelec by numeric integration = 50.00001207837354
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     49.47 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.79 ms
+    CPU time for veff                                                    0.05 sec, wall time      0.06 sec, GPU time     56.28 ms
+E1 = -901.2099879279167  Ecoul = 377.27601798060243  Exc = -46.14269910662052
+    CPU time for cycle=5                                                 0.06 sec, wall time      0.06 sec, GPU time     62.93 ms
+cycle= 5 E= -381.418692010317  delta_E= -0.00286  |g|= 0.0144  |ddm|= 0.0891
+diis-c [-2.78798079e-05  1.79190436e-03  4.11552190e-03  1.64118341e-01
+  1.65635001e-01  6.64339231e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.06 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.94 ms
+  HOMO = -0.19008825156353  LUMO = -0.00955853345833494  gap = 4.91246 eV
+nelec by numeric integration = 50.000012087459424
+    CPU time for vxc                                                     0.02 sec, wall time      0.03 sec, GPU time     25.28 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.48 ms
+    CPU time for veff                                                    0.03 sec, wall time      0.03 sec, GPU time     32.34 ms
+E1 = -901.2406541804918  Ecoul = 377.3095141848594  Exc = -46.145559578845265
+    CPU time for cycle=6                                                 0.03 sec, wall time      0.04 sec, GPU time     39.53 ms
+cycle= 6 E= -381.41872253086  delta_E= -3.05e-05  |g|= 0.00677  |ddm|= 0.0131
+diis-c [-4.84900624e-06  5.99764425e-04  1.35978397e-03  7.26807063e-02
+  7.78046036e-02  3.95784904e-01  4.51770238e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.99 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.94 ms
+  HOMO = -0.190676502159212  LUMO = -0.00955254112711739  gap = 4.92863 eV
+nelec by numeric integration = 50.000012069385974
+    CPU time for vxc                                                     0.02 sec, wall time      0.03 sec, GPU time     25.18 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.45 ms
+    CPU time for veff                                                    0.03 sec, wall time      0.03 sec, GPU time     31.88 ms
+E1 = -901.244959291346  Ecoul = 377.3144157607864  Exc = -46.146163956506385
+    CPU time for cycle=7                                                 0.03 sec, wall time      0.04 sec, GPU time     38.66 ms
+cycle= 7 E= -381.418730443448  delta_E= -7.91e-06  |g|= 0.00176  |ddm|= 0.00549
+diis-c [-1.78531970e-07  3.71972396e-04 -1.62058485e-05  5.06791200e-03
+  5.36708495e-03  5.57156404e-02  2.13983422e-01  7.19510174e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.05 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.87 ms
+  HOMO = -0.190642442741349  LUMO = -0.00958678388447937  gap = 4.92678 eV
+nelec by numeric integration = 50.00001206952629
+    CPU time for vxc                                                     0.03 sec, wall time      0.03 sec, GPU time     26.79 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.61 ms
+    CPU time for veff                                                    0.03 sec, wall time      0.04 sec, GPU time     33.77 ms
+E1 = -901.2488009764613  Ecoul = 377.3188640527142  Exc = -46.146771124662386
+    CPU time for cycle=8                                                 0.03 sec, wall time      0.04 sec, GPU time     40.77 ms
+cycle= 8 E= -381.418731004791  delta_E= -5.61e-07  |g|= 0.000266  |ddm|= 0.00131
+diis-c [-6.77868127e-09  1.73322507e-04 -2.64603154e-05 -1.17107582e-04
+ -2.23897073e-04  8.83242681e-03  6.67446840e-02  2.73854019e-01
+  6.50763012e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.81 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      2.91 ms
+  HOMO = -0.190632789393224  LUMO = -0.00959154937114112  gap = 4.92638 eV
+nelec by numeric integration = 50.000012069316256
+    CPU time for vxc                                                     0.03 sec, wall time      0.03 sec, GPU time     28.31 ms
+    CPU time for veff                                                    0.00 sec, wall time      0.00 sec, GPU time      3.36 ms
+    CPU time for veff                                                    0.03 sec, wall time      0.04 sec, GPU time     34.44 ms
+E1 = -901.2493401192995  Ecoul = 377.3194249521329  Exc = -46.146792893669655
+    CPU time for cycle=9                                                 0.04 sec, wall time      0.04 sec, GPU time     41.07 ms
+cycle= 9 E= -381.418731017218  delta_E= -1.24e-08  |g|= 0.000103  |ddm|= 0.000262
+    CPU time for SCF                                                    50.43 sec, wall time     51.33 sec, GPU time  51328.99 ms
+converged SCF energy = -381.418731017218
+Nuc-Nuc PySCF=  188.65797704361805
+One electron integrals energy -901.2493401192995
+Coulomb energy  377.3194249521329
+EXC  -46.146792893669655
+PySCF time:  51.33015223266557
+
+============================================================
+Processing: ../../../../Structures/water_cluster_10.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.03 sec, wall time      0.03 sec, GPU time     33.34 ms
+    CPU time for setting up grids                                        0.00 sec, wall time      0.00 sec, GPU time      4.90 ms
+nelec by numeric integration = 99.81193507065706
+    CPU time for vxc                                                     0.06 sec, wall time      0.06 sec, GPU time     64.10 ms
+    CPU time for veff                                                    0.09 sec, wall time      0.07 sec, GPU time     70.05 ms
+E1 = -2325.973924325569  Ecoul = 1006.7752978295672  Exc = -90.79143913393901
+init E= -762.283519514443
+cond(S) = 188.52437901457438
+    CPU time for SCF initialization                                      0.19 sec, wall time      0.18 sec, GPU time    176.79 ms
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      0.04 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      4.00 ms
+  HOMO = -0.408953456727884  LUMO = -0.088451128560758  gap = 8.72131 eV
+nelec by numeric integration = 100.00000096181068
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     46.77 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.68 ms
+    CPU time for veff                                                    0.05 sec, wall time      0.06 sec, GPU time     55.64 ms
+E1 = -2365.2696120537103  Ecoul = 1051.047516342862  Exc = -95.30692856368178
+    CPU time for cycle=1                                                 0.06 sec, wall time      0.06 sec, GPU time     61.66 ms
+cycle= 1 E= -761.822478159032  delta_E= 0.461  |g|= 2.34  |ddm|=  4.4
+diis-c [-5.46966248  1.        ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.06 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      4.03 ms
+  HOMO = 0.00155818872791132  LUMO = 0.0236136468446596  gap = 0.60016 eV
+nelec by numeric integration = 100.0004866767512
+    CPU time for vxc                                                     0.04 sec, wall time      0.05 sec, GPU time     45.43 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.78 ms
+    CPU time for veff                                                    0.05 sec, wall time      0.06 sec, GPU time     54.03 ms
+E1 = -2294.6174034502897  Ecoul = 975.7790286909403  Exc = -86.72996787420963
+    CPU time for cycle=2                                                 0.06 sec, wall time      0.06 sec, GPU time     61.33 ms
+cycle= 2 E= -757.861796518062  delta_E= 3.96  |g|=  4.4  |ddm|= 6.42
+diis-c [-0.34565225  0.65835686  0.34164314]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.43 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      4.14 ms
+  HOMO = -0.16010708197339  LUMO = -0.086807922481442  gap = 1.99457 eV
+nelec by numeric integration = 100.0000144717185
+    CPU time for vxc                                                     0.04 sec, wall time      0.05 sec, GPU time     45.41 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.75 ms
+    CPU time for veff                                                    0.05 sec, wall time      0.06 sec, GPU time     53.97 ms
+E1 = -2343.559417294459  Ecoul = 1025.582874767635  Exc = -92.39134585059698
+    CPU time for cycle=3                                                 0.06 sec, wall time      0.06 sec, GPU time     61.70 ms
+cycle= 3 E= -762.661342261923  delta_E= -4.8  |g|= 0.939  |ddm|= 5.51
+diis-c [-0.1621144   0.42317766  0.23498277  0.34183957]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.44 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.90 ms
+  HOMO = -0.214106026960635  LUMO = -0.0386833315050742  gap = 4.77349 eV
+nelec by numeric integration = 100.00001172800683
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     48.08 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.52 ms
+    CPU time for veff                                                    0.06 sec, wall time      0.06 sec, GPU time     56.79 ms
+E1 = -2344.720609669013  Ecoul = 1026.6739712878307  Exc = -92.4919664121597
+    CPU time for cycle=4                                                 0.06 sec, wall time      0.06 sec, GPU time     64.09 ms
+cycle= 4 E= -762.832058677845  delta_E= -0.171  |g|= 0.202  |ddm|= 0.625
+diis-c [-0.01309596  0.01241645  0.04071547 -0.03127094  0.97813902]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.59 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.70 ms
+  HOMO = -0.189329908648977  LUMO = -0.0583741929747367  gap = 3.56349 eV
+nelec by numeric integration = 100.00001718629002
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     46.68 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.58 ms
+    CPU time for veff                                                    0.05 sec, wall time      0.06 sec, GPU time     55.32 ms
+E1 = -2343.2602393548473  Ecoul = 1025.0337429255878  Exc = -92.32100813471999
+    CPU time for cycle=5                                                 0.06 sec, wall time      0.06 sec, GPU time     62.66 ms
+cycle= 5 E= -762.840958448482  delta_E= -0.0089  |g|= 0.118  |ddm|= 0.26
+diis-c [-0.00208083 -0.00902451  0.01396492 -0.05658803  0.50349427  0.54815336]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.60 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.78 ms
+  HOMO = -0.183828789899785  LUMO = -0.0601688798271284  gap = 3.36496 eV
+nelec by numeric integration = 100.00001643599897
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     48.50 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.58 ms
+    CPU time for veff                                                    0.06 sec, wall time      0.06 sec, GPU time     57.31 ms
+E1 = -2343.1834090360107  Ecoul = 1024.9400848114242  Exc = -92.3062629714202
+    CPU time for cycle=6                                                 0.06 sec, wall time      0.06 sec, GPU time     64.89 ms
+cycle= 6 E= -762.843041080509  delta_E= -0.00208  |g|= 0.0545  |ddm|= 0.108
+diis-c [-1.53349231e-04 -6.71158410e-03  2.30879308e-03 -3.67182350e-02
+  1.37946836e-01  3.52829689e-01  5.50344501e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.05 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.74 ms
+  HOMO = -0.179425913570776  LUMO = -0.0600122338933289  gap = 3.24941 eV
+nelec by numeric integration = 100.00001638983859
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     47.24 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.69 ms
+    CPU time for veff                                                    0.05 sec, wall time      0.06 sec, GPU time     56.06 ms
+E1 = -2343.1450325484025  Ecoul = 1024.8958586634694  Exc = -92.30094965416052
+    CPU time for cycle=7                                                 0.06 sec, wall time      0.06 sec, GPU time     63.65 ms
+cycle= 7 E= -762.843577423596  delta_E= -0.000536  |g|= 0.00877  |ddm|= 0.0409
+diis-c [-1.44343742e-05 -1.52338371e-03  2.36604455e-04 -9.99690833e-03
+  1.91832714e-02  1.03302850e-01  2.27520320e-01  6.61277246e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.11 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.67 ms
+  HOMO = -0.179135354943722  LUMO = -0.0603479204973162  gap = 3.23237 eV
+nelec by numeric integration = 100.00001645259593
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     48.45 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.71 ms
+    CPU time for veff                                                    0.06 sec, wall time      0.06 sec, GPU time     57.46 ms
+E1 = -2343.148589147315  Ecoul = 1024.8993877583139  Exc = -92.30093168553147
+    CPU time for cycle=8                                                 0.06 sec, wall time      0.07 sec, GPU time     65.54 ms
+cycle= 8 E= -762.843586959035  delta_E= -9.54e-06  |g|= 0.00551  |ddm|= 0.00928
+diis-c [-1.18338866e-06 -2.63602447e-04  5.37137210e-05 -3.15904061e-03
+  1.10560207e-03  3.69655660e-02  1.02045124e-01  4.33714981e-01
+  4.29537656e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.22 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.73 ms
+  HOMO = -0.179339612610477  LUMO = -0.0604628999099455  gap = 3.23480 eV
+nelec by numeric integration = 100.00001644298902
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     48.21 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.90 ms
+    CPU time for veff                                                    0.06 sec, wall time      0.06 sec, GPU time     57.63 ms
+E1 = -2343.147214802526  Ecoul = 1024.8982051682997  Exc = -92.30112898614783
+    CPU time for cycle=9                                                 0.06 sec, wall time      0.07 sec, GPU time     65.71 ms
+cycle= 9 E= -762.843592504877  delta_E= -5.55e-06  |g|= 0.000751  |ddm|= 0.00422
+diis-c [-4.48067037e-08  6.77185559e-01  8.11706365e-06 -5.25511880e-04
+ -9.93406343e-04  6.47779960e-03  2.30636053e-02  1.16926409e-01
+  1.77857427e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.21 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.71 ms
+  HOMO = -0.179299898639276  LUMO = -0.0604618424276095  gap = 3.23375 eV
+nelec by numeric integration = 100.0000164467796
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     47.98 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.79 ms
+    CPU time for veff                                                    0.06 sec, wall time      0.06 sec, GPU time     56.37 ms
+E1 = -2343.146666375235  Ecoul = 1024.8975648540827  Exc = -92.30103720443698
+    CPU time for cycle=10                                                0.06 sec, wall time      0.06 sec, GPU time     64.50 ms
+cycle= 10 E= -762.843592610091  delta_E= -1.05e-07  |g|= 0.0002  |ddm|= 0.000665
+diis-c [-6.16083529e-09  3.32161385e-01  5.40644135e-01 -1.84717403e-04
+ -4.83773050e-04  1.98287966e-03  8.08748568e-03  4.36262645e-02
+  7.41663407e-02]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.99 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      3.75 ms
+  HOMO = -0.179286677898587  LUMO = -0.0604688448121254  gap = 3.23320 eV
+nelec by numeric integration = 100.00001644678805
+    CPU time for vxc                                                     0.05 sec, wall time      0.05 sec, GPU time     48.25 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      5.61 ms
+    CPU time for veff                                                    0.06 sec, wall time      0.06 sec, GPU time     57.16 ms
+E1 = -2343.1466197521395  Ecoul = 1024.8975076255479  Exc = -92.30102660477509
+    CPU time for cycle=11                                                0.06 sec, wall time      0.07 sec, GPU time     65.03 ms
+cycle= 11 E= -762.843592615869  delta_E= -5.78e-09  |g|= 0.000101  |ddm|= 0.0002
+    CPU time for SCF                                                     0.83 sec, wall time      0.90 sec, GPU time    897.84 ms
+converged SCF energy = -762.843592615869
+Nuc-Nuc PySCF=  647.7065461154975
+One electron integrals energy -2343.1466197521395
+Coulomb energy  1024.8975076255479
+EXC  -92.30102660477509
+PySCF time:  0.8989232229068875
+
+============================================================
+Processing: ../../../../Structures/water_cluster_20.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.04 sec, wall time      0.04 sec, GPU time     37.19 ms
+    CPU time for setting up grids                                        0.01 sec, wall time      0.01 sec, GPU time     14.75 ms
+nelec by numeric integration = 199.62387975075694
+    CPU time for vxc                                                     0.12 sec, wall time      0.12 sec, GPU time    121.25 ms
+    CPU time for veff                                                    0.21 sec, wall time      0.16 sec, GPU time    163.36 ms
+E1 = -6630.925248912269  Ecoul = 3001.0108639037926  Exc = -181.74353414823605
+init E= -1524.84827533218
+cond(S) = 266.5849117778525
+    CPU time for SCF initialization                                      0.37 sec, wall time      0.33 sec, GPU time    333.64 ms
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      0.04 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.11 ms
+  HOMO = -0.427387565123412  LUMO = -0.114738116297708  gap = 8.50762 eV
+nelec by numeric integration = 200.0000333469031
+    CPU time for vxc                                                     0.09 sec, wall time      0.09 sec, GPU time     91.79 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.76 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.11 sec, GPU time    102.00 ms
+E1 = -6712.428221143975  Ecoul = 3092.343929460368  Exc = -190.5594955936334
+    CPU time for cycle=1                                                 0.11 sec, wall time      0.11 sec, GPU time    111.47 ms
+cycle= 1 E= -1523.83414345271  delta_E= 1.01  |g|= 3.22  |ddm|= 6.26
+diis-c [-10.38853335   1.        ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.35 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.29 ms
+  HOMO = 0.0383170804528779  LUMO = 0.0425332996345819  gap = 0.11473 eV
+nelec by numeric integration = 200.00017294914744
+    CPU time for vxc                                                     0.09 sec, wall time      0.09 sec, GPU time     86.36 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.83 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     96.50 ms
+E1 = -6558.661796245178  Ecoul = 2934.3193226232556  Exc = -173.75937412292308
+    CPU time for cycle=2                                                 0.10 sec, wall time      0.11 sec, GPU time    107.45 ms
+cycle= 2 E= -1511.29220392031  delta_E= 12.5  |g|= 6.53  |ddm|=   11
+diis-c [-1.44963335  0.68231104  0.31768896]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.40 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.16 ms
+  HOMO = -0.0987817767882085  LUMO = -0.0773487259301088  gap = 0.58322 eV
+nelec by numeric integration = 200.0000726605047
+    CPU time for vxc                                                     0.09 sec, wall time      0.09 sec, GPU time     91.66 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      7.27 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.11 sec, GPU time    102.61 ms
+E1 = -6648.666126358367  Ecoul = 3030.2890411828002  Exc = -182.78249027078326
+    CPU time for cycle=3                                                 0.11 sec, wall time      0.11 sec, GPU time    113.43 ms
+cycle= 3 E= -1514.34993162182  delta_E= -3.06  |g|= 4.22  |ddm|= 12.3
+diis-c [-1.03478894  0.58883624  0.27516557  0.13599818]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.45 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.23 ms
+  HOMO = -0.184379061288787  LUMO = -0.043316182783104  gap = 3.83852 eV
+nelec by numeric integration = 200.00006780451048
+    CPU time for vxc                                                     0.09 sec, wall time      0.09 sec, GPU time     86.83 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.87 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     97.08 ms
+E1 = -6671.207214445435  Ecoul = 3043.846466494478  Exc = -184.9018205445374
+    CPU time for cycle=4                                                 0.10 sec, wall time      0.11 sec, GPU time    107.62 ms
+cycle= 4 E= -1525.45292467096  delta_E= -11.1  |g|=  1.2  |ddm|= 7.73
+diis-c [-0.57445169  0.33495117  0.17331988  0.04715975  0.4445692 ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.52 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.22 ms
+  HOMO = -0.17912980426826  LUMO = -0.0351508200277385  gap = 3.91787 eV
+nelec by numeric integration = 200.00005051057545
+    CPU time for vxc                                                     0.08 sec, wall time      0.09 sec, GPU time     85.44 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      7.10 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     96.02 ms
+E1 = -6671.114676654689  Ecoul = 3043.509259772646  Exc = -184.9087497139081
+    CPU time for cycle=5                                                 0.10 sec, wall time      0.11 sec, GPU time    107.11 ms
+cycle= 5 E= -1525.70452277142  delta_E= -0.252  |g|= 0.476  |ddm|= 1.01
+diis-c [-0.052084    0.01879967  0.03720652 -0.0528779   0.20988082  0.7869909 ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.98 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.32 ms
+  HOMO = -0.15425116848971  LUMO = -0.0355539062269991  gap = 3.22992 eV
+nelec by numeric integration = 200.00005574346358
+    CPU time for vxc                                                     0.08 sec, wall time      0.08 sec, GPU time     83.88 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.72 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     93.68 ms
+E1 = -6668.692677984172  Ecoul = 3040.821852379353  Exc = -184.68463252662156
+    CPU time for cycle=6                                                 0.10 sec, wall time      0.10 sec, GPU time    104.75 ms
+cycle= 6 E= -1525.74581430691  delta_E= -0.0413  |g|= 0.182  |ddm|= 0.338
+diis-c [-0.0147183   0.01606144  0.01574794 -0.03150714  0.04146853  0.14022193
+  0.8180073 ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.75 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.17 ms
+  HOMO = -0.155543391621973  LUMO = -0.0521695860877066  gap = 2.81294 eV
+nelec by numeric integration = 200.00005674083985
+    CPU time for vxc                                                     0.08 sec, wall time      0.08 sec, GPU time     84.90 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.75 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     94.16 ms
+E1 = -6668.980887834206  Ecoul = 3041.117885155213  Exc = -184.69761183022442
+    CPU time for cycle=7                                                 0.10 sec, wall time      0.11 sec, GPU time    105.12 ms
+cycle= 7 E= -1525.75097068469  delta_E= -0.00516  |g|= 0.151  |ddm|= 0.203
+diis-c [-0.00410237  0.01509527  0.00502386 -0.01361558 -0.03274892 -0.17898147
+  0.53760754  0.6676193 ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.76 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.05 ms
+  HOMO = -0.134459154895347  LUMO = -0.064421441314926  gap = 1.90582 eV
+nelec by numeric integration = 200.00005796430523
+    CPU time for vxc                                                     0.08 sec, wall time      0.09 sec, GPU time     85.41 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      7.05 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     94.89 ms
+E1 = -6669.12323466793  Ecoul = 3041.2675064785135  Exc = -184.70900520268958
+    CPU time for cycle=8                                                 0.10 sec, wall time      0.11 sec, GPU time    105.76 ms
+cycle= 8 E= -1525.75508956757  delta_E= -0.00412  |g|= 0.0683  |ddm|= 0.14
+diis-c [-4.65386945e-04  7.10979283e-03  1.20933106e-04 -2.51270460e-03
+ -3.51177665e-02 -1.67286502e-01  5.88941436e-02  4.12073458e-01
+  7.26718645e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.98 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.04 ms
+  HOMO = -0.124318547178765  LUMO = -0.0700082417360735  gap = 1.47786 eV
+nelec by numeric integration = 200.0000581276951
+    CPU time for vxc                                                     0.08 sec, wall time      0.09 sec, GPU time     85.25 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.90 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     95.21 ms
+E1 = -6668.957917616276  Ecoul = 3041.100433606184  Exc = -184.7082087847443
+    CPU time for cycle=9                                                 0.10 sec, wall time      0.11 sec, GPU time    106.35 ms
+cycle= 9 E= -1525.7560489703  delta_E= -0.000959  |g|= 0.0167  |ddm|= 0.0697
+diis-c [-6.83290057e-05  6.66761329e-01 -6.03524792e-04 -5.24570315e-04
+ -1.03158515e-02 -4.32091619e-02 -2.77449014e-02  1.01677559e-01
+  3.13959122e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.04 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.15 ms
+  HOMO = -0.121612746421448  LUMO = -0.0710914522770698  gap = 1.37475 eV
+nelec by numeric integration = 200.0000583718985
+    CPU time for vxc                                                     0.08 sec, wall time      0.08 sec, GPU time     84.54 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.90 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     94.28 ms
+E1 = -6668.984772669896  Ecoul = 3041.129140464937  Exc = -184.71009183688744
+    CPU time for cycle=10                                                0.10 sec, wall time      0.11 sec, GPU time    105.59 ms
+cycle= 10 E= -1525.75608021731  delta_E= -3.12e-05  |g|= 0.0119  |ddm|= 0.0213
+diis-c [-5.31652327e-06  4.35397991e-01  4.38908761e-01 -3.36478282e-05
+ -2.36428135e-03 -1.09138553e-02 -1.95815462e-02  2.76351807e-02
+  1.30951398e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.22 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.08 ms
+  HOMO = -0.122063245151271  LUMO = -0.0711043780288956  gap = 1.38666 eV
+nelec by numeric integration = 200.00005833721835
+    CPU time for vxc                                                     0.09 sec, wall time      0.09 sec, GPU time     88.93 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.81 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     98.81 ms
+E1 = -6668.971882094667  Ecoul = 3041.1144199703167  Exc = -184.70828775721853
+    CPU time for cycle=11                                                0.10 sec, wall time      0.11 sec, GPU time    110.32 ms
+cycle= 11 E= -1525.75610605704  delta_E= -2.58e-05  |g|= 0.00173  |ddm|= 0.00905
+diis-c [-3.11121626e-07  1.44919990e-01  1.91359212e-01  6.21400024e-01
+ -8.79868849e-04 -4.17853266e-03 -6.47874741e-03  9.56573653e-03
+  4.42921866e-02]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.11 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.14 ms
+  HOMO = -0.12212492112953  LUMO = -0.0710759910140817  gap = 1.38911 eV
+nelec by numeric integration = 200.00005833591715
+    CPU time for vxc                                                     0.08 sec, wall time      0.08 sec, GPU time     84.99 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.77 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     94.53 ms
+E1 = -6668.9652320899  Ecoul = 3041.106477198772  Exc = -184.7069955138737
+    CPU time for cycle=12                                                0.10 sec, wall time      0.11 sec, GPU time    105.65 ms
+cycle= 12 E= -1525.75610658047  delta_E= -5.23e-07  |g|= 0.000559  |ddm|= 0.00156
+diis-c [-4.80545008e-08  3.18315737e-02  5.59577332e-02  2.84386581e-01
+  6.21706974e-01 -1.37792024e-04 -1.71098994e-03  4.65171790e-04
+  7.50074833e-03]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.87 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      6.99 ms
+  HOMO = -0.122079442093959  LUMO = -0.0710737744324774  gap = 1.38793 eV
+nelec by numeric integration = 200.00005833801094
+    CPU time for vxc                                                     0.08 sec, wall time      0.09 sec, GPU time     85.17 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.92 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.10 sec, GPU time     94.22 ms
+E1 = -6668.966384516488  Ecoul = 3041.107846069096  Exc = -184.70721199029921
+    CPU time for cycle=13                                                0.10 sec, wall time      0.10 sec, GPU time    104.99 ms
+cycle= 13 E= -1525.75610661316  delta_E= -3.27e-08  |g|= 0.00037  |ddm|= 0.000575
+diis-c [-3.01582577e-09  1.92007121e-02  3.22929205e-02  1.58786053e-01
+  4.10202009e-01  3.76029854e-01 -1.02859358e-03  1.49857770e-04
+  4.36718782e-03]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.15 ms
+    CPU time for eig                                                     0.00 sec, wall time      0.00 sec, GPU time      7.12 ms
+  HOMO = -0.122110327104847  LUMO = -0.0710751544221209  gap = 1.38874 eV
+nelec by numeric integration = 200.00005833640748
+    CPU time for vxc                                                     0.09 sec, wall time      0.09 sec, GPU time     89.62 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time      6.80 ms
+    CPU time for veff                                                    0.10 sec, wall time      0.11 sec, GPU time     99.09 ms
+E1 = -6668.968555624121  Ecoul = 3041.110303374361  Exc = -184.70749821283897
+    CPU time for cycle=14                                                0.11 sec, wall time      0.11 sec, GPU time    110.30 ms
+cycle= 14 E= -1525.75610663807  delta_E= -2.49e-08  |g|= 5.14e-05  |ddm|= 0.000268
+    CPU time for SCF                                                     1.80 sec, wall time      1.86 sec, GPU time   1861.79 ms
+converged SCF energy = -1525.75610663807
+Nuc-Nuc PySCF=  2286.8096438245325
+One electron integrals energy -6668.968555624121
+Coulomb energy  3041.110303374361
+EXC  -184.70749821283897
+PySCF time:  1.8628872619010508
+
+============================================================
+Processing: ../../../../Structures/water_cluster_32.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.05 sec, wall time      0.05 sec, GPU time     47.77 ms
+    CPU time for setting up grids                                        0.05 sec, wall time      0.05 sec, GPU time     46.67 ms
+nelec by numeric integration = 319.3982385486363
+    CPU time for vxc                                                     0.23 sec, wall time      0.23 sec, GPU time    227.85 ms
+    CPU time for veff                                                    0.48 sec, wall time      0.39 sec, GPU time    390.04 ms
+E1 = -13483.140472374951  Ecoul = 6235.710389963718  Exc = -290.83504078424573
+init E= -2439.82500204848
+cond(S) = 310.2564616318777
+    CPU time for SCF initialization                                      0.76 sec, wall time      0.68 sec, GPU time    683.56 ms
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      0.04 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.03 ms
+  HOMO = -0.439157391697683  LUMO = -0.139161452522738  gap = 8.16331 eV
+nelec by numeric integration = 320.0000795049234
+    CPU time for vxc                                                     0.14 sec, wall time      0.15 sec, GPU time    145.81 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     12.52 ms
+    CPU time for veff                                                    0.16 sec, wall time      0.16 sec, GPU time    161.33 ms
+E1 = -13620.419521656897  Ecoul = 6388.547804099553  Exc = -304.8484066001077
+    CPU time for cycle=1                                                 0.17 sec, wall time      0.18 sec, GPU time    175.53 ms
+cycle= 1 E= -2438.28000301046  delta_E= 1.54  |g|= 4.04  |ddm|= 7.92
+diis-c [-16.34410828   1.        ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.12 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.08 ms
+  HOMO = 0.0437149734838235  LUMO = 0.0451834305102061  gap = 0.03996 eV
+nelec by numeric integration = 320.0004341953501
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    139.46 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.22 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    152.67 ms
+E1 = -13378.526966283991  Ecoul = 6134.235575431432  Exc = -278.4894459180229
+    CPU time for cycle=2                                                 0.16 sec, wall time      0.17 sec, GPU time    167.71 ms
+cycle= 2 E= -2424.34071562359  delta_E= 13.9  |g|= 7.78  |ddm|= 12.6
+diis-c [-1.58511128  0.66648481  0.33351519]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.19 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.22 ms
+  HOMO = -0.117846861327526  LUMO = -0.112575102416447  gap = 0.14345 eV
+nelec by numeric integration = 320.0004514539048
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    138.63 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.26 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    151.52 ms
+E1 = -13543.754571676414  Ecoul = 6305.686559317519  Exc = -294.3898167881468
+    CPU time for cycle=3                                                 0.16 sec, wall time      0.17 sec, GPU time    166.83 ms
+cycle= 3 E= -2434.01770800005  delta_E= -9.68  |g|= 3.51  |ddm|= 12.5
+diis-c [-1.06722366  0.54682231  0.27649441  0.17668328]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.48 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.18 ms
+  HOMO = -0.198854252233755  LUMO = -0.0641760863861351  gap = 3.66478 eV
+nelec by numeric integration = 320.00013799654454
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    138.78 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.15 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    151.27 ms
+E1 = -13553.277028659144  Ecoul = 6309.730859638957  Exc = -295.8669066247663
+    CPU time for cycle=4                                                 0.16 sec, wall time      0.17 sec, GPU time    166.81 ms
+cycle= 4 E= -2440.97295449796  delta_E= -6.96  |g|= 1.24  |ddm|= 6.03
+diis-c [-0.54787665  0.3105918   0.17285131  0.08254736  0.43400953]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.38 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     11.90 ms
+  HOMO = -0.174218698777257  LUMO = -0.0385064213131413  gap = 3.69292 eV
+nelec by numeric integration = 320.00013473457716
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    144.89 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.18 ms
+    CPU time for veff                                                    0.16 sec, wall time      0.16 sec, GPU time    157.10 ms
+E1 = -13554.851688078154  Ecoul = 6311.0963562462075  Exc = -295.94396338277147
+    CPU time for cycle=5                                                 0.17 sec, wall time      0.17 sec, GPU time    172.14 ms
+cycle= 5 E= -2441.25917406772  delta_E= -0.286  |g|= 0.407  |ddm|= 1.07
+diis-c [-0.03286445 -0.00279792  0.02557567 -0.03588161  0.19373883  0.81936502]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.53 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.12 ms
+  HOMO = -0.129521561632463  LUMO = -0.0421561363756211  gap = 2.37733 eV
+nelec by numeric integration = 320.0001425146777
+    CPU time for vxc                                                     0.16 sec, wall time      0.16 sec, GPU time    157.18 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.35 ms
+    CPU time for veff                                                    0.17 sec, wall time      0.17 sec, GPU time    169.58 ms
+E1 = -13550.042361792352  Ecoul = 6305.837472157394  Exc = -295.52467414869545
+    CPU time for cycle=6                                                 0.18 sec, wall time      0.19 sec, GPU time    185.07 ms
+cycle= 6 E= -2441.28944263666  delta_E= -0.0303  |g|= 0.157  |ddm|= 0.415
+diis-c [-0.0075591  -0.00321309  0.00972801 -0.02793623  0.09206298  0.31438256
+  0.61497577]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.69 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     11.89 ms
+  HOMO = -0.150239203246757  LUMO = -0.0419031895465882  gap = 2.94797 eV
+nelec by numeric integration = 320.0001465172326
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    139.66 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.17 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    152.05 ms
+E1 = -13550.463555021983  Ecoul = 6306.243781278781  Exc = -295.51300518250616
+    CPU time for cycle=7                                                 0.16 sec, wall time      0.17 sec, GPU time    167.48 ms
+cycle= 7 E= -2441.29265777871  delta_E= -0.00322  |g|= 0.118  |ddm|= 0.172
+diis-c [-0.00196436  0.0023553   0.00320627 -0.01773023  0.04101237  0.01674741
+  0.39440842  0.56000047]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.80 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.11 ms
+  HOMO = -0.145298716146914  LUMO = -0.0438841334291037  gap = 2.75963 eV
+nelec by numeric integration = 320.0001451290566
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    143.09 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.33 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.16 sec, GPU time    155.61 ms
+E1 = -13550.479373995135  Ecoul = 6306.262350095842  Exc = -295.51817197915926
+    CPU time for cycle=8                                                 0.17 sec, wall time      0.17 sec, GPU time    171.34 ms
+cycle= 8 E= -2441.29507473146  delta_E= -0.00242  |g|= 0.0499  |ddm|= 0.0921
+diis-c [-2.97878986e-04  4.77018033e-03  2.71894696e-04 -5.00375508e-03
+  9.07915970e-03 -9.68373110e-02 -3.78556927e-02  2.08123740e-01
+  9.17451784e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.88 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.11 ms
+  HOMO = -0.137802971571037  LUMO = -0.0470398739819665  gap = 2.46979 eV
+nelec by numeric integration = 320.0001465410903
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    141.13 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.09 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    153.47 ms
+E1 = -13550.397901610106  Ecoul = 6306.186646547316  Exc = -295.5244478240954
+    CPU time for cycle=9                                                 0.17 sec, wall time      0.17 sec, GPU time    169.29 ms
+cycle= 9 E= -2441.29558173989  delta_E= -0.000507  |g|= 0.0172  |ddm|= 0.0495
+diis-c [-6.89905392e-05  6.46137172e-01 -9.05295335e-04 -1.80547769e-03
+  2.30268114e-03 -4.34083241e-02 -6.79403360e-02  2.08923928e-02
+  4.44727187e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.80 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.12 ms
+  HOMO = -0.135035217388838  LUMO = -0.0481919955005718  gap = 2.36312 eV
+nelec by numeric integration = 320.0001466998295
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    139.15 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.12 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    151.38 ms
+E1 = -13550.420568360867  Ecoul = 6306.210549321793  Exc = -295.5257238453725
+    CPU time for cycle=10                                                0.16 sec, wall time      0.17 sec, GPU time    167.15 ms
+cycle= 10 E= -2441.29562173745  delta_E= -4e-05  |g|= 0.0109  |ddm|= 0.0207
+diis-c [-4.47094513e-06  4.32166131e-01  5.28077421e-01 -1.61857903e-04
+  2.28927949e-03 -6.76257386e-03 -3.26812798e-02 -2.47159566e-02
+  1.01788837e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.84 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.13 ms
+  HOMO = -0.135083933461303  LUMO = -0.0484318027768748  gap = 2.35792 eV
+nelec by numeric integration = 320.0001467251909
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    141.24 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.30 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    153.70 ms
+E1 = -13550.428777027559  Ecoul = 6306.2183661520085  Exc = -295.5253540347529
+    CPU time for cycle=11                                                0.17 sec, wall time      0.17 sec, GPU time    169.45 ms
+cycle= 11 E= -2441.29564376331  delta_E= -2.2e-05  |g|= 0.00171  |ddm|= 0.0086
+diis-c [-2.73428031e-07  1.63177791e-01  2.33134734e-01  5.94739902e-01
+  7.38530437e-04 -3.32537145e-03 -1.37087792e-02 -1.05241420e-02
+  3.57673351e-02]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.76 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.08 ms
+  HOMO = -0.135035836571089  LUMO = -0.048451493971292  gap = 2.35608 eV
+nelec by numeric integration = 320.000146738679
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    139.93 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.13 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    152.33 ms
+E1 = -13550.413266782169  Ecoul = 6306.201292471413  Exc = -295.5237911223245
+    CPU time for cycle=12                                                0.16 sec, wall time      0.17 sec, GPU time    168.07 ms
+cycle= 12 E= -2441.29564428609  delta_E= -5.23e-07  |g|= 0.000633  |ddm|= 0.0017
+diis-c [-8.86998447e-08  3.64039436e-02  5.94838360e-02  3.05323902e-01
+  5.99338563e-01 -8.75887428e-04 -3.21824520e-03 -2.73452034e-03
+  6.27840833e-03]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.85 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     12.10 ms
+  HOMO = -0.135049154373888  LUMO = -0.048440930050255  gap = 2.35673 eV
+nelec by numeric integration = 320.000146736605
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    140.86 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.10 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    153.31 ms
+E1 = -13550.41395928122  Ecoul = 6306.202102521351  Exc = -295.52390870981117
+    CPU time for cycle=13                                                0.16 sec, wall time      0.17 sec, GPU time    168.99 ms
+cycle= 13 E= -2441.29564432269  delta_E= -3.66e-08  |g|= 0.000444  |ddm|= 0.000695
+diis-c [-6.90054377e-09  1.74556590e-02  2.61281439e-02  1.14471924e-01
+  3.85490095e-01  4.58044091e-01 -1.42986756e-03 -1.77562546e-03
+  1.61558055e-03]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.81 ms
+    CPU time for eig                                                     0.01 sec, wall time      0.01 sec, GPU time     11.90 ms
+  HOMO = -0.135024215758434  LUMO = -0.0484439439243243  gap = 2.35597 eV
+nelec by numeric integration = 320.00014673956827
+    CPU time for vxc                                                     0.14 sec, wall time      0.14 sec, GPU time    141.43 ms
+    CPU time for veff                                                    0.01 sec, wall time      0.01 sec, GPU time     10.05 ms
+    CPU time for veff                                                    0.15 sec, wall time      0.15 sec, GPU time    153.47 ms
+E1 = -13550.413693090719  Ecoul = 6306.201696313279  Exc = -295.5237687265693
+    CPU time for cycle=14                                                0.17 sec, wall time      0.17 sec, GPU time    169.05 ms
+cycle= 14 E= -2441.29564435701  delta_E= -3.43e-08  |g|= 0.000133  |ddm|= 0.000378
+    CPU time for SCF                                                     3.09 sec, wall time      3.09 sec, GPU time   3088.83 ms
+converged SCF energy = -2441.29564435701
+Nuc-Nuc PySCF=  5098.440121146994
+One electron integrals energy -13550.413693090719
+Coulomb energy  6306.201696313279
+EXC  -295.5237687265693
+PySCF time:  3.0899919220246375
+
+============================================================
+Processing: ../../../../Structures/water_cluster_47.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.06 sec, wall time      0.06 sec, GPU time     59.76 ms
+    CPU time for setting up grids                                        0.13 sec, wall time      0.13 sec, GPU time    134.37 ms
+nelec by numeric integration = 469.11594936359035
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    419.88 ms
+    CPU time for veff                                                    1.07 sec, wall time      0.90 sec, GPU time    903.59 ms
+E1 = -24359.045847006244  Ecoul = 11432.282999968498  Exc = -427.1528912414648
+init E= -3583.45848587844
+cond(S) = 393.7100252423436
+    CPU time for SCF initialization                                      1.57 sec, wall time      1.41 sec, GPU time   1405.74 ms
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      0.06 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.54 ms
+  HOMO = -0.450434900408945  LUMO = -0.165787697425997  gap = 7.74564 eV
+nelec by numeric integration = 470.0000410616551
+    CPU time for vxc                                                     0.22 sec, wall time      0.22 sec, GPU time    218.63 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     19.46 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.24 sec, GPU time    240.23 ms
+E1 = -24564.523471451914  Ecoul = 11660.555388107325  Exc = -447.72178857534215
+    CPU time for cycle=1                                                 0.26 sec, wall time      0.26 sec, GPU time    261.52 ms
+cycle= 1 E= -3581.23261951916  delta_E= 2.23  |g|=  4.9  |ddm|=  9.6
+diis-c [-23.98333111   1.        ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.67 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.58 ms
+  HOMO = 0.0299387175859883  LUMO = 0.0327982961098683  gap = 0.07781 eV
+nelec by numeric integration = 470.00019381976534
+    CPU time for vxc                                                     0.22 sec, wall time      0.22 sec, GPU time    217.53 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     19.37 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.24 sec, GPU time    239.19 ms
+E1 = -24229.684525498335  Ecoul = 11305.86488211839  Exc = -409.45433818246136
+    CPU time for cycle=2                                                 0.26 sec, wall time      0.26 sec, GPU time    262.10 ms
+cycle= 2 E= -3562.81672916163  delta_E= 18.4  |g|=  9.2  |ddm|= 14.3
+diis-c [-1.93860391  0.65943323  0.34056677]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.75 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.65 ms
+  HOMO = -0.153997275129446  LUMO = -0.134172586559666  gap = 0.53946 eV
+nelec by numeric integration = 470.0002745728473
+    CPU time for vxc                                                     0.21 sec, wall time      0.22 sec, GPU time    216.04 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.93 ms
+    CPU time for veff                                                    0.23 sec, wall time      0.24 sec, GPU time    235.04 ms
+E1 = -24456.065339681387  Ecoul = 11539.91168743144  Exc = -432.82497164137834
+    CPU time for cycle=3                                                 0.25 sec, wall time      0.26 sec, GPU time    258.19 ms
+cycle= 3 E= -3578.52137149055  delta_E= -15.7  |g|= 3.61  |ddm|= 13.6
+diis-c [-1.26052779  0.5290174   0.27714635  0.19383625]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.76 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.75 ms
+  HOMO = -0.192477564697173  LUMO = -0.0742215333257423  gap = 3.21791 eV
+nelec by numeric integration = 470.0000734950648
+    CPU time for vxc                                                     0.21 sec, wall time      0.22 sec, GPU time    215.67 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.63 ms
+    CPU time for veff                                                    0.23 sec, wall time      0.24 sec, GPU time    234.40 ms
+E1 = -24466.653936532304  Ecoul = 11545.580010605361  Exc = -434.62210284624695
+    CPU time for cycle=4                                                 0.25 sec, wall time      0.26 sec, GPU time    257.58 ms
+cycle= 4 E= -3585.23877637242  delta_E= -6.72  |g|= 1.41  |ddm|= 5.85
+diis-c [-0.66038752  0.31212554  0.17991167  0.08813724  0.41982555]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      1.82 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.80 ms
+  HOMO = -0.200420645690208  LUMO = -0.049321505251128  gap = 4.11162 eV
+nelec by numeric integration = 470.00005945374517
+    CPU time for vxc                                                     0.23 sec, wall time      0.23 sec, GPU time    233.10 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     17.11 ms
+    CPU time for veff                                                    0.25 sec, wall time      0.25 sec, GPU time    252.56 ms
+E1 = -24468.94187761283  Ecoul = 11547.520176007061  Exc = -434.6449456919943
+    CPU time for cycle=5                                                 0.27 sec, wall time      0.28 sec, GPU time    275.99 ms
+cycle= 5 E= -3585.60939489699  delta_E= -0.371  |g|= 0.45  |ddm|= 1.12
+diis-c [-0.04633905  0.00287947  0.02974549 -0.04816067  0.16321098  0.85232474]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.08 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     20.08 ms
+  HOMO = -0.130105675076991  LUMO = -0.0623037176848899  gap = 1.84499 eV
+nelec by numeric integration = 470.0000651390617
+    CPU time for vxc                                                     0.22 sec, wall time      0.23 sec, GPU time    225.10 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.75 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.25 sec, GPU time    244.31 ms
+E1 = -24462.836798698954  Ecoul = 11540.757723889466  Exc = -434.0260333823217
+    CPU time for cycle=6                                                 0.26 sec, wall time      0.27 sec, GPU time    268.08 ms
+cycle= 6 E= -3585.64785579104  delta_E= -0.0385  |g|= 0.185  |ddm|= 0.478
+diis-c [-0.00993713 -0.00095762  0.01136101 -0.03478253  0.08657003  0.30749304
+  0.63031607]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.08 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.60 ms
+  HOMO = -0.161478362432598  LUMO = -0.0538041745728339  gap = 2.92996 eV
+nelec by numeric integration = 470.00005830021604
+    CPU time for vxc                                                     0.21 sec, wall time      0.22 sec, GPU time    216.15 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.71 ms
+    CPU time for veff                                                    0.23 sec, wall time      0.24 sec, GPU time    235.06 ms
+E1 = -24463.034518017106  Ecoul = 11540.940627687956  Exc = -434.0154815719681
+    CPU time for cycle=7                                                 0.25 sec, wall time      0.26 sec, GPU time    258.42 ms
+cycle= 7 E= -3585.65211950035  delta_E= -0.00426  |g|= 0.144  |ddm|= 0.195
+diis-c [-0.00276257  0.00246005  0.00363655 -0.02134937  0.04911623  0.00409957
+  0.40530773  0.55672923]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.31 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.71 ms
+  HOMO = -0.161599206717411  LUMO = -0.0505489661148447  gap = 3.02183 eV
+nelec by numeric integration = 470.0000612938329
+    CPU time for vxc                                                     0.22 sec, wall time      0.23 sec, GPU time    226.20 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.70 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.25 sec, GPU time    244.92 ms
+E1 = -24463.030512158675  Ecoul = 11540.927844553758  Exc = -434.01026643205984
+    CPU time for cycle=8                                                 0.26 sec, wall time      0.27 sec, GPU time    268.73 ms
+cycle= 8 E= -3585.6556816362  delta_E= -0.00356  |g|= 0.0641  |ddm|= 0.11
+diis-c [-4.41062869e-04  4.22486006e-03  2.12969444e-04 -6.67026050e-03
+  1.94577537e-02 -1.03039522e-01 -1.19169123e-02  2.48642293e-01
+  8.49088819e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.27 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.56 ms
+  HOMO = -0.155755136607408  LUMO = -0.0496242329910026  gap = 2.88797 eV
+nelec by numeric integration = 470.0000604274025
+    CPU time for vxc                                                     0.22 sec, wall time      0.22 sec, GPU time    224.29 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.64 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.25 sec, GPU time    242.91 ms
+E1 = -24462.909796826843  Ecoul = 11540.812205527363  Exc = -434.0161517481265
+    CPU time for cycle=9                                                 0.26 sec, wall time      0.27 sec, GPU time    266.40 ms
+cycle= 9 E= -3585.65649064683  delta_E= -0.000809  |g|= 0.0193  |ddm|= 0.0559
+diis-c [-8.08846154e-05  7.02396820e-01 -8.14555951e-04 -1.85503216e-03
+  6.44506189e-03 -4.06258534e-02 -5.97206697e-02  2.25592067e-02
+  3.71615023e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.26 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.90 ms
+  HOMO = -0.152902668235223  LUMO = -0.049668976781514  gap = 2.80913 eV
+nelec by numeric integration = 470.00006029799164
+    CPU time for vxc                                                     0.22 sec, wall time      0.22 sec, GPU time    218.25 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.66 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.24 sec, GPU time    237.32 ms
+E1 = -24462.952786022714  Ecoul = 11540.85634624051  Exc = -434.0173579449012
+    CPU time for cycle=10                                                0.26 sec, wall time      0.26 sec, GPU time    261.10 ms
+cycle= 10 E= -3585.65654532633  delta_E= -5.47e-05  |g|= 0.0123  |ddm|= 0.0235
+diis-c [-7.16782647e-06  4.61830720e-01  4.98026402e-01 -2.64693111e-04
+  3.56867510e-03 -6.26242321e-03 -3.23421589e-02 -2.39607016e-02
+  9.94041801e-02]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.39 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     20.11 ms
+  HOMO = -0.153138958665457  LUMO = -0.0495844397646711  gap = 2.81786 eV
+nelec by numeric integration = 470.0000603884565
+    CPU time for vxc                                                     0.22 sec, wall time      0.22 sec, GPU time    223.45 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.66 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.24 sec, GPU time    242.14 ms
+E1 = -24462.94396259483  Ecoul = 11540.848693757209  Exc = -434.01855652162504
+    CPU time for cycle=11                                                0.26 sec, wall time      0.27 sec, GPU time    266.46 ms
+cycle= 11 E= -3585.65657295847  delta_E= -2.76e-05  |g|= 0.00224  |ddm|= 0.00995
+diis-c [-3.66217140e-07  1.67948143e-01  2.25732682e-01  5.99730929e-01
+  1.15922532e-03 -3.10708390e-03 -1.34934047e-02 -1.09784743e-02
+  3.30079838e-02]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.34 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     20.11 ms
+  HOMO = -0.153068544135353  LUMO = -0.0495563765768649  gap = 2.81671 eV
+nelec by numeric integration = 470.0000603925631
+    CPU time for vxc                                                     0.21 sec, wall time      0.22 sec, GPU time    216.18 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.81 ms
+    CPU time for veff                                                    0.23 sec, wall time      0.24 sec, GPU time    235.09 ms
+E1 = -24462.926443393128  Ecoul = 11540.828468651405  Exc = -434.01585148431184
+    CPU time for cycle=12                                                0.25 sec, wall time      0.26 sec, GPU time    259.19 ms
+cycle= 12 E= -3585.65657382526  delta_E= -8.67e-07  |g|= 0.000699  |ddm|= 0.00202
+diis-c [-1.45725431e-07  2.39545767e-02  4.52555292e-02  2.64321940e-01
+  6.69280375e-01 -3.58707311e-04 -2.08824207e-03 -2.61548151e-03
+  2.25000988e-03]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.25 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.97 ms
+  HOMO = -0.153083861466507  LUMO = -0.0495534502835771  gap = 2.81721 eV
+nelec by numeric integration = 470.00006038273136
+    CPU time for vxc                                                     0.21 sec, wall time      0.22 sec, GPU time    215.57 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.65 ms
+    CPU time for veff                                                    0.23 sec, wall time      0.24 sec, GPU time    234.19 ms
+E1 = -24462.925433137156  Ecoul = 11540.827427850267  Exc = -434.0158209603102
+    CPU time for cycle=13                                                0.25 sec, wall time      0.26 sec, GPU time    258.04 ms
+cycle= 13 E= -3585.65657384643  delta_E= -2.12e-08  |g|= 0.00061  |ddm|= 0.000858
+diis-c [-3.06352435e-09  1.74328941e-02  2.64921366e-02  1.17326731e-01
+  4.33045077e-01  4.07819173e-01 -1.38370936e-03 -1.97790857e-03
+  1.24560662e-03]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      2.30 ms
+    CPU time for eig                                                     0.02 sec, wall time      0.02 sec, GPU time     19.99 ms
+  HOMO = -0.153068376461006  LUMO = -0.0495573274370393  gap = 2.81668 eV
+nelec by numeric integration = 470.0000603874718
+    CPU time for vxc                                                     0.22 sec, wall time      0.22 sec, GPU time    223.28 ms
+    CPU time for veff                                                    0.02 sec, wall time      0.02 sec, GPU time     16.74 ms
+    CPU time for veff                                                    0.24 sec, wall time      0.24 sec, GPU time    241.93 ms
+E1 = -24462.92847662515  Ecoul = 11540.830784851814  Exc = -434.0161345430208
+    CPU time for cycle=14                                                0.26 sec, wall time      0.27 sec, GPU time    265.81 ms
+cycle= 14 E= -3585.65657391558  delta_E= -6.92e-08  |g|= 5.96e-05  |ddm|= 0.000455
+    CPU time for SCF                                                     5.20 sec, wall time      5.11 sec, GPU time   5109.30 ms
+converged SCF energy = -3585.65657391558
+Nuc-Nuc PySCF=  9770.457252400773
+One electron integrals energy -24462.92847662515
+Coulomb energy  11540.830784851814
+EXC  -434.0161345430208
+PySCF time:  5.110901345964521
+
+============================================================
+Processing: ../../../../Structures/water_cluster_76.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.09 sec, wall time      0.09 sec, GPU time     88.78 ms
+    CPU time for setting up grids                                        0.54 sec, wall time      0.54 sec, GPU time    543.06 ms
+nelec by numeric integration = 758.5705604341779
+    CPU time for vxc                                                     1.18 sec, wall time      1.18 sec, GPU time   1182.06 ms
+    CPU time for veff                                                    3.74 sec, wall time      4.60 sec, GPU time   4600.45 ms
+E1 = -51374.247460852086  Ecoul = 24467.53520221236  Exc = -690.7272388723565
+init E= -5794.52505333401
+cond(S) = 418.7449291891059
+    CPU time for SCF initialization                                      5.05 sec, wall time      5.92 sec, GPU time   5915.56 ms
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      0.09 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.21 ms
+  HOMO = -0.480722640401351  LUMO = -0.205447203780927  gap = 7.49063 eV
+nelec by numeric integration = 760.000123324344
+    CPU time for vxc                                                     0.43 sec, wall time      0.43 sec, GPU time    431.04 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.05 sec, GPU time     45.22 ms
+    CPU time for veff                                                    0.48 sec, wall time      0.49 sec, GPU time    479.98 ms
+E1 = -51738.41303101477  Ecoul = 24868.422166389697  Exc = -723.9520353497792
+    CPU time for cycle=1                                                 0.51 sec, wall time      0.52 sec, GPU time    521.73 ms
+cycle= 1 E= -5791.02845579677  delta_E=  3.5  |g|= 6.21  |ddm|= 12.2
+diis-c [-38.62535811   1.        ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.38 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.22 ms
+  HOMO = 0.0352289240858129  LUMO = 0.0387912999052656  gap = 0.09694 eV
+nelec by numeric integration = 760.0004211392509
+    CPU time for vxc                                                     0.43 sec, wall time      0.43 sec, GPU time    429.76 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     44.35 ms
+    CPU time for veff                                                    0.48 sec, wall time      0.48 sec, GPU time    477.35 ms
+E1 = -51167.435367684615  Ecoul = 24268.771331540876  Exc = -662.3341678873401
+    CPU time for cycle=2                                                 0.51 sec, wall time      0.52 sec, GPU time    523.03 ms
+cycle= 2 E= -5758.083759853  delta_E= 32.9  |g|= 11.7  |ddm|= 17.9
+diis-c [-3.41307695  0.66143981  0.33856019]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      3.92 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.09 ms
+  HOMO = -0.106003537994048  LUMO = -0.10498419164778  gap = 0.02774 eV
+nelec by numeric integration = 759.9998016170198
+    CPU time for vxc                                                     0.43 sec, wall time      0.43 sec, GPU time    431.15 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.97 ms
+    CPU time for veff                                                    0.47 sec, wall time      0.48 sec, GPU time    472.98 ms
+E1 = -51578.29862162051  Ecoul = 24729.924975558326  Exc = -697.856635051171
+    CPU time for cycle=3                                                 0.51 sec, wall time      0.52 sec, GPU time    518.31 ms
+cycle= 3 E= -5743.31583693528  delta_E= 14.8  |g|= 8.18  |ddm|= 21.1
+diis-c [-2.71494045  0.59840302  0.30711335  0.09448363]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.85 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.33 ms
+  HOMO = -0.152562069899157  LUMO = -0.0817405533782431  gap = 1.92715 eV
+nelec by numeric integration = 760.0002306547523
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    424.06 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     39.04 ms
+    CPU time for veff                                                    0.46 sec, wall time      0.47 sec, GPU time    467.05 ms
+E1 = -51571.88851853926  Ecoul = 24674.075061845873  Exc = -702.2933130217019
+    CPU time for cycle=4                                                 0.50 sec, wall time      0.51 sec, GPU time    513.95 ms
+cycle= 4 E= -5797.19232553701  delta_E= -53.9  |g|= 2.15  |ddm|= 15.1
+diis-c [-1.46269773  0.36402263  0.19970093  0.03311171  0.40316473]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.46 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.16 ms
+  HOMO = -0.16475940823668  LUMO = -0.0844640651011519  gap = 2.18495 eV
+nelec by numeric integration = 760.0001968109113
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    423.19 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.82 ms
+    CPU time for veff                                                    0.47 sec, wall time      0.47 sec, GPU time    465.78 ms
+E1 = -51578.37658857593  Ecoul = 24679.946710674012  Exc = -702.521300772538
+    CPU time for cycle=5                                                 0.50 sec, wall time      0.51 sec, GPU time    511.76 ms
+cycle= 5 E= -5798.03673449638  delta_E= -0.844  |g|= 0.665  |ddm|= 1.65
+diis-c [-0.1704154   0.0451971   0.04552498 -0.03488508  0.11068108  0.83348191]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.43 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.14 ms
+  HOMO = -0.133916773143054  LUMO = -0.0812840432220215  gap = 1.43221 eV
+nelec by numeric integration = 760.0002016038156
+    CPU time for vxc                                                     0.44 sec, wall time      0.44 sec, GPU time    444.00 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     39.20 ms
+    CPU time for veff                                                    0.49 sec, wall time      0.49 sec, GPU time    486.38 ms
+E1 = -51570.06102985889  Ecoul = 24670.808447793886  Exc = -701.7813774623704
+    CPU time for cycle=6                                                 0.52 sec, wall time      0.53 sec, GPU time    532.08 ms
+cycle= 6 E= -5798.1195153493  delta_E= -0.0828  |g|= 0.322  |ddm|= 0.65
+diis-c [-0.04079137  0.01980248  0.01944187 -0.02277748  0.00869971  0.29773172
+  0.6771017 ]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.83 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.15 ms
+  HOMO = -0.146403437290744  LUMO = -0.0555916434031302  gap = 2.47111 eV
+nelec by numeric integration = 760.0001978756607
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    424.11 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.78 ms
+    CPU time for veff                                                    0.47 sec, wall time      0.47 sec, GPU time    466.79 ms
+E1 = -51570.2034999245  Ecoul = 24670.95016482355  Exc = -701.7984496648841
+    CPU time for cycle=7                                                 0.50 sec, wall time      0.51 sec, GPU time    513.46 ms
+cycle= 7 E= -5798.13734058776  delta_E= -0.0178  |g|= 0.249  |ddm|= 0.39
+diis-c [-0.01264443  0.01103417  0.00569131 -0.01141324 -0.02573653 -0.0845847
+  0.42420326  0.68080572]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.89 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.39 ms
+  HOMO = -0.143343784473997  LUMO = -0.0581773690951279  gap = 2.31750 eV
+nelec by numeric integration = 760.0001982895678
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    423.27 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.72 ms
+    CPU time for veff                                                    0.46 sec, wall time      0.47 sec, GPU time    465.34 ms
+E1 = -51570.200862404796  Ecoul = 24670.91600936383  Exc = -701.778584550685
+    CPU time for cycle=8                                                 0.50 sec, wall time      0.51 sec, GPU time    511.78 ms
+cycle= 8 E= -5798.14899341357  delta_E= -0.0117  |g|= 0.111  |ddm|= 0.231
+diis-c [-1.86476585e-03  5.93539345e-03  2.96643752e-04 -2.69898154e-03
+ -1.75854915e-02 -1.70297651e-01  3.15908893e-02  3.90004457e-01
+  7.62754740e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.85 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.16 ms
+  HOMO = -0.126022667388046  LUMO = -0.0664902176975255  gap = 1.61996 eV
+nelec by numeric integration = 760.0001963617663
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    422.93 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.87 ms
+    CPU time for veff                                                    0.47 sec, wall time      0.47 sec, GPU time    465.44 ms
+E1 = -51569.96882746846  Ecoul = 24670.690450312515  Exc = -701.7875514871603
+    CPU time for cycle=9                                                 0.50 sec, wall time      0.51 sec, GPU time    511.51 ms
+cycle= 9 E= -5798.15148446503  delta_E= -0.00249  |g|= 0.0373  |ddm|= 0.119
+diis-c [-2.30957462e-04  6.22264452e-01 -9.29203009e-04 -4.80676381e-04
+ -5.65943415e-03 -6.45292463e-02 -3.28604378e-02  9.70771121e-02
+  3.85117434e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.84 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.01 ms
+  HOMO = -0.11933987936292  LUMO = -0.0689839160721827  gap = 1.37026 eV
+nelec by numeric integration = 760.0001970120848
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    423.45 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.93 ms
+    CPU time for veff                                                    0.47 sec, wall time      0.47 sec, GPU time    465.81 ms
+E1 = -51569.843093539166  Ecoul = 24670.562745324212  Exc = -701.7858026065055
+    CPU time for cycle=10                                                0.50 sec, wall time      0.51 sec, GPU time    512.25 ms
+cycle= 10 E= -5798.15170664338  delta_E= -0.000222  |g|= 0.0194  |ddm|= 0.0443
+diis-c [-2.83110297e-05  3.79862143e-01  4.90389646e-01 -1.20104429e-04
+ -3.92903451e-04 -1.56144298e-02 -1.88924713e-02  1.75616242e-02
+  1.47206497e-01]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.01 sec, GPU time      5.19 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.10 ms
+  HOMO = -0.120192209069897  LUMO = -0.0687844262758269  gap = 1.39888 eV
+nelec by numeric integration = 760.0001968526431
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    423.37 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.92 ms
+    CPU time for veff                                                    0.47 sec, wall time      0.47 sec, GPU time    466.01 ms
+E1 = -51569.858690366564  Ecoul = 24670.579545600922  Exc = -701.7870696159669
+    CPU time for cycle=11                                                0.50 sec, wall time      0.51 sec, GPU time    512.95 ms
+cycle= 11 E= -5798.15177020353  delta_E= -6.36e-05  |g|= 0.00588  |ddm|= 0.0168
+diis-c [-1.96541604e-06  1.56366909e-01  2.73469682e-01  5.21679014e-01
+ -2.14031770e-04 -7.43395588e-03 -9.20889754e-03  6.50319900e-03
+  5.88380818e-02]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      4.93 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     38.98 ms
+  HOMO = -0.12003715783442  LUMO = -0.0688650795060157  gap = 1.39246 eV
+nelec by numeric integration = 760.0001969424993
+    CPU time for vxc                                                     0.44 sec, wall time      0.44 sec, GPU time    439.72 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     39.18 ms
+    CPU time for veff                                                    0.48 sec, wall time      0.49 sec, GPU time    482.12 ms
+E1 = -51569.81088828311  Ecoul = 24670.522259395166  Exc = -701.7775917862513
+    CPU time for cycle=12                                                0.52 sec, wall time      0.53 sec, GPU time    528.43 ms
+cycle= 12 E= -5798.15177649612  delta_E= -6.29e-06  |g|= 0.00121  |ddm|= 0.00486
+diis-c [-2.27926079e-07  4.55429284e-02  9.60866055e-02  2.34156579e-01
+  6.13422828e-01 -1.35323975e-03 -2.86785332e-03  2.87128259e-04
+  1.47250243e-02]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.01 sec, GPU time      5.28 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.35 ms
+  HOMO = -0.120010425300841  LUMO = -0.0688434677743599  gap = 1.39232 eV
+nelec by numeric integration = 760.0001968880661
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    423.21 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     38.95 ms
+    CPU time for veff                                                    0.46 sec, wall time      0.47 sec, GPU time    465.06 ms
+E1 = -51569.81901945205  Ecoul = 24670.53181437697  Exc = -701.7790157732078
+    CPU time for cycle=13                                                0.50 sec, wall time      0.51 sec, GPU time    512.17 ms
+cycle= 13 E= -5798.15177667021  delta_E= -1.74e-07  |g|= 0.000729  |ddm|= 0.00124
+diis-c [-1.61822524e-08  1.28109946e-02  3.44928262e-02  1.00519945e-01
+  4.18777069e-01  4.31674817e-01 -7.01585068e-04 -5.43702764e-04
+  2.96963538e-03]
+    CPU time for DIIS                                                    0.00 sec, wall time      0.01 sec, GPU time      5.14 ms
+    CPU time for eig                                                     0.03 sec, wall time      0.03 sec, GPU time     39.21 ms
+  HOMO = -0.120029381200898  LUMO = -0.0688469231874515  gap = 1.39275 eV
+nelec by numeric integration = 760.0001969076947
+    CPU time for vxc                                                     0.42 sec, wall time      0.42 sec, GPU time    423.34 ms
+    CPU time for veff                                                    0.04 sec, wall time      0.04 sec, GPU time     39.02 ms
+    CPU time for veff                                                    0.46 sec, wall time      0.47 sec, GPU time    466.33 ms
+E1 = -51569.82471849723  Ecoul = 24670.538406591557  Exc = -701.7799090385364
+    CPU time for cycle=14                                                0.50 sec, wall time      0.51 sec, GPU time    513.28 ms
+cycle= 14 E= -5798.15177676613  delta_E= -9.59e-08  |g|= 0.000117  |ddm|= 0.000551
+    CPU time for SCF                                                    12.17 sec, wall time     13.18 sec, GPU time  13176.10 ms
+converged SCF energy = -5798.15177676613
+Nuc-Nuc PySCF=  21802.914444178077
+One electron integrals energy -51569.82471849723
+Coulomb energy  24670.538406591557
+EXC  -701.7799090385364
+PySCF time:  13.178847175091505
+
+============================================================
+Processing: ../../../../Structures/water_cluster_100.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.11 sec, wall time      0.11 sec, GPU time    110.99 ms
+    CPU time for setting up grids                                        1.20 sec, wall time      1.21 sec, GPU time   1208.74 ms
+nelec by numeric integration = 998.1190656119004
+    CPU time for vxc                                                     2.21 sec, wall time      2.22 sec, GPU time   2218.07 ms
+    CPU time for veff                                                   24.28 sec, wall time     23.69 sec, GPU time  23685.16 ms
+E1 = -79539.61387074804  Ecoul = 38153.85230052046  Exc = -908.8762084975594
+init E= -7624.38476511463
+cond(S) = 449.75818788190463
+    CPU time for SCF initialization                                     26.67 sec, wall time     26.09 sec, GPU time  26089.69 ms
+    CPU time for DIIS                                                    0.00 sec, wall time      0.00 sec, GPU time      0.12 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     72.48 ms
+  HOMO = -0.500643808509522  LUMO = -0.234321519608122  gap = 7.24700 eV
+nelec by numeric integration = 1000.0001720456294
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    683.02 ms
+    CPU time for veff                                                    2.39 sec, wall time      2.41 sec, GPU time   2406.95 ms
+    CPU time for veff                                                    3.08 sec, wall time      3.09 sec, GPU time   3093.17 ms
+E1 = -80037.44475149893  Ecoul = 38699.70250133598  Exc = -952.4478473296032
+    CPU time for cycle=1                                                 3.15 sec, wall time      3.17 sec, GPU time   3168.89 ms
+cycle= 1 E= -7619.93708388204  delta_E= 4.45  |g|= 7.11  |ddm|=   14
+diis-c [-50.49814493   1.        ]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.16 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.95 ms
+
+WARN: HOMO 0.0324940116911005 == LUMO 0.0328937609573139
+
+nelec by numeric integration = 1000.0004898604823
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    681.03 ms
+    CPU time for veff                                                    2.39 sec, wall time      2.41 sec, GPU time   2406.92 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3091.72 ms
+E1 = -79312.17379875499  Ecoul = 37929.253961246635  Exc = -872.2519932003742
+    CPU time for cycle=2                                                 3.15 sec, wall time      3.17 sec, GPU time   3174.62 ms
+cycle= 2 E= -7584.91881709821  delta_E=   35  |g|=   13  |ddm|= 19.2
+diis-c [-3.28695665  0.65260558  0.34739442]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      7.56 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.54 ms
+  HOMO = -0.108795659840757  LUMO = -0.106613693442513  gap = 0.05937 eV
+nelec by numeric integration = 999.9999135881292
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    680.31 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2406.93 ms
+    CPU time for veff                                                    3.08 sec, wall time      3.09 sec, GPU time   3090.33 ms
+E1 = -79810.27320503564  Ecoul = 38467.615999837275  Exc = -919.5932074231969
+    CPU time for cycle=3                                                 3.15 sec, wall time      3.17 sec, GPU time   3172.20 ms
+cycle= 3 E= -7591.99739901105  delta_E= -7.08  |g|= 6.78  |ddm|= 19.7
+diis-c [-2.44484929  0.57146331  0.30638274  0.12215395]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      7.73 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.50 ms
+  HOMO = -0.169784685245043  LUMO = -0.097962978539213  gap = 1.95437 eV
+nelec by numeric integration = 1000.0002818689755
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    679.73 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2408.23 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3090.97 ms
+E1 = -79826.3950711466  Ecoul = 38452.44247744052  Exc = -924.6508524885736
+    CPU time for cycle=4                                                 3.15 sec, wall time      3.17 sec, GPU time   3173.02 ms
+cycle= 4 E= -7628.35043258414  delta_E= -36.4  |g|= 2.09  |ddm|=   12
+diis-c [-1.31842727  0.34727859  0.20124151  0.05848676  0.39299314]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.25 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.93 ms
+  HOMO = -0.192429544689096  LUMO = -0.0553717925243012  gap = 3.72953 eV
+nelec by numeric integration = 1000.0002558602098
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    680.61 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2408.20 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3092.23 ms
+E1 = -79830.12076920716  Ecoul = 38455.30415428903  Exc = -924.6019660479084
+    CPU time for cycle=5                                                 3.15 sec, wall time      3.17 sec, GPU time   3174.98 ms
+cycle= 5 E= -7629.16556735553  delta_E= -0.815  |g|= 0.543  |ddm|= 1.55
+diis-c [-0.0890998   0.01483413  0.03418598 -0.02743647  0.0931446   0.88527176]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.13 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.49 ms
+  HOMO = -0.102561318107209  LUMO = -0.0710680025093371  gap = 0.85698 eV
+nelec by numeric integration = 1000.000254679872
+    CPU time for vxc                                                     0.70 sec, wall time      0.70 sec, GPU time    703.98 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2408.60 ms
+    CPU time for veff                                                    3.10 sec, wall time      3.12 sec, GPU time   3115.80 ms
+E1 = -79816.76746927368  Ecoul = 38440.61845573081  Exc = -923.3252732997244
+    CPU time for cycle=6                                                 3.18 sec, wall time      3.20 sec, GPU time   3198.66 ms
+cycle= 6 E= -7629.22127323208  delta_E= -0.0557  |g|= 0.252  |ddm|= 0.638
+diis-c [-0.02330136  0.0066546   0.01464941 -0.02111993  0.04145     0.34595825
+  0.61240766]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.57 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.78 ms
+  HOMO = -0.151314270662891  LUMO = -0.0633434942336998  gap = 2.39381 eV
+nelec by numeric integration = 1000.0002504951584
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    681.02 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2407.74 ms
+    CPU time for veff                                                    3.08 sec, wall time      3.09 sec, GPU time   3092.38 ms
+E1 = -79817.37651277153  Ecoul = 38441.207378876716  Exc = -923.3152850367434
+    CPU time for cycle=7                                                 3.15 sec, wall time      3.17 sec, GPU time   3175.64 ms
+cycle= 7 E= -7629.23140532104  delta_E= -0.0101  |g|= 0.184  |ddm|= 0.289
+diis-c [-0.00652153  0.00696203  0.004694   -0.01366043  0.0208498  -0.01375134
+  0.37554228  0.61936367]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.61 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.61 ms
+  HOMO = -0.148215550400804  LUMO = -0.0609381531768862  gap = 2.37494 eV
+nelec by numeric integration = 1000.0002511012211
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    679.63 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2408.60 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3091.64 ms
+E1 = -79817.43663960838  Ecoul = 38441.262534523936  Exc = -923.3162583717477
+    CPU time for cycle=8                                                 3.15 sec, wall time      3.17 sec, GPU time   3174.87 ms
+cycle= 8 E= -7629.23734984568  delta_E= -0.00594  |g|= 0.0898  |ddm|= 0.154
+diis-c [-1.30054543e-03  6.40038264e-03  2.53608701e-04 -4.45696524e-03
+  1.12623938e-02 -1.44417696e-01 -6.21007046e-02  2.70243950e-01
+  9.22815031e-01]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.87 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.56 ms
+  HOMO = -0.143985237570917  LUMO = -0.0629314153335855  gap = 2.20559 eV
+nelec by numeric integration = 1000.0002501510726
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    680.25 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2407.59 ms
+    CPU time for veff                                                    3.08 sec, wall time      3.09 sec, GPU time   3090.55 ms
+E1 = -79817.27746943301  Ecoul = 38441.11797442975  Exc = -923.3325651540059
+    CPU time for cycle=9                                                 3.15 sec, wall time      3.17 sec, GPU time   3173.43 ms
+cycle= 9 E= -7629.23904654676  delta_E= -0.0017  |g|= 0.0314  |ddm|= 0.0913
+diis-c [-2.62055580e-04  6.82121609e-01 -1.36821890e-03 -1.14751519e-03
+  4.58318747e-03 -6.33706927e-02 -9.30499977e-02  2.61683305e-02
+  4.46063298e-01]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.78 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.40 ms
+  HOMO = -0.141917308581205  LUMO = -0.0645428300315462  gap = 2.10547 eV
+nelec by numeric integration = 1000.0002497625184
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    679.70 ms
+    CPU time for veff                                                    2.39 sec, wall time      2.41 sec, GPU time   2408.01 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3090.95 ms
+E1 = -79817.15678570168  Ecoul = 38440.99755595258  Exc = -923.3329715271417
+    CPU time for cycle=10                                                3.15 sec, wall time      3.17 sec, GPU time   3174.30 ms
+cycle= 10 E= -7629.23918766573  delta_E= -0.000141  |g|= 0.0218  |ddm|= 0.0435
+diis-c [-2.44602893e-05  4.47921170e-01  5.04528086e-01 -1.99869084e-04
+  3.59492268e-03 -8.18350046e-03 -3.91432670e-02 -2.29299959e-02
+  1.14412454e-01]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.81 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.91 ms
+  HOMO = -0.142495658450514  LUMO = -0.0645483237667573  gap = 2.12106 eV
+nelec by numeric integration = 1000.000249814288
+    CPU time for vxc                                                     0.70 sec, wall time      0.71 sec, GPU time    705.07 ms
+    CPU time for veff                                                    2.39 sec, wall time      2.41 sec, GPU time   2408.31 ms
+    CPU time for veff                                                    3.10 sec, wall time      3.12 sec, GPU time   3117.12 ms
+E1 = -79817.22270374386  Ecoul = 38441.06720150842  Exc = -923.3367836559529
+    CPU time for cycle=11                                                3.18 sec, wall time      3.20 sec, GPU time   3201.39 ms
+cycle= 11 E= -7629.23927228088  delta_E= -8.46e-05  |g|= 0.00506  |ddm|= 0.0179
+diis-c [-1.41139266e-06  1.82516308e-01  2.58797609e-01  5.53286279e-01
+  1.40186361e-03 -4.31923717e-03 -1.79815728e-02 -1.26015078e-02
+  3.89002569e-02]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      9.51 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     72.02 ms
+  HOMO = -0.142568916820133  LUMO = -0.0645514524364088  gap = 2.12296 eV
+nelec by numeric integration = 1000.0002498305862
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    679.81 ms
+    CPU time for veff                                                    2.39 sec, wall time      2.41 sec, GPU time   2406.75 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3090.33 ms
+E1 = -79817.19249242611  Ecoul = 38441.0307641727  Exc = -923.3305622609919
+    CPU time for cycle=12                                                3.15 sec, wall time      3.17 sec, GPU time   3174.94 ms
+cycle= 12 E= -7629.23927690389  delta_E= -4.62e-06  |g|= 0.00141  |ddm|= 0.00454
+diis-c [-6.53533780e-07  2.55565414e-02  5.33596316e-02  2.46044695e-01
+  6.78581278e-01 -5.86374783e-04 -2.37671334e-03 -2.48268758e-03
+  1.90362993e-03]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      9.14 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.88 ms
+  HOMO = -0.142639999115457  LUMO = -0.0645395278330897  gap = 2.12522 eV
+nelec by numeric integration = 1000.0002498603707
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    680.05 ms
+    CPU time for veff                                                    2.39 sec, wall time      2.41 sec, GPU time   2406.62 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3090.02 ms
+E1 = -79817.18493238198  Ecoul = 38441.02264924612  Exc = -923.3300074410215
+    CPU time for cycle=13                                                3.15 sec, wall time      3.17 sec, GPU time   3173.48 ms
+cycle= 13 E= -7629.23927696636  delta_E= -6.25e-08  |g|= 0.00128  |ddm|= 0.00178
+diis-c [-1.05811373e-08  1.84545040e-02  2.93799742e-02  1.04517405e-01
+  4.35405971e-01  4.14026302e-01 -1.61954541e-03 -1.91789873e-03
+  1.75328840e-03]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.61 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.55 ms
+  HOMO = -0.142566801687988  LUMO = -0.06454919870386  gap = 2.12297 eV
+nelec by numeric integration = 1000.0002498374974
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    679.47 ms
+    CPU time for veff                                                    2.40 sec, wall time      2.41 sec, GPU time   2409.18 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3091.31 ms
+E1 = -79817.18915116711  Ecoul = 38441.02752604235  Exc = -923.3306657566428
+    CPU time for cycle=14                                                3.15 sec, wall time      3.17 sec, GPU time   3173.93 ms
+cycle= 14 E= -7629.23927727089  delta_E= -3.05e-07  |g|= 0.000125  |ddm|= 0.000962
+diis-c [-7.24670279e-09  2.72144720e-03  6.32033829e-03  2.78041078e-02
+  1.23725546e-01  1.19641099e-01  7.20346837e-01 -1.92702754e-04
+ -3.66672559e-04]
+    CPU time for DIIS                                                    0.01 sec, wall time      0.01 sec, GPU time      8.51 ms
+    CPU time for eig                                                     0.07 sec, wall time      0.07 sec, GPU time     71.43 ms
+  HOMO = -0.142573147372654  LUMO = -0.0645495356071416  gap = 2.12313 eV
+nelec by numeric integration = 1000.0002498383577
+    CPU time for vxc                                                     0.68 sec, wall time      0.68 sec, GPU time    679.28 ms
+    CPU time for veff                                                    2.39 sec, wall time      2.41 sec, GPU time   2407.90 ms
+    CPU time for veff                                                    3.07 sec, wall time      3.09 sec, GPU time   3089.84 ms
+E1 = -79817.1949869674  Ecoul = 38441.03396995176  Exc = -923.3312738652841
+    CPU time for cycle=15                                                3.15 sec, wall time      3.17 sec, GPU time   3172.20 ms
+cycle= 15 E= -7629.23927727041  delta_E= 4.8e-10  |g|= 0.000137  |ddm|= 0.00018
+    CPU time for SCF                                                    74.02 sec, wall time     73.77 sec, GPU time  73770.46 ms
+converged SCF energy = -7629.23927727041
+Nuc-Nuc PySCF=  34670.25301361051
+One electron integrals energy -79817.1949869674
+Coulomb energy  38441.03396995176
+EXC  -923.3312738652841
+PySCF time:  73.7751439078711
+
+============================================================
+Processing: ../../../../Structures/water_cluster_139.xyz
+============================================================
+
+
+PySCF Results
+
+
+
+
+******** <class 'gpu4pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = None
+level_shift factor = None
+DIIS = <class 'gpu4pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-07
+SCF conv_tol_grad = None
+SCF max_cycles = 50
+direct_scf = False
+XC library gpu4pyscf.dft.libxc version 7.0.0 (CUDA)
+    unable to decode the reference due to https://github.com/NVIDIA/cuda-python/issues/29
+XC functionals = 101,130
+small_rho_cutoff = 0
+Set gradient conv threshold to 0.000316228
+    CPU time for hcore                                                   0.19 sec, wall time      0.19 sec, GPU time    188.35 ms
+    CPU time for setting up grids                                        3.24 sec, wall time      3.25 sec, GPU time   3253.92 ms
+nelec by numeric integration = 1387.385384635195
+    CPU time for vxc                                                     5.19 sec, wall time      5.21 sec, GPU time   5211.41 ms
+/var/spool/slurm/d/job8474644/slurm_script: line 31: 1055265 Killed                  python3 benchmark_DFT_LDA_DF.py
+slurmstepd: error: Detected 1 oom_kill event in StepId=8474644.batch. Some of the step tasks have been OOM Killed.
