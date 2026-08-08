@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Run the PyFock test suites from the tests directory."""
+
+import sys
+from pathlib import Path
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from tests.run_tests import main
+
+
+if __name__ == "__main__":
+    sys.exit(main())

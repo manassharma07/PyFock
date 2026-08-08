@@ -1,0 +1,6 @@
+short/*/output.test.txt
+long/*/output.test.txt
+gpu/*/output.test.txt
+short/*/test.report.txt
+long/*/test.report.txt
+gpu/*/test.report.txt

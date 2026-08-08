@@ -355,6 +355,8 @@ streamlit run app.py
 - [x] [Kaggle Notebook: Advanced Features and GPU accelerated computations](https://www.kaggle.com/code/ducktape07/introduction-to-pyfock-tutorial)
 - [x] [Google Colab Notebook: Introduction to PyFock](https://colab.research.google.com/drive/1d2QpcE2vLt7c6_s48r3GUXruMT7rB-ua?usp=sharing)
 - [x] [Kaggle Notebook: Benchmarking PyFock against PySCF](https://www.kaggle.com/code/ducktape07/pyfock-vs-pyscf#10.-Timing-summary-table)
+- [x] [Kaggle Notebook: PyFock GPU Dynamic Precision](https://www.kaggle.com/code/ducktape07/pyfock-gpu-dynamic-precision)
+- [x] [Kaggle Notebook: PySCF vs. PyFock GPU Benchmark](https://www.kaggle.com/code/ducktape07/pyscf-vs-pyfock-gpu-benchmark)
 
 
 ## Documentation
@@ -412,7 +414,7 @@ If you use PyFock in your research, please cite:
   author       = {Sharma, Manas and Sierka, Marek},
   year         = {2026},
   publisher    = {ChemRxiv},
-  note         = {Preprint},
+  note         = {Accepted in JPC A},
   doi          = {https://doi.org/10.26434/chemrxiv.15003943/v1}
 }
 ```

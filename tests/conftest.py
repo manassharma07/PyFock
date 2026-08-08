@@ -42,3 +42,20 @@ def refs():
         yield refs_obj
     finally:
         refs_obj.close()
+
+
+def pytest_addoption(parser):
+    group = parser.getgroup("pyfock-regression")
+    group.addoption(
+        "--run-pyscf",
+        action="store_true",
+        default=False,
+        help="also run and validate PySCF for full-calculation regression tests",
+    )
+    group.addoption(
+        "--regression-ncores",
+        action="store",
+        type=int,
+        default=None,
+        help="override the core count used by regression input.py files",
+    )
