@@ -1,0 +1,666 @@
+Cupy is not installed. GPU acceleration is not availble.
+
+======================================================================
+PyFock Python Program for Quantum Chemistry Simulations
+                                        by Manas Sharma
+======================================================================
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m[38;5;45m█[0m  [38;5;51m█[0m[38;5;51m█[0m    [38;5;87m█[0m[38;5;87m█[0m [38;5;123m█[0m[38;5;123m█[0m[38;5;123m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m  [38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m   [38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m   [38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m█[0m[38;5;45m█[0m [38;5;45m░[0m[38;5;45m█[0m[38;5;51m█[0m  [38;5;51m█[0m[38;5;51m█[0m[38;5;87m░[0m [38;5;87m█[0m[38;5;87m█[0m[38;5;87m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m [38;5;159m█[0m[38;5;159m█[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;219m░[0m [38;5;219m█[0m[38;5;219m█[0m  [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m 
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m   [38;5;45m░[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m░[0m  [38;5;87m█[0m[38;5;87m█[0m[38;5;87m█[0m[38;5;123m█[0m[38;5;123m█[0m   [38;5;159m█[0m[38;5;159m█[0m    [38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m      [38;5;219m█[0m[38;5;219m█[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m  
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m░[0m[38;5;45m░[0m    [38;5;51m░[0m[38;5;51m█[0m[38;5;87m█[0m[38;5;87m░[0m   [38;5;123m█[0m[38;5;123m█[0m[38;5;123m░[0m[38;5;159m░[0m[38;5;159m░[0m   [38;5;195m█[0m[38;5;195m█[0m    [38;5;225m█[0m[38;5;219m█[0m [38;5;219m█[0m[38;5;219m█[0m      [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m 
+[38;5;39m█[0m[38;5;39m█[0m         [38;5;51m█[0m[38;5;87m█[0m    [38;5;123m█[0m[38;5;123m█[0m      [38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;219m░[0m [38;5;219m░[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m  [38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m░[0m[38;5;39m░[0m         [38;5;51m░[0m[38;5;87m░[0m    [38;5;123m░[0m[38;5;123m░[0m       [38;5;195m░[0m[38;5;195m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m   [38;5;219m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m [38;5;213m░[0m[38;5;213m░[0m   [38;5;213m░[0m[38;5;213m░[0m
+
+======================================================================
+
+Version:  0.1.5
+Citation: M. Sharma and M. Sierka, PyFock: A Just-In-Time Compiled 
+Gaussian Basis DFT Python Code for CPU and GPU Architectures
+
+======================================================================
+
+📧 Contact Information:
+   Developer: Dr. Manas Sharma (PhD Physics)
+   Email: manas.sharma@uni-jena.de
+   Website: https://manas.bragitoff.com/
+
+📚 Resources:
+   Documentation: https://pyfock-docs.bragitoff.com
+   Official Website: https://pyfock.bragitoff.com/
+   GitHub Repo: https://github.com/manassharma07/pyfock
+   Web GUI: https://pyfock-gui.bragitoff.com/
+
+======================================================================
+
+
+
+ Time to get inspired by a great quantum chemist :)
+
+
+======================================================================
+  ____       _                     _ _                       
+ / ___|  ___| |__  _ __ ___   __| (_)_ __   __ _  ___ _ __ 
+ \___ \ / __| '_ \| '__/ _ \ / _` | | '_ \ / _` |/ _ \ '__|
+  ___) | (__| | | | | | (_) | (_| | | | | | (_| |  __/ |   
+ |____/ \___|_| |_|_|  \___/ \__,_|_|_| |_|\__, |\___|_|   
+                                           |___/            
+======================================================================
+
+   
+                                  :-----;.                               
+                         ::::;;;;;;;;;;;;;;;;;:::;,                      
+                       .,;;;;:::;;:,,,,,,,,,,::;;:,..                    
+                    .-------;;;;;;,.,,.,;,..,;;;;;;;;;;;                 
+                  ,:;;;;;;;;;;:::::,... :..,:::::::::..;;                
+                  :----;---;;:,,,,,,..  ,...,,,,,:--;..::.               
+                .;-------+,                        .;+--;--;             
+                 ;;;;;;;:    .                       ,;:::::,            
+                 ;-;;;;::    ..                       ,-;;;;;.           
+                 ;-----:.. .  .                         ,;---.           
+                 .:;;;;:,,..                            .:;;,            
+                  :;-----;;,                            .;+-.            
+                  :------;::;                           ;;;;             
+                  :;;;;;:,,,.                          .:::.             
+                  ;+-+-;;;;:.,:::-:,,.      ,-;;:,.    .--:.             
+                 ..;--+-,...--:;-:. .;,:: .;;:;-:. .:  .:,.              
+                 ,;,:-;,,;+*-,.,;. ..+*-,.+-...;,   ;+-:. ..             
+                 -; .+: . .,;.      .+;   .;        ;,. ;...             
+                 ...;;. ,,. .,     ,:,,,   .,     .,.   .                
+                 ..:+  ,::.   ..,,,,..:,     ..,,..      .               
+                  ....,:::,        .. ,.                  .              
+                   .  ,:,,...      :....                                 
+                     ..,;;:::.     .,;*-,  .          ..,.               
+                        .,,,,  .      . ..            .                  
+                        .,,,: ... ,..,,. .           ..                  
+                        -;;;;.    ;;;:,,,,......    ,.                   
+                      .,;...,..     ..              .                    
+                     .:;-  ;;,,.                    .                    
+                   ,;:::;  .-;::::.             ,         ,              
+               .,...,,,,,   ,;-;:,,...          .         .              
+             .;;;;;;;;;;;,.  .:+++-,.,,.... .  .   .      ,              
+        ,,,:,::.,,,,::,,:,,.    .;:;;:....   .     .                     
+    .. .,:;;:,:,,;;;;;::::.,      .::;.     ..    ..                     
+              ,    ,-;;;;;;;,                 ,;-:.,          .          
+              .     ..,,... ....+-,,,,...::,,,,,,.,.                     
+             .,         ,   .:;;+%;;--;;;;;---;;;::,                     
+             ,               .:;;?;;:;;:;:;-+;;;:;,                      
+            ..                ,;::-:,,,,,,::;;;::,.                      
+              ,,.              ,;::.  .         ...                      
+   
+   
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║  The task is not so much to see what no one has yet seen, but to     ║
+   ║ think what nobody has yet thought about that which everybody sees.   ║
+sysctl: sysctl fmt -1 1024 1: Operation not permitted
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║                                                      ~ schrodinger   ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+
+
+Number of atoms:  3
+
+
+Number of basis functions or Cartesian atomic orbitals (6d, 10f, 15g and so on):  142
+
+
+Number of auxiliary basis functions (in Cartesian atomic orbital basis):  85
+
+======================================================================
+
+
+============= System Information =============
+Operating System: Darwin 24.6.0
+System Type: 64bit
+CPU Model: Error getting CPU model: Command '['sysctl', '-n', 'machdep.cpu.brand_string']' returned non-zero exit status 1.
+Number of Cores: 10
+Number of Threads: Unavailable
+Memory (GB): 16.0
+
+======================================================================
+
+Running DFT using 4 threads for Numba.
+
+
+
+
+Spherical Atomic Orbitals (5d, 7f, 10g...) are being used!
+
+
+Currently, when using SAOs, the Schwarz screening threshold is recommended to be 1e-11 or smaller for correct results. 
+Setting it to 1e-11.
+
+
+Number of Spherical atomic orbitals (5d, 7f, 10g and so on):  117
+
+Calculating one electron integrals...
+
+
+Core H size in GB  0.0002
+done!
+Time taken 0.09 seconds.
+
+
+
+User requested to use Rys Quadrature Algorithm for the evaluation of ERIs
+Stricter version of Schwarz screening:  False
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.01 seconds.
+
+
+
+Performing Schwarz screening...
+Threshold  1e-11
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.02
+Time taken to evaluate the square roots needed:  0.0
+Time for significant indices evaluation:  0.0070894580000000484
+Size of permanent array storing the significant indices of 3c2e ERI in GB  0.00024367999999999997
+No. of elements in the standard three-centered two electron ERI tensor:  1713940
+No. of elements in the triangular three-centered two electron ERI tensor:  863005
+No. of significant triplets based on Schwarz inequality and triangularity: 863005 or 50.4% of original
+Schwarz screening done!
+Total time taken for Schwarz screening 0.03 seconds.
+
+Two Center Two electron ERI size in GB  5.78e-05
+Three Center Two electron ERI size in GB  0.00690404
+Three-centered two electron evaluation done!
+Time taken for Cholesky factorization of two-centered two-electron integrals 0.0 seconds.
+
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  0.27 seconds.
+
+
+
+------------------------------------------------------
+Numerical Integration for XC Term
+------------------------------------------------------
+
+
+Generating grids...
+
+
+Grids level:  3
+Using PySCF to generate the DFT grids.
+done!
+Time taken 0.02 seconds.
+
+
+Pruning generated grids by rho...
+
+
+done!
+Time taken 0.11 seconds.
+
+
+Deleted 2635 grid points.
+
+No. of supplied/generated grid points (after pruning):  31069
+Size (in GB) for storing the coordinates of grid:       0.001
+Size (in GB) for storing the weights of grid:           0.0
+Size (in GB) for storing the density at gridpoints:     0.0
+
+Sorting grids ....
+done!
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  5000
+No. of batches:  7
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.01 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    142
+Average no. of basis functions contributing to a batch of grid points:    125
+
+You have asked to save the values of significant basis functions on grid points so as to avoid recalculation for each SCF cycle.
+Please note: This will require addtional memory that is approximately: 0.0 GB
+Calculating the value of significantly contributing basis functions (atomic orbitals)...
+done!
+Time taken 0.05 seconds.
+
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+P. A. M. Dirac, Math. Proc. Cambridge Philos. Soc. 26, 376 (1930); F. Bloch, Z. Phys. 57, 545 (1929).
+J. P. Perdew and A. Zunger, Phys. Rev. B 23, 5048 (1981) [modified parameterisation].
+------------------------------------------------------
+
+
+
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999331648475918
+
+
+
+------Iteration 1--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -197.8149256788469
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    76.2098721618920
+Coulomb Energy                    45.2521657187587
+Exchange-Correlation Energy       -8.6232264293839
+--------------------------------------------------
+Total Energy                     -75.8454473523611
+--------------------------------------------------
+
+
+
+Energy difference :  75.84544735236113
+
+
+HOMO-LUMO gap: 0.37296830631447975 au
+HOMO-LUMO gap: 10.149 eV
+
+
+Time taken for the previous iteration: 0.21 seconds 
+
+
+
+Density matrix difference norm:  0.9037483727873816 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999804579813
+
+
+
+------Iteration 2--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -202.7630410312334
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    77.5823696217170
+Coulomb Energy                    49.3089738772208
+Exchange-Correlation Energy       -9.0551158108322
+--------------------------------------------------
+Total Energy                     -75.7961464679088
+--------------------------------------------------
+
+
+
+Energy difference :  0.049300884452307514
+
+
+HOMO-LUMO gap: 0.1269902535438554 au
+HOMO-LUMO gap: 3.456 eV
+
+
+Time taken for the previous iteration: 0.09 seconds 
+
+
+
+Density matrix difference norm:  0.9356325638863108 
+
+
+
+
+
+XC algo 2
+Number of electrons:  10.000000471282595
+
+
+
+------Iteration 3--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -189.3487021977197
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    71.4212361624812
+Coulomb Energy                    41.4123028858062
+Exchange-Correlation Energy       -8.1185524561185
+--------------------------------------------------
+Total Energy                     -75.5030487303318
+--------------------------------------------------
+
+
+
+Energy difference :  0.2930977375770709
+
+
+HOMO-LUMO gap: 0.2618010094846994 au
+HOMO-LUMO gap: 7.124 eV
+
+
+Time taken for the previous iteration: 0.1 seconds 
+
+
+
+Density matrix difference norm:  0.6445908722945176 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999939992339
+
+
+
+------Iteration 4--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.5418970377793
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    75.5700048328681
+Coulomb Energy                    46.6776986001138
+Exchange-Correlation Energy       -8.7440739800180
+--------------------------------------------------
+Total Energy                     -75.9076007095964
+--------------------------------------------------
+
+
+
+Energy difference :  0.40455197926468145
+
+
+HOMO-LUMO gap: 0.25532170299266355 au
+HOMO-LUMO gap: 6.948 eV
+
+
+Time taken for the previous iteration: 0.1 seconds 
+
+
+
+Density matrix difference norm:  0.021050356300946357 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999957611577
+
+
+
+------Iteration 5--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.3667956780266
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    75.4951024303652
+Coulomb Energy                    46.5628050067752
+Exchange-Correlation Energy       -8.7296479975896
+--------------------------------------------------
+Total Energy                     -75.9078693632568
+--------------------------------------------------
+
+
+
+Energy difference :  0.0002686536603988543
+
+
+HOMO-LUMO gap: 0.25449713130985785 au
+HOMO-LUMO gap: 6.925 eV
+
+
+Time taken for the previous iteration: 0.1 seconds 
+
+
+
+Density matrix difference norm:  0.00581799189777679 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999956812053
+
+
+
+------Iteration 6--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.3576408107853
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    75.4923416076039
+Coulomb Energy                    46.5556527617625
+Exchange-Correlation Energy       -8.7289013183537
+--------------------------------------------------
+Total Energy                     -75.9078808845536
+--------------------------------------------------
+
+
+
+Energy difference :  1.152129674153457e-05
+
+
+HOMO-LUMO gap: 0.25452630763427564 au
+HOMO-LUMO gap: 6.926 eV
+
+
+Time taken for the previous iteration: 0.1 seconds 
+
+
+
+Density matrix difference norm:  0.00033338536318411766 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999956938478
+
+
+
+------Iteration 7--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.3571616149550
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    75.4916002563487
+Coulomb Energy                    46.5559277435871
+Exchange-Correlation Energy       -8.7289142171064
+--------------------------------------------------
+Total Energy                     -75.9078809569066
+--------------------------------------------------
+
+
+
+Energy difference :  7.235300358843233e-08
+
+
+HOMO-LUMO gap: 0.25453080091768143 au
+HOMO-LUMO gap: 6.926 eV
+
+
+Time taken for the previous iteration: 0.1 seconds 
+
+
+
+Density matrix difference norm:  2.823615162744379e-05 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.99999995692236
+
+
+
+------Iteration 8--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.3574605164138
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    75.4917791812465
+Coulomb Energy                    46.5560656531789
+Exchange-Correlation Energy       -8.7289321505717
+--------------------------------------------------
+Total Energy                     -75.9078809573412
+--------------------------------------------------
+
+
+
+Energy difference :  4.346105697550229e-10
+
+
+HOMO-LUMO gap: 0.25453091004882467 au
+HOMO-LUMO gap: 6.926 eV
+
+
+Time taken for the previous iteration: 0.1 seconds 
+
+
+
+Density matrix difference norm:  2.929870954917013e-06 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999956922593
+
+
+
+------Iteration 9--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.3574760787151
+Nuclear repulsion Energy           9.1306668752190
+Kinetic Energy                    75.4917865792408
+Coulomb Energy                    46.5560748360356
+Exchange-Correlation Energy       -8.7289331691255
+--------------------------------------------------
+Total Energy                     -75.9078809573451
+--------------------------------------------------
+
+
+
+Energy difference :  3.936406756110955e-12
+
+SCF Converged after 9 iterations!
+
+-------------------------------------
+Total Energy =  -75.90788095734513
+-------------------------------------
+
+
+
+Time taken : 1.66 seconds.
+
+
+
+-------------------------------------------------------------
+Profiling (Wall times in seconds)
+-------------------------------------------------------------
+Preprocessing                           0.17
+Density Fitting                         0.27
+    DF (gamma)                          0.13
+    DF (coeff)                          0.02
+    DF (Jtri)                           0.1
+    DF (Cholesky)                       0.0
+DIIS                                    0.05
+KS matrix diagonalization               0.09
+One electron Integrals (S, T, Vnuc)     0.09
+Coulomb Integrals (2c2e + 3c2e)         0.27
+Grids construction                      0.02
+Exchange-Correlation Term               0.49
+Misc.                                   0.22
+Complete SCF                            1.66
+
+PyFock dipole moment
+PyFock dipole X (A.U.) = -0.3728614681803144
+PyFock dipole Y (A.U.) = -0.03517211820316437
+PyFock dipole Z (A.U.) = 0.6629040294587201
+PyFock dipole magnitude (A.U.) = 0.7613832836522513
+
+
+******** <class 'pyscf.df.df_jk.DFRKS'> ********
+method = DFRKS
+initial guess = minao
+damping factor = 0
+level_shift factor = 0
+DIIS = <class 'pyscf.scf.diis.CDIIS'>
+diis_start_cycle = 1
+diis_space = 8
+diis_damp = 0
+SCF conv_tol = 1e-11
+SCF conv_tol_grad = None
+SCF max_cycles = 35
+direct_scf = False
+chkfile to save SCF result = /var/folders/2v/15wx3xrs0tj4bz4kdgj4gfwh0000gn/T/tmpjjm0j60g
+max_memory 5000 MB (current use 0 MB)
+XC library pyscf.dft.libxc version 7.0.0
+    S. Lehtola, C. Steigemann, M. J.T. Oliveira, and M. A.L. Marques.,  SoftwareX 7, 1–5 (2018)
+XC functionals = 1,10
+    P. A. M. Dirac.,  Math. Proc. Cambridge Philos. Soc. 26, 376 (1930)
+    F. Bloch.,  Z. Phys. 57, 545 (1929)
+    J. P. Perdew and A. Zunger.,  Phys. Rev. B 23, 5048 (1981)
+small_rho_cutoff = 1e-07
+Set gradient conv threshold to 3.16228e-06
+init E= -75.8454473524006
+  HOMO = -0.405323798413884  LUMO = -0.0323554922387982
+cycle= 1 E= -75.796146467894  delta_E= 0.0493  |g|= 0.797  |ddm|= 0.903
+  HOMO = -0.0847272525875819  LUMO = 0.0256730040023788
+cycle= 2 E= -75.3648809133265  delta_E= 0.431  |g|=  1.7  |ddm|= 1.05
+  HOMO = -0.282354428532258  LUMO = -0.0167952149280183
+cycle= 3 E= -75.9072274372495  delta_E= -0.542  |g|= 0.0534  |ddm|= 0.774
+  HOMO = -0.266443596185123  LUMO = -0.0122162666367025
+cycle= 4 E= -75.9078581748738  delta_E= -0.000631  |g|= 0.0119  |ddm|= 0.0314
+  HOMO = -0.267851037453453  LUMO = -0.0136106706941844
+cycle= 5 E= -75.9078796515007  delta_E= -2.15e-05  |g|= 0.00263  |ddm|= 0.00638
+  HOMO = -0.26834960663382  LUMO = -0.0138323696348699
+cycle= 6 E= -75.9078809557866  delta_E= -1.3e-06  |g|= 0.000101  |ddm|= 0.00121
+  HOMO = -0.268376819892022  LUMO = -0.0138468401269905
+cycle= 7 E= -75.9078809572907  delta_E= -1.5e-09  |g|= 1.26e-05  |ddm|= 5.36e-05
+  HOMO = -0.268378475040589  LUMO = -0.0138476056916627
+cycle= 8 E= -75.9078809573167  delta_E= -2.6e-11  |g|= 2.64e-06  |ddm|= 5.85e-06
+  HOMO = -0.268378686342092  LUMO = -0.0138476668742782
+cycle= 9 E= -75.9078809573178  delta_E= -1.12e-12  |g|= 4.66e-07  |ddm|= 1.82e-06
+  HOMO = -0.268378882512375  LUMO = -0.0138477098367544
+Extra cycle  E= -75.907880957318  delta_E= -1.85e-13  |g|= 9.1e-07  |ddm|= 5.72e-07
+converged SCF energy = -75.907880957318
+
+PySCF comparison values
+PySCF basis functions = 117
+PySCF grid points = 31272
+PySCF one-electron energy = -122.86569581767645
+PySCF nuclear repulsion energy = 9.130666875194525
+PySCF Coulomb energy = 46.55608202479056
+PySCF exchange-correlation energy = -8.728934039626614
+PySCF total energy = -75.90788095731799
+delta E (PyFock - PySCF) = -2.7142732506035827e-11
+PySCF dipole X (A.U.) = -0.37286320081677005
+PySCF dipole Y (A.U.) = -0.035172126076031755
+PySCF dipole Z (A.U.) = 0.6629040510756494
+PySCF dipole magnitude (A.U.) = 0.7613841513379054
+Max dipole difference (PyFock - PySCF) = 1.7326364556424778e-06

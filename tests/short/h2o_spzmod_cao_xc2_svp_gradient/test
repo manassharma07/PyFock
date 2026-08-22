@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Run this directory's calculation and compare selected quantities."""
+
+import sys
+from pathlib import Path
+
+
+TEST = {
+    "name": "H2O analytical gradient / SPZMOD / CAO / XC_algo 2 / def2-SVP",
+    "description": "H2O analytical DFT gradient regression using CAO orbitals.",
+    "input": "input.py",
+    "output": "output.test.txt",
+    "reference": "output.ref.txt",
+    "report": "test.report.txt",
+    "geometry": "h2o.xyz",
+    "basis": "def2-SVP",
+    "auxbasis": "def2-universal-jfit",
+    "xc_name": "SPZMOD",
+    "xc_ids": [1, 10],
+    "ao_basis": "CAO",
+    "xc_algo": 2,
+    "device": "cpu",
+    "use_pyscf_grids": True,
+    "use_libxc": False,
+}
+
+FLOAT = r"([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][-+]?\d+)?)"
+
+CHECKS = [
+    {"name": "SCF converged", "match": r"SCF Converged after", "kind": "text"},
+    {
+        "name": "Basis functions",
+        "match": r"Number of basis functions or Cartesian atomic orbitals.*:\s+([0-9]+)",
+        "kind": "integer",
+    },
+    {
+        "name": "Grid points",
+        "match": r"No\. of supplied/generated grid points \(after pruning\):\s+([0-9]+)",
+        "kind": "integer",
+    },
+    {"name": "Total energy", "match": r"^Total Energy\s+" + FLOAT + r"\s*$", "tol": 2.0e-7},
+]
+
+ATOMS = ["O", "H", "H"]
+for atom_index, symbol in enumerate(ATOMS, start=1):
+    for axis in "XYZ":
+        CHECKS.append(
+            {
+                "name": f"PyFock gradient {atom_index} {symbol} {axis}",
+                "match": rf"^PyFock gradient atom {atom_index} {symbol} {axis} \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$",
+                "tol": 2.0e-7,
+            }
+        )
+
+CHECKS.extend(
+    [
+        {"name": "PyFock gradient norm", "match": r"^PyFock gradient norm \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 2.0e-7},
+        {"name": "PyFock maximum component", "match": r"^PyFock maximum gradient component \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 2.0e-7},
+        {"name": "PyFock gradient sum X", "match": r"^PyFock gradient sum X \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 2.0e-7},
+        {"name": "PyFock gradient sum Y", "match": r"^PyFock gradient sum Y \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 2.0e-7},
+        {"name": "PyFock gradient sum Z", "match": r"^PyFock gradient sum Z \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 2.0e-7},
+        {"name": "PySCF basis functions", "match": r"^PySCF basis functions\s+=\s+([0-9]+)\s*$", "kind": "integer", "when": "pyscf"},
+        {"name": "PySCF grid points", "match": r"^PySCF grid points\s+=\s+([0-9]+)\s*$", "kind": "integer", "when": "pyscf"},
+        {"name": "PySCF total energy", "match": r"^PySCF total energy\s+=\s+" + FLOAT + r"\s*$", "tol": 5.0e-8, "when": "pyscf"},
+        {"name": "PyFock - PySCF energy diff", "match": r"^delta E \(PyFock - PySCF\)\s+=\s+" + FLOAT + r"\s*$", "tol": 2.0e-7, "when": "pyscf"},
+    ]
+)
+
+for atom_index, symbol in enumerate(ATOMS, start=1):
+    for axis in "XYZ":
+        CHECKS.append(
+            {
+                "name": f"PySCF gradient {atom_index} {symbol} {axis}",
+                "match": rf"^PySCF gradient atom {atom_index} {symbol} {axis} \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$",
+                "tol": 5.0e-8,
+                "when": "pyscf",
+            }
+        )
+
+CHECKS.extend(
+    [
+        {"name": "PySCF gradient norm", "match": r"^PySCF gradient norm \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 5.0e-8, "when": "pyscf"},
+        {"name": "PySCF maximum component", "match": r"^PySCF maximum gradient component \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 5.0e-8, "when": "pyscf"},
+        {"name": "Maximum gradient difference", "match": r"^Max gradient difference \(PyFock - PySCF\) \(Ha/Bohr\) =\s+" + FLOAT + r"\s*$", "tol": 2.0e-7, "when": "pyscf"},
+    ]
+)
+
+
+ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tests.test_driver import run_test
+
+
+if __name__ == "__main__":
+    sys.exit(run_test(TEST, CHECKS))
