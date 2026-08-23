@@ -409,7 +409,7 @@ Distributed under the **MIT License**. See `LICENSE` file for more information.
 If you use PyFock in your research, please cite:
 
 ```bibtex
-@misc{sharma2026pyfock,
+@article{sharma2026pyfock,
   title        = {PyFock: A Just-In-Time Compiled Gaussian Basis DFT Python Code for CPU and GPU Architectures},
   author       = {Sharma, Manas and Sierka, Marek},
   journal = {The Journal of Physical Chemistry A},

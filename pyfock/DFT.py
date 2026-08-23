@@ -14,7 +14,6 @@
 #                         888                                            888                                    
 #                    Y8b d88P                                       Y8b d88P                                    
 #                     "Y88P"                                         "Y88P"                                       
-from re import T
 from pyfock.Utils import print_pyfock_logo
 from pyfock.Utils import print_scientist
 # Print system information 

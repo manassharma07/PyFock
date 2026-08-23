@@ -21,7 +21,7 @@ with open(os.path.join(here, "requirements.txt")) as f:
 
 setup(
     name = "pyfock",
-    version = "0.1.6", # DONT FORGET TO CHANGE THE VERSION IN __INIT__.py
+    version = "0.1.7", # DONT FORGET TO CHANGE THE VERSION IN __INIT__.py
     author = "Manas Sharma",
     author_email = "feedback@bragitoff.com",
     description = ("A simplistic and efficient pure-python quantum chemistry library from Phys Whiz."),

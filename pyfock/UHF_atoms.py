@@ -14,7 +14,6 @@
 #                         888                                            888                                    
 #                    Y8b d88P                                       Y8b d88P                                    
 #                     "Y88P"                                         "Y88P"                                       
-from re import T
 import pyfock.Mol as Mol
 import pyfock.Basis as Basis
 # import pyfock.Integrals as Integrals
@@ -1596,4 +1595,3 @@ class DFT:
         
 
         
-
