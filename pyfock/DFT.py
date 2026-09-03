@@ -247,6 +247,9 @@ class DFT:
         """ Atomic grids for DFT calculation """
         self.use_pyscf_grids = use_pyscf_grids
         """ Whether to generate PySCF grids when no explicit grids are supplied. """
+        self.grid_pruning_use_core_guess = False
+        """ Use a core-Hamiltonian density for XC grid pruning, independently
+        of a user-supplied SCF density guess. """
 
         self.isDF = True
         """ Use density fitting (DF) for two-electron Coulomb integrals by default. 
@@ -1178,9 +1181,18 @@ class DFT:
             print('Time taken '+str(round(duration1e, 2))+' seconds.\n', flush=True)
 
 
+        dmat_grid_pruning = None
+        if self.grid_pruning_use_core_guess and xc != 'HF' and grids is None:
+            dmat_grid_pruning = self.guessCoreH(
+                mol, basis, Hcore=H, S=S
+            )
+
         if dmat is None:
             if self.dmat_guess_method=='core':
-                dmat = self.guessCoreH(mol, basis, Hcore=H, S=S)
+                if dmat_grid_pruning is None:
+                    dmat = self.guessCoreH(mol, basis, Hcore=H, S=S)
+                else:
+                    dmat = dmat_grid_pruning.copy()
 
         if self.use_gpu:
             dmat_cp = cp.asarray(dmat, dtype=cp.float64)
@@ -1349,6 +1361,8 @@ class DFT:
                 # Evaluate ao_values to calculate rho
                 print('\nPruning generated grids by rho...\n\n', flush=True)
                 startGrids_prune_rho = timer()
+                if dmat_grid_pruning is None:
+                    dmat_grid_pruning = dmat
                 threshold_rho = 1e-11
                 ngrids_temp = grids.coords.shape[0]
                 ndeleted = 0
@@ -1361,7 +1375,12 @@ class DFT:
                     weights_block = grids.weights[offset : min(offset+blocksize_temp,ngrids_temp)]
                     coords_block = grids.coords[offset : min(offset+blocksize_temp,ngrids_temp)] 
                     ao_value_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block)  
-                    rho_block = contract('ij,mi,mj->m', dmat, ao_value_block, ao_value_block)
+                    rho_block = contract(
+                        'ij,mi,mj->m',
+                        dmat_grid_pruning,
+                        ao_value_block,
+                        ao_value_block,
+                    )
                     zero_indices = np.where(np.abs(rho_block*weights_block) < threshold_rho)[0]
                     ndeleted += len(zero_indices)
                     weightsNew_block = np.delete(weights_block, zero_indices)

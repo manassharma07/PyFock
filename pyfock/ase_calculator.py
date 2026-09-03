@@ -105,6 +105,10 @@ class PyFockCalculator(Calculator):
     ``force_mode="numerical"`` to explicitly request finite-difference
     forces; the ``force_step_size``/``force_step_unit``/``force_method``/
     ``force_use_fixed_grids`` parameters apply to the numerical path only.
+
+    The converged AO density matrix is checkpointed after each successful
+    calculation and used as the initial guess for the next compatible ASE
+    geometry. Pass ``reuse_density=False`` to disable this behavior.
     """
 
     implemented_properties = ["energy", "forces"]
@@ -120,6 +124,7 @@ class PyFockCalculator(Calculator):
         "force_step_unit": "bohr",
         "force_method": "central",
         "force_use_fixed_grids": True,
+        "reuse_density": True,
     }
     _cached_dft_attr_names = None
 
@@ -137,6 +142,7 @@ class PyFockCalculator(Calculator):
         force_step_unit="bohr",
         force_method="central",
         force_use_fixed_grids=True,
+        reuse_density=True,
         **kwargs,
     ):
         super().__init__()
@@ -165,6 +171,7 @@ class PyFockCalculator(Calculator):
         self.parameters["force_step_unit"] = force_step_unit
         self.parameters["force_method"] = force_method
         self.parameters["force_use_fixed_grids"] = force_use_fixed_grids
+        self.parameters["reuse_density"] = bool(reuse_density)
 
         self.directory = os.path.abspath(directory)
         self.pyfock_options = canonical_options
@@ -178,6 +185,8 @@ class PyFockCalculator(Calculator):
         self._last_dipole_eang = None
         self._last_step_dir = None
         self._last_step_token = None
+        self._last_density_path = None
+        self._last_density_compatibility_token = None
 
     @classmethod
     def _dft_attribute_names(cls):
@@ -225,6 +234,33 @@ class PyFockCalculator(Calculator):
         }
         encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
+
+    def _density_compatibility_token(self, atoms):
+        """Identify geometries whose AO density matrices are compatible."""
+        payload = {
+            "symbols": atoms.get_chemical_symbols(),
+            "pbc": [bool(x) for x in atoms.pbc],
+            "charge": self.parameters["charge"],
+            "basis": self.parameters["basis"],
+            "auxbasis": self.parameters["auxbasis"],
+            "options": self.pyfock_options,
+        }
+        encoded = json.dumps(payload, sort_keys=True).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _density_guess_path(self, atoms):
+        if not self.parameters.get("reuse_density", True):
+            return None
+        if self._last_density_path is None:
+            return None
+        if (
+            self._last_density_compatibility_token
+            != self._density_compatibility_token(atoms)
+        ):
+            return None
+        if not os.path.isfile(self._last_density_path):
+            return None
+        return self._last_density_path
 
     def _to_ev_forces(self, forces_au_bohr):
         factor = Data.au2eVFactor / Data.Bohr2AngsFactor
@@ -312,7 +348,15 @@ class PyFockCalculator(Calculator):
 
         return options
 
-    def _write_run_script(self, atoms, workdir, task_name, compute_forces=False, compute_dipole=False):
+    def _write_run_script(
+        self,
+        atoms,
+        workdir,
+        task_name,
+        compute_forces=False,
+        compute_dipole=False,
+        density_guess_path=None,
+    ):
         options = self._prepare_runtime_options()
         basis_name = self.parameters["basis"] or self._default_basis_name(atoms)
         auxbasis_name = self.parameters["auxbasis"] or "def2-universal-jfit"
@@ -375,8 +419,42 @@ else:
 dft_obj = DFT(mol, basis, auxbasis)
 {option_block}
 
+density_guess_path = {self._render_value(density_guess_path)}
+density_guess_used = False
+if density_guess_path is not None:
+    try:
+        density_guess = np.load(density_guess_path, allow_pickle=False)
+        expected_shape = (basis.bfs_nao, basis.bfs_nao)
+        if density_guess.shape != expected_shape:
+            print(
+                "WARNING: Previous density matrix has shape "
+                + str(density_guess.shape)
+                + "; expected "
+                + str(expected_shape)
+                + ". Using the configured initial guess instead."
+            )
+        elif not np.all(np.isfinite(density_guess)):
+            print(
+                "WARNING: Previous density matrix contains non-finite values. "
+                "Using the configured initial guess instead."
+            )
+        else:
+            dft_obj.dmat = np.asarray(density_guess, dtype=np.float64)
+            dft_obj.grid_pruning_use_core_guess = True
+            density_guess_used = True
+            print("Using converged density matrix from the previous ASE step.")
+    except (EOFError, OSError, ValueError) as exc:
+        print(
+            "WARNING: Could not load the previous density matrix: "
+            + str(exc)
+            + ". Using the configured initial guess instead."
+        )
+
 energy_au, dmat = dft_obj.scf()
 gap_au, gap_ev = compute_homo_lumo_gap(dft_obj)
+
+if bool(getattr(dft_obj, "converged", False)):
+    np.save("converged_dmat.npy", np.asarray(dmat, dtype=np.float64))
 
 result = {{
     "converged": bool(getattr(dft_obj, "converged", False)),
@@ -390,6 +468,8 @@ result = {{
     "nuclear_repulsion_energy_au": None if getattr(dft_obj, "Nuclear_repulsion_energy", None) is None else float(dft_obj.Nuclear_repulsion_energy),
     "homo_lumo_gap_au": gap_au,
     "homo_lumo_gap_ev": gap_ev,
+    "density_guess_used": density_guess_used,
+    "density_guess_source": density_guess_path if density_guess_used else None,
 }}
 
 if {self._render_value(compute_forces)}:
@@ -478,6 +558,8 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
             "nuclear_repulsion_energy_au": summary.get("nuclear_repulsion_energy_au"),
             "homo_lumo_gap_au": summary.get("homo_lumo_gap_au"),
             "homo_lumo_gap_ev": summary.get("homo_lumo_gap_ev"),
+            "density_guess_used": bool(summary.get("density_guess_used", False)),
+            "density_guess_source": summary.get("density_guess_source"),
             "dispersion_enabled": bool(self.parameters.get("dispersion", False)),
         }
         self._last_homo_lumo_gap_au = summary.get("homo_lumo_gap_au")
@@ -495,14 +577,22 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
         self._write_xyz(self.atoms, xyz_path)
 
         compute_forces = "forces" in properties
+        density_guess_path = self._density_guess_path(self.atoms)
         script_path, output_path = self._write_run_script(
             self.atoms,
             step_dir,
             task_name="singlepoint",
             compute_forces=compute_forces,
             compute_dipole=False,
+            density_guess_path=density_guess_path,
         )
         summary = self._run_pyfock_script(step_dir, script_path, output_path)
+        density_checkpoint_path = os.path.join(step_dir, "converged_dmat.npy")
+        if summary.get("converged", False) and os.path.isfile(density_checkpoint_path):
+            self._last_density_path = density_checkpoint_path
+            self._last_density_compatibility_token = self._density_compatibility_token(
+                self.atoms
+            )
         self._populate_common_results(summary)
 
         if compute_forces:
