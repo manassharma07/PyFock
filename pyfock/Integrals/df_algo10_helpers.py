@@ -1,5 +1,5 @@
 """
-Density-fitting Coulomb term, algorithm 10 (``DF_algo=10``, the PyFock default).
+Density-fitting Coulomb term, algorithm 10 (``DF_algo=10``; the former default, still used on the GPU).
 
 This module collects every routine that the default density-fitted Coulomb
 evaluation needs, in the order in which they are used during an SCF run:

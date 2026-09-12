@@ -279,6 +279,25 @@ energyCrysX, dmat = dftObj.scf()
 print(f"SCF Energy: {energyCrysX} Ha")
 ```
 
+### Density-Fitting Coulomb Algorithms and Memory Budget
+
+The Coulomb term is evaluated with density fitting and Schwarz screening. Two CPU
+algorithms are available through `DFT.DF_algo`:
+
+- `11` (default): shell-blocked Rys evaluation with block-sparse storage. It honours a
+  memory budget for the stored integrals:
+- `10`: the previous default, per-function Rys evaluation with sparse triangular storage
+  of the screened three-center integrals. It gives the same energies (identical to
+  ~1e-10 Hartree) but its three-center integral phase is 4-8x slower; GPU runs use it.
+
+```python
+dft_obj.max_memory_ints3c2e = 2.0   # GB; None (default) = store everything, 0 = recompute every SCF iteration
+```
+
+With a budget smaller than the significant integrals, the most expensive shell-pair
+blocks are kept in memory and the cheaper ones are re-evaluated in every SCF cycle.
+`DF_algo=11` is currently CPU-only; GPU runs automatically use `DF_algo=10`.
+
 ### Analytical Forces & Geometry Optimization
 
 After a converged DFT calculation, analytical nuclear gradients (and forces)

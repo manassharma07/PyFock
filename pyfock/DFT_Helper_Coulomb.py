@@ -523,6 +523,32 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
                 duration_strict_schwarz_nuc_mat = timer() - start_strict_schwarz_nuc_mat
                 print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', round(duration_strict_schwarz_nuc_mat, 2), flush=True)
             
+        elif DF_algo==11:
+            # Shell-blocked Rys evaluation with block-sparse storage (Integrals.df_algo11_helpers).
+            print('\n\nPerforming Schwarz screening (shell-blocked DF_algo=11)...')
+            print('Threshold ', threshold_schwarz)
+            startSchwarz = timer()
+            if use_gpu:
+                raise NotImplementedError('DF_algo=11 is CPU-only for now.')
+            start_4c2e_diag = timer()
+            ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
+            sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
+            sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
+            print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(timer() - start_4c2e_diag, 2))
+            durationSchwarz = timer() - startSchwarz
+            print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
+            start_plan = timer()
+            ints3c2e = Integrals.df_algo11_helpers.build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e,
+                                                              threshold_schwarz, strict_schwarz, sao=dftObj.sao,
+                                                              max_memory_gb=dftObj.max_memory_ints3c2e)
+            print(ints3c2e.summary(), flush=True)
+            print('Time taken for the shell-blocked three-center integrals: ', round(timer() - start_plan, 2), flush=True)
+            if strict_schwarz:
+                start_strict_schwarz_nuc_mat = timer()
+                V = Integrals.nuc_mat_symm(basis, mol, None, sqrt_ints4c2e_diag)
+                H = T + V
+                print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', round(timer() - start_strict_schwarz_nuc_mat, 2), flush=True)
+
         else:
             ints3c2e = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True, threshold_schwarz=threshold_schwarz)
             
@@ -609,6 +635,9 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         indices_dmat_tri_2 = np.tril_indices_from(dmat, k=-1) # lower tri, without the diagonal
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
         print('Three Center Two electron ERI size in GB ',ints3c2e.nbytes/1e9, flush=True)
+    if DF_algo==11:
+        print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
+        print('Three Center Two electron ERI (cached shell-pair blocks) size in GB ', ints3c2e.memory_gb, flush=True)
 
 
 
@@ -777,6 +806,25 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
                 J = np.zeros((basis.bfs_nao, basis.bfs_nao))
                 J[indices_dmat_tri] = J_tri
                 J += J.T - np.diag(np.diag(J))
+        durationDF_Jtri += timer() - startDF_Jtri
+    if DF_algo==11:
+        # Shell-blocked plan (Integrals.df_algo11_helpers): cached blocks are contracted from
+        # memory, uncached shell pairs are re-evaluated on the fly in both passes.
+        plan = ints3c2e
+        startDF_gamma = timer()
+        gamma_alpha = Integrals.df_algo11_helpers.gamma_from_plan(plan, dmat)
+        durationDF_gamma += timer() - startDF_gamma
+        startDF_coeff = timer()
+        with threadpool_limits(limits=ncores, user_api='blas'):
+            if not cholesky:
+                df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, overwrite_a=False, overwrite_b=False)
+            else:
+                df_coeff = scipy.linalg.cho_solve(cho_decomp_ints2c2e, gamma_alpha, overwrite_b=False, check_finite=True)
+        durationDF_coeff += timer() - startDF_coeff
+        with threadpool_limits(limits=ncores, user_api='blas'):
+            Ecoul_temp = np.dot(df_coeff, gamma_alpha) # (rho^~|rho^~) Coulomb energy due to interactions b/w auxiliary density
+        startDF_Jtri = timer()
+        J = Integrals.df_algo11_helpers.J_from_plan(plan, df_coeff)
         durationDF_Jtri += timer() - startDF_Jtri
     durationDF = durationDF + timer() - startDF
 

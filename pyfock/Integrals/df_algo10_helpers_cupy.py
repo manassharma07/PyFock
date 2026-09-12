@@ -1,6 +1,6 @@
 """
 GPU (CuPy / Numba-CUDA) counterpart of :mod:`pyfock.Integrals.df_algo10_helpers`
-for the default density-fitted Coulomb algorithm (``DF_algo=10``).
+for the density-fitted Coulomb algorithm 10 (``DF_algo=10``, the GPU default).
 
 The four steps mirror the CPU module and share its sparse storage layout and
 screening rules, so ``offsets`` computed with the CPU

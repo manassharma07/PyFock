@@ -124,7 +124,13 @@ class DFT:
         Whether to use Rys quadrature for evaluating electron repulsion integrals.
 
     DF_algo : int
-        Algorithm selector for DF (reserved for developer use).
+        Algorithm selector for DF (reserved for developer use). 11 (default) is the shell-blocked
+        CPU algorithm that honours ``max_memory_ints3c2e``; 10 is the previous default and is used
+        automatically on the GPU.
+
+    max_memory_ints3c2e : float or None
+        Memory budget (GB) for the stored three-center integrals with DF_algo=11
+        (None = store everything significant, 0 = recompute every SCF iteration).
 
     XC_algo : int
         Algorithm selector for XC evaluation (2 for CPU, 3 for GPU).
@@ -264,11 +270,19 @@ class DFT:
         """ Use rys quadrature for the evaluation of two electron integrals (with and without DF)
         In case of DF, only rys quadrature based evaluation of ERIs is supported."""
 
-        self.DF_algo = 10
-        """ This is only for developers. Users should not change it. 
-        In this algo, the significant 3c2e integrals are calculated and stored in memory throughout SCF.
-        Other alternatives are 1 and 2, which are only for reference and. take up a lot of memory as the complete
-        3c2e tensor is stored in memory."""
+        self.DF_algo = 11
+        """ This is only for developers. Users should not change it.
+        DF_algo=11 (default, CPU): the significant 3c2e integrals are evaluated shell-blocked, stored
+        block-sparse in memory throughout the SCF (or partially/never, see max_memory_ints3c2e).
+        DF_algo=10: the previous default (per-function evaluation, sparse triangular storage); it is
+        still used automatically on the GPU. Alternatives 1 and 2 are only for reference and take up
+        a lot of memory as the complete 3c2e tensor is stored in memory."""
+
+        self.max_memory_ints3c2e = None
+        """ Memory budget in GB for the screened three-center integrals when DF_algo=11.
+        None (default): keep every significant shell-pair block in memory. A smaller budget keeps the
+        most expensive blocks and recomputes the remaining ones in every SCF iteration; 0 recomputes
+        everything (direct DF-J). Ignored by the other DF algorithms."""
 
         self.blocksize = blocksize
         """ Block size for the evaulation of XC term on grids. For CPUs a value of ~5000 is recommended. For GPUs, a value >20480 is recommended. """
@@ -934,6 +948,9 @@ class DFT:
         auxbasis = self.auxbasis
         rys = self.rys
         DF_algo = self.DF_algo
+        if DF_algo == 11 and self.use_gpu:
+            print('Note: the shell-blocked DF_algo=11 is CPU-only for now; using DF_algo=10 on the GPU.', flush=True)
+            DF_algo = 10
         blocksize = self.blocksize
         XC_algo = self.XC_algo
         debug = self.debug
@@ -1064,11 +1081,11 @@ class DFT:
         isSchwarz = True
         
         if strict_schwarz:
-            if not (DF_algo==6 or DF_algo==10):
+            if not (DF_algo in (6, 10, 11)):
                 print('Warning: The stricter variation of Schwarz screening is only compatible with DF algo #6 or #10 so turning it off.')
                 strict_schwarz = False
         if cholesky:
-            if not (DF_algo==6 or DF_algo==10):
+            if not (DF_algo in (6, 10, 11)):
                 print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with DF algo #6 or #10 so turning it off.')
                 cholesky = False
         if cholesky:
@@ -1111,7 +1128,8 @@ class DFT:
         # DF_algo = 7 (no longer works or maintained) # The significant indices (ij|P) are stored even more efficiently by using shell indices instead of bf indices.
         # DF_algo = 8 (no longer works or maintained) # Similar to 6, except that here the significant indices are not stored resulting in 50% memory savings. The drawback is that it only works in serial which is useful for Google colab or Kaggle perhaps.
         # DF_algo = 9 (no longer works or maintained) # 
-        # DF_algo = 10 # Best and default: Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
+        # DF_algo = 11 # Shell-blocked Rys evaluation with block-sparse storage and a memory budget (max_memory_ints3c2e); CPU only for now.
+        # DF_algo = 10 # Previous default (GPU default): Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
 
         V_ecp = None
         if not strict_schwarz: # If a stricter variant of Schwarz screening is not requested
@@ -1742,7 +1760,7 @@ class DFT:
                     Ecoul = contract('ij,ji->', dmat, J)*0.5
                     if xc=='HF':
                         Eexchange = -contract('ij,ji->', dmat, K)*0.25
-            if isDF and (DF_algo==6 or DF_algo==10):
+            if isDF and (DF_algo in (6, 10, 11)):
                 Ecoul = Ecoul*2 - 0.5*Ecoul_temp # This is the correct formula for Coulomb energy with DF
             
             if xc!='HF':
@@ -1928,7 +1946,7 @@ class DFT:
         print('Preprocessing                          ', round(durationXCpreprocessing + durationAO_values + durationgrids_prune_rho + durationSchwarz, 2), flush=True)
         if isDF:
             print('Density Fitting                        ', round(durationDF, 2), flush=True)
-            if DF_algo==6 or DF_algo==10:
+            if DF_algo in (6, 10, 11):
                 print('    DF (gamma)                         ', round(durationDF_gamma, 2), flush=True)
                 print('    DF (coeff)                         ', round(durationDF_coeff, 2), flush=True)
                 print('    DF (Jtri)                          ', round(durationDF_Jtri, 2), flush=True)
