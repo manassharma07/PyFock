@@ -121,7 +121,7 @@ def rys_3c2e_tri(basis, auxbasis):
 
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy")
 def rys_3c2e_tri_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, nbf, naux):
-    # This function is a memory efficient version of rys_3c2e_symm_internal.
+    # This function is a memory efficient version of rys_3c2e_symm_old_internal (the legacy per-function kernel).
     # This does not support slicing and only returns a 2D array instead of a 3D array.
     # This function calculates the three-centered two electron integrals for density fitting
     # The basis object holds the information of basis functions like: exponents, coeffs, etc.

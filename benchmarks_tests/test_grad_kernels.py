@@ -56,7 +56,7 @@ def build(coords_ang):
 
 def e3c(coords_ang):
     m, b, ab = build(coords_ang)
-    ints = Integrals.rys_3c2e_symm_test(b, ab, schwarz=False)
+    ints = Integrals.rys_3c2e_symm(b, ab, schwarz=False)
     return np.einsum('ijp,ij,p->', ints, D, c)
 
 

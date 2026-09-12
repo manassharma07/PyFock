@@ -3,7 +3,7 @@ import numba
 from numba import njit, prange
 
 from .rys_helpers import Roots, Recur_3c2e_new, LOOKUP_TABLE_COMB
-from .rys_3c2e_symm_test import _pack_basis
+from .rys_3c2e_symm import _pack_basis
 
 
 def rys_nuc_grad_contract(basis, mol, dmat, schwarz=True, threshold=1e-13, ncores=None):

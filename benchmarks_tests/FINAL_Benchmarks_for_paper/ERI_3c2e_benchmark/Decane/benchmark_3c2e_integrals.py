@@ -80,7 +80,7 @@ print('NAO (aux): ', auxbasis.bfs_nao)
 start=timer()
 #NOTE: The matrices are calculated in CAO basis and not the SAO basis
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_rys = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=False)
+ERI_rys = Integrals.rys_3c2e_symm_old(basis, auxbasis, schwarz=False)
 print(ERI_rys[0:7,0:7,0]) 
 duration = timer() - start
 # print(abs(ERI_conv - ERI_rys).max())
@@ -94,7 +94,7 @@ print('NAO (aux): ', auxbasis.bfs_nao)
 start=timer()
 #NOTE: The matrices are calculated in CAO basis and not the SAO basis
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_rys_schwarz = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True)
+ERI_rys_schwarz = Integrals.rys_3c2e_symm_old(basis, auxbasis, schwarz=True)
 print(ERI_rys_schwarz[0:7,0:7,0]) 
 duration = timer() - start
 # print(abs(ERI_conv - ERI_rys_schwarz).max())
@@ -153,7 +153,7 @@ print('NAO (aux): ', auxbasis.bfs_nao)
 start=timer()
 #NOTE: The matrices are calculated in CAO basis and not the SAO basis
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_rys_test = Integrals.rys_3c2e_symm_test(basis, auxbasis, schwarz=True)
+ERI_rys_test = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True)
 print(ERI_rys[0:7,0:7,0]) 
 duration = timer() - start
 print(abs(ERI_rys - ERI_rys_test).max())

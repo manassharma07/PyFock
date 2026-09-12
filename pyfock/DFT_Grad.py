@@ -251,7 +251,7 @@ class DFT_Grad:
         with threadpool_limits(limits=ncores, user_api='blas'):
             for c0 in range(0, naux, chunk_naux):
                 c1 = min(c0 + chunk_naux, naux)
-                ints3c2e_chunk = Integrals.rys_3c2e_symm_test(
+                ints3c2e_chunk = Integrals.rys_3c2e_symm(
                     basis, auxbasis, slice=[0, nbf, 0, nbf, c0, c1],
                     schwarz=True,
                     threshold_schwarz=min(dft_obj.threshold_schwarz, 1e-9),

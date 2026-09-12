@@ -3,7 +3,7 @@ import numba
 from numba import njit, prange
 
 from .rys_helpers import Roots, Recur_3c2e_new, LOOKUP_TABLE_COMB
-from .rys_3c2e_symm_test import _pack_basis
+from .rys_3c2e_symm import _pack_basis
 
 
 def rys_3c2e_grad_contract(
@@ -24,7 +24,7 @@ def rys_3c2e_grad_contract(
 
     without ever storing the full derivative tensor d(ij|P)/dR. The derivative
     integrals are evaluated shell-blocked with Rys quadrature (following
-    :func:`rys_3c2e_symm_test`) and contracted on the fly with the density
+    :func:`rys_3c2e_symm`) and contracted on the fly with the density
     matrix ``dmat`` and the density-fitting coefficients ``df_coeff``.
 
     Only the bra (A) and auxiliary (C) derivatives are evaluated explicitly;

@@ -97,32 +97,32 @@ auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=auxbasisName)})
 # Let's calculate the complete 3c2e ERI array using the Rys algorithm
 print('\n\n\n')
 print('Integrals')
-print('3c2e ERI array (Rys)\n')
+print('3c2e ERI array (Rys, legacy per-function algorithm)\n')
 print('NAO: ', basis.bfs_nao)
 print('NAO (aux): ', auxbasis.bfs_nao)
 start=timer()
 #NOTE: The matrices are calculated in CAO basis and not the SAO basis
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_rys = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=False)
+ERI_rys = Integrals.rys_3c2e_symm_old(basis, auxbasis, schwarz=False)
 print(ERI_rys[0:7,0:7,0]) 
 duration = timer() - start
 # print(abs(ERI_conv - ERI_rys).max())
-print('Duration for 3c2e ERI using PyFock Rys algorithm: ',duration)
+print('Duration for 3c2e ERI using PyFock Rys (legacy) algorithm: ',duration)
 
 print('\n\n\n')
 print('Integrals')
-print('3c2e ERI array (Rys with Schwarz screening)\n')
+print('3c2e ERI array (Rys legacy with Schwarz screening)\n')
 print('NAO: ', basis.bfs_nao)
 print('NAO (aux): ', auxbasis.bfs_nao)
 start=timer()
 #NOTE: The matrices are calculated in CAO basis and not the SAO basis
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_rys_schwarz = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True)
+ERI_rys_schwarz = Integrals.rys_3c2e_symm_old(basis, auxbasis, schwarz=True)
 print(ERI_rys_schwarz[0:7,0:7,0]) 
 duration = timer() - start
 # print(abs(ERI_conv - ERI_rys_schwarz).max())
 print(abs(ERI_rys - ERI_rys_schwarz).max())
-print('Duration for 3c2e ERI using PyFock Rys algorithm with Schwarz screening: ',duration)
+print('Duration for 3c2e ERI using PyFock Rys (legacy) algorithm with Schwarz screening: ',duration)
 
 print('\n\n\n')
 print('Integrals')
@@ -170,17 +170,17 @@ if bench_GPU:
 
 print('\n\n\n')
 print('Integrals')
-print('3c2e ERI array (Rys test)\n')
+print('3c2e ERI array (Rys shell-blocked, default rys_3c2e_symm)\n')
 print('NAO: ', basis.bfs_nao)
 print('NAO (aux): ', auxbasis.bfs_nao)
 start=timer()
 #NOTE: The matrices are calculated in CAO basis and not the SAO basis
 #You should refer to the example that shows the transformation between the two if you need matrices in SAO basis.
-ERI_rys_test = Integrals.rys_3c2e_symm_test(basis, auxbasis, schwarz=True)
-print(ERI_rys[0:7,0:7,0]) 
+ERI_rys_test = Integrals.rys_3c2e_symm(basis, auxbasis, schwarz=True)
+print(ERI_rys_test[0:7,0:7,0]) 
 duration = timer() - start
 print(abs(ERI_rys - ERI_rys_test).max())
-print('Duration for 3c2e ERI using PyFock Rys test algorithm: ',duration)
+print('Duration for 3c2e ERI using PyFock Rys shell-blocked (default) algorithm: ',duration)
 
 #Comparison with PySCF
 from pyscf import gto, dft, df

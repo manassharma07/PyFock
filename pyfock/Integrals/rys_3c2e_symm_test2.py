@@ -164,9 +164,9 @@ def rys_3c2e_symm_test2(
         + int(max(np.array(auxbasis.shells, dtype=np.int32)) - 1)
     )
     if max_l_total // 2 + 1 > 10:
-        from .rys_3c2e_symm import rys_3c2e_symm
+        from .rys_3c2e_symm_old import rys_3c2e_symm_old
 
-        return rys_3c2e_symm(
+        return rys_3c2e_symm_old(
             basis,
             auxbasis,
             slice=slice,

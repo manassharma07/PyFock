@@ -1,28 +1,65 @@
 import numpy as np
 from numba import njit, prange
 
-from .integral_helpers import innerLoop4c2e, Fboys
-from .rys_helpers import coulomb_rys
-from .rys_helpers import coulomb_rys_3c2e
-from .rys_helpers import coulomb_rys_3c2e_new
-from .schwarz_helpers import eri_4c2e_diag
-from .rys_2c2e_symm import rys_2c2e_symm
-from .rys_2c2e_diag import rys_2c2e_diag
+from .rys_helpers import Roots, Recur_3c2e_new, Shift_3c2e
 
 
-def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, threshold_schwarz=1e-9):
+def _pack_basis(basis):
+    nbf = basis.bfs_nao
+    maxnprim = max(basis.bfs_nprim)
+
+    coeffs = np.zeros((nbf, maxnprim), dtype=np.float64)
+    expnts = np.zeros((nbf, maxnprim), dtype=np.float64)
+    prim_norms = np.zeros((nbf, maxnprim), dtype=np.float64)
+
+    for ibf in range(nbf):
+        for iprim in range(basis.bfs_nprim[ibf]):
+            coeffs[ibf, iprim] = basis.bfs_coeffs[ibf][iprim]
+            expnts[ibf, iprim] = basis.bfs_expnts[ibf][iprim]
+            prim_norms[ibf, iprim] = basis.bfs_prim_norms[ibf][iprim]
+
+    shell_l = np.array(
+        [basis.bfs_lm[bf0] for bf0 in basis.shell_bfs_offset],
+        dtype=np.int32,
+    )
+
+    return (
+        np.array(basis.bfs_coords, dtype=np.float64),
+        np.array(basis.bfs_contr_prim_norms, dtype=np.float64),
+        np.array(basis.bfs_lmn, dtype=np.int32),
+        np.array(basis.bfs_nprim, dtype=np.int32),
+        coeffs,
+        prim_norms,
+        expnts,
+        shell_l,
+        np.array(basis.shell_bfs_offset, dtype=np.int32),
+        np.array(basis.bfs_nbfshell, dtype=np.int32),
+    )
+
+
+def rys_3c2e_symm(
+    basis,
+    auxbasis,
+    slice=None,
+    schwarz=False,
+    threshold_schwarz=1e-9,
+):
     """
     Compute three-center two-electron (3c2e) electron repulsion integrals using
-    the Rys quadrature method with symmetry considerations.
+    shell-blocked Rys quadrature with symmetry considerations.
 
     This function evaluates integrals of the form (A B | C), where A and B are
     basis functions from a primary basis set and C is from an auxiliary basis set.
     Symmetry in the first two indices is exploited ((A B | C) = (B A | C)),
-    so only the upper-triangular part of the (A,B) block is computed and the (B A | C)
-    integrals are formed by symmetry.
-    The implementation uses Numba-accelerated backends with symmetry-aware
-    optimizations and optional Schwarz screening to skip negligible contributions.
-    Symmetry is utilized to only compute N_{bf}*(N_{bf}+1)/2*N_{auxbf}
+    so only shell pairs with A >= B are computed and the (B A | C) block is
+    filled by symmetry.
+
+    Shell triplets are evaluated instead of individual basis-function triples:
+    for each shell pair the primitive-pair data is built once, and each Rys
+    recurrence is reused over the whole Cartesian shell block. This is the
+    default 3c2e implementation. The legacy per-basis-function algorithm is
+    kept as :func:`rys_3c2e_symm_old` and is used automatically as a fallback
+    when more than 10 Rys roots would be required (very high angular momentum).
 
     Parameters
     ----------
@@ -33,42 +70,37 @@ def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, threshold_schwarz=
         - bfs_expnts : Gaussian exponents.
         - bfs_prim_norms : Primitive normalization constants.
         - bfs_contr_prim_norms : Contraction normalization factors.
-        - bfs_lmn : Angular momentum quantum numbers (ℓ, m, n).
+        - bfs_lmn : Angular momentum quantum numbers (l, m, n).
         - bfs_nprim : Number of primitives per basis function.
         - bfs_nao : Total number of atomic orbitals.
+        - shells, shell_bfs_offset, bfs_nbfshell : shell structure.
 
     auxbasis : object
-        Auxiliary basis set object with the same attributes as `basis`, 
-        but typically used for resolution-of-the-identity (RI) expansions.
+        Auxiliary basis set object with the same attributes as `basis`,
+        typically used for resolution-of-the-identity (RI) expansions.
 
     slice : list of int, optional
         A 6-element list specifying a subset of integrals to compute:
         [start_A, end_A, start_B, end_B, start_C, end_C]
         If None (default), computes all N_{bf}*N_{bf}*N_{auxbf} integrals.
+        Slice boundaries do not need to coincide with shell boundaries.
 
     schwarz : bool, optional
-        If True, applies Schwarz screening to skip calculations where the 
-        product of integral bounds is below `threshold_schwarz`.
+        If True, applies Schwarz screening at the shell-triplet level: a shell
+        triplet (AB|C) is skipped when the product of the largest sqrt((ab|ab))
+        in the shell pair and the largest sqrt((c|c)) in the auxiliary shell is
+        below `threshold_schwarz`.
 
     threshold_schwarz : float, optional
         The threshold for Schwarz screening (default is 1e-9).
 
     Returns
     -------
-    ints3c2e : ndarray of shape 
-        (Nbf, Nbf, Nauxbf) or 
-        (end_A - start_A, end_B - start_B, end_C - start_C) 
+    ints3c2e : ndarray of shape
+        (Nbf, Nbf, Nauxbf) or
+        (end_A - start_A, end_B - start_B, end_C - start_C)
         if slice is given.
         The computed 3-center 2-electron integrals.
-
-    Notes
-    -----
-    - Uses preallocated NumPy arrays to store primitive data for efficient Numba processing.
-    - Handles irregular contraction patterns by padding primitive arrays to the 
-      size of the largest contraction.
-    - If Schwarz screening is enabled, precomputes diagonal two-electron integrals 
-      and uses their square roots for screening.
-    - Symmetry relations are exploited to avoid redundant calculations.
 
     Examples
     --------
@@ -76,275 +108,503 @@ def rys_3c2e_symm(basis, auxbasis, slice=None, schwarz=False, threshold_schwarz=
     >>> ints_block = rys_3c2e_symm(basis, auxbasis, slice=[0, 5, 0, 5, 0, 10])
     >>> ints_screened = rys_3c2e_symm(basis, auxbasis, schwarz=True, threshold_schwarz=1e-10)
     """
-    # Here the lists are converted to numpy arrays for better use with Numba.
-    # Once these conversions are done we pass these to a Numba decorated
-    # function that uses prange, etc. to calculate the 3c2e integrals efficiently.
-    # This function calculates the 3c2e electron-electron ERIs for a given basis object and auxbasis object.
-    # The basis object holds the information of basis functions like: exponents, coeffs, etc.
-    
-
-    # It is possible to only calculate a slice (block/subset) of the complete set of integrals.
-    # slice is a 6 element list whose first and second elements give the range of the A functions to be calculated.
-    # and so on.
-    # slice = [indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC]
-
-    #We convert the required properties to numpy arrays as this is what Numba likes.
-    bfs_coords = np.array([basis.bfs_coords])
-    bfs_contr_prim_norms = np.array([basis.bfs_contr_prim_norms])
-    bfs_lmn = np.array([basis.bfs_lmn])
-    bfs_nprim = np.array([basis.bfs_nprim])
-
-    #We convert the required properties to numpy arrays as this is what Numba likes.
-    aux_bfs_coords = np.array([auxbasis.bfs_coords])
-    aux_bfs_contr_prim_norms = np.array([auxbasis.bfs_contr_prim_norms])
-    aux_bfs_lmn = np.array([auxbasis.bfs_lmn])
-    aux_bfs_nprim = np.array([auxbasis.bfs_nprim])
-        
-
-    #The remaining properties like bfs_coeffs are a list of lists of unequal sizes.
-    #Numba won't be able to work with these efficiently.
-    #So, we convert them to a numpy 2d array by applying a trick,
-    #that the second dimension is that of the largest list. So that
-    #it can accomadate all the lists.
-    maxnprim = max(basis.bfs_nprim)
-    bfs_coeffs = np.zeros([basis.bfs_nao, maxnprim])
-    bfs_expnts = np.zeros([basis.bfs_nao, maxnprim])
-    bfs_prim_norms = np.zeros([basis.bfs_nao, maxnprim])
-    for i in range(basis.bfs_nao):
-        for j in range(basis.bfs_nprim[i]):
-            bfs_coeffs[i,j] = basis.bfs_coeffs[i][j]
-            bfs_expnts[i,j] = basis.bfs_expnts[i][j]
-            bfs_prim_norms[i,j] = basis.bfs_prim_norms[i][j]
-
-    maxnprimaux = max(auxbasis.bfs_nprim)
-    aux_bfs_coeffs = np.zeros([auxbasis.bfs_nao, maxnprimaux])
-    aux_bfs_expnts = np.zeros([auxbasis.bfs_nao, maxnprimaux])
-    aux_bfs_prim_norms = np.zeros([auxbasis.bfs_nao, maxnprimaux])
-    for i in range(auxbasis.bfs_nao):
-        for j in range(auxbasis.bfs_nprim[i]):
-            aux_bfs_coeffs[i,j] = auxbasis.bfs_coeffs[i][j]
-            aux_bfs_expnts[i,j] = auxbasis.bfs_expnts[i][j]
-            aux_bfs_prim_norms[i,j] = auxbasis.bfs_prim_norms[i][j]
-            
-
-
-        
     if slice is None:
         slice = [0, basis.bfs_nao, 0, basis.bfs_nao, 0, auxbasis.bfs_nao]
-        
-    #Limits for the calculation of 4c2e integrals
-    indx_startA = int(slice[0])
-    indx_endA = int(slice[1])
-    indx_startB = int(slice[2])
-    indx_endB = int(slice[3])
-    indx_startC = int(slice[4])
-    indx_endC = int(slice[5])
 
+    indx_start_a = int(slice[0])
+    indx_end_a = int(slice[1])
+    indx_start_b = int(slice[2])
+    indx_end_b = int(slice[3])
+    indx_start_c = int(slice[4])
+    indx_end_c = int(slice[5])
+
+    max_l_total = (
+        2 * int(max(np.array(basis.shells, dtype=np.int32)) - 1)
+        + int(max(np.array(auxbasis.shells, dtype=np.int32)) - 1)
+    )
+    if max_l_total // 2 + 1 > 10:
+        from .rys_3c2e_symm_old import rys_3c2e_symm_old
+
+        return rys_3c2e_symm_old(
+            basis,
+            auxbasis,
+            slice=slice,
+            schwarz=schwarz,
+            threshold_schwarz=threshold_schwarz,
+        )
+
+    (
+        bfs_coords,
+        bfs_contr_prim_norms,
+        bfs_lmn,
+        bfs_nprim,
+        bfs_coeffs,
+        bfs_prim_norms,
+        bfs_expnts,
+        shell_l,
+        shell_bfs_offset,
+        bfs_nbfshell,
+    ) = _pack_basis(basis)
+
+    (
+        aux_bfs_coords,
+        aux_bfs_contr_prim_norms,
+        aux_bfs_lmn,
+        aux_bfs_nprim,
+        aux_bfs_coeffs,
+        aux_bfs_prim_norms,
+        aux_bfs_expnts,
+        aux_shell_l,
+        aux_shell_bfs_offset,
+        aux_bfs_nbfshell,
+    ) = _pack_basis(auxbasis)
+
+    nshells = len(basis.shells)
+    nshells_aux = len(auxbasis.shells)
+
+    shell_pair_bound = np.ones((1, 1), dtype=np.float64)
+    aux_shell_bound = np.ones(1, dtype=np.float64)
     if schwarz:
-        ints4c2e_diag = eri_4c2e_diag(basis)
-        ints2c2e_diag = rys_2c2e_diag(auxbasis)
-        sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-        sqrt_diag_ints2c2e = np.sqrt(np.abs(ints2c2e_diag))
-        print('Prelims calc done for Schwarz screening!')
-    else:
-        #Create dummy array
-        sqrt_ints4c2e_diag = np.zeros((1,1), dtype=np.float64)
-        sqrt_diag_ints2c2e = np.zeros((1), dtype=np.float64)
+        from .rys_2c2e_diag import rys_2c2e_diag
+        from .schwarz_helpers import eri_4c2e_diag
 
-    ints3c2e = rys_3c2e_symm_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_lmn[0], bfs_nprim[0], bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords[0], aux_bfs_contr_prim_norms[0], aux_bfs_lmn[0], aux_bfs_nprim[0], aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts,indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, schwarz, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz)
-    return ints3c2e
+        sqrt_ints4c2e_diag = np.sqrt(np.abs(eri_4c2e_diag(basis)))
+        sqrt_diag_ints2c2e = np.sqrt(np.abs(rys_2c2e_diag(auxbasis)))
+
+        shell_pair_bound = np.zeros((nshells, nshells), dtype=np.float64)
+        for ish in range(nshells):
+            ia0 = shell_bfs_offset[ish]
+            nia = bfs_nbfshell[ish]
+            for jsh in range(ish + 1):
+                ib0 = shell_bfs_offset[jsh]
+                nib = bfs_nbfshell[jsh]
+                bound = 0.0
+                for ia in range(ia0, ia0 + nia):
+                    for ib in range(ib0, ib0 + nib):
+                        if sqrt_ints4c2e_diag[ia, ib] > bound:
+                            bound = sqrt_ints4c2e_diag[ia, ib]
+                shell_pair_bound[ish, jsh] = bound
+                shell_pair_bound[jsh, ish] = bound
+
+        aux_shell_bound = np.zeros(nshells_aux, dtype=np.float64)
+        for ksh in range(nshells_aux):
+            ic0 = aux_shell_bfs_offset[ksh]
+            nic = aux_bfs_nbfshell[ksh]
+            bound = 0.0
+            for ic in range(ic0, ic0 + nic):
+                if sqrt_diag_ints2c2e[ic] > bound:
+                    bound = sqrt_diag_ints2c2e[ic]
+            aux_shell_bound[ksh] = bound
+
+    return rys_3c2e_symm_internal(
+        basis.bfs_nao,
+        auxbasis.bfs_nao,
+        nshells,
+        nshells_aux,
+        bfs_coords,
+        bfs_contr_prim_norms,
+        bfs_lmn,
+        bfs_nprim,
+        bfs_coeffs,
+        bfs_prim_norms,
+        bfs_expnts,
+        shell_l,
+        shell_bfs_offset,
+        bfs_nbfshell,
+        aux_bfs_coords,
+        aux_bfs_contr_prim_norms,
+        aux_bfs_lmn,
+        aux_bfs_nprim,
+        aux_bfs_coeffs,
+        aux_bfs_prim_norms,
+        aux_bfs_expnts,
+        aux_shell_l,
+        aux_shell_bfs_offset,
+        aux_bfs_nbfshell,
+        indx_start_a,
+        indx_end_a,
+        indx_start_b,
+        indx_end_b,
+        indx_start_c,
+        indx_end_c,
+        schwarz,
+        shell_pair_bound,
+        aux_shell_bound,
+        threshold_schwarz,
+    )
+
+
+@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline="always")
+def _shell_intersects(start, count, lo, hi):
+    return start < hi and start + count > lo
+
+
+@njit(cache=True, fastmath=True, nogil=True, error_model="numpy", inline="always")
+def _build_shift_tables(
+    shift_x,
+    shift_y,
+    shift_z,
+    nbf_a,
+    nbf_b,
+    nbf_c,
+    bf_a_start,
+    bf_b_start,
+    bf_c_start,
+    bfs_lmn,
+    aux_bfs_lmn,
+    gx,
+    gy,
+    gz,
+    xij0,
+    xij1,
+    xij2,
+):
+    for ia in range(nbf_a):
+        ibf_a = bf_a_start + ia
+        ax = bfs_lmn[ibf_a, 0]
+        ay = bfs_lmn[ibf_a, 1]
+        az = bfs_lmn[ibf_a, 2]
+        for ib in range(nbf_b):
+            ibf_b = bf_b_start + ib
+            bx = bfs_lmn[ibf_b, 0]
+            by = bfs_lmn[ibf_b, 1]
+            bz = bfs_lmn[ibf_b, 2]
+            iab = ia * nbf_b + ib
+            for ic in range(nbf_c):
+                ibf_c = bf_c_start + ic
+                cx = aux_bfs_lmn[ibf_c, 0]
+                cy = aux_bfs_lmn[ibf_c, 1]
+                cz = aux_bfs_lmn[ibf_c, 2]
+                shift_x[iab, ic] = Shift_3c2e(gx, ax, bx, cx, 0, xij0)
+                shift_y[iab, ic] = Shift_3c2e(gy, ay, by, cy, 0, xij1)
+                shift_z[iab, ic] = Shift_3c2e(gz, az, bz, cz, 0, xij2)
+
 
 @njit(parallel=True, cache=True, fastmath=True, nogil=True, error_model="numpy")
-def rys_3c2e_symm_internal(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, schwarz, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz):
-    # This function calculates the three-centered two electron integrals for density fitting
-    # The basis object holds the information of basis functions like: exponents, coeffs, etc.
-    
-    # returns (AB|P) 
-    
-    # Infer the matrix shape from the start and end indices
-    num_A = indx_endA - indx_startA 
-    num_B = indx_endB - indx_startB 
-    num_C = indx_endC - indx_startC
-    matrix_shape = (num_A, num_B, num_C)
+def rys_3c2e_symm_internal(
+    nbf,
+    naux,
+    nshells,
+    nshells_aux,
+    bfs_coords,
+    bfs_contr_prim_norms,
+    bfs_lmn,
+    bfs_nprim,
+    bfs_coeffs,
+    bfs_prim_norms,
+    bfs_expnts,
+    shell_l,
+    shell_bfs_offset,
+    bfs_nbfshell,
+    aux_bfs_coords,
+    aux_bfs_contr_prim_norms,
+    aux_bfs_lmn,
+    aux_bfs_nprim,
+    aux_bfs_coeffs,
+    aux_bfs_prim_norms,
+    aux_bfs_expnts,
+    aux_shell_l,
+    aux_shell_bfs_offset,
+    aux_bfs_nbfshell,
+    indx_start_a,
+    indx_end_a,
+    indx_start_b,
+    indx_end_b,
+    indx_start_c,
+    indx_end_c,
+    schwarz,
+    shell_pair_bound,
+    aux_shell_bound,
+    threshold_schwarz,
+):
+    three_c2e = np.zeros(
+        (
+            indx_end_a - indx_start_a,
+            indx_end_b - indx_start_b,
+            indx_end_c - indx_start_c,
+        ),
+        dtype=np.float64,
+    )
 
-    
-    # Check if the slice of the matrix requested falls in the lower/upper triangle or in both the triangles
-    tri_symm = False
-    no_symm = False
-    if indx_startA==indx_startB and indx_endA==indx_endB:
-        tri_symm = True
-    else:
-        no_symm = True
-    
-
-    # Initialize the matrix with zeros
-    threeC2E = np.zeros(matrix_shape, dtype=np.float64) 
-        
+    n_ab = nshells * (nshells + 1) // 2
+    n_tasks = n_ab * nshells_aux
     pi = 3.141592653589793
-    pisq = 9.869604401089358  #PI^2
-    twopisq = 19.739208802178716  #2*PI^2
 
-    L = np.zeros((3))
-    
-    shell_sizes = np.array((1, 3, 6, 10, 15, 21, 28, 36))
-    
-    ld, md, nd = int(0), int(0), int(0)
-    alphalk = 0.0
+    ab_shell_a = np.empty(n_ab, dtype=np.int32)
+    ab_shell_b = np.empty(n_ab, dtype=np.int32)
+    idx = 0
+    for ish in range(nshells):
+        for jsh in range(ish + 1):
+            ab_shell_a[idx] = ish
+            ab_shell_b[idx] = jsh
+            idx += 1
 
-    #Loop pver BFs
-    for i in prange(indx_startA, indx_endA): #A
-        I = bfs_coords[i]
-        Ni = bfs_contr_prim_norms[i]
-        lmni = bfs_lmn[i]
-        la, ma, na = lmni
-        nprimi = bfs_nprim[i]
-        roots = np.zeros((10))
-        weights = np.zeros((10))
-        G = np.zeros((20,20))
-        for j in range(indx_startB, indx_endB): #B
-            if (tri_symm and j<=i) or no_symm:
-                if schwarz:
-                    sqrt_ints4c2e_diag_ij = sqrt_ints4c2e_diag[i,j]
-                    if sqrt_ints4c2e_diag_ij<threshold_schwarz:
+    max_l_bra = 0
+    max_l_aux = 0
+    max_nbf_shell = 0
+    max_nbf_aux_shell = 0
+    for ish in range(nshells):
+        if shell_l[ish] > max_l_bra:
+            max_l_bra = shell_l[ish]
+        if bfs_nbfshell[ish] > max_nbf_shell:
+            max_nbf_shell = bfs_nbfshell[ish]
+    for ksh in range(nshells_aux):
+        if aux_shell_l[ksh] > max_l_aux:
+            max_l_aux = aux_shell_l[ksh]
+        if aux_bfs_nbfshell[ksh] > max_nbf_aux_shell:
+            max_nbf_aux_shell = aux_bfs_nbfshell[ksh]
+
+    max_bra_order = 2 * max_l_bra
+    max_aux_order = max_l_aux
+    max_nbf_pair = max_nbf_shell * max_nbf_shell
+
+    for task_idx in prange(n_tasks):
+        ab_idx = task_idx // nshells_aux
+        ksh = task_idx - ab_idx * nshells_aux
+
+        ish = ab_shell_a[ab_idx]
+        jsh = ab_shell_b[ab_idx]
+
+        bf_a_start = shell_bfs_offset[ish]
+        bf_b_start = shell_bfs_offset[jsh]
+        bf_c_start = aux_shell_bfs_offset[ksh]
+
+        nbf_a = bfs_nbfshell[ish]
+        nbf_b = bfs_nbfshell[jsh]
+        nbf_c = aux_bfs_nbfshell[ksh]
+
+        if not _shell_intersects(bf_c_start, nbf_c, indx_start_c, indx_end_c):
+            continue
+
+        ab_in_requested_order = (
+            _shell_intersects(bf_a_start, nbf_a, indx_start_a, indx_end_a)
+            and _shell_intersects(bf_b_start, nbf_b, indx_start_b, indx_end_b)
+        )
+        ba_in_requested_order = (
+            ish != jsh
+            and _shell_intersects(bf_b_start, nbf_b, indx_start_a, indx_end_a)
+            and _shell_intersects(bf_a_start, nbf_a, indx_start_b, indx_end_b)
+        )
+        if not (ab_in_requested_order or ba_in_requested_order):
+            continue
+
+        if schwarz:
+            if shell_pair_bound[ish, jsh] * aux_shell_bound[ksh] < threshold_schwarz:
+                continue
+
+        la_shell = shell_l[ish]
+        lb_shell = shell_l[jsh]
+        lc_shell = aux_shell_l[ksh]
+        bra_order = la_shell + lb_shell
+        aux_order = lc_shell
+        nroots = (bra_order + aux_order) // 2 + 1
+
+        ibf_a0 = bf_a_start
+        ibf_b0 = bf_b_start
+        ibf_c0 = bf_c_start
+        nprim_a = bfs_nprim[ibf_a0]
+        nprim_b = bfs_nprim[ibf_b0]
+        nprim_c = aux_bfs_nprim[ibf_c0]
+
+        ax0 = bfs_coords[ibf_a0, 0]
+        ay0 = bfs_coords[ibf_a0, 1]
+        az0 = bfs_coords[ibf_a0, 2]
+        bx0 = bfs_coords[ibf_b0, 0]
+        by0 = bfs_coords[ibf_b0, 1]
+        bz0 = bfs_coords[ibf_b0, 2]
+        cx0 = aux_bfs_coords[ibf_c0, 0]
+        cy0 = aux_bfs_coords[ibf_c0, 1]
+        cz0 = aux_bfs_coords[ibf_c0, 2]
+
+        xij0 = ax0 - bx0
+        xij1 = ay0 - by0
+        xij2 = az0 - bz0
+        ijsq = xij0 * xij0 + xij1 * xij1 + xij2 * xij2
+
+        roots = np.zeros(10, dtype=np.float64)
+        weights = np.zeros(10, dtype=np.float64)
+        gx = np.zeros((max_bra_order + 1, max_aux_order + 1), dtype=np.float64)
+        gy = np.zeros((max_bra_order + 1, max_aux_order + 1), dtype=np.float64)
+        gz = np.zeros((max_bra_order + 1, max_aux_order + 1), dtype=np.float64)
+        shift_x = np.zeros((max_nbf_pair, max_nbf_aux_shell), dtype=np.float64)
+        shift_y = np.zeros((max_nbf_pair, max_nbf_aux_shell), dtype=np.float64)
+        shift_z = np.zeros((max_nbf_pair, max_nbf_aux_shell), dtype=np.float64)
+        shell_block = np.zeros(
+            (max_nbf_shell, max_nbf_shell, max_nbf_aux_shell),
+            dtype=np.float64,
+        )
+
+        for iprim_a in range(nprim_a):
+            alpha = bfs_expnts[ibf_a0, iprim_a]
+            for iprim_b in range(nprim_b):
+                beta = bfs_expnts[ibf_b0, iprim_b]
+                gamma_p = alpha + beta
+                inv_gamma_p = 1.0 / gamma_p
+                screen_ab = np.exp(-alpha * beta * inv_gamma_p * ijsq)
+                if screen_ab < 1.0e-8:
+                    continue
+
+                px = (alpha * ax0 + beta * bx0) * inv_gamma_p
+                py = (alpha * ay0 + beta * by0) * inv_gamma_p
+                pz = (alpha * az0 + beta * bz0) * inv_gamma_p
+
+                pqx = px - cx0
+                pqy = py - cy0
+                pqz = pz - cz0
+                pqsq = pqx * pqx + pqy * pqy + pqz * pqz
+
+                for iprim_c in range(nprim_c):
+                    gamma_q = aux_bfs_expnts[ibf_c0, iprim_c]
+                    rho = gamma_p * gamma_q / (gamma_p + gamma_q)
+                    x = rho * pqsq
+                    gamma_pq_sqrt = np.sqrt(gamma_p * gamma_q)
+
+                    Roots(nroots, x, roots, weights)
+
+                    rys_prefactor = 2.0 * np.sqrt(rho / pi)
+                    for iroot in range(nroots):
+                        root = roots[iroot]
+                        Recur_3c2e_new(
+                            gx,
+                            root,
+                            bra_order,
+                            0,
+                            aux_order,
+                            0,
+                            ax0,
+                            bx0,
+                            cx0,
+                            0.0,
+                            alpha,
+                            beta,
+                            gamma_q,
+                            0.0,
+                            gamma_p,
+                            gamma_q,
+                            alpha * beta,
+                            gamma_pq_sqrt,
+                        )
+                        Recur_3c2e_new(
+                            gy,
+                            root,
+                            bra_order,
+                            0,
+                            aux_order,
+                            0,
+                            ay0,
+                            by0,
+                            cy0,
+                            0.0,
+                            alpha,
+                            beta,
+                            gamma_q,
+                            0.0,
+                            gamma_p,
+                            gamma_q,
+                            alpha * beta,
+                            gamma_pq_sqrt,
+                        )
+                        Recur_3c2e_new(
+                            gz,
+                            root,
+                            bra_order,
+                            0,
+                            aux_order,
+                            0,
+                            az0,
+                            bz0,
+                            cz0,
+                            0.0,
+                            alpha,
+                            beta,
+                            gamma_q,
+                            0.0,
+                            gamma_p,
+                            gamma_q,
+                            alpha * beta,
+                            gamma_pq_sqrt,
+                        )
+
+                        _build_shift_tables(
+                            shift_x,
+                            shift_y,
+                            shift_z,
+                            nbf_a,
+                            nbf_b,
+                            nbf_c,
+                            bf_a_start,
+                            bf_b_start,
+                            bf_c_start,
+                            bfs_lmn,
+                            aux_bfs_lmn,
+                            gx,
+                            gy,
+                            gz,
+                            xij0,
+                            xij1,
+                            xij2,
+                        )
+
+                        root_weight = rys_prefactor * weights[iroot]
+                        for ia in range(nbf_a):
+                            ibf_a = bf_a_start + ia
+                            ca = (
+                                bfs_contr_prim_norms[ibf_a]
+                                * bfs_coeffs[ibf_a, iprim_a]
+                                * bfs_prim_norms[ibf_a, iprim_a]
+                            )
+                            for ib in range(nbf_b):
+                                ibf_b = bf_b_start + ib
+                                cb = (
+                                    ca
+                                    * bfs_contr_prim_norms[ibf_b]
+                                    * bfs_coeffs[ibf_b, iprim_b]
+                                    * bfs_prim_norms[ibf_b, iprim_b]
+                                )
+                                iab = ia * nbf_b + ib
+                                for ic in range(nbf_c):
+                                    ibf_c = bf_c_start + ic
+                                    cc = (
+                                        cb
+                                        * aux_bfs_contr_prim_norms[ibf_c]
+                                        * aux_bfs_coeffs[ibf_c, iprim_c]
+                                        * aux_bfs_prim_norms[ibf_c, iprim_c]
+                                    )
+                                    shell_block[ia, ib, ic] += (
+                                        cc
+                                        * root_weight
+                                        * shift_x[iab, ic]
+                                        * shift_y[iab, ic]
+                                        * shift_z[iab, ic]
+                                    )
+
+        for ia in range(nbf_a):
+            ibf_a = bf_a_start + ia
+            a_in_a = indx_start_a <= ibf_a < indx_end_a
+            a_in_b = indx_start_b <= ibf_a < indx_end_b
+            for ib in range(nbf_b):
+                ibf_b = bf_b_start + ib
+                b_in_b = indx_start_b <= ibf_b < indx_end_b
+                b_in_a = indx_start_a <= ibf_b < indx_end_a
+                for ic in range(nbf_c):
+                    ibf_c = bf_c_start + ic
+                    if not (indx_start_c <= ibf_c < indx_end_c):
                         continue
-                J = bfs_coords[j]
-                IJ = I - J
-                IJsq = np.sum(IJ**2)
-                Nj = bfs_contr_prim_norms[j]
-                lmnj = bfs_lmn[j]
-                lb, mb, nb = lmnj
-                tempcoeff1 = Ni*Nj
-                nprimj = bfs_nprim[j]
-                
-                for k in range(indx_startC, indx_endC): #C
-                    lmnk = aux_bfs_lmn[k]
-                    lc, mc, nc = lmnk
-                    tot_ang = lc + mc + nc
-                    is_first = (lmnk.sum() == lmnk[0])
-                    if schwarz and is_first:
-                        if sqrt_ints4c2e_diag_ij*sqrt_diag_ints2c2e[k]<threshold_schwarz:
-                            k += shell_sizes[tot_ang] # Skip the entire shell
-                            continue
-                    
-                    K = aux_bfs_coords[k]
-                    Nk = aux_bfs_contr_prim_norms[k]
-                    
-                    tempcoeff2 = tempcoeff1*Nk
-                    nprimk = aux_bfs_nprim[k]
-                    KL = K 
-                    
-                    norder = int((la+ma+na+lb+mb+nb+lc+mc+nc+ld+md+nd)/2 + 1 ) 
-                    val = 0.0
 
-                    if norder<=10: # Use rys quadrature # Good for upto i orbitals
-                        
-                        n = int(max(la+lb,ma+mb,na+nb))
-                        m = int(max(lc+ld,mc+md,nc+nd))
-                        
-                        #Loop over primitives
-                        for ik in range(nprimi):   
-                            dik = bfs_coeffs[i][ik]
-                            Nik = bfs_prim_norms[i][ik]
-                            alphaik = bfs_expnts[i][ik]
-                            tempcoeff3 = tempcoeff2*dik*Nik
-                                
-                            for jk in range(nprimj):
-                                alphajk = bfs_expnts[j][jk]
-                                gammaP = alphaik + alphajk
-                                screenfactorAB = np.exp(-alphaik*alphajk/gammaP*IJsq)
-                                if abs(screenfactorAB)<1.0e-8:   
-                                    #TODO: Check for optimal value for screening
-                                    continue
-                                djk = bfs_coeffs[j][jk] 
-                                Njk = bfs_prim_norms[j][jk]      
-                                P = (alphaik*I + alphajk*J)/gammaP
-                                PQ = P - K
-                                PQsq = np.sum(PQ**2)
-                                tempcoeff4 = tempcoeff3*djk*Njk  
-                                    
-                                for kk in range(nprimk):
-                                    dkk = aux_bfs_coeffs[k][kk]
-                                    Nkk = aux_bfs_prim_norms[k][kk]
-                                    alphakk = aux_bfs_expnts[k][kk]
+                    val = shell_block[ia, ib, ic]
 
+                    if a_in_a and b_in_b:
+                        three_c2e[
+                            ibf_a - indx_start_a,
+                            ibf_b - indx_start_b,
+                            ibf_c - indx_start_c,
+                        ] = val
 
-                                    tempcoeff5 = tempcoeff4*dkk*Nkk 
-                                        
+                    if ish != jsh and b_in_a and a_in_b:
+                        three_c2e[
+                            ibf_b - indx_start_a,
+                            ibf_a - indx_start_b,
+                            ibf_c - indx_start_c,
+                        ] = val
 
-                                    gammaQ = alphakk #+ alphalk
-                                    
-                                    rho = gammaP*gammaQ/(gammaP+gammaQ)
-                
-                
-                                    val += tempcoeff5 * coulomb_rys_3c2e_new(
-                                                roots, weights, G, PQsq, rho, norder, n, m,
-                                                la, lb, lc, 0, ma, mb, mc, 0, na, nb, nc, 0,
-                                                alphaik, alphajk, alphakk, alphalk,
-                                                I, J, K, L, P
-                                            )   
-
-                    else: # Analytical (Conventional)
-                        KLsq = np.sum(KL**2)
-                        #Loop over primitives
-                        for ik in range(bfs_nprim[i]):   
-                            dik = bfs_coeffs[i][ik]
-                            Nik = bfs_prim_norms[i][ik]
-                            alphaik = bfs_expnts[i][ik]
-                            tempcoeff3 = tempcoeff2*dik*Nik
-                                
-                            for jk in range(bfs_nprim[j]):
-                                alphajk = bfs_expnts[j][jk]
-                                gammaP = alphaik + alphajk
-                                screenfactorAB = np.exp(-alphaik*alphajk/gammaP*IJsq)
-                                if abs(screenfactorAB)<1.0e-8:   
-                                    #TODO: Check for optimal value for screening
-                                    continue
-                                djk = bfs_coeffs[j][jk] 
-                                Njk = bfs_prim_norms[j][jk]      
-                                P = (alphaik*I + alphajk*J)/gammaP
-                                PI = P - I
-                                PJ = P - J  
-                                fac1 = twopisq/gammaP*screenfactorAB   
-                                onefourthgammaPinv = 0.25/gammaP  
-                                tempcoeff4 = tempcoeff3*djk*Njk  
-                                    
-                                for kk in range(aux_bfs_nprim[k]):
-                                    dkk = aux_bfs_coeffs[k][kk]
-                                    Nkk = aux_bfs_prim_norms[k][kk]
-                                    alphakk = aux_bfs_expnts[k][kk]
-                                    tempcoeff5 = tempcoeff4*dkk*Nkk 
-                                        
-                                    
-                                    gammaQ = alphakk #+ alphalk
-                                    
-                                    Q = K#(alphakk*K + alphalk*L)/gammaQ        
-                                    PQ = P - Q
-                                            
-                                    QK = Q - K
-                                    QL = Q #- L
-                                    
-                                            
-                                    fac2 = fac1/gammaQ
-                                            
-
-                                    omega = (fac2)*np.sqrt(pi/(gammaP + gammaQ))#*screenfactorKL
-                                    delta = 0.25*(1/gammaQ) + onefourthgammaPinv          
-                                    PQsqBy4delta = np.sum(PQ**2)/(4*delta)         
-                                                
-                                    sum1 = innerLoop4c2e(la,lb,lc,ld,ma,mb,mc,md,na,nb,nc,nd,gammaP,gammaQ,PI,PJ,QK,QL,PQ,PQsqBy4delta,delta)
-                                    
-                                                
-                                    val += omega*sum1*tempcoeff5
-
-                    threeC2E[i-indx_startA, j-indx_startB, k-indx_startC] = val
-                    
-                                    
-    if tri_symm:
-        #We save time by evaluating only the lower diagonal elements and then use symmetry Si,j=Sj,i 
-        for i in prange(indx_startA, indx_endA):
-            for j in prange(indx_startB, indx_endB):
-                if j<=i:
-                    threeC2E[j-indx_startB, i-indx_startA, :] = threeC2E[i-indx_startA, j-indx_startB, :]       
-                            
-        
-    return threeC2E
+    return three_c2e
