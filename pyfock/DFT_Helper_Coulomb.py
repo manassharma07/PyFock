@@ -452,57 +452,50 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             # print('Percentage of total calculated: ', count_below_threshold/nsignificant*100)
             # ints3c2e[mask] = 0.0
         elif DF_algo==10:
+            # Default algorithm. The screened (ij|P) are kept in the sparse triangular
+            # layout of Integrals.df_algo10_helpers (see that module's docstring).
             print('\n\nPerforming Schwarz screening...')
-            # threshold_schwarz = 1e-09
             print('Threshold ', threshold_schwarz)
             startSchwarz = timer()
             nints3c2e_tri = int(basis.bfs_nao*(basis.bfs_nao+1)/2.0)*auxbasis.bfs_nao
             nints3c2e = basis.bfs_nao*basis.bfs_nao*auxbasis.bfs_nao
-            # This is based on Schwarz inequality screening
-            # Diagonal elements of ERI 4c2e array
-            duration_4c2e_diag = 0.0
+            # Diagonal elements (ij|ij) of the 4c2e ERI tensor for the Schwarz inequality
             start_4c2e_diag = timer()
             if not use_gpu:
                 ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
             else:
-                ints4c2e_diag = Integrals.schwarz_helpers_cupy.eri_4c2e_diag_cupy(basis)
+                ints4c2e_diag = Integrals.df_algo10_helpers_cupy.eri_4c2e_diag_cupy(basis)
             duration_4c2e_diag = timer() - start_4c2e_diag
             print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
-            
-            # Calculate the square roots required for 
-            duration_square_roots = 0.0
+
+            # Square roots of the Schwarz bounds sqrt((ij|ij)) and sqrt((P|P))
             start_square_roots = timer()
             if use_gpu:
-                sqrt_ints4c2e_diag = cp.sqrt(np.abs(ints4c2e_diag))
-                sqrt_diag_ints2c2e = cp.sqrt(np.abs(np.diag(ints2c2e)))
+                sqrt_ints4c2e_diag = cp.sqrt(cp.abs(ints4c2e_diag))
+                sqrt_diag_ints2c2e = cp.sqrt(cp.abs(cp.diag(ints2c2e)))
+                sqrt_ints4c2e_diag_np = cp.asnumpy(sqrt_ints4c2e_diag)
+                sqrt_diag_ints2c2e_np = cp.asnumpy(sqrt_diag_ints2c2e)
             else:
                 sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
                 sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
+                sqrt_ints4c2e_diag_np = sqrt_ints4c2e_diag
+                sqrt_diag_ints2c2e_np = sqrt_diag_ints2c2e
+            if dftObj.sao:
+                # Spherical aux functions: screen whole shells so that every stored
+                # (ij|P~) block stays inside the spherical subspace of the projected metric.
+                sqrt_diag_ints2c2e_np = Integrals.df_algo10_helpers.aux_shell_max_bounds(sqrt_diag_ints2c2e_np, auxbasis)
+                sqrt_diag_ints2c2e = cp.asarray(sqrt_diag_ints2c2e_np) if use_gpu else sqrt_diag_ints2c2e_np
             duration_square_roots = timer() - start_square_roots
             print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
-            
-            auxbfs_lm = np.array(auxbasis.bfs_lm)
-            aux_bfs_lmn = np.array([auxbasis.bfs_lmn])
 
-
-
-            # Calculate the indices of the ints3c2e array based on Schwarz inequality
-            duration_indices_calc = 0.0
+            # Number of significant aux functions of every lower-triangular AO pair
+            # (offsets into the sparse array); no aux indices are stored.
             start_indices_calc = timer()
             indicesA, indicesB = np.tril_indices_from(dmat)
-            if use_gpu:
-                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(cp.asnumpy(sqrt_ints4c2e_diag), cp.asnumpy(sqrt_diag_ints2c2e), threshold_schwarz, strict_schwarz, auxbfs_lm, aux_bfs_lmn[0], indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
-            else:
-                offsets_3c2e = Integrals.schwarz_helpers.calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, auxbfs_lm,  aux_bfs_lmn[0], indicesA.shape[0] , auxbasis.bfs_nao, indicesA, indicesB)
-            nsignificant = np.sum(offsets_3c2e)
-            offsets_3c2e = np.cumsum(offsets_3c2e)
-            duration_indices_calc += timer() - start_indices_calc
+            offsets_3c2e, nsignificant = Integrals.df_algo10_helpers.calc_offsets_3c2e_schwarz(sqrt_ints4c2e_diag_np, sqrt_diag_ints2c2e_np, threshold_schwarz, strict_schwarz, indicesA, indicesB)
+            duration_indices_calc = timer() - start_indices_calc
             print('Time for significant indices evaluation: ', duration_indices_calc)
-            # print('Time for array concatenation: ', duration_concatenation)
-            
             print('Size of permanent array storing the significant indices of 3c2e ERI in GB ', indicesA.nbytes/1e9+indicesB.nbytes/1e9+offsets_3c2e.nbytes/1e9, flush=True)
-
-            
             print('No. of elements in the standard three-centered two electron ERI tensor: ', nints3c2e, flush=True)
             print('No. of elements in the triangular three-centered two electron ERI tensor: ', nints3c2e_tri, flush=True)
             print('No. of significant triplets based on Schwarz inequality and triangularity: ' + str(nsignificant) + ' or '+str(np.round(nsignificant/nints3c2e*100,1)) + '% of original', flush=True)
@@ -510,18 +503,14 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             durationSchwarz = timer() - startSchwarz
             print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
 
+            # Screened three-center integrals. With SAOs the auxiliary d/f/g shells are
+            # projected onto their spherical subspaces inside the kernel.
             if use_gpu:
-                if dftObj.sao:
-                    ints3c2e = Integrals.schwarz_helpers_cupy.rys_3c2e_tri_schwarz_sparse_algo10_sao_cupy(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
-                else:
-                    ints3c2e = Integrals.schwarz_helpers_cupy.rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
+                ints3c2e = Integrals.df_algo10_helpers_cupy.rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant, sao=dftObj.sao)
                 if not keep_ints3c2e_in_gpu:
                     ints3c2e = cp.asnumpy(ints3c2e)
             else:
-                if dftObj.sao:
-                    ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse_algo10_sao(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
-                else:
-                    ints3c2e = Integrals.schwarz_helpers.rys_3c2e_tri_schwarz_sparse_algo10(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant)
+                ints3c2e = Integrals.df_algo10_helpers.rys_3c2e_tri_schwarz_sparse_algo10(basis, auxbasis, indicesA, indicesB, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, nsignificant, sao=dftObj.sao)
             
             if strict_schwarz:
                 start_strict_schwarz_nuc_mat = timer()
@@ -740,37 +729,31 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
             J[indices_dmat_tri] = J_tri
             J += J.T - np.diag(np.diag(J))
         durationDF_Jtri += timer() - startDF_Jtri
-    if DF_algo==10: 
+    if DF_algo==10:
+        # Default algorithm: sparse (ij|P) in the layout of Integrals.df_algo10_helpers.
         dmat_temp = dmat.copy()
         dmat_temp[indices_dmat_tri_2] = 2*dmat[indices_dmat_tri_2] # Double the non-diagonal elements of the triangular density matrix
         dmat_tri = dmat_temp[indices_dmat_tri]
         startDF_gamma = timer()
-        auxbfs_lm = np.array(auxbasis.bfs_lm)
-        auxbfs_lmn = np.array(auxbasis.bfs_lmn)
+        # gamma_alpha = sum_ij D_ij (ij|alpha); not yet the fitting coefficients c_alpha
+        # (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
         if use_gpu:
             ints3c2e_cp = cp.asarray(ints3c2e)
             dmat_tri_cp = cp.array(dmat_tri)
             offsets_3c2e_cp = cp.array(offsets_3c2e)
             sqrt_ints4c2e_diag_cp = cp.array(sqrt_ints4c2e_diag)
             sqrt_diag_ints2c2e_cp = cp.array(sqrt_diag_ints2c2e)
-            gamma_alpha = Integrals.schwarz_helpers_cupy.df_coeff_calculator_algo10_cupy(ints3c2e, dmat_tri_cp, basis.bfs_nao, offsets_3c2e_cp, auxbasis.bfs_nao, sqrt_ints4c2e_diag_cp, sqrt_diag_ints2c2e_cp, threshold, strict_schwarz) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-            # gamma_alpha = cp.asnumpy(gamma_alpha)
+            gamma_alpha = Integrals.df_algo10_helpers_cupy.df_coeff_calculator_algo10_cupy(ints3c2e_cp, dmat_tri_cp, basis.bfs_nao, offsets_3c2e_cp, auxbasis.bfs_nao, sqrt_ints4c2e_diag_cp, sqrt_diag_ints2c2e_cp, threshold, strict_schwarz)
         else:
-            # df_coeff_1 = contract('pP,p->P', ints3c2e, dmat_tri) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-            # gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_serial(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-            gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_parallel(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, ncores, strict_schwarz, auxbfs_lm, auxbfs_lmn) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
-            
-        # gamma_alpha = Integrals.schwarz_helpers.df_coeff_calculator_algo10_parallel(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, ncores, strict_schwarz, auxbfs_lm) # This is actually the gamma_alpha (and not df_coeff (c_alpha)) in this paper (https://aip.scitation.org/doi/pdf/10.1063/1.1567253)
+            gamma_alpha = Integrals.df_algo10_helpers.df_coeff_calculator_algo10(ints3c2e, dmat_tri, indicesA, indicesB, offsets_3c2e, auxbasis.bfs_nao, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz, ncores)
         durationDF_gamma += timer() - startDF_gamma
         startDF_coeff = timer()
         with threadpool_limits(limits=ncores, user_api='blas'):
-            # print('Density fitting', controller.info())
             if not cholesky:
                 if not use_gpu:
                     df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, overwrite_a=False, overwrite_b=False)
                 else:
                     df_coeff = cp.linalg.solve(ints2c2e, gamma_alpha)
-                    # print(df_coeff[0:10])
             else:
                 df_coeff = scipy.linalg.cho_solve(cho_decomp_ints2c2e, gamma_alpha, overwrite_b=False, check_finite=True)
         durationDF_coeff += timer() - startDF_coeff
@@ -780,16 +763,15 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
             with threadpool_limits(limits=ncores, user_api='blas'):
                 Ecoul_temp = np.dot(df_coeff, gamma_alpha) # (rho^~|rho^~) Coulomb energy due to interactions b/w auxiliary density
         startDF_Jtri = timer()
-        #J_tri = contract('pP,P', ints3c2e, df_coeff)
+        # J_ij = sum_alpha (ij|alpha) c_alpha for the lower triangle, then symmetrized
         if use_gpu:
             df_coeff_cp = cp.asarray(df_coeff)
-            J_tri = Integrals.schwarz_helpers_cupy.J_tri_calculator_algo10_cupy(ints3c2e_cp, df_coeff_cp, int(basis.bfs_nao*(basis.bfs_nao+1)/2), basis.bfs_nao, offsets_3c2e_cp, sqrt_ints4c2e_diag_cp, sqrt_diag_ints2c2e_cp, threshold, auxbasis.bfs_nao, strict_schwarz, auxbfs_lm)
-            # J_tri = Integrals.schwarz_helpers_cupy.J_tri_calculator_algo10_cupy(ints3c2e_cp, df_coeff, int(basis.bfs_nao*(basis.bfs_nao+1)/2), basis.bfs_nao, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, auxbasis.bfs_nao, strict_schwarz, auxbfs_lm)
+            J_tri = Integrals.df_algo10_helpers_cupy.J_tri_calculator_algo10_cupy(ints3c2e_cp, df_coeff_cp, int(basis.bfs_nao*(basis.bfs_nao+1)/2), basis.bfs_nao, offsets_3c2e_cp, sqrt_ints4c2e_diag_cp, sqrt_diag_ints2c2e_cp, threshold, auxbasis.bfs_nao, strict_schwarz)
             J = cp.zeros((basis.bfs_nao, basis.bfs_nao))
             J[indices_dmat_tri] = J_tri
             J += J.T - cp.diag(cp.diag(J))
         else:
-            J_tri = Integrals.schwarz_helpers.J_tri_calculator_algo10(ints3c2e, df_coeff, indicesA, indicesB, offsets_3c2e, int(basis.bfs_nao*(basis.bfs_nao+1)/2), sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, auxbasis.bfs_nao, strict_schwarz, auxbfs_lm)
+            J_tri = Integrals.df_algo10_helpers.J_tri_calculator_algo10(ints3c2e, df_coeff, indicesA, indicesB, offsets_3c2e, int(basis.bfs_nao*(basis.bfs_nao+1)/2), sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz)
             # https://stackoverflow.com/questions/17527693/transform-the-upper-lower-triangular-part-of-a-symmetric-matrix-2d-array-into
             with threadpool_limits(limits=ncores, user_api='blas'):
                 J = np.zeros((basis.bfs_nao, basis.bfs_nao))

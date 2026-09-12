@@ -1083,13 +1083,9 @@ class DFT:
         
         if self.sao:
             print('\n\nSpherical Atomic Orbitals (5d, 7f, 10g...) are being used!\n\n')
-            if isSchwarz and threshold_schwarz >= 1e-10:
-                if self.use_gpu:
-                    print('Currently, when using SAOs, the Schwarz screening threshold is recommended to be 1e-10 or smaller for correct results. \nSetting it to 1e-10.', flush=True)
-                    threshold_schwarz = 1e-10
-                else:
-                    print('Currently, when using SAOs, the Schwarz screening threshold is recommended to be 1e-11 or smaller for correct results. \nSetting it to 1e-11.', flush=True)
-                    threshold_schwarz = 1e-11
+            # The Schwarz threshold is used as requested. (Earlier versions forced 1e-11/1e-10
+            # here to hide an inconsistency between the SAO 3c2e kernel and the sparse
+            # storage bookkeeping of DF_algo=10; the screening is now shell-consistent.)
             # Get the CAO to SAO transformation matrix
             c2sph_mat = basis.cart2sph_basis() # CAO --> SAO
             # Calculate the pseudoinverse transformation matrix 
