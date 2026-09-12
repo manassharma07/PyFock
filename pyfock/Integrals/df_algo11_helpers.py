@@ -604,6 +604,19 @@ def build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshol
     -------
     DFAlgo11Plan
     """
+    plan = _plan_metadata(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e,
+                          threshold, strict_schwarz, sao, max_memory_gb, ncores)
+    plan.values = np.zeros(plan.n_elements_cached, dtype=np.float64)
+    if plan.work_build.size:
+        bin_off, bin_items = _lpt_bins(plan.work_build, plan.build_cost, plan.nthreads)
+        _build_cached(bin_off, bin_items, plan.pair_I, plan.pair_J, plan.pair_offset,
+                      plan.pair_nrows, plan.pair_ncols, plan.values, *_kernel_args(plan), plan.dims)
+    return plan
+
+
+def _plan_metadata(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold,
+                   strict_schwarz, sao=False, max_memory_gb=None, ncores=None):
+    """Shared CPU/GPU screening and cache selection; allocate no integral values."""
     plan = DFAlgo11Plan()
     nthreads = int(numba.get_num_threads() if ncores is None else max(1, ncores))
     plan.nthreads = nthreads
@@ -668,7 +681,6 @@ def build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshol
     plan.pair_offset[cached_idx] = np.concatenate(([0], np.cumsum(sizes)[:-1])).astype(np.int64) if cached_idx.size else np.zeros(0, dtype=np.int64)
     plan.n_pairs_cached = int(cached_idx.size)
     plan.n_elements_cached = int(sizes.sum())
-    plan.values = np.zeros(plan.n_elements_cached, dtype=np.float64)
 
     # Load balancing: explicit LPT assignment of shell pairs to one bin per thread.
     # Per-iteration cost: full evaluation for uncached pairs, contraction only for cached ones.
@@ -689,10 +701,6 @@ def build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshol
     # Row buffer for on-the-fly evaluation is only needed for uncached pairs.
     plan.max_nrows = int(plan.pair_nrows[uncached_idx].max()) if uncached_idx.size else 1
 
-    if plan.work_build.size:
-        bin_off, bin_items = _lpt_bins(plan.work_build, plan.build_cost, nthreads)
-        _build_cached(bin_off, bin_items, plan.pair_I, plan.pair_J, plan.pair_offset, plan.pair_nrows, plan.pair_ncols,
-                      plan.values, *_kernel_args(plan), plan.dims)
     return plan
 
 

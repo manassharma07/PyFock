@@ -1,6 +1,6 @@
 """
 GPU (CuPy / Numba-CUDA) counterpart of :mod:`pyfock.Integrals.df_algo10_helpers`
-for the density-fitted Coulomb algorithm 10 (``DF_algo=10``, the GPU default).
+for the density-fitted Coulomb algorithm 10 (``DF_algo=10``, the previous GPU default).
 
 The four steps mirror the CPU module and share its sparse storage layout and
 screening rules, so ``offsets`` computed with the CPU
@@ -188,6 +188,10 @@ def rys_3c2e_tri_schwarz_sparse_algo10_cupy(basis, auxbasis, indicesA, indicesB,
     With ``sao=True`` the auxiliary d/f/g shells are projected onto their
     spherical subspaces; shells with ``l > 4`` are not supported on the GPU.
     """
+    if (max(basis.shells) - 1 > 2 or max(auxbasis.shells) - 1 > 4
+            or max(auxbasis.bfs_nprim) > 7):
+        raise ValueError('The GPU algorithm-10 kernels require orbital l<=2, auxiliary l<=4, '
+                         'and at most 7 auxiliary primitives per shell; use DF_algo=11 for larger shells.')
     (bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
      bfs_coeffs, bfs_prim_norms, bfs_expnts) = _to_device(pack_basis_arrays(basis))
     (aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim,

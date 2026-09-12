@@ -41,6 +41,8 @@ def _environment(ncores):
             "NUMEXPR_NUM_THREADS",
         ):
             env[variable] = str(ncores)
+    # PyFock prints a Unicode logo; the child writes to a UTF-8 file, not a console.
+    env.setdefault("PYTHONIOENCODING", "utf-8")
     previous = env.get("PYTHONPATH")
     env["PYTHONPATH"] = str(REPOSITORY_ROOT) + (
         os.pathsep + previous if previous else ""

@@ -95,8 +95,10 @@ def load_case(directory: Path, suite: Optional[str] = None) -> RegressionCase:
         raise ValueError("CPU XC_algo must be 1 or 2")
     if str(metadata["ao_basis"]).upper() not in ("CAO", "SAO"):
         raise ValueError("ao_basis must be CAO or SAO")
-    if metadata["use_pyscf_grids"] is not True:
-        raise ValueError("Every test must use PySCF grids")
+    if metadata["use_pyscf_grids"] is not True and suite != "gpu":
+        # GPU hosts often lack PySCF; GPU cases may use native grids when their
+        # reference is a PyFock CPU run with the same grid settings.
+        raise ValueError("Short and long tests must use PySCF grids")
     if metadata["use_libxc"] is not False:
         raise ValueError("These tests must exercise native PyFock XC")
 

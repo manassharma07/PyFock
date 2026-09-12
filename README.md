@@ -281,14 +281,14 @@ print(f"SCF Energy: {energyCrysX} Ha")
 
 ### Density-Fitting Coulomb Algorithms and Memory Budget
 
-The Coulomb term is evaluated with density fitting and Schwarz screening. Two CPU
+The Coulomb term is evaluated with density fitting and Schwarz screening. Two CPU/GPU
 algorithms are available through `DFT.DF_algo`:
 
 - `11` (default): shell-blocked Rys evaluation with block-sparse storage. It honours a
   memory budget for the stored integrals:
 - `10`: the previous default, per-function Rys evaluation with sparse triangular storage
   of the screened three-center integrals. It gives the same energies (identical to
-  ~1e-10 Hartree) but its three-center integral phase is 4-8x slower; GPU runs use it.
+  ~1e-10 Hartree in the CPU comparisons). It remains selectable for benchmarking.
 
 ```python
 dft_obj.max_memory_ints3c2e = 2.0   # GB; None (default) = store everything, 0 = recompute every SCF iteration
@@ -296,7 +296,14 @@ dft_obj.max_memory_ints3c2e = 2.0   # GB; None (default) = store everything, 0 =
 
 With a budget smaller than the significant integrals, the most expensive shell-pair
 blocks are kept in memory and the cheaper ones are re-evaluated in every SCF cycle.
-`DF_algo=11` is currently CPU-only; GPU runs automatically use `DF_algo=10`.
+With `use_gpu=True`, algorithm 11 evaluates and contracts shell blocks on the GPU
+using CuPy and Numba-CUDA. The memory budget limits cached device values. Direct
+pairs use an additional temporary buffer (up to 1 GB by default); the plan summary
+reports its size. Cached blocks remain on the device even if
+`keep_ints3c2e_in_gpu=False`; use `max_memory_ints3c2e` to control their storage.
+The GPU integral builder supports orbital and auxiliary shells through i (`l=6`).
+See [GPU design and validation](docs/df_algo11_gpu.md) for validation coverage,
+benchmark commands, memory accounting, and limitations of the surrounding driver.
 
 ### Analytical Forces & Geometry Optimization
 

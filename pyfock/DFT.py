@@ -272,17 +272,18 @@ class DFT:
 
         self.DF_algo = 11
         """ This is only for developers. Users should not change it.
-        DF_algo=11 (default, CPU): the significant 3c2e integrals are evaluated shell-blocked, stored
+        DF_algo=11 (default, CPU/GPU): the significant 3c2e integrals are evaluated shell-blocked, stored
         block-sparse in memory throughout the SCF (or partially/never, see max_memory_ints3c2e).
         DF_algo=10: the previous default (per-function evaluation, sparse triangular storage); it is
-        still used automatically on the GPU. Alternatives 1 and 2 are only for reference and take up
+        selectable on both CPU and GPU. Alternatives 1 and 2 are only for reference and take up
         a lot of memory as the complete 3c2e tensor is stored in memory."""
 
         self.max_memory_ints3c2e = None
         """ Memory budget in GB for the screened three-center integrals when DF_algo=11.
         None (default): keep every significant shell-pair block in memory. A smaller budget keeps the
         most expensive blocks and recomputes the remaining ones in every SCF iteration; 0 recomputes
-        everything (direct DF-J). Ignored by the other DF algorithms."""
+        everything (direct DF-J). On the GPU this caps cached device values; a separate bounded
+        buffer holds direct batches. Ignored by the other DF algorithms."""
 
         self.blocksize = blocksize
         """ Block size for the evaulation of XC term on grids. For CPUs a value of ~5000 is recommended. For GPUs, a value >20480 is recommended. """
@@ -374,10 +375,14 @@ class DFT:
         """ Number of GPUs to be used """
         self.free_gpu_mem = False
         """ Whether the GPU memory should be freed by force or not"""
-        try:
-            self.max_threads_per_block = cuda.get_current_device().MAX_THREADS_PER_BLOCK
-        except:
-            self.max_threads_per_block = 1024
+        # Only GPU runs may touch CUDA here: querying the device creates a CUDA
+        # context in every process, including CPU-only ones.
+        self.max_threads_per_block = 1024
+        if use_gpu:
+            try:
+                self.max_threads_per_block = cuda.get_current_device().MAX_THREADS_PER_BLOCK
+            except Exception as error:
+                print('Warning: could not query the CUDA device in DFT.__init__ ({}); assuming 1024 threads per block.'.format(error), flush=True)
         
         self.threads_x = int(self.max_threads_per_block/16)
         self.threads_y = int(self.max_threads_per_block/64)
@@ -948,9 +953,6 @@ class DFT:
         auxbasis = self.auxbasis
         rys = self.rys
         DF_algo = self.DF_algo
-        if DF_algo == 11 and self.use_gpu:
-            print('Note: the shell-blocked DF_algo=11 is CPU-only for now; using DF_algo=10 on the GPU.', flush=True)
-            DF_algo = 10
         blocksize = self.blocksize
         XC_algo = self.XC_algo
         debug = self.debug
@@ -1128,8 +1130,8 @@ class DFT:
         # DF_algo = 7 (no longer works or maintained) # The significant indices (ij|P) are stored even more efficiently by using shell indices instead of bf indices.
         # DF_algo = 8 (no longer works or maintained) # Similar to 6, except that here the significant indices are not stored resulting in 50% memory savings. The drawback is that it only works in serial which is useful for Google colab or Kaggle perhaps.
         # DF_algo = 9 (no longer works or maintained) # 
-        # DF_algo = 11 # Shell-blocked Rys evaluation with block-sparse storage and a memory budget (max_memory_ints3c2e); CPU only for now.
-        # DF_algo = 10 # Previous default (GPU default): Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
+        # DF_algo = 11 # Shell-blocked Rys evaluation with block-sparse storage and a memory budget (CPU/GPU).
+        # DF_algo = 10 # Previous default: Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
 
         V_ecp = None
         if not strict_schwarz: # If a stricter variant of Schwarz screening is not requested
@@ -1725,7 +1727,7 @@ class DFT:
                     elif XC_algo==2:
                         Exc, Vxc = Integrals.eval_xc_2_cupy(basis, dmat_cp, grids.weights, cp.asnumpy(grids.coords), funcid, ncores=ncores, blocksize=blocksize, \
                                                     list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
-                                                        list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
+                                                        list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug, use_libxc=self.use_libxc)
                     if XC_algo==3:
                         # Default for GPUs
                         Exc, Vxc = Integrals.eval_xc_3_cupy(basis, dmat_cp, grids.weights, grids.coords, funcid, blocksize=blocksize, debug=debug, \

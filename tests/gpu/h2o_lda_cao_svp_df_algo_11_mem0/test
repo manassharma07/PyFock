@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Compare GPU SCF with the matching native-grid CPU calculation."""
+import sys
+from pathlib import Path
+TEST = {'name': 'h2o_lda_cao_svp_df_algo_11_mem0', 'description': 'Native-grid GPU versus CPU algorithm 11.',
+        'input': 'input.py', 'output': 'output.test.txt', 'reference': 'output.ref.txt',
+        'report': 'test.report.txt', 'basis': 'def2-SVP', 'auxbasis': 'def2-universal-jfit',
+        'xc_name': 'LDA(1,7)', 'xc_ids': [1, 7], 'ao_basis': 'CAO', 'xc_algo': 2,
+        'device': 'gpu', 'use_pyscf_grids': False, 'use_libxc': False}
+CHECKS = [{'name': 'SCF converged', 'match': r'SCF Converged after', 'kind': 'text'},
+          {'name': 'Total energy', 'match': r'^Total Energy\s+([-+0-9.eE]+)\s*$', 'tol': 1e-8}]
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT))
+from tests.test_driver import run_test
+if __name__ == '__main__':
+    sys.exit(run_test(TEST, CHECKS))

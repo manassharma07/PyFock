@@ -4,6 +4,7 @@ import numexpr
 from timeit import default_timer as timer
 # from time import process_time
 from pyfock import Integrals
+from pyfock import XC
 from opt_einsum import contract
 from joblib import Parallel, delayed
 from threadpoolctl import ThreadpoolController, threadpool_info, threadpool_limits
@@ -14,10 +15,21 @@ except Exception as e:
     cp = np
 import numba
 
-def eval_xc_2_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, blocksize=5000, list_nonzero_indices=None, count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None, debug=False):
+class _NativeFunctional:
+    """Adapt native CPU XC results to the hybrid kernel's LibXC-shaped arrays."""
+    def __init__(self, functional_id):
+        self.functional_id = functional_id
+
+    def compute(self, inp):
+        result = XC.func_compute(self.functional_id, inp['rho'], sigma=inp.get('sigma'), use_gpu=False)
+        return {key: np.asarray(value).reshape(-1, 1)
+                for key, value in zip(('zk', 'vrho', 'vsigma', 'vtau'), result)}
+
+
+def eval_xc_2_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2, blocksize=5000, list_nonzero_indices=None, count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None, debug=False, use_libxc=False):
     print('Calculating XC term using GPU and algo 2', flush=True)
     print('Algo 2 uses a hybrid CPU+GPU approach for XC evaluation.', flush=True)
-    print('CPU threads specified by ncores are used to evaluate functional values (via LibXC) and AO/AO grad values.', flush=True)
+    print('CPU threads specified by ncores evaluate functional values and AO/AO gradient values.', flush=True)
     # This performs parallelization at the blocks/batches level.
     # Therefore, joblib is perfect for such embarrasingly parallel task
     # In order to evaluate a density functional we will use the 
@@ -106,8 +118,8 @@ def eval_xc_2_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2,
     else:
         x_family_code = XC.get_family(funcid[0])
         c_family_code = XC.get_family(funcid[1])
-        funcx = None
-        funcc = None
+        funcx = _NativeFunctional(funcid[0])
+        funcc = _NativeFunctional(funcid[1])
 
     weights_cp = cp.asarray(weights)
     dmat_cp = cp.asarray(dmat)
@@ -121,7 +133,7 @@ def eval_xc_2_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, ncores=2,
     if list_nonzero_indices is not None:
         if list_ao_values is not None:
             if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
-                output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=nblocks//ncores)(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat_cp[cp.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug, stream=streams[iblock%len(streams)]) for iblock in range(nblocks+1))
+                output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=max(1, nblocks//ncores))(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat_cp[cp.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug, stream=streams[iblock%len(streams)]) for iblock in range(nblocks+1))
             else: #GGA
                 output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat_cp[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], list_ao_grad_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug) for iblock in range(nblocks+1))
         else:
@@ -184,7 +196,12 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     durationAO = 0.0
     numba.set_num_threads(1)
 
+    # AO evaluation in this hybrid algorithm runs on the CPU.
+    if non_zero_indices is not None:
+        non_zero_indices = cp.asnumpy(non_zero_indices)
+
     if funcx is None:
+        import pylibxc
         xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'}
         funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
         funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
