@@ -15,91 +15,83 @@ except Exception as e:
 from numba import cuda
 import math
 
-def eval_bfs_and_grad(basis, coord, deriv=1, parallel=True, non_zero_indices=None):
+def pack_bfs_data(basis):
+    """Pack the per-basis-function data of ``basis`` into the NumPy arrays the
+    Numba AO kernels take, in their argument order.
 
-        #We convert the required properties to numpy arrays as this is what Numba likes.
-        bfs_coords = np.array([basis.bfs_coords])
-        bfs_contr_prim_norms = np.array([basis.bfs_contr_prim_norms])
-        bfs_lmn = np.array([basis.bfs_lmn])
-        bfs_nprim = np.array([basis.bfs_nprim])
+    The ragged primitive lists are padded to the largest contraction length
+    (the padding is never read: the kernels loop up to ``bfs_nprim[i]``).  Pack
+    once and pass the result as ``bfs_data`` to :func:`eval_bfs` /
+    :func:`eval_bfs_and_grad` when calling them repeatedly for the same basis.
 
-           
-
-        #The remaining properties like bfs_coeffs are a list of lists of unequal sizes.
-        #Numba won't be able to work with these efficiently.
-        #So, we convert them to a numpy 2d array by applying a trick,
-        #that the second dimension is that of the largest list. So that
-        #it can accomodate all the lists.
-        maxnprim = max(basis.bfs_nprim)
-        bfs_coeffs = np.zeros([basis.bfs_nao, maxnprim])
-        bfs_expnts = np.zeros([basis.bfs_nao, maxnprim])
-        bfs_prim_norms = np.zeros([basis.bfs_nao, maxnprim])
-        bfs_radius_cutoff = np.zeros([basis.bfs_nao])
-        for i in range(basis.bfs_nao):
-            for j in range(basis.bfs_nprim[i]):
-                bfs_coeffs[i,j] = basis.bfs_coeffs[i][j]
-                bfs_expnts[i,j] = basis.bfs_expnts[i][j]
-                bfs_prim_norms[i,j] = basis.bfs_prim_norms[i][j]
-                bfs_radius_cutoff[i] = basis.bfs_radius_cutoff[i]
-
-        if parallel:
-            # Uses the same number of threads as the defined by numba.set_num_threads before calling this function
-            if non_zero_indices is not None:
-                bf_values, bf_grad_values = eval_bfs_and_grad_sparse_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, non_zero_indices)
-            else:
-                bf_values, bf_grad_values = eval_bfs_and_grad_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
-        else:
-            numba.set_num_threads(1) # Set number of threads to 1
-            if non_zero_indices is not None:
-                bf_values, bf_grad_values = eval_bfs_and_grad_sparse_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, non_zero_indices)
-            else:
-                bf_values, bf_grad_values = eval_bfs_and_grad_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
-        
-            
-        # return bf_grad_values
-        return bf_values, bf_grad_values
-
-
-def eval_bfs(basis, coord, parallel=True, non_zero_indices=None):
-
-    #We convert the required properties to numpy arrays as this is what Numba likes.
-    bfs_coords = np.array([basis.bfs_coords])
-    bfs_contr_prim_norms = np.array([basis.bfs_contr_prim_norms])
-    bfs_lmn = np.array([basis.bfs_lmn])
-    bfs_nprim = np.array([basis.bfs_nprim])
-
-    #The remaining properties like bfs_coeffs are a list of lists of unequal sizes.
-    #Numba won't be able to work with these efficiently.
-    #So, we convert them to a numpy 2d array by applying a trick,
-    #that the second dimension is that of the largest list. So that
-    #it can accomadate all the lists.
+    Returns
+    -------
+    tuple ``(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs,
+    bfs_prim_norms, bfs_expnts, bfs_radius_cutoff)``
+    """
+    nbf = basis.bfs_nao
+    bfs_coords = np.array(basis.bfs_coords)
+    bfs_contr_prim_norms = np.array(basis.bfs_contr_prim_norms)
+    bfs_lmn = np.array(basis.bfs_lmn)
+    bfs_nprim = np.array(basis.bfs_nprim)
     maxnprim = max(basis.bfs_nprim)
-    bfs_coeffs = np.zeros([basis.bfs_nao, maxnprim])
-    bfs_expnts = np.zeros([basis.bfs_nao, maxnprim])
-    bfs_prim_norms = np.zeros([basis.bfs_nao, maxnprim])
-    bfs_radius_cutoff = np.zeros([basis.bfs_nao])
-    for i in range(basis.bfs_nao):
-        for j in range(basis.bfs_nprim[i]):
-            bfs_coeffs[i,j] = basis.bfs_coeffs[i][j]
-            bfs_expnts[i,j] = basis.bfs_expnts[i][j]
-            bfs_prim_norms[i,j] = basis.bfs_prim_norms[i][j]
-            bfs_radius_cutoff[i] = basis.bfs_radius_cutoff[i]
+    bfs_coeffs = np.zeros((nbf, maxnprim))
+    bfs_expnts = np.zeros((nbf, maxnprim))
+    bfs_prim_norms = np.zeros((nbf, maxnprim))
+    for i in range(nbf):
+        nprim = basis.bfs_nprim[i]
+        bfs_coeffs[i, :nprim] = basis.bfs_coeffs[i][:nprim]
+        bfs_expnts[i, :nprim] = basis.bfs_expnts[i][:nprim]
+        bfs_prim_norms[i, :nprim] = basis.bfs_prim_norms[i][:nprim]
+    bfs_radius_cutoff = np.array(basis.bfs_radius_cutoff, dtype=np.float64)
+    return (bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff)
 
-    if parallel:
-        # Uses the same number of threads as the defined by numba.set_num_threads before calling this function
-        if non_zero_indices is not None:
-            bf_values = eval_bfs_sparse_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, non_zero_indices)
-        else:
-            bf_values = eval_bfs_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
-    else:
+
+def eval_bfs_and_grad(basis, coord, deriv=1, parallel=True, non_zero_indices=None, bfs_data=None):
+    """Values and Cartesian gradients of the basis functions at the points
+    ``coord`` (``n x 3``).  ``non_zero_indices`` restricts the evaluation to
+    those functions (sparse kernels).  ``bfs_data`` is an optional pre-packed
+    tuple from :func:`pack_bfs_data`; it saves re-packing the basis on every
+    call.  With ``parallel=True`` the kernels use the thread count set with
+    ``numba.set_num_threads`` before the call.
+
+    Returns ``(values (n, nao), gradients (3, n, nao))``.
+    """
+    if bfs_data is None:
+        bfs_data = pack_bfs_data(basis)
+    bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff = bfs_data
+
+    if not parallel:
         numba.set_num_threads(1) # Set number of threads to 1
-        if non_zero_indices is not None:
-            bf_values = eval_bfs_sparse_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, non_zero_indices)
-        else:
-            bf_values = eval_bfs_internal(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
-    
-    
+    if non_zero_indices is not None:
+        bf_values, bf_grad_values = eval_bfs_and_grad_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, non_zero_indices)
+    else:
+        bf_values, bf_grad_values = eval_bfs_and_grad_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
+
+    return bf_values, bf_grad_values
+
+
+def eval_bfs(basis, coord, parallel=True, non_zero_indices=None, bfs_data=None):
+    """Values of the basis functions at the points ``coord`` (``n x 3``), shape
+    ``(n, nao)``.  ``non_zero_indices`` restricts the evaluation to those
+    functions (sparse kernel).  ``bfs_data`` is an optional pre-packed tuple
+    from :func:`pack_bfs_data`; it saves re-packing the basis on every call.
+    With ``parallel=True`` the kernels use the thread count set with
+    ``numba.set_num_threads`` before the call.
+    """
+    if bfs_data is None:
+        bfs_data = pack_bfs_data(basis)
+    bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff = bfs_data
+
+    if not parallel:
+        numba.set_num_threads(1) # Set number of threads to 1
+    if non_zero_indices is not None:
+        bf_values = eval_bfs_sparse_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coord, non_zero_indices)
+    else:
+        bf_values = eval_bfs_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
+
     return bf_values
+
 
 @njit(parallel=True, cache=True, fastmath=True, error_model="numpy", inline='always', nogil=True)
 def eval_rho(bf_values, densmat):
@@ -972,8 +964,17 @@ def eval_gto_vectorize_cupy(alpha, coeff, exp_sq_term, xlymzn):
 # eval_bfs_and_grad_internal_serial = njit(parallel=False, cache=True, nogil=True, fastmath=True, error_model="numpy")(eval_bfs_and_grad_internal_)
 
 
-@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
+@njit(parallel=False, cache=True, fastmath=True, error_model="numpy", nogil=True)
 def nonzero_ao_indices_batch(coords, bfs_coords, bfs_radius_cutoff):
+    """Reference (serial, brute-force) screening of one block of grid points.
+
+    A basis function is significant for the block if at least one of its grid
+    points lies within the function's radial cutoff.  Returns a length-``nbf``
+    ``uint16`` buffer whose first ``count`` entries are the significant indices
+    (ascending), and ``count``.  Kept as the reference implementation for the
+    unit tests; :func:`nonzero_ao_indices` uses the parallel
+    :func:`nonzero_ao_indices_mask` kernel, which gives identical results.
+    """
     nbfs = bfs_coords.shape[0]
     ncoords = coords.shape[0]
     count = 0
@@ -996,30 +997,103 @@ def nonzero_ao_indices_batch(coords, bfs_coords, bfs_radius_cutoff):
     # Return the indices array and the number of non-zero bfs
     return indices, count
 
+
+@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True)
+def nonzero_ao_indices_mask(coords, bfs_coords, bfs_radius_cutoff, blocksize, nblocks, ngrids):
+    """Significance mask of shape ``(nblocks + 1, nbf)`` (``uint8``): entry
+    ``[iblock, ibf]`` is 1 if some grid point of block ``iblock`` lies within
+    the radial cutoff of basis function ``ibf``.
+
+    The blocks are processed in parallel (``prange``; uses the thread count set
+    with ``numba.set_num_threads``).  Each block is first enclosed in a bounding
+    sphere (its centroid and the largest distance from it), which settles most
+    block/function pairs without visiting any grid point: the block lies
+    entirely beyond the cutoff (not significant) or entirely within it
+    (significant).  Only the remaining pairs fall back to the per-point test,
+    which is the same test as in :func:`nonzero_ao_indices_batch`, so the
+    result is identical to the brute-force scan.  CPU counterpart of
+    :func:`nonzero_ao_indices_batch_cuda`.
+    """
+    nbfs = bfs_coords.shape[0]
+    mask = np.zeros((nblocks + 1, nbfs), dtype=np.uint8)
+    margin = 1.0e-10  # keeps the sphere tests clear of rounding at the boundary
+    for iblock in prange(nblocks + 1):
+        offset = iblock * blocksize
+        end = min(offset + blocksize, ngrids)
+        npts = end - offset
+        if npts > 0:
+            # Bounding sphere of the block: centroid and largest distance from it
+            cx = 0.0
+            cy = 0.0
+            cz = 0.0
+            for igrd in range(offset, end):
+                cx += coords[igrd, 0]
+                cy += coords[igrd, 1]
+                cz += coords[igrd, 2]
+            cx /= npts
+            cy /= npts
+            cz /= npts
+            rad2 = 0.0
+            for igrd in range(offset, end):
+                x = coords[igrd, 0] - cx
+                y = coords[igrd, 1] - cy
+                z = coords[igrd, 2] - cz
+                d2 = x * x + y * y + z * z
+                if d2 > rad2:
+                    rad2 = d2
+            rad = np.sqrt(rad2)
+            for ibf in range(nbfs):
+                bx = bfs_coords[ibf, 0]
+                by = bfs_coords[ibf, 1]
+                bz = bfs_coords[ibf, 2]
+                cutoff = bfs_radius_cutoff[ibf]
+                dist_centre = np.sqrt((cx - bx) ** 2 + (cy - by) ** 2 + (cz - bz) ** 2)
+                if dist_centre - rad > cutoff + margin:
+                    continue  # every point of the block is beyond the cutoff
+                if dist_centre + rad < cutoff - margin:
+                    mask[iblock, ibf] = 1  # every point of the block is within the cutoff
+                    continue
+                # Sphere straddles the cutoff: same per-point test as the reference kernel
+                for igrd in range(offset, end):
+                    x = coords[igrd, 0] - bx
+                    y = coords[igrd, 1] - by
+                    z = coords[igrd, 2] - bz
+                    if np.sqrt(x * x + y * y + z * z) < cutoff:
+                        mask[iblock, ibf] = 1
+                        break
+    return mask
+
+
 def nonzero_ao_indices(basis, coords, blocksize, nblocks, ngrids):
-    #TODO: Parallelize this using joblib
-    # For a given set of grids and the batch/block size
-    # it calculates the list of indices for each block
-    # that corresponds to the basis functions which 
-    # have non-zero contributions to those batches/blocks.
-    # It also returns the number of such significant bfs
-    # for each block/batch.
-    bfs_coords = np.array([basis.bfs_coords])
-    bfs_radius_cutoff = np.zeros([basis.bfs_nao])
-    for i in range(basis.bfs_nao):
-        bfs_radius_cutoff[i] = basis.bfs_radius_cutoff[i]
-    # Calculate the value of basis functions for all grid points in batches
-    # and find the indices of basis functions that have a significant contribution to those batches for each batch
+    """For each block of ``blocksize`` grid points (``nblocks + 1`` blocks in
+    total, the last one short or empty), find the basis functions that have a
+    non-negligible value somewhere in the block, i.e. whose radial cutoff
+    (``basis.bfs_radius_cutoff``) reaches at least one of its points.
+
+    The work is done by the parallel :func:`nonzero_ao_indices_mask` kernel.
+
+    Returns
+    -------
+    list_nonzero_indices : list of ``uint16`` arrays, one per block, ascending
+    count_nonzero_indices : list of int, the number of entries of each array
+    """
+    nbfs = basis.bfs_nao
+    if nbfs - 1 > np.iinfo(np.uint16).max:
+        raise ValueError('nonzero_ao_indices stores basis-function indices as uint16: '
+                         + str(nbfs) + ' basis functions exceed the supported '
+                         + str(np.iinfo(np.uint16).max + 1) + '.')
+    bfs_coords = np.ascontiguousarray(basis.bfs_coords, dtype=np.float64)
+    bfs_radius_cutoff = np.ascontiguousarray(basis.bfs_radius_cutoff, dtype=np.float64)
+    coords = np.ascontiguousarray(coords, dtype=np.float64)
+    mask = nonzero_ao_indices_mask(coords, bfs_coords, bfs_radius_cutoff, blocksize, nblocks, ngrids)
     list_nonzero_indices = []
     count_nonzero_indices = []
-    # Loop over batches
-    for iblock in range(nblocks+1):
-        offset = iblock*blocksize
-        coords_block = coords[offset : min(offset+blocksize,ngrids)]   
-        nonzero_indices, count = nonzero_ao_indices_batch(coords_block, bfs_coords[0], bfs_radius_cutoff)
-        list_nonzero_indices.append(nonzero_indices)
-        count_nonzero_indices.append(count)
+    for iblock in range(nblocks + 1):
+        indices = np.flatnonzero(mask[iblock]).astype(np.uint16)
+        list_nonzero_indices.append(indices)
+        count_nonzero_indices.append(int(indices.shape[0]))
     return list_nonzero_indices, count_nonzero_indices
+
 
 @cuda.jit(fastmath=True, cache=True)
 def nonzero_ao_indices_batch_cuda(coords, bfs_coords, bfs_radius_cutoff, nblocks, blocksize, ngrids, nbfs, nonzero_indices_mask):

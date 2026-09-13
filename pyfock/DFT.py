@@ -1501,9 +1501,10 @@ class DFT:
                 durationAO_values = 0
                 if save_ao_values:
                     startAO_values = timer()
+                    bfs_data = Integrals.bf_val_helpers.pack_bfs_data(basis)  # pack the basis once for all blocks
                     if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
                         print('\nYou have asked to save the values of significant basis functions on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
-                        memory_required = sum(count_nonzero_indices*blocksize)*8/1024/1024/1024
+                        memory_required = sum(count_nonzero_indices)*blocksize*8/1024/1024/1024
                         print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
                         print('Calculating the value of significantly contributing basis functions (atomic orbitals)...', flush=True)
                         list_ao_values = []
@@ -1511,7 +1512,7 @@ class DFT:
                         for iblock in range(nblocks+1):
                             offset = iblock*blocksize
                             coords_block = grids.coords[offset : min(offset+blocksize,ngrids)]   
-                            ao_values_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
+                            ao_values_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], bfs_data=bfs_data)
                             if self.use_gpu and self.keep_ao_in_gpu:
                                 list_ao_values.append(cp.asarray(ao_values_block))
                             else:
@@ -1520,7 +1521,7 @@ class DFT:
                         ao_values_block = 0 
                     if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
                         print('\nYou have asked to save the values of significant basis functions and their gradients on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
-                        memory_required = 4*sum(count_nonzero_indices*blocksize)*8/1024/1024/1024
+                        memory_required = 4*sum(count_nonzero_indices)*blocksize*8/1024/1024/1024
                         print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
                         print('Calculating the value of significantly contributing basis functions (atomic orbitals)...', flush=True)
                         list_ao_values = []
@@ -1530,7 +1531,7 @@ class DFT:
                             offset = iblock*blocksize
                             coords_block = grids.coords[offset : min(offset+blocksize,ngrids)]   
                             # ao_values_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
-                            ao_values_block, ao_grad_values_block = Integrals.bf_val_helpers.eval_bfs_and_grad(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])
+                            ao_values_block, ao_grad_values_block = Integrals.bf_val_helpers.eval_bfs_and_grad(basis, coords_block, parallel=True, non_zero_indices=list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], bfs_data=bfs_data)
                             if self.use_gpu and self.keep_ao_in_gpu:
                                 list_ao_values.append(cp.asarray(ao_values_block))
                                 list_ao_grad_values.append(cp.asarray(ao_grad_values_block))

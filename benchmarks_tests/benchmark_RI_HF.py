@@ -192,7 +192,7 @@ print('\n\naux NAO :',auxbasis.bfs_nao)
 
 M = Integrals.dipole_moment_mat_symm(basis)
 
-df_algo = 1
+df_algo = 11
 print('\n\nPyFock RI-HF Results with DF_algo =', df_algo)
 dftObj = DFT(molCrysX, basis, auxbasis, xc='HF')
 dftObj.dmat = dmat_init.copy()
