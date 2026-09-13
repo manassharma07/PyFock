@@ -31,6 +31,7 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
     V = None
     ints3c2e = None
     ints2c2e = None
+    ints2c2e_sph = None
     nsignificant = None
     indicesA = None
     indicesB = None
@@ -56,6 +57,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             # streams[0].synchronize()
             cp.cuda.Stream.null.synchronize()
 
+    rihf = isinstance(dftObj.xc, str) and dftObj.xc == 'HF'
+    diag_pseudo_cart = None
     print('Stricter version of Schwarz screening: ', strict_schwarz, flush=True)
     print('\nCalculating three centered two electron and two-centered two-electron integrals...\n\n', flush=True)
     if rys:
@@ -65,11 +68,18 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             if dftObj.sao:
                 # Convert the 2c2e matrix from CAO to SAO basis
                 ints2c2e = auxbasis.cart2sph_operator_blockwise(ints2c2e) # CAO --> SAO 
-                # ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
-                # Convert back to CAO so that now we lose the extra information that the CAO basis had
-                ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
+                ints2c2e_sph = ints2c2e # spherical metric, kept for RI-HF with DF_algo=11
                 eps = 1e-12
-                ints2c2e += eps * np.eye(ints2c2e.shape[0])
+                if rihf and DF_algo == 11:
+                    # RI-HF with DF_algo=11 fits in the spherical space; of the pseudo-Cartesian
+                    # metric only the diagonal (Schwarz bounds) is needed, and it only involves
+                    # the diagonal shell blocks of the spherical metric.
+                    diag_pseudo_cart = _pseudo_cartesian_metric_diagonal(auxbasis, ints2c2e_sph, sph2c_mat_pseudo_aux) + eps
+                else:
+                    # ints2c2e = np.dot(c2sph_mat_aux, np.dot(ints2c2e, c2sph_mat_aux.T)) # CAO --> SAO
+                    # Convert back to CAO so that now we lose the extra information that the CAO basis had
+                    ints2c2e = np.dot(sph2c_mat_pseudo_aux, np.dot(ints2c2e, sph2c_mat_pseudo_aux.T))
+                    ints2c2e += eps * np.eye(ints2c2e.shape[0])
         else:
             ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis)
             if dftObj.sao:
@@ -546,16 +556,34 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
                 xp = np
                 build_plan = Integrals.df_algo11_helpers.build_plan
             sqrt_ints4c2e_diag = xp.sqrt(xp.abs(ints4c2e_diag))
-            sqrt_diag_ints2c2e = xp.sqrt(xp.abs(xp.diag(ints2c2e)))
+            if diag_pseudo_cart is not None:
+                sqrt_diag_ints2c2e = np.sqrt(np.abs(diag_pseudo_cart))
+            else:
+                sqrt_diag_ints2c2e = xp.sqrt(xp.abs(xp.diag(ints2c2e)))
             print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(timer() - start_4c2e_diag, 2))
             durationSchwarz = timer() - startSchwarz
             print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
             start_plan = timer()
+            max_memory_plan = dftObj.max_memory_ints3c2e
+            if rihf and max_memory_plan is not None:
+                print('RI-HF with DF_algo=11 keeps every significant block in memory: max_memory_ints3c2e is ignored.', flush=True)
+                max_memory_plan = None
             ints3c2e = build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e,
                                                               threshold_schwarz, strict_schwarz, sao=dftObj.sao,
-                                                              max_memory_gb=dftObj.max_memory_ints3c2e)
+                                                              max_memory_gb=max_memory_plan)
             print(ints3c2e.summary(), flush=True)
             print('Time taken for the shell-blocked three-center integrals: ', round(timer() - start_plan, 2), flush=True)
+            if rihf:
+                # RI-HF: orthonormalize the stored rows in the fit metric once (Integrals.df_algo11_exchange);
+                # J and K are then built from these rows and the raw blocks are released.
+                if use_gpu:
+                    raise NotImplementedError('RI-HF with DF_algo=11 is implemented for the CPU only.')
+                start_exchange = timer()
+                metric_fit = ints2c2e_sph if dftObj.sao else ints2c2e
+                ints3c2e.exchange = Integrals.df_algo11_exchange.build_exchange(ints3c2e, basis, auxbasis, metric_fit,
+                                                                                  sao=dftObj.sao, release_plan_values=True)
+                print(ints3c2e.exchange.summary(), flush=True)
+                print('Time taken to orthonormalize the three-center rows for RI-HF: ', round(timer() - start_exchange, 2), flush=True)
             if strict_schwarz:
                 start_strict_schwarz_nuc_mat = timer()
                 V = (Integrals.nuc_mat_symm_cupy(basis, mol, None, None, sqrt_ints4c2e_diag)
@@ -651,7 +679,10 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         print('Three Center Two electron ERI size in GB ',ints3c2e.nbytes/1e9, flush=True)
     if DF_algo==11:
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
-        print('Three Center Two electron ERI (cached shell-pair blocks) size in GB ', ints3c2e.memory_gb, flush=True)
+        if getattr(ints3c2e, 'exchange', None) is not None:
+            print('Three Center Two electron ERI (orthonormalized RI-HF rows) size in GB ', ints3c2e.exchange.memory_gb, flush=True)
+        else:
+            print('Three Center Two electron ERI (cached shell-pair blocks) size in GB ', ints3c2e.memory_gb, flush=True)
 
 
 
@@ -828,26 +859,39 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         # Shell-blocked plan (Integrals.df_algo11_helpers): cached blocks are contracted from
         # memory, uncached shell pairs are re-evaluated on the fly in both passes.
         plan = ints3c2e
-        startDF_gamma = timer()
-        gamma_alpha = (Integrals.df_algo11_helpers_cupy.gamma_from_plan_cupy(plan, dmat)
-                       if use_gpu else Integrals.df_algo11_helpers.gamma_from_plan(plan, dmat))
-        durationDF_gamma += timer() - startDF_gamma
-        startDF_coeff = timer()
-        with threadpool_limits(limits=ncores, user_api='blas'):
-            if use_gpu:
-                df_coeff = cp.linalg.solve(ints2c2e, gamma_alpha)
-                cp.cuda.get_current_stream().synchronize()
-            elif not cholesky:
-                df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, overwrite_a=False, overwrite_b=False)
-            else:
-                df_coeff = scipy.linalg.cho_solve(cho_decomp_ints2c2e, gamma_alpha, overwrite_b=False, check_finite=True)
-        durationDF_coeff += timer() - startDF_coeff
-        with threadpool_limits(limits=ncores, user_api='blas'):
-            Ecoul_temp = (cp.dot(df_coeff, gamma_alpha) if use_gpu else np.dot(df_coeff, gamma_alpha))
-        startDF_Jtri = timer()
-        J = (Integrals.df_algo11_helpers_cupy.J_from_plan_cupy(plan, df_coeff)
-             if use_gpu else Integrals.df_algo11_helpers.J_from_plan(plan, df_coeff))
-        durationDF_Jtri += timer() - startDF_Jtri
+        exchange = getattr(plan, 'exchange', None)
+        if exchange is not None:
+            # RI-HF: the stored rows are orthonormalized in the fit metric, so the fit
+            # coefficients are gamma itself (no solve) and gamma.gamma is the DF energy term.
+            startDF_gamma = timer()
+            gamma_alpha = Integrals.df_algo11_exchange.gamma_from_exchange(exchange, dmat)
+            durationDF_gamma += timer() - startDF_gamma
+            df_coeff = gamma_alpha
+            Ecoul_temp = np.dot(gamma_alpha, gamma_alpha)
+            startDF_Jtri = timer()
+            J = Integrals.df_algo11_exchange.J_from_exchange(exchange, gamma_alpha)
+            durationDF_Jtri += timer() - startDF_Jtri
+        else:
+            startDF_gamma = timer()
+            gamma_alpha = (Integrals.df_algo11_helpers_cupy.gamma_from_plan_cupy(plan, dmat)
+                           if use_gpu else Integrals.df_algo11_helpers.gamma_from_plan(plan, dmat))
+            durationDF_gamma += timer() - startDF_gamma
+            startDF_coeff = timer()
+            with threadpool_limits(limits=ncores, user_api='blas'):
+                if use_gpu:
+                    df_coeff = cp.linalg.solve(ints2c2e, gamma_alpha)
+                    cp.cuda.get_current_stream().synchronize()
+                elif not cholesky:
+                    df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, overwrite_a=False, overwrite_b=False)
+                else:
+                    df_coeff = scipy.linalg.cho_solve(cho_decomp_ints2c2e, gamma_alpha, overwrite_b=False, check_finite=True)
+            durationDF_coeff += timer() - startDF_coeff
+            with threadpool_limits(limits=ncores, user_api='blas'):
+                Ecoul_temp = (cp.dot(df_coeff, gamma_alpha) if use_gpu else np.dot(df_coeff, gamma_alpha))
+            startDF_Jtri = timer()
+            J = (Integrals.df_algo11_helpers_cupy.J_from_plan_cupy(plan, df_coeff)
+                 if use_gpu else Integrals.df_algo11_helpers.J_from_plan(plan, df_coeff))
+            durationDF_Jtri += timer() - startDF_Jtri
     durationDF = durationDF + timer() - startDF
 
     # Free memory
@@ -862,6 +906,26 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         cp.cuda.Device(0).use()
         cp._default_memory_pool.free_all_blocks()
     return J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp
+
+
+def _pseudo_cartesian_metric_diagonal(auxbasis, metric_sph, sph2cart_pseudo):
+    """
+    Diagonal of ``S M_sph S^T`` (``S`` = block-diagonal spherical->pseudo-Cartesian map)
+    without forming the dense matrix: only the diagonal shell blocks of ``M_sph`` enter.
+    """
+    nshells = auxbasis.nshells
+    cart_off = np.asarray(auxbasis.shell_bfs_offset, dtype=np.int64)
+    cart_n = np.asarray(auxbasis.bfs_nbfshell, dtype=np.int64)
+    sph_n = 2 * (np.asarray(auxbasis.shells, dtype=np.int64) - 1) + 1
+    sph_off = np.concatenate(([0], np.cumsum(sph_n)[:-1])).astype(np.int64)
+    diag = np.zeros(int(cart_n.sum()), dtype=np.float64)
+    for K in range(nshells):
+        c0, nc = cart_off[K], cart_n[K]
+        s0, ns = sph_off[K], sph_n[K]
+        S_K = sph2cart_pseudo[c0:c0 + nc, s0:s0 + ns]
+        M_K = metric_sph[s0:s0 + ns, s0:s0 + ns]
+        diag[c0:c0 + nc] = np.einsum('ij,jk,ik->i', S_K, M_K, S_K)
+    return diag
 
 
 def _density_matrix_factor(dmat, tol=1e-10):
@@ -884,15 +948,20 @@ def _density_matrix_factor(dmat, tol=1e-10):
     return vec[:, keep] * np.sqrt(occ[keep])
 
 
-def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e):
+def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=None):
     """
     Build the RI Hartree-Fock exchange matrix for full-tensor DF algorithms.
 
     DF_algo=1 stores both (ij|P) and (P|Q)^-1 (Q|ij).
     DF_algo=2 stores the orthonormalized three-center tensor Q_Pij.
     DF_algo=3 stores only (ij|P), so it solves against the DF metric here.
+    DF_algo=11 uses the screened, metric-orthonormalized shell-pair rows of
+    Integrals.df_algo11_exchange (built in density_fitting_prelims_for_DFT_development).
+    ``dmat_factor`` (nao, nocc) with ``dmat = dmat_factor @ dmat_factor.T`` (e.g. the
+    occupied MO coefficients scaled by sqrt(occupation)) skips the eigendecomposition of dmat.
     """
-    dmat_factor = _density_matrix_factor(dmat)
+    if dmat_factor is None:
+        dmat_factor = _density_matrix_factor(dmat)
     if dmat_factor.shape[1] == 0:
         return np.zeros_like(dmat)
 
@@ -916,4 +985,9 @@ def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e)
         left = contract('Pij,io->Pjo', df_coeff, dmat_factor, optimize=True)
         right = contract('klP,ko->Plo', ints3c2e, dmat_factor, optimize=True)
         return contract('Pjo,Plo->jl', left, right, optimize=True)
-    raise ValueError('RI-HF exchange is currently implemented only for DF_algo=1, 2, or 3.')
+    if DF_algo==11:
+        exchange = getattr(ints3c2e, 'exchange', None)
+        if exchange is None:
+            raise ValueError('RI-HF with DF_algo=11 needs the orthonormalized rows built by density_fitting_prelims_for_DFT_development (xc must be \'HF\' when the integrals are built).')
+        return Integrals.df_algo11_exchange.K_from_exchange(exchange, dmat_factor)
+    raise ValueError('RI-HF exchange is currently implemented only for DF_algo=1, 2, 3, or 11.')

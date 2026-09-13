@@ -125,8 +125,8 @@ class DFT:
 
     DF_algo : int
         Algorithm selector for DF (reserved for developer use). 11 (default) is the shell-blocked
-        CPU algorithm that honours ``max_memory_ints3c2e``; 10 is the previous default and is used
-        automatically on the GPU.
+        CPU algorithm that honours ``max_memory_ints3c2e`` and also provides RI-HF exchange
+        (``xc='HF'``, CPU); 10 is the previous default and is used automatically on the GPU.
 
     max_memory_ints3c2e : float or None
         Memory budget (GB) for the stored three-center integrals with DF_algo=11
@@ -276,7 +276,10 @@ class DFT:
         block-sparse in memory throughout the SCF (or partially/never, see max_memory_ints3c2e).
         DF_algo=10: the previous default (per-function evaluation, sparse triangular storage); it is
         selectable on both CPU and GPU. Alternatives 1 and 2 are only for reference and take up
-        a lot of memory as the complete 3c2e tensor is stored in memory."""
+        a lot of memory as the complete 3c2e tensor is stored in memory.
+        RI-HF (xc='HF') works with DF_algo=1, 2, 3 and 11 (CPU). With 11 the screened blocks are
+        orthonormalized in the fit metric once after the integral build (true spherical fit space
+        in SAO mode) and both J and the exchange matrix K are contracted from these rows."""
 
         self.max_memory_ints3c2e = None
         """ Memory budget in GB for the screened three-center integrals when DF_algo=11.
@@ -605,7 +608,7 @@ class DFT:
                 x = eig_vec_s[:,eig_val_s>1e-7] / np.sqrt(eig_val_s[eig_val_s>1e-7])
             xHx = x.T @ H @ x
             #Solve the canonical eigenvalue equation HC = CE
-            eigvalues, eigvectors = scipy.linalg.eigh(xHx)
+            eigvalues, eigvectors = scipy.linalg.eigh(xHx, driver='evd')
             eigvectors = np.dot(x, eigvectors)
 
         idx = np.argmax(np.abs(eigvectors.real), axis=0)
@@ -769,8 +772,7 @@ class DFT:
         # B is symmetric
         for i in range(nKS):
             for j in range(i+1):
-                B[i,j] = B[j,i] = \
-                    np.real(np.trace(np.dot(np.conjugate(self.errVecs[i]).T, self.errVecs[j])))
+                B[i,j] = B[j,i] = np.real(np.vdot(self.errVecs[i], self.errVecs[j]))  # = trace(err_i^H err_j)
         
                                                     
         residual = np.zeros((nKS + 1, 1))
@@ -929,6 +931,8 @@ class DFT:
         durationxc = 0
         durationXCpreprocessing = 0
         durationDF = 0
+        durationK = 0
+        dmat_factor = None  # (nao, nocc) factor of dmat from the last diagonalization (RI-HF exchange)
         durationKS = 0
         durationSCF = 0
         durationgrids_prune_rho = 0
@@ -999,9 +1003,9 @@ class DFT:
                         )
                         import pylibxc
 
-        if xc=='HF' and isDF and DF_algo not in (1, 2, 3):
+        if xc=='HF' and isDF and DF_algo not in (1, 2, 3, 11):
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('ERROR: RI-HF is currently implemented only for DF_algo=1, 2, or 3!')
+            print('ERROR: RI-HF is currently implemented only for DF_algo=1, 2, 3, or 11!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             exit()
         if xc=='HF' and isDF and self.use_gpu:
@@ -1025,6 +1029,10 @@ class DFT:
         #### Set number of cores
         numba.set_num_threads(ncores)
         os.environ['RAYON_NUM_THREADS'] = str(ncores)
+        # Cap the numpy/scipy BLAS pools at ncores for the whole SCF. If the caller set
+        # OPENBLAS_NUM_THREADS etc. after numpy was already imported, numpy's BLAS would
+        # otherwise keep all cores and contend with the Numba and Accelerate threads.
+        blas_limiter = threadpool_limits(limits=ncores, user_api='blas')
         
         print('Running DFT using '+str(numba.get_num_threads())+' threads for Numba.\n\n', flush=True)
         if grids is None:
@@ -1653,7 +1661,9 @@ class DFT:
                 else:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
                     if xc=='HF':
-                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e)
+                        startK = timer()
+                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=dmat_factor)
+                        durationK += timer() - startK
 
 
                     
@@ -1689,7 +1699,9 @@ class DFT:
                 else:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
                     if xc=='HF':
-                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e)
+                        startK = timer()
+                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=dmat_factor)
+                        durationK += timer() - startK
                 # J += J_diff
             if self.use_gpu:
                 J = cp.asarray(J, dtype=cp.float64)
@@ -1902,6 +1914,12 @@ class DFT:
                             eigvalues, eigvectors = self.solve(KS, S, orthogonalize=orthogonalize, x=x_ortho)
                     mo_occ = self.getOcc(mol, eigvalues, eigvectors)
                     dmat = self.gen_dm(eigvectors, mo_occ)
+                    if xc=='HF' and isDF:
+                        # Low-rank factor of the new density (dmat = factor @ factor.T, CAO basis) for the RI-HF exchange
+                        occ_idx = mo_occ > 0
+                        dmat_factor = eigvectors[:, occ_idx] * np.sqrt(mo_occ[occ_idx])
+                        if self.sao:
+                            dmat_factor = c2sph_mat.T @ dmat_factor #SAO --> CAO
                     if self.sao:
                         dmat = basis.sph2cart_dmat_blockwise(dmat) #SAO --> CAO
                         # The above is the same as this
@@ -1955,6 +1973,8 @@ class DFT:
                 print('    DF (Jtri)                          ', round(durationDF_Jtri, 2), flush=True)
                 if cholesky:
                     print('    DF (Cholesky)                      ', round(durationDF_cholesky, 2), flush=True)
+        if isDF and xc=='HF':
+            print('Exchange matrix (RI-K)                 ', round(durationK, 2), flush=True)
         print('DIIS                                   ', round(durationDIIS, 2), flush=True)
         print('KS matrix diagonalization              ', round(durationKS, 2), flush=True)
         print('One electron Integrals (S, T, Vnuc)    ', round(duration1e, 2), flush=True)
@@ -1965,7 +1985,7 @@ class DFT:
         print('Grids construction                     ', round(durationgrids, 2), flush=True)
         print('Exchange-Correlation Term              ', round(durationxc, 2), flush=True)
         totalTime = round(durationXCpreprocessing + durationAO_values + duration1e + durationCoulomb - durationDF_cholesky + \
-            durationgrids + durationxc + durationDF + durationKS + durationDIIS + durationgrids_prune_rho, 2)
+            durationgrids + durationxc + durationDF + durationK + durationKS + durationDIIS + durationgrids_prune_rho, 2)
         print('Misc.                                  ', round(durationSCF - totalTime, 2), flush=True)
         print('Complete SCF                           ', round(durationSCF, 2), flush=True)
 
@@ -1977,6 +1997,7 @@ class DFT:
 
             # Switch back to main GPU
             cp.cuda.Device(0).use()
+        blas_limiter.restore_original_limits()
         rt_tddft = self.rt_tddft
         if rt_tddft:
             if xc_bf_screen and save_ao_values:

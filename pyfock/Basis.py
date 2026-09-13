@@ -862,6 +862,25 @@ class Basis:
         return scipy.linalg.block_diag(*sph2cart)
 
 
+    def _blockwise_transform_tables(self):
+        """
+        Packed per-shell Cartesian->spherical transforms of this basis and the
+        Cartesian/spherical shell offsets, built on first use and cached (the shell
+        structure of a Basis does not change after construction).
+        """
+        cache = getattr(self, '_blockwise_transform_cache', None)
+        if cache is None or cache[0] != self.nshells:
+            nshells = self.nshells
+            T_shell = [Basis.cart2sph(self.shells[k] - 1) for k in range(nshells)]
+            T_flat, T_offsets, T_rows, T_cols = _pack_transforms(T_shell)
+            cart_offsets = np.array(self.shell_bfs_offset, dtype=np.int64)
+            sph_offsets = np.zeros(nshells, dtype=np.int64)
+            sph_offsets[1:] = np.cumsum(T_rows[:-1])
+            cache = (nshells, T_flat, T_offsets, T_rows, T_cols, cart_offsets, sph_offsets)
+            self._blockwise_transform_cache = cache
+        return cache[1:]
+
+
     def cart2sph_operator_blockwise(self, A):
         """
         Blockwise Cartesian → spherical transformation of a *symmetric* operator.
@@ -885,18 +904,8 @@ class Basis:
         A_sph : (nao_sph, nao_sph) ndarray
         """
         nshells = self.nshells
-
-        # Per-shell transforms  (computed once; consider caching on self)
-        T_shell = [Basis.cart2sph(self.shells[i] - 1) for i in range(nshells)]
-
-        # Pack into contiguous arrays Numba can use
-        T_flat, T_offsets, T_rows, T_cols = _pack_transforms(T_shell)
-
-        # Cartesian offsets (input) and spherical offsets (output)
-        cart_offsets = np.array(self.shell_bfs_offset, dtype=np.int64)
-        cart_sizes   = np.array(self.bfs_nbfshell,     dtype=np.int64)
-        sph_offsets  = np.zeros(nshells, dtype=np.int64)
-        sph_offsets[1:] = np.cumsum(T_rows[:-1])
+        # Per-shell transforms and offsets, packed once per Basis and cached
+        T_flat, T_offsets, T_rows, T_cols, cart_offsets, sph_offsets = self._blockwise_transform_tables()
 
         nao_sph = int(T_rows.sum())
         A_sph   = np.zeros((nao_sph, nao_sph), dtype=np.float64)
@@ -932,13 +941,8 @@ class Basis:
         D_cart : (nao_cart, nao_cart) ndarray
         """
         nshells = self.nshells
-
-        T_shell = [Basis.cart2sph(self.shells[i] - 1) for i in range(nshells)]
-        T_flat, T_offsets, T_rows, T_cols = _pack_transforms(T_shell)
-
-        cart_offsets = np.array(self.shell_bfs_offset, dtype=np.int64)
-        sph_offsets  = np.zeros(nshells, dtype=np.int64)
-        sph_offsets[1:] = np.cumsum(T_rows[:-1])
+        # Per-shell transforms and offsets, packed once per Basis and cached
+        T_flat, T_offsets, T_rows, T_cols, cart_offsets, sph_offsets = self._blockwise_transform_tables()
 
         nao_cart = int(T_cols.sum())
         D_cart   = np.zeros((nao_cart, nao_cart), dtype=np.float64)
