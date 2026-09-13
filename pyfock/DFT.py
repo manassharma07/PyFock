@@ -91,10 +91,15 @@ class DFT:
         matrix (DF_algo 1, 2, 3 or 11; CPU, XC_algo=2). Range-separated hybrids are not supported.
 
     grids : object, optional
-        Precomputed numerical integration grids. If None, they will be generated automatically.
+        Precomputed numerical integration grids (a PyFock `Grids` object or any object with `coords` and
+        `weights`). If None, they are generated according to `gridsLevel` and the `grids_scheme` attribute
+        ('treutler', the default: Treutler-Ahlrichs radial grids, Lebedev angular grids, angular pruning and Becke
+        partitioning; 'numgrid': numgrid grids with the `grids_preset`, `grids_radial_precision` and
+        `grids_angular_points` attributes), and pruned with the starting density (points with |rho * w| < 1e-11
+        are dropped).
 
     gridsLevel : int, optional
-        Level of numerical integration grid refinement (default is 3).
+        Grid level, 0 (coarsest) to 9 (finest); default 3.
 
     use_pyscf_grids : bool, optional
         If True, generate PySCF DFT grids internally when no explicit `grids`
@@ -262,6 +267,23 @@ class DFT:
         """ Atomic grids for DFT calculation """
         self.use_pyscf_grids = use_pyscf_grids
         """ Whether to generate PySCF grids when no explicit grids are supplied. """
+        self.grids_scheme = 'treutler'
+        """ Scheme used to generate the XC grid when no `grids` are supplied and `use_pyscf_grids` is False:
+        'treutler' (default): Treutler-Ahlrichs radial grids, Lebedev angular grids, angular pruning and Becke partitioning
+        with Treutler's atomic-size adjustment; 'numgrid': the grids of the numgrid library (LMG radial grids from the
+        def2-QZVP exponents), with the parameters of `grids_preset`. """
+        self.grids_options = {}
+        """ Extra keyword arguments for `Grids` with the 'treutler' scheme, e.g. {'pruning': None, 'size_adjustment': 'becke',
+        'points_per_element': {'C': (75, 302)}}. """
+        self.grids_preset = 'compact'
+        """ numgrid parameter preset ('numgrid' scheme only): 'compact': radial precision and angular grids chosen per level such
+        that the grid is similar in size to the 'treutler' grid of the same level (comparable accuracy at level 3 for light
+        elements); 'dense': the previous PyFock grids (radial precision 1e-13, up to 590 angular points at level 3; about three
+        times more points than 'compact' at level 3). """
+        self.grids_radial_precision = None
+        """ 'numgrid' scheme only: radial precision requested from the LMG radial grid (None: the value of the level from `grids_preset`). """
+        self.grids_angular_points = None
+        """ 'numgrid' scheme only: (min, max) number of Lebedev angular points for all atoms (None: the values of the level from `grids_preset`). """
         self.grid_pruning_use_core_guess = False
         """ Prune the XC grid with the density of the configured initial guess
         (``dmat_guess_method``), independently of a user-supplied SCF starting density.
@@ -951,7 +973,7 @@ class DFT:
         SCF Procedure:
         1. Initialize one-electron integrals (S, T, V_nuc)
         2. Calculate/prepare two-electron integrals with optional screening
-        3. Generate and prune integration grids for XC evaluation
+        3. Generate and pruning integration grids for XC evaluation
         4. Iterative SCF loop:
         - Build Coulomb matrix J from density matrix
         - Evaluate exchange-correlation energy/potential on grids
@@ -1479,10 +1501,16 @@ class DFT:
                 if self.use_pyscf_grids:
                     print('Using PySCF to generate the DFT grids.', flush=True)
                     grids = self.generate_pyscf_grids(gridsLevel=gridsLevel)
-                else:
-                    # Generate grids for XC term
+                elif str(self.grids_scheme).lower() == 'numgrid':
+                    # Grids of the numgrid library (LMG radial grids from the def2-QZVP exponents, Lebedev angular
+                    # grids, numgrid's Becke partitioning); parameters from the preset of the level
                     basisGrids = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-QZVP')})
-                    grids = Grids(mol, basis=basisGrids, level = gridsLevel, ncores=ncores)
+                    grids = Grids(mol, basis=basisGrids, level=gridsLevel, ncores=ncores, scheme='numgrid', preset=self.grids_preset,
+                                  radial_precision=self.grids_radial_precision, angular_points=self.grids_angular_points)
+                else:
+                    # Native grids: Treutler-Ahlrichs radial grids, Lebedev angular grids (numgrid tables),
+                    # angular pruning by radial regions, Becke partitioning with Treutler's atomic-size adjustment
+                    grids = Grids(mol, level=gridsLevel, ncores=ncores, scheme=self.grids_scheme, **self.grids_options)
 
                 print('done!', flush=True)
                 durationgrids = timer() - startGrids
@@ -1496,36 +1524,38 @@ class DFT:
                     dmat_grid_pruning = dmat
                 threshold_rho = 1e-11
                 ngrids_temp = grids.coords.shape[0]
-                ndeleted = 0
-                blocksize_temp = 50000
+                blocksize_temp = 10000
                 nblocks_temp = ngrids_temp//blocksize_temp
-                weightsNew = None
-                coordsNew = None
+                # Only the basis functions whose radial cutoff reaches a block of points are evaluated
+                # (the same screening as the XC evaluation), instead of the full AO matrix at every point
+                list_nonzero_indices_temp, count_nonzero_indices_temp = Integrals.bf_val_helpers.nonzero_ao_indices(basis, grids.coords, blocksize_temp, nblocks_temp, ngrids_temp)
+                bfs_data_temp = Integrals.bf_val_helpers.pack_bfs_data(basis)
+                keep = np.ones(ngrids_temp, dtype=bool)
                 for iblock in range(nblocks_temp+1):
                     offset = iblock*blocksize_temp
-                    weights_block = grids.weights[offset : min(offset+blocksize_temp,ngrids_temp)]
-                    coords_block = grids.coords[offset : min(offset+blocksize_temp,ngrids_temp)] 
-                    ao_value_block = Integrals.bf_val_helpers.eval_bfs(basis, coords_block)  
+                    end = min(offset+blocksize_temp, ngrids_temp)
+                    if end <= offset:
+                        continue
+                    nonzero_indices_block = list_nonzero_indices_temp[iblock][0:count_nonzero_indices_temp[iblock]]
+                    if nonzero_indices_block.shape[0] == 0:
+                        keep[offset:end] = False  # no basis function reaches these points: rho = 0
+                        continue
+                    ao_value_block = Integrals.bf_val_helpers.eval_bfs(basis, grids.coords[offset:end], parallel=True,
+                                                                        non_zero_indices=nonzero_indices_block, bfs_data=bfs_data_temp)
+                    idx_block = nonzero_indices_block.astype(np.int64)
                     rho_block = contract(
                         'ij,mi,mj->m',
-                        dmat_grid_pruning,
+                        dmat_grid_pruning[np.ix_(idx_block, idx_block)],
                         ao_value_block,
                         ao_value_block,
                     )
-                    zero_indices = np.where(np.abs(rho_block*weights_block) < threshold_rho)[0]
-                    ndeleted += len(zero_indices)
-                    weightsNew_block = np.delete(weights_block, zero_indices)
-                    coordsNew_block = np.delete(coords_block, zero_indices, 0)
-                    if weightsNew_block.shape[0]>0:
-                        if weightsNew is None:
-                            weightsNew = weightsNew_block
-                            coordsNew = coordsNew_block
-                        else:
-                            weightsNew = np.concatenate((weightsNew, weightsNew_block))
-                            coordsNew = np.concatenate([coordsNew, coordsNew_block], axis=0)
-
-                grids.coords = coordsNew
-                grids.weights = weightsNew
+                    keep[offset:end] = np.abs(rho_block*grids.weights[offset:end]) >= threshold_rho
+                ndeleted = int(ngrids_temp - np.count_nonzero(keep))
+                if hasattr(grids, 'prune_by_mask'):
+                    grids.prune_by_mask(keep)
+                else:
+                    grids.coords = np.ascontiguousarray(grids.coords[keep])
+                    grids.weights = np.ascontiguousarray(grids.weights[keep])
                 self.grids = grids
                 print('done!', flush=True)
                 durationgrids_prune_rho = timer() - startGrids_prune_rho
@@ -1555,20 +1585,12 @@ class DFT:
             print('Size (in GB) for storing the density at gridpoints:    ', round(grids.weights.nbytes/1e9, 3), flush=True)
 
             # Sort the grids for slightly better performance with batching (doesn't seem to make much difference)
-            if sortGrids:
+            if sortGrids and not getattr(grids, 'is_sorted', False):
+                # Group the points box by box (1.2 Bohr boxes) so that the batches of the XC
+                # evaluation are spatially compact and few basis functions contribute to each of them
                 print('\nSorting grids ....', flush=True)
-                # Function to sort grids
-                def get_ordered_list(points, x, y, z):
-                    points.sort(key = lambda p: (p[0] - x)**2 + (p[1] - y)**2 + (p[2] - z)**2)
-                    # print(points[0:10])
-                    return points
-                # Make a single array of coords and weights
-                coords_weights = np.c_[grids.coords, grids.weights]
-                coords_weights = np.array(get_ordered_list(coords_weights.tolist(), min(grids.coords[:,0]), min(grids.coords[:,1]), min(grids.coords[:,2])))
-                # Now go back to two arrays for coords and weights
-                grids.weights = coords_weights[:,3]
-                grids.coords = coords_weights[:,0:3]
-                coords_weights = 0#None
+                grids.coords, grids.weights = Grids.sort_by_boxes(grids.coords, grids.weights, mol.coordsBohrs)
+                grids.is_sorted = True
                 print('done!', flush=True)
 
             # blocksize = 10000

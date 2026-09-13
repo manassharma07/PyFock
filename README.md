@@ -95,6 +95,7 @@
 - ✅ **Effective Core Potentials**: Support for evaluation of ECP integrals
 - ✅ **Analytical gradients & forces**: Fast analytical nuclear gradients for density-fitted DFT — one-electron (overlap/kinetic/nuclear), DF Coulomb (3c2e + 2c2e), and XC for LDA, GGA and meta-GGA (native or LibXC) — matching PySCF forces and faster
 - ✅ **ASE Calculator**: Optional ASE interface (geometry optimization and the wider ASE ecosystem), using analytical forces by default
+- ✅ **XC integration grids**: Treutler-Ahlrichs radial and Lebedev angular grids with region-wise angular pruning and Becke partitioning (levels 0-9), built by a parallel Numba kernel; energies agree with PySCF to the SCF convergence threshold in our benchmarks; numgrid grids remain available as an alternative scheme
 - ✅ **SANO initial guess**: superposition of atomic natural-orbital densities (ANO-RCC-MB natural orbitals projected onto the calculation basis, no atomic SCF needed) as the default SCF starting point; it roughly halves the number of SCF iterations relative to the core-Hamiltonian guess and prunes the XC grid accurately
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
 
@@ -305,6 +306,26 @@ saves 12-63 % of the SCF iterations, 41 % over a 22-case benchmark (e.g. decane/
 density, it also removes a grid-pruning error of the too-compact core-Hamiltonian density
 (3e-4 Ha for decane, more for heavy atoms). See [docs/sano_guess.md](docs/sano_guess.md) for
 the method, the benchmark table and the tests.
+
+### XC Integration Grids
+
+The exchange-correlation term is integrated on Treutler-Ahlrichs radial grids combined with Lebedev
+angular grids (tables from numgrid), pruned region by region and joined by Becke partitioning
+with Treutler's atomic-size adjustment. `gridsLevel` runs from 0 (coarsest) to 9 (finest), default 3.
+In our benchmarks the resulting SCF energies agree with PySCF's at the same level to the convergence
+threshold, and the grid is built in about the time PySCF needs (decane: 0.11 s vs 0.14 s).
+
+```python
+dftObj = DFT(mol, basis, auxbasis, xc='PBE', gridsLevel=3)            # default: grids_scheme='treutler'
+dftObj.grids_options = {'pruning': None, 'size_adjustment': 'becke'} # variants of the default scheme
+dftObj.grids_options = {'points_per_element': {'C': (75, 302)}}      # (n_rad, n_ang) overrides per element
+dftObj.grids_scheme = 'numgrid'; dftObj.grids_preset = 'compact'     # numgrid grids ('dense': the old PyFock grids)
+dftObj.use_pyscf_grids = True                                        # or let PySCF build the grid (PySCF must be installed)
+```
+
+Standalone grids come from `Grids(mol, level=3)` (`coords`, `weights` and the atom index of every
+point, grouped into 1.2 Bohr boxes). See [docs/xc_grids.md](docs/xc_grids.md) for the construction,
+its validation and a study of what the numgrid grids can and cannot do.
 
 ### Density-Fitting Coulomb Algorithms and Memory Budget
 

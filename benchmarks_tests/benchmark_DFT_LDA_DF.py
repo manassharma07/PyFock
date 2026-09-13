@@ -263,8 +263,8 @@ print('\n\nNAO :',basis.bfs_nao)
 auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
 print('\n\naux NAO :',auxbasis.bfs_nao)
 
-# dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx)
-dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
+dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx)
+# dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, grids=pyscfGrids)
 # dftObj = DFT(molCrysX, basis, auxbasis, xc=funcidcrysx, use_pyscf_grids=True)
 dftObj.dmat = dmat_init
 dftObj.conv_crit = 1e-7
