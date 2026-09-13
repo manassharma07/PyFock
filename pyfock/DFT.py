@@ -24,6 +24,7 @@ from pyfock import XC
 # import pyfock.Integrals as Integrals
 import pyfock.Integrals as Integrals
 import pyfock.Grids as Grids
+import pyfock.Guess as Guess
 import pyfock.Data as Data
 from threadpoolctl import ThreadpoolController, threadpool_info, threadpool_limits
 # controller = ThreadpoolController()
@@ -76,7 +77,10 @@ class DFT:
         Convergence criterion for the SCF cycle in Hartrees (default is 1e-7).
 
     dmat_guess_method : str, optional
-        Method for the initial density matrix guess (e.g., 'core', 'huckel').
+        Method for the initial density matrix guess: 'sano' (default; superposition of
+        atomic natural-orbital densities, i.e. spherically averaged free-atom densities in
+        the ANO-RCC-MB minimal basis projected onto the calculation basis, see
+        ``pyfock.Guess``) or 'core' (core-Hamiltonian guess).
 
     xc : list or str, optional
         Exchange-correlation functional specification. If None, defaults to LDA (`[1, 7]`).
@@ -223,9 +227,9 @@ class DFT:
 
         
         self.dmat_guess_method = dmat_guess_method
-        """ Initial guess for the density matrix """
+        """ Initial guess for the density matrix: 'sano' (default) or 'core' """
         if self.dmat_guess_method is None:
-            self.dmat_guess_method = 'core'
+            self.dmat_guess_method = 'sano'
 
         self.dmat = None
         """ Initial density matrix guess for SCF. Will get updated at each SCF iteration. """
@@ -259,8 +263,10 @@ class DFT:
         self.use_pyscf_grids = use_pyscf_grids
         """ Whether to generate PySCF grids when no explicit grids are supplied. """
         self.grid_pruning_use_core_guess = False
-        """ Use a core-Hamiltonian density for XC grid pruning, independently
-        of a user-supplied SCF density guess. """
+        """ Prune the XC grid with the density of the configured initial guess
+        (``dmat_guess_method``), independently of a user-supplied SCF starting density.
+        This keeps the pruned grid identical to that of a fresh calculation when a
+        converged density is reused (e.g. along a geometry optimization). """
 
         self.isDF = True
         """ Use density fitting (DF) for two-electron Coulomb integrals by default. 
@@ -735,6 +741,75 @@ class DFT:
 
         return dmat
     
+
+    def guessSANO(self, mol=None, basis=None, Hcore=None, S=None, verbose=True):
+        """
+        Generate the SANO guess density matrix: superposition of spherically averaged
+        free-atom densities, taken from the atomic natural orbitals of the ANO-RCC-MB
+        minimal basis and projected onto the calculation basis (see ``pyfock.Guess``).
+
+        Falls back to the core-Hamiltonian guess (with a warning) for elements beyond Cm
+        or ECP core sizes without a tabulated shell structure.
+
+        Parameters
+        ----------
+        mol : Mol, optional
+            Molecule object (default: ``self.mol``).
+        basis : Basis, optional
+            Basis set (default: ``self.basis``).
+        Hcore : ndarray, optional
+            Core Hamiltonian, only used for the core-guess fallback.
+        S : ndarray, optional
+            Overlap matrix (CAO, NumPy). Recomputed when not given or not a NumPy array.
+        verbose : bool, optional
+            Print a summary of the guess and the references to cite.
+
+        Returns
+        -------
+        ndarray
+            Guess density matrix in the CAO representation.
+        """
+        if mol is None:
+            mol = self.mol
+        if basis is None:
+            basis = self.basis
+        S_np = S if isinstance(S, np.ndarray) else None
+        try:
+            dmat, info = Guess.sano_dmat(mol, basis, S=S_np)
+        except ValueError as exc:
+            print('\nWARNING: SANO initial guess not available (' + str(exc) + ')')
+            print('Falling back to the core-Hamiltonian guess.\n', flush=True)
+            self.guess_info = None
+            return self.guessCoreH(mol, basis, Hcore=Hcore, S=S)
+        self.guess_info = info
+        if verbose:
+            print('\nInitial guess: SANO (superposition of atomic natural-orbital densities)')
+            print('  Spherically averaged atomic densities from the ' + info['minimal_basis']
+                  + ' natural orbitals for ' + ', '.join(info['species'])
+                  + ', projected onto the calculation basis'
+                  + (' and renormalized.' if info['renormalized'] else '.'))
+            if info['nelectrons'] > 0:
+                print('  Electrons in the guess density: ' + format(info['nelectrons_guess'], '.4f')
+                      + ' of ' + str(info['nelectrons']) + ' (the calculation basis represents '
+                      + format(100.0 * info['nelectrons_projected'] / info['nelectrons'], '.2f')
+                      + '% of the atomic natural orbitals)')
+            print('  Time taken: ' + str(round(info['time'], 3)) + ' seconds.')
+            print(Guess.sano_citation_text(info['nuclear_charges']))
+            print('', flush=True)
+        return dmat
+
+    def guess_dmat(self, mol=None, basis=None, Hcore=None, S=None):
+        """
+        Initial density matrix according to ``self.dmat_guess_method``
+        ('core' or 'sano'), in the CAO representation.
+        """
+        method = str(self.dmat_guess_method).strip().lower()
+        if method in ('core', 'hcore', '1e'):
+            return self.guessCoreH(mol, basis, Hcore=Hcore, S=S)
+        if method == 'sano':
+            return self.guessSANO(mol, basis, Hcore=Hcore, S=S)
+        raise ValueError("Unknown dmat_guess_method '" + str(self.dmat_guess_method)
+                         + "'. Available: 'core', 'sano'.")
 
     def DIIS(self,S,D,F):
         """
@@ -1241,16 +1316,14 @@ class DFT:
 
         dmat_grid_pruning = None
         if self.grid_pruning_use_core_guess and xc != 'HF' and grids is None:
-            dmat_grid_pruning = self.guessCoreH(
-                mol, basis, Hcore=H, S=S
-            )
+            # Density of the configured initial guess, independent of a user-supplied dmat
+            dmat_grid_pruning = self.guess_dmat(mol, basis, Hcore=H, S=S)
 
         if dmat is None:
-            if self.dmat_guess_method=='core':
-                if dmat_grid_pruning is None:
-                    dmat = self.guessCoreH(mol, basis, Hcore=H, S=S)
-                else:
-                    dmat = dmat_grid_pruning.copy()
+            if dmat_grid_pruning is None:
+                dmat = self.guess_dmat(mol, basis, Hcore=H, S=S)
+            else:
+                dmat = dmat_grid_pruning.copy()
 
         if self.use_gpu:
             dmat_cp = cp.asarray(dmat, dtype=cp.float64)

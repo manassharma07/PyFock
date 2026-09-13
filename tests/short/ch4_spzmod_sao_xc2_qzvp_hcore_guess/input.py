@@ -56,6 +56,7 @@ dft_obj = DFT(
     ncores=ncores,
 )
 dft_obj.dmat = None
+dft_obj.dmat_guess_method = "core"  # this case tests the core-Hamiltonian guess (PyFock default is 'sano')
 dft_obj.max_itr = 35
 dft_obj.XC_algo = xc_algo
 dft_obj.strict_schwarz = False

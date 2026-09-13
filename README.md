@@ -95,6 +95,7 @@
 - ✅ **Effective Core Potentials**: Support for evaluation of ECP integrals
 - ✅ **Analytical gradients & forces**: Fast analytical nuclear gradients for density-fitted DFT — one-electron (overlap/kinetic/nuclear), DF Coulomb (3c2e + 2c2e), and XC for LDA, GGA and meta-GGA (native or LibXC) — matching PySCF forces and faster
 - ✅ **ASE Calculator**: Optional ASE interface (geometry optimization and the wider ASE ecosystem), using analytical forces by default
+- ✅ **SANO initial guess**: superposition of atomic natural-orbital densities (ANO-RCC-MB natural orbitals projected onto the calculation basis, no atomic SCF needed) as the default SCF starting point; it roughly halves the number of SCF iterations relative to the core-Hamiltonian guess and prunes the XC grid accurately
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
 
 ## Installation
@@ -279,6 +280,32 @@ energyCrysX, dmat = dftObj.scf()
 print(f"SCF Energy: {energyCrysX} Ha")
 ```
 
+### Initial Guess for the SCF
+
+The SCF starts by default from the **SANO** guess (superposition of atomic natural-orbital
+densities): the spherically averaged density of every free atom, written in the ANO-RCC-MB
+minimal basis whose contracted functions are the atomic natural orbitals of Roos and
+co-workers, projected onto the calculation basis and renormalized shell by shell. It is the
+PyFock analogue of PySCF's `minao` guess, costs a fraction of a second and needs no atomic
+SCF. The core-Hamiltonian guess remains available:
+
+```python
+dft_obj = DFT(mol, basis, auxbasis, xc='PBE', dmat_guess_method='sano')   # default
+dft_obj = DFT(mol, basis, auxbasis, xc='PBE', dmat_guess_method='core')   # core-Hamiltonian guess
+
+# The guess density itself (CAO representation) and its references
+from pyfock import Guess
+dmat_guess, info = Guess.sano_dmat(mol, basis)
+print(Guess.sano_citation_text(info['nuclear_charges']))
+```
+
+The SCF output lists the references to cite for the guess. Compared with the core guess it
+saves 12-63 % of the SCF iterations, 41 % over a 22-case benchmark (e.g. decane/def2-SVP/PBE
+18 -> 8, cholesterol 27 -> 10), and, because PyFock prunes the XC grid with the starting
+density, it also removes a grid-pruning error of the too-compact core-Hamiltonian density
+(3e-4 Ha for decane, more for heavy atoms). See [docs/sano_guess.md](docs/sano_guess.md) for
+the method, the benchmark table and the tests.
+
 ### Density-Fitting Coulomb Algorithms and Memory Budget
 
 The Coulomb term is evaluated with density fitting and Schwarz screening. Two CPU/GPU
@@ -405,7 +432,7 @@ streamlit run app.py
 - [ ] Analytical gradients on GPU and for non-DF / ECP calculations
 - [ ] Electron dynamics & Excited state calculations (RT-TDDFT)
 - [ ] Periodic boundary conditions
-- [ ] Hybrid functionals with exact exchange
+- [x] Hybrid functionals with exact exchange (native B3LYP/PBE0 and LibXC hybrids, RI-K via DF_algo=11; CPU)
 - [ ] Multi-GPU parallelization
 - [ ] Basis set optimization tools
 

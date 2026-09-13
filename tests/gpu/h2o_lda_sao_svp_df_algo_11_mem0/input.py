@@ -7,6 +7,8 @@ basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
 aux = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
 dft = DFT(mol, basis, aux, xc=[1, 7], conv_crit=1e-7, gridsLevel=3,
           use_pyscf_grids=False, blocksize=5000, save_ao_values=True, use_gpu=True, ncores=ncores)
+# The reference output was generated with the core-Hamiltonian guess (PyFock's default is now 'sano')
+dft.dmat_guess_method = "core"
 dft.max_itr = 35
 dft.XC_algo = 2
 dft.DF_algo = 11
