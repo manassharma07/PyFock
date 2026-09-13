@@ -57,7 +57,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             # streams[0].synchronize()
             cp.cuda.Stream.null.synchronize()
 
-    rihf = isinstance(dftObj.xc, str) and dftObj.xc == 'HF'
+    # exact (RI) exchange is needed for HF and for global hybrid functionals
+    rihf = (isinstance(dftObj.xc, str) and dftObj.xc == 'HF') or getattr(dftObj, 'exx_coef', 0.0) > 0
     diag_pseudo_cart = None
     print('Stricter version of Schwarz screening: ', strict_schwarz, flush=True)
     print('\nCalculating three centered two electron and two-centered two-electron integrals...\n\n', flush=True)

@@ -87,8 +87,8 @@ class DFT_Grad:
             raise NotImplementedError('Analytical gradients are currently implemented for CPU only.')
         if not dft_obj.isDF:
             raise NotImplementedError('Analytical gradients are currently implemented for density-fitted (isDF=True) calculations only.')
-        if dft_obj.xc == 'HF':
-            raise NotImplementedError('Analytical gradients are currently implemented for pure DFT functionals only.')
+        if dft_obj.xc == 'HF' or getattr(dft_obj, 'exx_coef', 0.0) > 0:
+            raise NotImplementedError('Analytical gradients are currently implemented for pure DFT functionals only (no exact exchange).')
         if ecp_grad_mode not in ('analytical', 'fd'):
             raise ValueError("ecp_grad_mode must be 'analytical' or 'fd'.")
 

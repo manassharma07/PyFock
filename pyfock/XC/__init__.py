@@ -18,6 +18,7 @@ All components can be imported directly from this module.
 """
 from .lda_x import lda_x, lda_x_cupy
 from .lda_c_vwn import lda_c_vwn, lda_c_vwn_cupy
+from .lda_c_vwn_rpa import lda_c_vwn_rpa, lda_c_vwn_rpa_cupy
 from .lda_c_pw import lda_c_pw, lda_c_pw_cupy
 from .lda_c_pw_mod import lda_c_pw_mod, lda_c_pw_mod_cupy
 from .lda_c_pz import lda_c_pz, lda_c_pz_cupy
@@ -39,11 +40,14 @@ from .mgga_r2scan_task import mgga_x_r2scan, mgga_x_r2scan_cupy, mgga_c_r2scan, 
 from .mgga_r2scan_task import mgga_x_task, mgga_x_task_cupy
 from .xcfunc_handler import check_implemented, func_compute, get_functional_id, resolve_functional, get_implemented_ids
 from .xcfunc_handler import get_family, get_functional_citation
+from .xcfunc_handler import is_hybrid, get_exx_coefficient, get_hybrid_components, get_semilocal_family
+from .xcfunc_handler import xc_semilocal_family, LIBXC_FAMILY_TO_SEMILOCAL
 # get_functional_citation, _ALIAS_TO_IDS, _NAME_TO_ID, _FUNCTIONAL_DATA
 
 __all__ = [
     'lda_x', 'lda_x_cupy',
     'lda_c_vwn', 'lda_c_vwn_cupy',
+    'lda_c_vwn_rpa', 'lda_c_vwn_rpa_cupy',
     'lda_c_pw', 'lda_c_pw_cupy',
     'lda_c_pw_mod', 'lda_c_pw_mod_cupy',
     'lda_c_pz', 'lda_c_pz_cupy',
@@ -66,7 +70,9 @@ __all__ = [
     'mgga_c_r2scan', 'mgga_c_r2scan_cupy',
     'mgga_x_task', 'mgga_x_task_cupy',
     'check_implemented', 'func_compute', 'get_functional_id', 'get_implemented_ids',
-    'resolve_functional', 'get_functional_citation', 'get_family'
+    'resolve_functional', 'get_functional_citation', 'get_family',
+    'is_hybrid', 'get_exx_coefficient', 'get_hybrid_components', 'get_semilocal_family',
+    'xc_semilocal_family', 'LIBXC_FAMILY_TO_SEMILOCAL',
 ]
 
 

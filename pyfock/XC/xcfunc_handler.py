@@ -1,5 +1,6 @@
 from pyfock.XC import lda_x, lda_x_cupy, lda_c_vwn, lda_c_vwn_cupy, lda_c_pw, lda_c_pw_cupy, lda_c_pw_mod, lda_c_pw_mod_cupy
 from pyfock.XC import lda_c_pz, lda_c_pz_cupy, lda_c_pz_mod, lda_c_pz_mod_cupy
+from pyfock.XC import lda_c_vwn_rpa, lda_c_vwn_rpa_cupy
 from pyfock.XC import gga_x_pbe, gga_x_pbe_cupy, gga_c_pbe, gga_c_pbe_cupy, gga_x_b88, gga_x_b88_cupy, gga_c_lyp, gga_c_lyp_cupy
 from pyfock.XC import gga_x_pbe_sol, gga_x_pbe_sol_cupy, gga_c_pbe_sol, gga_c_pbe_sol_cupy
 from pyfock.XC import gga_x_rpbe, gga_x_rpbe_cupy
@@ -35,9 +36,10 @@ from pyfock.XC import mgga_x_task, mgga_x_task_cupy
 # 498 - MGGA_C_R2SCAN
 # 707 - MGGA_X_TASK
 _IMPLEMENTED_IDS = {
-    1, 7, 9, 10, 12, 13,
+    1, 7, 8, 9, 10, 12, 13,
     101, 106, 109, 116, 117, 130, 131, 132, 133, 134,
     202, 203, 231, 233, 497, 498, 707,
+    402, 406, 475,  # global hybrids (semilocal part from the components below, exact exchange via RI-K)
 }
 
 
@@ -49,6 +51,7 @@ _IMPLEMENTED_IDS = {
 _FUNCTIONAL_FAMILY = {
     1:   1,  # LDA_X        → LDA
     7:   1,  # LDA_C_VWN    → LDA
+    8:   1,  # LDA_C_VWN_RPA → LDA
     9:   1,  # LDA_C_PZ     → LDA
     10:  1,  # LDA_C_PZ_MOD → LDA
     12:  1,  # LDA_C_PW     → LDA
@@ -82,6 +85,9 @@ _FUNCTIONAL_FAMILY = {
     707: 4,  # MGGA_X_TASK     → MGGA
     718: 4,  # MGGA_X_R2SCANL  → MGGA
     719: 4,  # MGGA_C_R2SCANL  → MGGA
+    402: 3,  # HYB_GGA_XC_B3LYP  → hybrid (GGA semilocal part)
+    406: 3,  # HYB_GGA_XC_PBEH   → hybrid (GGA semilocal part)
+    475: 3,  # HYB_GGA_XC_B3LYP5 → hybrid (GGA semilocal part)
 }
 
 FAMILY_LDA    = 1
@@ -99,6 +105,10 @@ _FUNCTIONAL_DATA = {
     7: (
         "LDA_C_VWN",
         "S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980).",
+    ),
+    8: (
+        "LDA_C_VWN_RPA",
+        "S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980) [RPA parametrization].",
     ),
     9: (
         "LDA_C_PZ",
@@ -245,6 +255,33 @@ _FUNCTIONAL_DATA = {
         "MGGA_C_R2SCANL",
         "A. P. Bartok and J. R. Yates, J. Chem. Phys. 150, 161101 (2019).",
     ),
+    402: (
+        "HYB_GGA_XC_B3LYP",
+        "A. D. Becke, J. Chem. Phys. 98, 5648 (1993); P. J. Stephens, F. J. Devlin, C. F. Chabalowski, "
+        "and M. J. Frisch, J. Phys. Chem. 98, 11623 (1994) [VWN-RPA correlation, as in LibXC and PySCF].",
+    ),
+    406: (
+        "HYB_GGA_XC_PBEH",
+        "C. Adamo and V. Barone, J. Chem. Phys. 110, 6158 (1999); "
+        "M. Ernzerhof and G. E. Scuseria, J. Chem. Phys. 110, 5029 (1999).",
+    ),
+    475: (
+        "HYB_GGA_XC_B3LYP5",
+        "A. D. Becke, J. Chem. Phys. 98, 5648 (1993); P. J. Stephens, F. J. Devlin, C. F. Chabalowski, "
+        "and M. J. Frisch, J. Phys. Chem. 98, 11623 (1994) [VWN5 correlation].",
+    ),
+}
+
+# Global hybrids implemented natively: LibXC ID → (exact-exchange fraction, semilocal components).
+# The semilocal part is the coefficient-weighted sum of the listed functionals; the exact
+# exchange fraction scales the (RI) exchange matrix K in the SCF.
+#   B3LYP  = 0.20 E_x^HF + 0.08 LDA_X + 0.72 B88 + 0.19 VWN(RPA) + 0.81 LYP   (LibXC/PySCF definition)
+#   B3LYP5 = same with VWN5 correlation
+#   PBE0   = 0.25 E_x^HF + 0.75 PBE_X + PBE_C
+_HYBRID_FUNCTIONALS = {
+    402: (0.20, ((0.08, 1), (0.72, 106), (0.19, 8), (0.81, 131))),
+    475: (0.20, ((0.08, 1), (0.72, 106), (0.19, 7), (0.81, 131))),
+    406: (0.25, ((0.75, 101), (1.00, 130))),
 }
 
 # Reverse map: upper-cased canonical name → LibXC ID
@@ -258,6 +295,11 @@ _ALIAS_TO_IDS = {
     "PW91":     [109, 134],   # GGA_X_PW91    + GGA_C_PW91
     "BP86":     [106, 132],   # GGA_X_B88     + GGA_C_P86
     "BLYP":     [106, 131],   # GGA_X_B88     + GGA_C_LYP
+    "B3LYP":    [402],        # HYB_GGA_XC_B3LYP  (single xc functional, 20% exact exchange)
+    "B3LYP5":   [475],        # HYB_GGA_XC_B3LYP5 (VWN5 correlation)
+    "PBE0":     [406],        # HYB_GGA_XC_PBEH   (25% exact exchange)
+    "PBEH":     [406],
+    "PBE1PBE":  [406],
     "LDA":      [1,   7],     # LDA_X         + LDA_C_VWN  (most common LDA combo)
     "SVWN":     [1,   7],     # synonym for LDA/VWN
     "SVWN5":    [1,   7],
@@ -279,6 +321,44 @@ _ALIAS_TO_IDS = {
     "R2SCANL":  [718, 719],   # MGGA_X_R2SCANL  + MGGA_C_R2SCANL
     "R2SCAN01": [645, 642],   # MGGA_X_R2SCAN01 + MGGA_C_R2SCAN01
 }
+
+
+# LibXC family codes (XC_FAMILY_LDA/GGA/MGGA and their HYB_ variants) -> semilocal family
+LIBXC_FAMILY_TO_SEMILOCAL = {1: 1, 2: 2, 4: 4, 32: 2, 64: 4, 128: 1}
+
+
+def xc_semilocal_family(funcids, use_libxc=False):
+    """
+    Highest semilocal family (1 LDA, 2 GGA, 4 mGGA) of a list of functional IDs, i.e.
+    whether the XC quadrature needs AO gradients (GGA) or also tau (mGGA).  With
+    ``use_libxc`` the families are taken from pylibxc (hybrids map to their semilocal
+    family), otherwise from the native tables.
+    """
+    ids = [funcids] if isinstance(funcids, int) else list(funcids)
+    if use_libxc:
+        import pylibxc
+        return max(LIBXC_FAMILY_TO_SEMILOCAL[pylibxc.LibXCFunctional(int(fid), 'unpolarized').get_family()] for fid in ids)
+    return max(get_semilocal_family(int(fid)) for fid in ids)
+
+
+def is_hybrid(funcid: int) -> bool:
+    """True for the natively implemented global hybrids (402, 406, 475)."""
+    return funcid in _HYBRID_FUNCTIONALS
+
+
+def get_exx_coefficient(funcid: int) -> float:
+    """Exact-exchange fraction of a natively implemented hybrid, 0.0 otherwise."""
+    return _HYBRID_FUNCTIONALS[funcid][0] if funcid in _HYBRID_FUNCTIONALS else 0.0
+
+
+def get_hybrid_components(funcid: int):
+    """Semilocal components ``((coef, LibXC ID), ...)`` of a functional (``((1.0, funcid),)`` if not a hybrid)."""
+    return _HYBRID_FUNCTIONALS[funcid][1] if funcid in _HYBRID_FUNCTIONALS else ((1.0, funcid),)
+
+
+def get_semilocal_family(funcid: int) -> int:
+    """Family (1 LDA, 2 GGA, 4 mGGA) of the semilocal part, i.e. the highest family among the components."""
+    return max(_FUNCTIONAL_FAMILY[fid] for _, fid in get_hybrid_components(funcid))
 
 
 def get_functional_id(name: str) -> int:
@@ -492,6 +572,7 @@ def func_compute(funcid, rho, sigma=None, tau=None, use_gpu=True):
     _LDA_CPU = {
         1:  lda_x,
         7:  lda_c_vwn,
+        8:  lda_c_vwn_rpa,
         9:  lda_c_pz,
         10: lda_c_pz_mod,
         12: lda_c_pw,
@@ -501,6 +582,7 @@ def func_compute(funcid, rho, sigma=None, tau=None, use_gpu=True):
     _LDA_GPU = {
         1:  lda_x_cupy,
         7:  lda_c_vwn_cupy,
+        8:  lda_c_vwn_rpa_cupy,
         9:  lda_c_pz_cupy,
         10: lda_c_pz_mod_cupy,
         12: lda_c_pw_cupy,
@@ -558,6 +640,33 @@ def func_compute(funcid, rho, sigma=None, tau=None, use_gpu=True):
         lda_table, gga_table, mgga_table = _LDA_GPU, _GGA_GPU, _MGGA_GPU
     else:
         lda_table, gga_table, mgga_table = _LDA_CPU, _GGA_CPU, _MGGA_CPU
+    if funcid in _HYBRID_FUNCTIONALS:
+        # Semilocal part of a global hybrid: coefficient-weighted sum of its components.
+        # (The exact-exchange fraction is applied to the RI exchange matrix in the SCF.)
+        family = get_semilocal_family(funcid)
+        e = 0.0
+        vrho = 0.0
+        vsigma = 0.0
+        vtau = 0.0
+        for coef, fid in _HYBRID_FUNCTIONALS[funcid][1]:
+            ffam = _FUNCTIONAL_FAMILY[fid]
+            if ffam == 4:
+                ret = func_compute(fid, rho, sigma=sigma, tau=tau, use_gpu=use_gpu)
+            elif ffam == 2:
+                ret = func_compute(fid, rho, sigma=sigma, use_gpu=use_gpu)
+            else:
+                ret = func_compute(fid, rho, use_gpu=use_gpu)
+            e = e + coef * ret[0]
+            vrho = vrho + coef * ret[1]
+            if ffam >= 2:
+                vsigma = vsigma + coef * ret[2]
+            if ffam == 4:
+                vtau = vtau + coef * ret[3]
+        if family == 1:
+            return e, vrho
+        if family == 2:
+            return e, vrho, vsigma
+        return e, vrho, vsigma, vtau
 
     if funcid in lda_table:
         return lda_table[funcid](rho)

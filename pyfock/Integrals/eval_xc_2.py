@@ -171,19 +171,12 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
     # bf_values = Integrals.bf_val_helpers.eval_bfs(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
     bfs_data_as_np_arrays = [bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff]
 
-    xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-    if use_libxc:
-        import pylibxc
-        # Create a LibXC object  
-        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-        x_family_code = funcx.get_family()
-        c_family_code = funcc.get_family()
-    else:
-        x_family_code = XC.get_family(funcid[0])
-        c_family_code = XC.get_family(funcid[1])
-        funcx = None
-        funcc = None
+    # The functionals evaluated at the grid points, as a list of ('libxc', LibXCFunctional, family)
+    # or ('native', LibXC ID, family) entries whose contributions are summed; `family` is the
+    # semilocal family (1 LDA, 2 GGA, 4 mGGA) of each entry and `xc_family` the highest one,
+    # which decides whether AO gradients (GGA) or also tau (mGGA) are needed. A hybrid functional
+    # evaluates its semilocal part here; its exact-exchange fraction is applied in the SCF.
+    funcs, xc_family = _xc_functionals(funcid, use_libxc)
 
     #### Set number of cores for numba related evaluations within 'block_dens_func()' for example bf_value evaluations 
     numba.set_num_threads(1)
@@ -216,17 +209,19 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
                     'expr_tau_block':expr_tau_block}
 
 
-    if list_nonzero_indices is not None:
-        if list_ao_values is not None:
-            if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
-                output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size, pre_dispatch=3*ncores)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, use_libxc, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
-            else: #GGA
-                output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, use_libxc, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], list_ao_grad_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
+    # One BLAS thread inside the joblib workers (they parallelize over grid blocks); the limit is
+    # applied once here so that the original thread count is restored exactly once afterwards.
+    with threadpool_limits(limits=1, user_api='blas'):
+        if list_nonzero_indices is not None:
+            if list_ao_values is not None:
+                if xc_family == 1:
+                    output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size, pre_dispatch=3*ncores)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcs, xc_family, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
+                else: #GGA
+                    output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcs, xc_family, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], list_ao_grad_values[iblock], numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
+            else:
+                output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcs, xc_family, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
         else:
-            output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, use_libxc, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
-            # output = Parallel(n_jobs=ncores, backend='loky', batch_size=batch_size)(delayed(block_dens_func_wrapper)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug) for iblock in block_indices)
-    else:
-        output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat, funcid, use_libxc, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
+            output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(delayed(block_dens_func)(weights[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat, funcs, xc_family, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, numexpr_expr=numexpr_expr, debug=debug) for iblock in block_indices)
         
     indx_block_output = 0
     for iblock in block_indices:
@@ -270,8 +265,6 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
     output = 0
     non_zero_indices = 0
     coords = 0
-    if use_libxc:
-        efunc = efunc[0]
 
     return efunc, v
 
@@ -280,64 +273,21 @@ def eval_xc_2(basis, dmat, weights, coords, funcid=[1,7], use_libxc=False, spin=
 # Use cloudpickle for better serialization
 # set_loky_pickler('cloudpickle')
 
-# Worker-local cache for functionals and numexpr expressions
-_worker_cache = {}
-
-def _get_worker_objects(funcid, x_family_code, c_family_code):
-    """Get or create worker-local LibXC functionals and numexpr expressions"""
-    global _worker_cache
-    
-    cache_key = (tuple(funcid), x_family_code, c_family_code)
-    
-    if cache_key not in _worker_cache:
-        # Create LibXC functionals
-        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-        
-        # Compile NumExpr expressions once per worker
-        numexpr_expr = {
-            'expr_den': numexpr.NumExpr('rho_block*weights_block'),
-            'expr_F': numexpr.NumExpr('weights_block*v_rho_temp'),
-            'expr_z': numexpr.NumExpr('0.5*F*ao_value_block_T'),
-            'expr_v': numexpr.NumExpr('v_temp + v_temp_T'),
-            'expr_sigma_block': numexpr.NumExpr('rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2'),
-            'expr_Ftemp': numexpr.NumExpr('2*weights_block*vsigma_temp'),
-            'expr_Fx': numexpr.NumExpr('Ftemp*rho_grad_block_x'),
-            'expr_Fy': numexpr.NumExpr('Ftemp*rho_grad_block_y'),
-            'expr_Fz': numexpr.NumExpr('Ftemp*rho_grad_block_z'),
-            'expr_z_grad': numexpr.NumExpr('Fx*ao_value_gradx_block_T + Fy*ao_value_grady_block_T + Fz*ao_value_gradz_block_T'),
-            'expr_tau_block': numexpr.NumExpr('0.5*(tau_block_x + tau_block_y + tau_block_z)')
-        }
-        
-        # Set numba to use single thread per worker
-        # numba.set_num_threads(1)
-        
-        _worker_cache[cache_key] = (funcx, funcc, numexpr_expr)
-    
-    return _worker_cache[cache_key]
+def _xc_functionals(funcid, use_libxc):
+    """Functional list for :func:`block_dens_func` and the overall semilocal family (see eval_xc_2)."""
+    ids = [funcid] if isinstance(funcid, (int, np.integer)) else list(funcid)
+    funcs = []
+    for fid in ids:
+        if use_libxc:
+            import pylibxc
+            fn = pylibxc.LibXCFunctional(int(fid), 'unpolarized')
+            funcs.append(('libxc', fn, XC.LIBXC_FAMILY_TO_SEMILOCAL[fn.get_family()]))
+        else:
+            funcs.append(('native', int(fid), XC.get_semilocal_family(int(fid))))
+    return funcs, max(f[2] for f in funcs)
 
 
-def block_dens_func_wrapper(weights_block, coords_block, dmat_block, funcid,
-                            bfs_data_as_np_arrays, non_zero_indices=None, 
-                            ao_values=None, ao_grad_values=None,
-                            x_family_code=None, c_family_code=None, 
-                            xc_family_dict=None, debug=False):
-    """Wrapper that initializes worker-local objects and calls block_dens_func"""
-    
-    # Get worker-local functionals and numexpr expressions
-    funcx, funcc, numexpr_expr = _get_worker_objects(funcid, x_family_code, c_family_code)
-    
-    # Call your actual function
-    return block_dens_func(
-        weights_block, coords_block, dmat_block, funcid, bfs_data_as_np_arrays,
-        non_zero_indices, ao_values, ao_grad_values,
-        funcx=funcx, funcc=funcc,
-        x_family_code=x_family_code, c_family_code=c_family_code,
-        xc_family_dict=xc_family_dict, numexpr_expr=numexpr_expr, debug=debug
-    )
-
-@threadpool_limits.wrap(limits=1, user_api='blas')
-def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, ao_grad_values=None, funcx=None, funcc=None, x_family_code=None, c_family_code=None, xc_family_dict=None, numexpr_expr=None, debug=False):
+def block_dens_func(weights_block, coords_block, dmat, funcs, xc_family, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, ao_grad_values=None, numexpr_expr=None, debug=False):
     ### Use threadpoolctl https://github.com/numpy/numpy/issues/11826
     # to set the number of threads to 1
     # https://github.com/joblib/threadpoolctl
@@ -353,10 +303,6 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     numba.set_num_threads(1)
 
 
-    if funcx is None:
-        if use_libxc:
-            funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-            funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
 
     
     bfs_coords = bfs_data_as_np_arrays[0]
@@ -376,7 +322,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
         startAO = timer()
     # AO and Grad values
     # LDA
-    if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
+    if xc_family == 1:
         if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
             ao_value_block = ao_values
         else:
@@ -393,7 +339,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
 
     # GGA/MGGA (# If either x or c functional is of GGA/MGGA type we need ao_grad_values)
     # If either x or c functional is of GGA/MGGA type we need ao_grad_values
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
             ao_value_block, ao_values_grad_block = ao_values, ao_grad_values
         else:
@@ -427,7 +373,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
         Fmj = ao_value_block @ dmat
         rho_block = Integrals.bf_val_helpers.eval_rho(ao_value_block, dmat) # This is by-far the fastest now (when not using non_zero_indices) <-----
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values too
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         # rho_grad_block_x = contract('ij,mi,mj->m',dmat,ao_values_grad_block[0],ao_value_block)+\
         #                         contract('ij,mi,mj->m',dmat,ao_value_block,ao_values_grad_block[0])
         # rho_grad_block_y = contract('ij,mi,mj->m',dmat,ao_values_grad_block[1],ao_value_block)+\
@@ -443,7 +389,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
         rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('mj,kmj->km', Fmj, ao_values_grad_block) 
         # sigma_block = numexpr.evaluate('(rho_grad_block_x**2 + rho_grad_block_y**2 + rho_grad_block_z**2)')
         sigma_block = numexpr_expr['expr_sigma_block'](rho_grad_block_x, rho_grad_block_y, rho_grad_block_z)
-        if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+        if xc_family == 4:
             tau_block_x, tau_block_y, tau_block_z = contract('ij,kmi,kmj->km', dmat, ao_values_grad_block, ao_values_grad_block)
             tau_block = numexpr_expr['expr_tau_block'](tau_block_x, tau_block_y, tau_block_z)
         
@@ -453,131 +399,69 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
 
 
     
-    #LibXC stuff
-    # Exchange
+    # Functional values at the grid points: energy per particle and the derivatives with
+    # respect to rho, sigma and tau, summed over the functionals (each gets the inputs its
+    # semilocal family needs).
     if debug:
         startLibxc = timer()
-    
-    # Input dictionary for libxc
-    inp = {}
-    # Input dictionary needs density values at grid points
-    inp['rho'] = rho_block
-    if xc_family_dict[x_family_code]!='LDA':
-        # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
-        inp['sigma'] = sigma_block
-    if xc_family_dict[x_family_code]=='MGGA':
-        inp['tau'] = tau_block
-    # Calculate the necessary quantities using LibXC
-    if use_libxc:
-        retx = funcx.compute(inp)
-    else:
-        if xc_family_dict[x_family_code]=='MGGA':
-            retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
+    e = 0.0
+    vrho = 0.0
+    vsigma = 0.0
+    vtau = 0.0
+    for kind, fn, fam in funcs:
+        if kind == 'libxc':
+            inp = {'rho': rho_block}
+            if fam >= 2:
+                inp['sigma'] = sigma_block
+            if fam == 4:
+                inp['tau'] = tau_block
+            ret = fn.compute(inp)
+            e = e + ret['zk'].ravel()
+            vrho = vrho + ret['vrho'].ravel()
+            if fam >= 2:
+                vsigma = vsigma + ret['vsigma'].ravel()
+            if fam == 4:
+                vtau = vtau + ret['vtau'].ravel()
         else:
-            retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, use_gpu=False)
-    # durationLibxc = durationLibxc + timer() - startLibxc
-    # print('Duration for LibXC computations at grid points: ',durationLibxc)
-
-    # Correlation
-    # startLibxc = timer()
-    
-    # Input dictionary for libxc
-    inp = {}
-    # Input dictionary needs density values at grid points
-    inp['rho'] = rho_block
-    if xc_family_dict[c_family_code]!='LDA':
-        # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
-        inp['sigma'] = sigma_block
-    if xc_family_dict[c_family_code]=='MGGA':
-        inp['tau'] = tau_block
-    # Calculate the necessary quantities using LibXC
-    if use_libxc:
-        retc = funcc.compute(inp)
-    else:
-        if xc_family_dict[c_family_code]=='MGGA':
-            retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
-        else:
-            retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, use_gpu=False)
+            if fam == 4:
+                ret = XC.func_compute(fn, rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
+            elif fam == 2:
+                ret = XC.func_compute(fn, rho_block, sigma=sigma_block, use_gpu=False)
+            else:
+                ret = XC.func_compute(fn, rho_block, use_gpu=False)
+            e = e + ret[0]
+            vrho = vrho + ret[1]
+            if fam >= 2:
+                vsigma = vsigma + ret[2]
+            if fam == 4:
+                vtau = vtau + ret[3]
     if debug:
         durationLibxc = durationLibxc + timer() - startLibxc
-    # print('Duration for LibXC computations at grid points: ',durationLibxc)
 
     if debug:
         startE = timer()
     #ENERGY-----------
-    if use_libxc:
-        e = retx['zk'] + retc['zk'] # Functional values at grid points
-    else:
-        e = retx[0] + retc[0]
-    # Testing CrysX's own implmentation
-    #e = densfuncs.lda_x(rho)
-
-    # Calculate the total energy 
     # Multiply the density at grid points by weights
-    # den = numexpr.evaluate('(rho_block*weights_block)') #elementwise multiply
     den = numexpr_expr['expr_den'](rho_block, weights_block)
-    # den = rho_block*weights_block #elementwise multiply
     efunc = np.dot(den, e) #Multiply with functional values at grid points and sum
     nelec = np.sum(den)
-    # nelec = numexpr.evaluate('sum(den)')
     if debug:
         durationE = durationE + timer() - startE
-    # print('Duration for calculation of total density functional energy: ',durationE)
 
     #POTENTIAL----------
-    # The derivative of functional wrt density is vrho
-    if use_libxc:
-        vrho = retx['vrho'] + retc['vrho']
-    else:
-        vrho = retx[1] + retc[1]
-    # vrho = numexpr.evaluate('x_vrho + c_vrho', {'x_vrho':retx['vrho'], 'c_vrho': retc['vrho']})
-    vsigma = 0
-    vtau = 0
-    # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-    if xc_family_dict[x_family_code]!='LDA':
-        # The derivative of functional wrt grad \rho square.
-        if use_libxc:
-            vsigma += retx['vsigma']
-        else:
-            vsigma += retx[2]
-    if xc_family_dict[x_family_code]=='MGGA':
-        if use_libxc:
-            vtau += retx['vtau']
-        else:
-            vtau += retx[3]
-        
-    if xc_family_dict[c_family_code]!='LDA':
-        # The derivative of functional wrt grad \rho square.
-        if use_libxc:
-            vsigma += retc['vsigma']
-        else:
-            vsigma += retc[2]
-    if xc_family_dict[c_family_code]=='MGGA':
-        if use_libxc:
-            vtau += retc['vtau']
-        else:
-            vtau += retc[3]
-    retx = 0
-    retc = 0
-    func = 0
+    ret = 0
     
     if debug:
         startF = timer()
     # v_rho_temp = vrho[:,0]
     # F = weights_block*v_rho_temp
     # F = numexpr.evaluate('(weights_block*v_rho_temp)')
-    if use_libxc:
-        F = numexpr_expr['expr_F'](weights_block, vrho[:,0])
-    else:
-        F = numexpr_expr['expr_F'](weights_block, vrho)
+    F = numexpr_expr['expr_F'](weights_block, vrho)
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         # vsigma_temp = vsigma[:,0]
         # Ftemp = numexpr.evaluate('(2*weights_block*vsigma_temp)')
-        if use_libxc:
-            Ftemp = numexpr_expr['expr_Ftemp'](weights_block, vsigma[:,0])
-        else:
-            Ftemp = numexpr_expr['expr_Ftemp'](weights_block, vsigma)
+        Ftemp = numexpr_expr['expr_Ftemp'](weights_block, vsigma)
         # Ftemp = 2*weights_block*vsigma[:,0]
         # Fx = numexpr.evaluate('(Ftemp*rho_grad_block_x)')
         # Fy = numexpr.evaluate('(Ftemp*rho_grad_block_y)')
@@ -599,7 +483,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     # z = numexpr.evaluate('(0.5*F*ao_value_block_T)')
     z = numexpr_expr['expr_z'](F, ao_value_block.T)
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         ao_value_gradx_block_T = ao_values_grad_block[0].T
         ao_value_grady_block_T = ao_values_grad_block[1].T
         ao_value_gradz_block_T = ao_values_grad_block[2].T
@@ -624,11 +508,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, use_libxc, bfs_da
     # v = v_temp + v_temp_T
     # v = numexpr.evaluate('(v_temp + v_temp_T)')
     v = numexpr_expr['expr_v'](v_temp, v_temp.T)
-    if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
-        if use_libxc:
-            v += contract('m,kmi,kmj->ij', 0.5*weights_block*vtau[:,0], ao_values_grad_block, ao_values_grad_block)
-        else:
-            v += contract('m,kmi,kmj->ij', 0.5*weights_block*vtau, ao_values_grad_block, ao_values_grad_block)
+    if xc_family == 4:
+        v += contract('m,kmi,kmj->ij', 0.5*weights_block*vtau, ao_values_grad_block, ao_values_grad_block)
     
     
     if debug:

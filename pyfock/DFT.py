@@ -80,6 +80,11 @@ class DFT:
 
     xc : list or str, optional
         Exchange-correlation functional specification. If None, defaults to LDA (`[1, 7]`).
+        Accepted forms: ``'HF'``; a name (``'PBE'``, ``'BLYP'``, ``'B3LYP'``, ``'B3LYP5'``, ``'PBE0'``, ...);
+        an ``[exchange, correlation]`` pair of LibXC IDs; or a single LibXC xc-functional ID such as
+        ``[402]`` (B3LYP). Global hybrids (native 402/475/406, or any LibXC global hybrid with
+        ``use_libxc=True``) add their exact-exchange fraction through the density-fitted exchange
+        matrix (DF_algo 1, 2, 3 or 11; CPU, XC_algo=2). Range-separated hybrids are not supported.
 
     grids : object, optional
         Precomputed numerical integration grids. If None, they will be generated automatically.
@@ -371,6 +376,7 @@ class DFT:
         """ Whether to keep the atomic orbitals for XC evaluation in GPU memory or CPU memory. Only relevant if save_ao_values = True. """
         self.use_libxc = False
         """ Whether to use LibXC's version of XC functionals or PyFock implementations. 
+        The native set includes the global hybrids B3LYP (402, VWN-RPA as in LibXC/PySCF), B3LYP5 (475) and PBE0 (406).
         For GPU calculations it is recommended to use PyFock 
         implementation as it avoids CPU-GPU transfers."""
         self.n_streams = 1
@@ -1003,14 +1009,42 @@ class DFT:
                         )
                         import pylibxc
 
-        if xc=='HF' and isDF and DF_algo not in (1, 2, 3, 11):
+        # Fraction of exact (Hartree-Fock) exchange: 1 for HF, the hybrid coefficient for a
+        # global hybrid functional (e.g. 0.2 for B3LYP, 0.25 for PBE0), 0 for pure functionals.
+        exx_coef = 0.0
+        if xc == 'HF':
+            exx_coef = 1.0
+        else:
+            if isinstance(xc, (tuple, np.ndarray)):
+                xc = list(xc)
+            if isinstance(xc, list) and all(isinstance(v, (int, np.integer)) for v in xc):
+                xc = [int(v) for v in xc]
+            if not (isinstance(xc, list) and len(xc) in (1, 2) and all(isinstance(v, int) for v in xc)):
+                raise ValueError(f'Cannot interpret the functional specification {xc!r}: expected a name, '
+                                 'one xc functional ID, or an [exchange, correlation] pair of IDs.')
+            if self.use_libxc:
+                for fid in xc:
+                    fn = pylibxc.LibXCFunctional(fid, 'unpolarized')
+                    if getattr(fn, '_have_cam', 0):
+                        raise NotImplementedError('Range-separated hybrid functionals are not supported (only global hybrids).')
+                    if fn.get_family() in (32, 64, 128):  # HYB_GGA, HYB_MGGA, HYB_LDA
+                        exx_coef += fn.get_hyb_exx_coef()
+            else:
+                exx_coef = sum(XC.get_exx_coefficient(fid) for fid in xc)
+        self.exx_coef = exx_coef
+        if exx_coef > 0 and isDF and DF_algo not in (1, 2, 3, 11):
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('ERROR: RI-HF is currently implemented only for DF_algo=1, 2, 3, or 11!')
+            print('ERROR: RI exact exchange (HF and hybrid functionals) is currently implemented only for DF_algo=1, 2, 3, or 11!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             exit()
-        if xc=='HF' and isDF and self.use_gpu:
+        if exx_coef > 0 and isDF and self.use_gpu:
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('ERROR: RI-HF with density fitting is currently implemented only for CPU!')
+            print('ERROR: RI exact exchange (HF and hybrid functionals) with density fitting is currently implemented only for CPU!')
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            exit()
+        if xc != 'HF' and (exx_coef > 0 or len(xc) == 1) and (self.use_gpu or XC_algo not in (None, 2)):
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('ERROR: Hybrid functionals (and single xc functional IDs) are currently supported only with XC_algo=2 on the CPU!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             exit()
 
@@ -1479,16 +1513,8 @@ class DFT:
             list_ao_values = None
             list_ao_grad_values = None
             if xc_bf_screen:
-                xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-                if self.use_libxc:
-                    # Create a LibXC object  
-                    funcx = pylibxc.LibXCFunctional(xc[0], "unpolarized")
-                    funcc = pylibxc.LibXCFunctional(xc[1], "unpolarized")
-                    x_family_code = funcx.get_family()
-                    c_family_code = funcc.get_family()
-                else:
-                    x_family_code = XC.get_family(xc[0])
-                    c_family_code = XC.get_family(xc[1])
+                # 1 LDA, 2 GGA, 4 mGGA: the highest semilocal family among the functionals (hybrids count as their semilocal part)
+                xc_semilocal_family = XC.xc_semilocal_family(xc, self.use_libxc)
                 ### Find the list of significanlty contributing bfs for xc evaluations
                 startXCpreprocessing = timer()
                 print('\nPreliminary processing for XC term evaluations...', flush=True)
@@ -1510,7 +1536,7 @@ class DFT:
                 if save_ao_values:
                     startAO_values = timer()
                     bfs_data = Integrals.bf_val_helpers.pack_bfs_data(basis)  # pack the basis once for all blocks
-                    if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
+                    if xc_semilocal_family == 1:
                         print('\nYou have asked to save the values of significant basis functions on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
                         memory_required = sum(count_nonzero_indices)*blocksize*8/1024/1024/1024
                         print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
@@ -1527,7 +1553,7 @@ class DFT:
                                 list_ao_values.append(ao_values_block)
                         #Free memory 
                         ao_values_block = 0 
-                    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+                    if xc_semilocal_family != 1:
                         print('\nYou have asked to save the values of significant basis functions and their gradients on grid points so as to avoid recalculation for each SCF cycle.', flush=True)
                         memory_required = 4*sum(count_nonzero_indices)*blocksize*8/1024/1024/1024
                         print('Please note: This will require addtional memory that is approximately: '+ str(np.round(memory_required,1))+ ' GB', flush=True)
@@ -1561,8 +1587,6 @@ class DFT:
 
             funcid = xc
 
-            xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-
 
             print('\n\n------------------------------------------------------', flush=True)
             print('Exchange-Correlation Functional')
@@ -1572,16 +1596,15 @@ class DFT:
                 print(pylibxc.util.xc_reference())
                 print('\n\n')
                 print('XC Functional IDs supplied: ', funcid, flush=True)
-                print('\n\nDescription of exchange functional: \n')
-                print('The Exchange function belongs to the family:', xc_family_dict[x_family_code], flush=True)
-                print(funcx.describe())
-                print('\n\nDescription of correlation functional: \n', flush=True)
-                print(' The Correlation function belongs to the family:', xc_family_dict[c_family_code], flush=True)
-                print(funcc.describe())
-                
+                for fid in funcid:
+                    fn = pylibxc.LibXCFunctional(fid, "unpolarized")
+                    print('\n\nDescription of functional', fid, '(LibXC family code', fn.get_family(), '):\n', flush=True)
+                    print(fn.describe())
             else:
-                print(XC.get_functional_citation(xc[0]))
-                print(XC.get_functional_citation(xc[1]))
+                for fid in funcid:
+                    print(XC.get_functional_citation(fid))
+            if exx_coef > 0:
+                print(f'\nGlobal hybrid functional: {exx_coef:.4f} of exact (RI) exchange is added to the semilocal part.', flush=True)
             print('------------------------------------------------------\n', flush=True)
             print('\n\n', flush=True)
         #-------XC Stuff end----------------------
@@ -1644,7 +1667,7 @@ class DFT:
                         if rys:
                             J = Integrals.rys_coulomb_matrix(basis, dmat, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
                         else: #Obara-Saika
-                            if xc=='HF':
+                            if exx_coef > 0:
                                 J, K = Integrals.os_coulomb_matrix(basis, dmat, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
                                 
                             else:
@@ -1652,7 +1675,7 @@ class DFT:
                     else:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat) # This is in CAO basis
-                            if xc=='HF':
+                            if exx_coef > 0:
                                 K = contract('ijkl,ik', ints4c2e, dmat) # This is in CAO basis
                         elif coul_algo==2:
                             J = Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat, threshold_schwarz, sqrt_ints4c2e_diag)
@@ -1660,7 +1683,7 @@ class DFT:
                     print('Cumulative time taken to evaluate Coulomb matrix: '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
                 else:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
-                    if xc=='HF':
+                    if exx_coef > 0:
                         startK = timer()
                         K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=dmat_factor)
                         durationK += timer() - startK
@@ -1678,17 +1701,17 @@ class DFT:
                         if rys:
                             J_diff = Integrals.rys_coulomb_matrix(basis, dmat_diff, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag, threshold=threshold_schwarz)
                         else: #Obara-saika
-                            if xc=='HF':
+                            if exx_coef > 0:
                                 J_diff, K_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
                             else:
                                 J_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=False)
                         J += J_diff
-                        if xc=='HF':
+                        if exx_coef > 0:
                             K += K_diff
                     else:
                         if coul_algo==1:
                             J = contract('ijkl,ij', ints4c2e, dmat)
-                            if xc=='HF':
+                            if exx_coef > 0:
                                 K = contract('ijkl,ik', ints4c2e, dmat) # This is in CAO basis
                         elif coul_algo==2:
                             J_diff =Integrals.rys_coulomb_matrix_sparse(ints4c2e_values, ints4c2e_indices, dmat_diff, threshold_schwarz, sqrt_ints4c2e_diag)
@@ -1698,7 +1721,7 @@ class DFT:
                         
                 else:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
-                    if xc=='HF':
+                    if exx_coef > 0:
                         startK = timer()
                         K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=dmat_factor)
                         durationK += timer() - startK
@@ -1773,19 +1796,22 @@ class DFT:
                         Eecp = contract('ij,ji->', dmat, V_ecp)
                     Ekin = contract('ij,ji->', dmat, T)
                     Ecoul = contract('ij,ji->', dmat, J)*0.5
-                    if xc=='HF':
-                        Eexchange = -contract('ij,ji->', dmat, K)*0.25
+                    if exx_coef > 0:
+                        Eexchange = -exx_coef*contract('ij,ji->', dmat, K)*0.25
             if isDF and (DF_algo in (6, 10, 11)):
                 Ecoul = Ecoul*2 - 0.5*Ecoul_temp # This is the correct formula for Coulomb energy with DF
             
+            Etot_new = Enuc + Eecp + Ekin + Enn + Ecoul
             if xc!='HF':
-                Etot_new = Exc + Enuc + Eecp + Ekin + Enn + Ecoul
-            else:
-                Etot_new = Eexchange + Enuc + Eecp + Ekin + Enn + Ecoul
+                Etot_new = Etot_new + Exc
+            if exx_coef > 0:
+                Etot_new = Etot_new + Eexchange
             self.scf_energies.append(Etot_new)
             self.Total_energy = Etot_new
             if xc!='HF':
                 self.XC_energy = Exc
+            if exx_coef > 0:
+                self.Exx_energy = Eexchange
             self.Kinetic_energy = Ekin
             self.Nuclear_repulsion_energy = Enn
             self.J_energy = Ecoul
@@ -1806,6 +1832,8 @@ class DFT:
             print(f"{'Coulomb Energy':<{label_w}}{num_fmt.format(Ecoul)}")
             if xc!='HF':
                 print(f"{'Exchange-Correlation Energy':<{label_w}}{num_fmt.format(Exc)}")
+                if exx_coef > 0:
+                    print(f"{'Exact Exchange Energy':<{label_w}}{num_fmt.format(Eexchange)}")
             else:
                 print(f"{'Exchange Energy':<{label_w}}{num_fmt.format(Eexchange)}")
             print('-' * (label_w + 20))
@@ -1843,10 +1871,11 @@ class DFT:
             
 
             if not scf_converged:
+                KS = H + J
                 if xc!='HF':
-                    KS = H + J + Vxc 
-                else:
-                    KS = H + J - 0.5*K
+                    KS = KS + Vxc
+                if exx_coef > 0:
+                    KS = KS - 0.5*exx_coef*K
                 if self.sao:
                     # The following gets rid of the extra information in the CAO basis KS matrix by going to SAO and then back to CAO.
                     # This way even though the matrix dimensions would be that of CAO but the information would be the same as SAO
@@ -1914,7 +1943,7 @@ class DFT:
                             eigvalues, eigvectors = self.solve(KS, S, orthogonalize=orthogonalize, x=x_ortho)
                     mo_occ = self.getOcc(mol, eigvalues, eigvectors)
                     dmat = self.gen_dm(eigvectors, mo_occ)
-                    if xc=='HF' and isDF:
+                    if exx_coef > 0 and isDF:
                         # Low-rank factor of the new density (dmat = factor @ factor.T, CAO basis) for the RI-HF exchange
                         occ_idx = mo_occ > 0
                         dmat_factor = eigvectors[:, occ_idx] * np.sqrt(mo_occ[occ_idx])
@@ -1973,7 +2002,7 @@ class DFT:
                 print('    DF (Jtri)                          ', round(durationDF_Jtri, 2), flush=True)
                 if cholesky:
                     print('    DF (Cholesky)                      ', round(durationDF_cholesky, 2), flush=True)
-        if isDF and xc=='HF':
+        if isDF and exx_coef > 0:
             print('Exchange matrix (RI-K)                 ', round(durationK, 2), flush=True)
         print('DIIS                                   ', round(durationDIIS, 2), flush=True)
         print('KS matrix diagonalization              ', round(durationKS, 2), flush=True)

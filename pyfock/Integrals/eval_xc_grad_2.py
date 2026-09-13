@@ -104,29 +104,32 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
     else:
         batch_size = nblocks // (ncores * 2)
 
-    if list_nonzero_indices is not None:
-        output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(
-            delayed(block_xc_grad_func)(
-                weights[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
-                coords[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
-                dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])],
-                funcid, use_libxc, bfs_data_as_np_arrays,
-                list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]],
-                funcx=funcx, funcc=funcc,
-                x_family_code=x_family_code, c_family_code=c_family_code,
-                xc_family_dict=xc_family_dict)
-            for iblock in block_indices)
-    else:
-        full_indices = np.arange(basis.bfs_nao)
-        output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(
-            delayed(block_xc_grad_func)(
-                weights[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
-                coords[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
-                dmat, funcid, use_libxc, bfs_data_as_np_arrays, full_indices,
-                funcx=funcx, funcc=funcc,
-                x_family_code=x_family_code, c_family_code=c_family_code,
-                xc_family_dict=xc_family_dict)
-            for iblock in block_indices)
+    # One BLAS thread inside the joblib workers (they parallelize over grid blocks); the limit is
+    # applied once here so that the original thread count is restored exactly once afterwards.
+    with threadpool_limits(limits=1, user_api='blas'):
+        if list_nonzero_indices is not None:
+            output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(
+                delayed(block_xc_grad_func)(
+                    weights[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
+                    coords[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
+                    dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])],
+                    funcid, use_libxc, bfs_data_as_np_arrays,
+                    list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]],
+                    funcx=funcx, funcc=funcc,
+                    x_family_code=x_family_code, c_family_code=c_family_code,
+                    xc_family_dict=xc_family_dict)
+                for iblock in block_indices)
+        else:
+            full_indices = np.arange(basis.bfs_nao)
+            output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem', batch_size=batch_size)(
+                delayed(block_xc_grad_func)(
+                    weights[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
+                    coords[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
+                    dmat, funcid, use_libxc, bfs_data_as_np_arrays, full_indices,
+                    funcx=funcx, funcc=funcc,
+                    x_family_code=x_family_code, c_family_code=c_family_code,
+                    xc_family_dict=xc_family_dict)
+                for iblock in block_indices)
 
     dexc_dbf = np.zeros((3, basis.bfs_nao))
     indx_block_output = 0
@@ -145,7 +148,6 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
     return dexc_dbf
 
 
-@threadpool_limits.wrap(limits=1, user_api='blas')
 def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
                        bfs_data_as_np_arrays, non_zero_indices,
                        funcx=None, funcc=None, x_family_code=None,

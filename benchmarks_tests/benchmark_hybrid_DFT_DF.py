@@ -1,0 +1,310 @@
+####### NOTE: The scipy.linalg library appears to be using double the number of threads supplied for some reason.
+####### To avoid such issues messing up the benchmarks, the benchmark should be run as 'taskset --cpu-list 0-3 python3 benchmark_hybrid_DFT_DF.py'
+####### This way one can set the number of CPUs seen by the python process and the benchmark would be much more reliable.
+####### Furthermore, to confirm the CPU and memory usage throughout the whole process, one can profilie it using  
+####### psrecord 13447 --interval 1 --duration 120 --plot 13447.png
+#######
+####### Hybrid-DFT benchmark: RI-J + RI-K (DF_algo=11) with a global hybrid functional, compared with PySCF's
+####### density-fitted RKS using the same molecule, basis, auxiliary basis, grids and initial density.
+
+import os
+import platform
+# Set the number of threads/cores to be used by PyFock and PySCF
+# (set before numpy is imported by numba/psutil, otherwise numpy's BLAS keeps all cores)
+ncores = 4
+os.environ['OMP_NUM_THREADS'] = str(ncores)
+os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
+os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
+os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
+os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4
+# Set the max memory for PySCF
+os.environ["PYSCF_MAX_MEMORY"] = str(25000) 
+import psutil
+import numba
+#numba.config.THREADING_LAYER='tbb'
+
+# Print system information 
+from pyfock import Utils
+
+Utils.print_sys_info()
+
+# Check if the environment variables are properly set
+print("Number of cores being actually used/requested for the benchmark:", ncores)
+print('Confirming that the environment variables are properly set...')
+print('OMP_NUM_THREADS =', os.environ.get('OMP_NUM_THREADS', None))
+print('OPENBLAS_NUM_THREADS =', os.environ.get('OPENBLAS_NUM_THREADS', None))
+print('MKL_NUM_THREADS =', os.environ.get('MKL_NUM_THREADS', None))
+print('VECLIB_MAXIMUM_THREADS =', os.environ.get('VECLIB_MAXIMUM_THREADS', None))
+print('NUMEXPR_NUM_THREADS =', os.environ.get('NUMEXPR_NUM_THREADS', None))
+print('PYSCF_MAX_MEMORY =', os.environ.get('PYSCF_MAX_MEMORY', None))
+
+
+# Run your tasks here
+from pyfock import Basis
+from pyfock import Mol
+from pyfock import Integrals
+from pyfock import DFT
+from timeit import default_timer as timer
+import numpy as np
+import scipy
+
+from pyscf import gto, dft, df, scf
+
+#Hybrid DFT SCF benchmark and comparison with PySCF
+#Benchmarking and performance assessment and comparison using various techniques and different softwares
+
+# ------------------------------------------------------------------------------
+# Global hybrid functionals
+# ------------------------------------------------------------------------------
+# The same name is understood by PyFock and PySCF. PyFock evaluates the semilocal
+# part with its native functionals (or with pylibxc if use_libxc=True below) and
+# adds the exact-exchange fraction through the density-fitted exchange matrix.
+
+# B3LYP (HYB_GGA_XC_B3LYP, LibXC ID 402): 20% exact exchange, VWN-RPA correlation as in LibXC/PySCF
+xc_name = 'B3LYP'
+
+# B3LYP5 (HYB_GGA_XC_B3LYP5, LibXC ID 475): 20% exact exchange, VWN5 correlation
+# xc_name = 'B3LYP5'
+
+# PBE0 (HYB_GGA_XC_PBEH, LibXC ID 406): 25% exact exchange
+# xc_name = 'PBE0'
+
+# basis_set_name = 'sto-2g'
+# basis_set_name = 'sto-3g'
+# basis_set_name = 'sto-6g'
+# basis_set_name = '6-31G'
+basis_set_name = 'def2-SVP'
+# basis_set_name = 'def2-SVPD'
+# basis_set_name = 'def2-TZVP'
+# basis_set_name = 'def2-QZVP'
+# basis_set_name = 'def2-TZVPP'
+# basis_set_name = 'def2-QZVPP'
+# basis_set_name = 'def2-TZVPD'
+# basis_set_name = 'def2-QZVPD'
+# basis_set_name = 'def2-TZVPPD'
+# basis_set_name = 'def2-QZVPPD'
+# basis_set_name = 'cc-pVDZ'
+# basis_set_name = 'ano-rcc'
+
+# Exact exchange needs a JK-fitting auxiliary basis
+auxbasis_name = 'def2-universal-jkfit'
+# auxbasis_name = 'def2-universal-jfit'
+# auxbasis_name = 'def2-TZVP'
+# auxbasis_name = 'sto-3g'
+# auxbasis_name = 'def2-SVP'
+# auxbasis_name = '6-31G'
+
+# xyzFilename = 'Benzene-Fulvene_Dimer.xyz'
+# xyzFilename = 'Adenine-Thymine.xyz'
+# xyzFilename = 'Zn.xyz'
+# xyzFilename = 'Zn_dimer.xyz'
+# xyzFilename = 'TPP.xyz'
+# xyzFilename = 'Zn_TPP.xyz'
+# xyzFilename = 'H2O.xyz'
+
+# xyzFilename = 'Caffeine.xyz'
+# xyzFilename = 'Serotonin.xyz'
+# xyzFilename = 'Cholesterol.xyz'
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'Taxol.xyz'
+# xyzFilename = 'Valinomycin.xyz'
+# xyzFilename = 'Olestra.xyz'
+# xyzFilename = 'Ubiquitin.xyz'
+
+### 1D Carbon Alkanes
+xyzFilename = 'Decane_C10H22.xyz'
+# xyzFilename = 'Icosane_C20H42.xyz'
+# xyzFilename = 'Tetracontane_C40H82.xyz'
+# xyzFilename = 'Pentacontane_C50H102.xyz'
+# xyzFilename = 'Octacontane_C80H162.xyz'
+# xyzFilename = 'Hectane_C100H202.xyz'
+# xyzFilename = 'Icosahectane_C120H242.xyz'
+
+### 2D Carbon
+# xyzFilename = 'Graphene_C16.xyz'
+# xyzFilename = 'Graphene_C76.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### 3d Carbon Fullerenes
+# xyzFilename = 'C60.xyz'
+# xyzFilename = 'C70.xyz'
+# xyzFilename = 'Graphene_C102.xyz'
+# xyzFilename = 'Graphene_C184.xyz'
+# xyzFilename = 'Graphene_C210.xyz'
+# xyzFilename = 'Graphene_C294.xyz'
+
+### def2 ECP benchmark systems
+# xyzFilename = 'AgCl.xyz'
+# xyzFilename = 'AuCl.xyz'
+# xyzFilename = 'BiH3.xyz'
+# xyzFilename = 'HgCl2.xyz'
+# xyzFilename = 'I2.xyz'
+# xyzFilename = 'PbH4.xyz'
+# xyzFilename = 'RbCl.xyz'
+# xyzFilename = 'SnCl4.xyz'
+# xyzFilename = 'W_CO6.xyz'
+# xyzFilename = 'XeF2.xyz'
+# xyzFilename = 'Cd_dimer.xyz'
+
+
+# ---------PySCF---------------
+#Comparison with PySCF
+molPySCF = gto.Mole()
+molPySCF.atom = xyzFilename
+molPySCF.basis = basis_set_name
+molPySCF.ecp = basis_set_name
+molPySCF.cart = False
+molPySCF.verbose = 4
+molPySCF.max_memory=5000
+# molPySCF.incore_anyway = True # Keeps the PySCF ERI integrals incore
+molPySCF.build()
+#print(molPySCF.cart_labels())
+
+print('\n\nPySCF Results\n\n')
+start=timer()
+mf = dft.rks.RKS(molPySCF).density_fit(auxbasis=auxbasis_name)
+mf.xc = xc_name
+# mf.verbose = 4
+mf.direct_scf = False
+# mf.with_df.max_memory = 25000
+# dmat_init = mf.init_guess_by_1e(molPySCF)
+# dmat_init = mf.init_guess_by_huckel(molPySCF)
+mf.init_guess = 'minao'
+dmat_init = mf.init_guess_by_minao(molPySCF)
+# mf.init_guess = 'atom'
+# dmat_init = mf.init_guess_by_atom(molPySCF)
+mf.max_cycle = 35
+mf.conv_tol = 1e-7
+mf.grids.level = 3
+# print('begin df build')
+# start_df_pyscf=timer()
+# mf.with_df.build()
+# duration_df_pyscf = timer()- start_df_pyscf
+# print('PySCF df time: ', duration_df_pyscf)
+# print('end df build')
+energyPyscf = mf.kernel(dm0=dmat_init)
+print('Nuc-Nuc PySCF= ', molPySCF.energy_nuc())
+print('One electron integrals energy',mf.scf_summary['e1'])
+print('Coulomb energy ',mf.scf_summary['coul'])
+print('EXC ',mf.scf_summary['exc'])
+duration = timer()-start
+print('PySCF time: ', duration)
+pyscfGrids = mf.grids
+print('PySCF Grid Size: ', pyscfGrids.weights.shape)
+print('\n\n PySCF Dipole moment')
+dmat = mf.make_rdm1()
+print(dmat.shape)
+mol_dip_pyscf = mf.dip_moment(molPySCF, dmat, unit='AU')
+mf = 0#None
+
+# Get memory information
+memory_info = psutil.virtual_memory()
+
+# Convert bytes to human-readable format
+used_memory = psutil._common.bytes2human(memory_info.used)
+
+
+# If you want to print in a more human-readable format, you can use psutil's utility function
+print(f"Currently Used memory: {used_memory}")
+#--------------------CrysX --------------------------
+
+#Initialize a Mol object with somewhat large geometry
+molCrysX = Mol(coordfile=xyzFilename)
+print('\n\nNatoms :',molCrysX.natoms)
+# print(molCrysX.coordsBohrs)
+
+#Initialize a Basis object with a very large basis set
+basis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=basis_set_name)})
+print('\n\nNAO :',basis.bfs_nao)
+
+auxbasis = Basis(molCrysX, {'all':Basis.load(mol=molCrysX, basis_name=auxbasis_name)})
+print('\n\naux NAO :',auxbasis.bfs_nao)
+
+# dftObj = DFT(molCrysX, basis, auxbasis, xc=xc_name)
+dftObj = DFT(molCrysX, basis, auxbasis, xc=xc_name, grids=pyscfGrids)
+# dftObj = DFT(molCrysX, basis, auxbasis, xc=xc_name, use_pyscf_grids=True)
+dftObj.dmat = dmat_init
+dftObj.conv_crit = 1e-7
+dftObj.max_itr = 35
+dftObj.ncores = ncores
+dftObj.save_ao_values = True
+dftObj.rys = True
+dftObj.isDF = True
+dftObj.DF_algo = 11 # Exact exchange (RI-K) is available with DF_algo = 11 (also 1, 2, 3)
+dftObj.blocksize = 5000
+dftObj.XC_algo = 2 # Hybrid functionals are supported with XC_algo = 2 on the CPU
+dftObj.debug = False
+dftObj.sortGrids = False
+dftObj.xc_bf_screen = True
+dftObj.threshold_schwarz = 1e-9
+dftObj.strict_schwarz = False
+dftObj.cholesky = True
+dftObj.orthogonalize = True
+# SAO or CAO basis
+dftObj.sao = True
+
+# GPU acceleration
+dftObj.use_gpu = False
+dftObj.keep_ao_in_gpu = False
+dftObj.use_libxc = False # True: semilocal part of the functional from pylibxc instead of PyFock's native implementation
+dftObj.n_streams = 1 # Changing this to anything other than 1 won't make any difference 
+dftObj.n_gpus = 1 # Specify the number of GPUs
+dftObj.free_gpu_mem = True
+dftObj.threads_x = 32
+dftObj.threads_y = 32
+dftObj.dynamic_precision = False
+dftObj.keep_ints3c2e_in_gpu = True
+
+# Using PySCF grids to compare the energies
+start=timer()
+energyCrysX, dmat_pyfock = dftObj.scf()
+durationCrysX = timer()-start
+
+
+print('Energy diff (PySCF-CrysX)', abs(energyCrysX-energyPyscf))
+print('PySCF time: ', duration)
+print('PyFock time: ', durationCrysX)
+print('Speed-up (PySCF time / PyFock time): ', duration/durationCrysX)
+
+print('\n\nPyFock Dipole moment')
+M = Integrals.dipole_moment_mat_symm(basis)
+mol_dip = molCrysX.get_dipole_moment(M, dmat_pyfock)
+print('Dipole moment(X, Y, Z, A.U.):', *mol_dip)
+print('Max Diff dipole moment (PySCF-CrysX)', abs(mol_dip_pyscf-mol_dip).max())
+
+
+#Print package versions
+import joblib
+import scipy
+import numba
+import threadpoolctl
+import opt_einsum
+import llvmlite 
+import numexpr
+import pyscf
+try:
+    import pylibxc
+    pylibxc_version = pylibxc.__version__
+except Exception:
+    pylibxc_version = 'not installed'
+try:
+    import cupy
+    cupy_version = cupy.__version__
+except Exception:
+    cupy_version = 'not installed'
+print('\n\n\n Package versions')
+print('pyscf version', pyscf.__version__)
+# print('psi4 version', psi4.__version__)
+print('np version', np.__version__)
+print('joblib version', joblib.__version__)
+print('numba version', numba.__version__)
+print('threadpoolctl version', threadpoolctl.__version__)
+print('opt_einsum version', opt_einsum.__version__)
+print('pylibxc version', pylibxc_version)
+print('llvmlite version', llvmlite.__version__)
+print('cupy version', cupy_version)
+print('numexpr version', numexpr.__version__)
+print('scipy version', scipy.__version__)
