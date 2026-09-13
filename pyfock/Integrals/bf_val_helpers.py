@@ -848,25 +848,25 @@ def eval_bfs_and_grad_sparse_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs
         xl = x**lmni[0]
         ym = y**lmni[1]
         zn = z**lmni[2]
-        if abs(x-0.0)<1e-14:
-            xl_1 = 0.0
+        # d/dx [x^l exp(-a r^2)] = (l x^(l-1) - 2 a x^(l+1)) exp(-a r^2).  The polynomial term
+        # vanishes for l = 0 (never evaluate x**(-1)); for l >= 1 it must be kept even at x = 0,
+        # where it is the whole derivative of a p function.  Same as the CPU eval_gto_and_grad.
+        if lmni[0] == 0:
+            poly_x = 0.0
         else:
-            xl_1 = x**(lmni[0]-1)
-        if abs(y-0.0)<1e-14:
-            ym_1 = 0.0
+            poly_x = lmni[0]*x**(lmni[0]-1)
+        if lmni[1] == 0:
+            poly_y = 0.0
         else:
-            ym_1 = y**(lmni[1]-1)
-        if abs(z-0.0)<1e-14:
-            zn_1 = 0.0
+            poly_y = lmni[1]*y**(lmni[1]-1)
+        if lmni[2] == 0:
+            poly_z = 0.0
         else:
-            zn_1 = z**(lmni[2]-1)
-        # xl_1 = x**(lmni[0]-1)
-        # ym_1 = y**(lmni[1]-1)
-        # zn_1 = z**(lmni[2]-1)
+            poly_z = lmni[2]*z**(lmni[2]-1)
         xlymzn = xl*ym*zn
-        xl_1ymzn = xl_1*ym*zn
-        xlym_1zn = xl*ym_1*zn
-        xlymzn_1 = xl*ym*zn_1
+        poly_x_ymzn = poly_x*ym*zn
+        xl_poly_y_zn = xl*poly_y*zn
+        xlym_poly_z = xl*ym*poly_z
         value0 = 0.0
         value1 = 0.0
         value2 = 0.0
@@ -880,15 +880,10 @@ def eval_bfs_and_grad_sparse_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs
 
             # AO Value
             value0 += factor2*xlymzn
-            # Grad x
-            factor = (lmni[0]-2*alphaik*x2)
-            value1 += factor2*xl_1ymzn*factor
-            # Grad y
-            factor = (lmni[1]-2*alphaik*y2)
-            value2 += factor2*xlym_1zn*factor 
-            # Grad z 
-            factor = (lmni[2]-2*alphaik*z2)
-            value3 += factor2*xlymzn_1*factor
+            # Grad x, y, z: polynomial term plus the -2 a x x^l exponent term
+            value1 += factor2*(poly_x_ymzn - 2*alphaik*x*xlymzn)
+            value2 += factor2*(xl_poly_y_zn - 2*alphaik*y*xlymzn)
+            value3 += factor2*(xlym_poly_z - 2*alphaik*z*xlymzn)
             # # Grad x
             # if abs(x-0)<1e-14:
             #     value1 = 0.0

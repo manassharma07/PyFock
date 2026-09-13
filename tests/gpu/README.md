@@ -17,6 +17,10 @@ On Windows machines where CuPy cannot compile its CUB kernels (no `cl.exe` on
 `PATH`), set `CUPY_ACCELERATORS=` (empty) before running; see
 `docs/df_algo11_gpu.md`.
 
+The H2O/def2-SVP PBE case (`h2o_pbe_cao_svp_xc3_df_algo_11`) exercises the GPU-native
+XC algorithm 3 with a GGA functional against a CPU reference; it guards the GPU
+AO-gradient kernel.
+
 Algorithm 10's fixed CUDA buffers do not support orbital f/g shells, so it is
 not used as a QZVP reference.
 
