@@ -204,7 +204,7 @@ class SkalaFunctional:
 
     # ------------------------------------------------------------------
     def exc_and_potential(self, rho, rho_grad, tau, coords, weights, atomic_weights, atom_idx,
-                          atom_coords, max_points_per_chunk=250000):
+                          atom_coords, max_points_per_chunk=250000, nuclear_terms=False):
         """Exchange-correlation energy and its grid-point derivatives for one density.
 
         All inputs are the *total* (spin-summed) quantities PyFock's restricted code works with, given on
@@ -234,6 +234,11 @@ class SkalaFunctional:
         max_points_per_chunk : int
             Upper bound on the grid points evaluated by the model at once. Chunking is exact and only
             trades speed for peak memory.
+        nuclear_terms : bool
+            Also return the part of ``dE/dR`` that does not go through the density. Unlike a semilocal
+            functional, Skala reads the grid geometry directly -- it consumes ``grid_coords`` and
+            ``coarse_0_atomic_coords`` -- so the energy depends on the nuclear positions explicitly.
+            Both derivatives come out of the same reverse pass at negligible extra cost.
 
         Returns
         -------
@@ -245,6 +250,13 @@ class SkalaFunctional:
             ``dE/d(grad rho)`` at each grid point, quadrature weight included.
         vtau : (G,) ndarray
             ``dE/dtau`` at each grid point, quadrature weight included.
+        explicit_grad : (natm, 3) ndarray
+            Only with ``nuclear_terms``: the explicit ``dE/dR``, i.e. the model's direct dependence on
+            the nuclear coordinates plus the cotangent of every grid point gathered onto the atom whose
+            grid it belongs to (grid points translate rigidly with their atom). This is *not* the whole
+            XC gradient -- the density-mediated part comes from contracting ``vrho``/``vgrad``/``vtau``
+            with the AO derivatives, and the grid-weight response is not included; see
+            :func:`pyfock.Integrals.eval_xc_grad_skala`.
         """
         import torch
 
@@ -280,6 +292,10 @@ class SkalaFunctional:
         vrho_m = torch.zeros_like(rho_m)
         vgrad_m = torch.zeros_like(grad_m)
         vtau_m = torch.zeros_like(tau_m)
+        # Explicit nuclear dependence (only assembled when the caller asks for it): Skala reads the grid
+        # geometry itself, so the energy depends on the nuclear positions beyond the density.
+        dgrid_m = torch.zeros_like(coords_m) if nuclear_terms else None
+        datom = torch.zeros_like(atom_coords_t) if nuclear_terms else None
 
         for atoms, start, stop in chunks:
             sel = slice(start, stop)
@@ -288,30 +304,49 @@ class SkalaFunctional:
             grad = torch.stack((grad_m[:, sel] * 0.5, grad_m[:, sel] * 0.5)).requires_grad_()
             kin = torch.stack((tau_m[sel] * 0.5, tau_m[sel] * 0.5)).requires_grad_()
 
+            chunk_atoms = torch.as_tensor(atoms, dtype=torch.long, device=device)
             chunk_sizes = torch.as_tensor(atom_sizes[atoms], dtype=torch.long, device=device)
+            grid_coords = coords_m[sel]
+            chunk_atom_coords = atom_coords_t[chunk_atoms]
+            if nuclear_terms:
+                grid_coords = grid_coords.detach().requires_grad_()
+                chunk_atom_coords = chunk_atom_coords.detach().requires_grad_()
             features = {
                 'density': density,
                 'grad': grad,
                 'kin': kin,
-                'grid_coords': coords_m[sel],
+                'grid_coords': grid_coords,
                 'grid_weights': weights_m[sel],
                 'atomic_grid_weights': atomic_w_m[sel],
                 'atomic_grid_sizes': chunk_sizes,
-                'coarse_0_atomic_coords': atom_coords_t[torch.as_tensor(atoms, dtype=torch.long,
-                                                                        device=device)],
+                'coarse_0_atomic_coords': chunk_atom_coords,
                 'atomic_grid_size_bound_shape': torch.zeros(int(chunk_sizes.max()), 0, dtype=torch.long,
                                                             device=device),
             }
             features = {key: value for key, value in features.items() if key in self._needs}
 
             energy = self._model.get_exc(features)
-            c_rho, c_grad, c_kin = torch.autograd.grad(energy, (density, grad, kin))
+            # One reverse pass gives every derivative needed, whether or not the nuclear terms were
+            # asked for; adding the two geometry inputs costs nothing beyond their own storage.
+            inputs = (density, grad, kin)
+            if nuclear_terms:
+                # allow_unused: a functional that does not declare grid_coords or
+                # coarse_0_atomic_coords simply has no explicit nuclear dependence through it, and
+                # autograd hands back None rather than raising.
+                inputs = inputs + (grid_coords, chunk_atom_coords)
+            cotangents = torch.autograd.grad(energy, inputs, allow_unused=nuclear_terms)
+            c_rho, c_grad, c_kin = cotangents[0], cotangents[1], cotangents[2]
 
             exc += float(energy.detach())
             # d/d(total) = (d/d(alpha) + d/d(beta)) / 2, since each channel holds half the total.
             vrho_m[sel] = 0.5 * (c_rho[0] + c_rho[1])
             vgrad_m[:, sel] = 0.5 * (c_grad[0] + c_grad[1])
             vtau_m[sel] = 0.5 * (c_kin[0] + c_kin[1])
+            if nuclear_terms:
+                if cotangents[3] is not None:
+                    dgrid_m[sel] = cotangents[3]
+                if cotangents[4] is not None:
+                    datom.index_add_(0, chunk_atoms, cotangents[4])
 
         vrho = np.empty(ngrids, dtype=np.float64)
         vtau = np.empty(ngrids, dtype=np.float64)
@@ -319,7 +354,20 @@ class SkalaFunctional:
         vrho[perm] = vrho_m.cpu().numpy()
         vtau[perm] = vtau_m.cpu().numpy()
         vgrad[:, perm] = vgrad_m.cpu().numpy()
-        return exc, vrho, vgrad, vtau
+        if not nuclear_terms:
+            return exc, vrho, vgrad, vtau
+
+        # Every grid point translates rigidly with the atom it belongs to, so its cotangent lands on
+        # that atom; the model's direct dependence on the nuclear coordinates adds on top.
+        dgrid = np.empty((ngrids, 3), dtype=np.float64)
+        dgrid[perm] = dgrid_m.cpu().numpy()
+        explicit = np.ascontiguousarray(datom.cpu().numpy(), dtype=np.float64)
+        # bincount rather than np.add.at: the same segmented sum, but without the latter's
+        # element-by-element unbuffered path, which is an order of magnitude slower on a large grid.
+        for direction in range(3):
+            explicit[:, direction] += np.bincount(atom_idx, weights=dgrid[:, direction],
+                                                  minlength=natm)
+        return exc, vrho, vgrad, vtau, explicit
 
 
 def load_skala(xc, use_gpu=False):

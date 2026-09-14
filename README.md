@@ -374,13 +374,26 @@ Consequences worth knowing:
 - **CPU only for now.** `use_gpu=True` raises a clear error: the GPU path needs a CUDA build of PyTorch
   plus a CuPy↔Torch bridge (zero-copy through DLPack) that is not wired up yet.
 - **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
-- **Analytical nuclear gradients are not available.** Forces would need the Pulay and grid-weight
-  derivative terms propagated through the network; use `DFT_NumGrad` for numerical forces.
+- **Analytical nuclear gradients are supported** (CPU, density fitting), so Skala can be used for
+  geometry optimization and anything else built on forces — see below.
 - **Dispersion is off by default** — pass `dispersion=True` to include it, see below.
 - **The model carries about 1e-9 Ha of its own numerical noise.** Presenting the network with differently
   shaped batches (a different `max_points_per_chunk`) shifts the energy at that level. Within one
   calculation the chunking is fixed, so the shift is systematic rather than random and SCF convergence to
   `1e-8` is unaffected — but do not expect two runs with different chunk sizes to agree bit for bit.
+
+#### Forces and geometry optimization
+
+`DFT_Grad` works with Skala exactly as it does with a semilocal functional:
+
+```python
+dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1')
+dftObj.scf()
+result = DFT_Grad(dftObj).calculate()
+forces = result['forces']
+```
+
+and the ASE calculator on top of it gives geometry optimization, NEB and MD.
 
 #### Dispersion
 
@@ -673,7 +686,7 @@ streamlit run app.py
 - [ ] Electron dynamics & Excited state calculations (RT-TDDFT)
 - [ ] Periodic boundary conditions
 - [x] Hybrid functionals with exact exchange (native B3LYP/PBE0 and LibXC hybrids, RI-K via DF_algo=11; CPU)
-- [x] Skala neural exchange-correlation functional (CPU)
+- [x] Skala neural exchange-correlation functional, with analytical gradients (CPU)
 - [ ] Multi-GPU parallelization
 - [ ] Basis set optimization tools
 

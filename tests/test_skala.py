@@ -12,15 +12,20 @@ from __future__ import annotations
 import contextlib
 import io
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from pyfock import Basis, Data, DFT, Grids, Integrals, Mol, XC
+from pyfock import (Basis, Data, DFT, DFT_Grad, DFT_NumGrad, Grids, Integrals,
+                    Mol, XC)
 
 
 torch = pytest.importorskip('torch', reason='Skala needs PyTorch')
 
 pytestmark = pytest.mark.filterwarnings('ignore::UserWarning')
+
+H2_XYZ = Path(__file__).resolve().parents[1] / 'examples' / 'H2.xyz'
 
 H2O = [['O', 0.0, 0.0, 0.1173], ['H', 0.0, 0.7572, -0.4692], ['H', 0.0, -0.7572, -0.4692]]
 
@@ -168,6 +173,64 @@ def test_matches_published_reference_energy(skala):
 
     assert dft.converged
     assert float(energy) == pytest.approx(-1.1683906705, abs=5e-7)
+
+
+def test_analytical_gradient_matches_finite_differences(skala):
+    """The analytical XC gradient against a numerical one, on one displaced atom.
+
+    PyFock evaluates analytical XC gradients on a fixed grid -- the dependence of the Becke weights on
+    the nuclear positions is not differentiated -- for every functional, Skala included. So this is a
+    consistency check at that level of theory, not an exactness check: the tolerance is set by that
+    approximation rather than by the implementation. ``benchmarks_tests/benchmark_skala_gradients.py``
+    quantifies it properly by running r2SCAN alongside as a control; there Skala comes out *below* the
+    semilocal baseline. Only one atom is displaced here to keep the test to six extra SCFs.
+    """
+    mol = Mol(coordfile=str(H2_XYZ)) if H2_XYZ.is_file() else Mol(atoms=[['H', 0.0, 0.0, 0.0],
+                                                                         ['H', 0.0, 0.0, 0.74]])
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='sto-3g')})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+    dft = DFT(mol, basis, auxbasis, xc='skala-1.1', grids=Grids(mol, level=1, verbose=False))
+    dft.conv_crit = 1e-10
+    with contextlib.redirect_stdout(io.StringIO()):
+        dft.scf()
+        assert dft.converged
+        analytical = DFT_Grad(dft, verbose=False).calculate()['gradient']
+        numerical = DFT_NumGrad(dft, verbose=False).calculate(atom_indices=[0])['gradient']
+
+    assert np.all(np.isfinite(analytical))
+    scale = max(float(np.abs(numerical[0]).max()), 1e-6)
+    assert np.allclose(analytical[0], numerical[0], atol=2e-4 * scale + 1e-6)
+
+
+def test_explicit_nuclear_term_is_present(system, skala):
+    """Skala reads the grid geometry, so part of dE/dR bypasses the density entirely.
+
+    If the extra cotangents were silently dropped -- an easy way for the gradient to look plausible but
+    be wrong -- this term would come back as exactly zero.
+    """
+    mol, _, grids, dmat = system
+    rho = np.zeros(grids.size)
+    rho_grad = np.zeros((3, grids.size))
+    tau = np.zeros(grids.size)
+    from pyfock.Integrals.eval_xc_skala import _bfs_arrays, _block_aos
+    from opt_einsum import contract
+    basis = system[1]
+    bfs = _bfs_arrays(basis)
+    ao, ao_grad = _block_aos(bfs, grids.coords, None, None, None)
+    Fmj = ao @ dmat
+    rho[:] = contract('mj,mj->m', Fmj, ao)
+    rho_grad[:] = 2 * contract('mj,kmj->km', Fmj, ao_grad)
+    tau[:] = 0.5 * contract('ij,kmi,kmj->m', dmat, ao_grad, ao_grad)
+
+    atom_coords = np.asarray(mol.coordsBohrs, dtype=np.float64).reshape(-1, 3)
+    out = skala.exc_and_potential(rho, rho_grad, tau, grids.coords, grids.weights,
+                                  grids.atomic_weights, grids.atom_idx, atom_coords,
+                                  nuclear_terms=True)
+    assert len(out) == 5
+    explicit = out[4]
+    assert explicit.shape == atom_coords.shape
+    assert np.all(np.isfinite(explicit))
+    assert np.abs(explicit).max() > 0.0, 'the explicit nuclear term must not be identically zero'
 
 
 def test_unknown_functional_name():

@@ -99,14 +99,20 @@ class DFT_Grad:
         self.ecp_fd_step = ecp_fd_step
         self.verbose = verbose
 
-        # Resolve the functional specification the same way DFT.scf does
+        # Resolve the functional specification the same way DFT.scf does. Skala is not a LibXC
+        # functional: the converged DFT object already holds the loaded model, and the gradient goes
+        # through its own driver.
+        self.skala = getattr(dft_obj, 'skala', None)
         xc = dft_obj.xc
-        if isinstance(xc, list):
-            if all(isinstance(v, str) for v in xc):
-                xc = [XC.get_functional_id(name) for name in xc]
-        elif isinstance(xc, str):
-            xc = XC.resolve_functional(xc)
-        self.funcid = xc
+        if self.skala is not None:
+            self.funcid = xc
+        else:
+            if isinstance(xc, list):
+                if all(isinstance(v, str) for v in xc):
+                    xc = [XC.get_functional_id(name) for name in xc]
+            elif isinstance(xc, str):
+                xc = XC.resolve_functional(xc)
+            self.funcid = xc
 
     def _energy_weighted_dmat(self):
         """Energy-weighted density matrix W in the CAO basis."""
@@ -302,14 +308,26 @@ class DFT_Grad:
             list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices(
                 basis, coords_grid, blocksize, nblocks, ngrids)
 
-        dexc_dbf = Integrals.eval_xc_grad_2(
-            basis, dmat, weights_grid, coords_grid, funcid=self.funcid,
-            use_libxc=dft_obj.use_libxc, ncores=ncores, blocksize=blocksize,
-            list_nonzero_indices=list_nonzero_indices,
-            count_nonzero_indices=count_nonzero_indices,
-        )
+        explicit_xc_grad = None
+        if self.skala is not None:
+            # Skala also depends on the nuclear positions explicitly, through the grid geometry it
+            # reads; that part comes back already resolved per atom (see eval_xc_grad_skala).
+            dexc_dbf, explicit_xc_grad = Integrals.eval_xc_grad_skala(
+                basis, dmat, dft_obj.grids, self.skala, ncores=ncores, blocksize=blocksize,
+                list_nonzero_indices=list_nonzero_indices,
+                count_nonzero_indices=count_nonzero_indices,
+            )
+        else:
+            dexc_dbf = Integrals.eval_xc_grad_2(
+                basis, dmat, weights_grid, coords_grid, funcid=self.funcid,
+                use_libxc=dft_obj.use_libxc, ncores=ncores, blocksize=blocksize,
+                list_nonzero_indices=list_nonzero_indices,
+                count_nonzero_indices=count_nonzero_indices,
+            )
         grad_xc = np.zeros((natoms, 3))
         np.add.at(grad_xc, bfs_atoms, -2.0 * dexc_dbf.T)
+        if explicit_xc_grad is not None:
+            grad_xc += explicit_xc_grad
         timings['xc'] = timer() - start
 
         # ---------------- ECP (if present) ----------------
