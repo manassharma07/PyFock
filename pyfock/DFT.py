@@ -1669,30 +1669,42 @@ class DFT:
                 durationgrids = timer() - startGrids
                 print('Time taken '+str(round(durationgrids, 2))+' seconds.\n', flush=True)
 
-                # Begin pruning the grids based on density (rho)
-                # Evaluate ao_values to calculate rho
-                print('\nPruning generated grids by rho...\n\n', flush=True)
-                startGrids_prune_rho = timer()
-                if dmat_grid_pruning is None:
-                    dmat_grid_pruning = dmat
-                ngrids_temp = grids.coords.shape[0]
-                # Only the basis functions whose radial cutoff reaches a block of points are evaluated
-                # (the same screening as the XC evaluation), instead of the full AO matrix at every point.
-                # GPU runs evaluate them with the same CUDA kernel the XC term uses.
-                keep = self.grid_pruning_mask(grids, basis, dmat_grid_pruning,
-                                              cp_stream=streams[0] if self.use_gpu else None)
-                ndeleted = int(ngrids_temp - np.count_nonzero(keep))
-                if hasattr(grids, 'prune_by_mask'):
-                    grids.prune_by_mask(keep)
+                # Begin pruning the grids based on density (rho).
+                # Skipped for Skala: dropping the low-density tail is invisible to a semilocal
+                # functional (those points carry almost no energy density, ~2e-10 Ha for PBE), but
+                # Skala's features are integrals over each atomic grid, so removing ~10% of the points
+                # shifts them and moves the energy by ~2e-4 Ha.
+                if skala is not None:
+                    print('\nSkipping the density pruning of the grids: Skala integrates over each')
+                    print('atomic grid, so pruning changes its features (~2e-4 Ha on water).\n',
+                          flush=True)
                 else:
-                    grids.coords = np.ascontiguousarray(grids.coords[keep])
-                    grids.weights = np.ascontiguousarray(grids.weights[keep])
+                    # Evaluate ao_values to calculate rho
+                    print('\nPruning generated grids by rho...\n\n', flush=True)
+                    startGrids_prune_rho = timer()
+                    if dmat_grid_pruning is None:
+                        dmat_grid_pruning = dmat
+                    ngrids_temp = grids.coords.shape[0]
+                    # Only the basis functions whose radial cutoff reaches a block of points are evaluated
+                    # (the same screening as the XC evaluation), instead of the full AO matrix at every point.
+                    # GPU runs evaluate them with the same CUDA kernel the XC term uses.
+                    keep = self.grid_pruning_mask(grids, basis, dmat_grid_pruning,
+                                                  cp_stream=streams[0] if self.use_gpu else None)
+                    ndeleted = int(ngrids_temp - np.count_nonzero(keep))
+                    if hasattr(grids, 'prune_by_mask'):
+                        grids.prune_by_mask(keep)
+                    else:
+                        grids.coords = np.ascontiguousarray(grids.coords[keep])
+                        grids.weights = np.ascontiguousarray(grids.weights[keep])
+                    print('done!', flush=True)
+                    durationgrids_prune_rho = timer() - startGrids_prune_rho
+                    print('Time taken '+str(round(durationgrids_prune_rho, 2))+' seconds.\n', flush=True)
+                    print('\nDeleted '+ str(ndeleted) + ' grid points.', flush=True)
+
+                # Keep the grid on the object whether or not it was pruned: DFT_Grad and anything else
+                # that runs after the SCF needs it.
                 self.grids = grids
-                print('done!', flush=True)
-                durationgrids_prune_rho = timer() - startGrids_prune_rho
-                print('Time taken '+str(round(durationgrids_prune_rho, 2))+' seconds.\n', flush=True)
-                print('\nDeleted '+ str(ndeleted) + ' grid points.', flush=True)
-                
+
             else:
                 print('\nUsing the user supplied grids!\n\n', flush=True)
             
