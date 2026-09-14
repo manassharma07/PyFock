@@ -35,20 +35,61 @@
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li><a href="#about-the-project">About The Project</a></li>
+    <li><a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#what-makes-pyfock-different">What Makes PyFock Different?</a></li>
+        <li><a href="#performance-highlights">Performance Highlights</a></li>
+      </ul>
+    </li>
     <li><a href="#key-features">Key Features</a></li>
-    <li><a href="#installation">Installation</a></li>
+    <li><a href="#installation">Installation</a>
+      <ul>
+        <li><a href="#basic-installation">Basic Installation</a></li>
+        <li><a href="#installing-from-github-latest-development-version">Installing from GitHub</a></li>
+        <li><a href="#installing-libxc-optional-dependency">Installing LibXC</a></li>
+        <li><a href="#optional-dependencies">Optional Dependencies</a></li>
+      </ul>
+    </li>
     <li><a href="#quick-start">Quick Start</a></li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#graphical-user-interface">Graphical User Interface</a></li>
-    <li><a href="#tutorials">Tutorials</a></li>
+    <li><a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#computing-molecular-integrals">Computing Molecular Integrals</a></li>
+        <li><a href="#gpu-accelerated-integrals">GPU-Accelerated Integrals</a></li>
+        <li><a href="#converting-between-cartesian-and-spherical-basis">Cartesian &lt;-&gt; Spherical Basis</a></li>
+        <li><a href="#subset-evaluation">Subset Evaluation</a></li>
+        <li><a href="#skala-the-neural-exchange-correlation-functional">Skala: the neural XC functional</a>
+          <ul>
+            <li><a href="#getting-the-model">Getting the model</a></li>
+            <li><a href="#what-is-different-about-it">What is different about it</a></li>
+            <li><a href="#dispersion">Dispersion</a></li>
+            <li><a href="#validating-against-the-published-reference-energies">Validating against the published reference energies</a></li>
+            <li><a href="#cost">Cost</a></li>
+          </ul>
+        </li>
+        <li><a href="#initial-guess-for-the-scf">Initial Guess for the SCF</a></li>
+        <li><a href="#xc-integration-grids">XC Integration Grids</a></li>
+        <li><a href="#density-fitting-coulomb-algorithms-and-memory-budget">Density-Fitting Coulomb Algorithms and Memory Budget</a></li>
+        <li><a href="#analytical-forces--geometry-optimization">Analytical Forces &amp; Geometry Optimization</a></li>
+        <li><a href="#generating-visualization-files">Generating Visualization Files</a></li>
+      </ul>
+    </li>
+    <li><a href="#graphical-user-interface">Graphical User Interface</a>
+      <ul>
+        <li><a href="#gui-features">GUI Features</a></li>
+        <li><a href="#running-gui-locally">Running GUI Locally</a></li>
+      </ul>
+    </li>
+    <li><a href="#tutorials">Tutorials</a>
+      <ul>
+        <li><a href="#interactive-jupyter-notebooks">Interactive Jupyter Notebooks</a></li>
+      </ul>
+    </li>
     <li><a href="#documentation">Documentation</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#citation">Citation</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
 
@@ -216,6 +257,8 @@ energy, dmat = dftObj.scf()
 print(f"Total Energy: {energy} Ha")
 ```
 
+`xc` also accepts LibXC IDs instead of a name — `xc=[101, 130]` is the same PBE as `xc='PBE'`.
+
 ## Usage
 
 ### Computing Molecular Integrals
@@ -273,39 +316,6 @@ S_ovlp_subset = Integrals.overlap_mat_symm(basis, slice=[0, 5, 0, 5])
 # slice = [row_start, row_end, col_start, col_end]
 ```
 
-### Full DFT Calculation Example
-
-```python
-from pyfock import Basis, Mol, DFT
-
-# Initialize molecule
-xyzFilename = 'benzene.xyz'
-mol = Mol(coordfile=xyzFilename)
-
-# Set up basis sets
-basis_set_name = 'def2-SVP'
-auxbasis_name = 'def2-universal-jfit'
-basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=basis_set_name)})
-auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=auxbasis_name)})
-
-# Configure XC functional (PBE)
-funcx = 101  # Exchange
-funcc = 130  # Correlation
-funcidcrysx = [funcx, funcc]
-
-# Initialize DFT object
-dftObj = DFT(mol, basis, auxbasis, xc=funcidcrysx)
-
-# Configure convergence and parallelization
-dftObj.conv_crit = 1e-7
-dftObj.max_itr = 20
-dftObj.ncores = 4
-
-# Run calculation
-energyCrysX, dmat = dftObj.scf()
-print(f"SCF Energy: {energyCrysX} Ha")
-```
-
 ### Skala: the neural exchange-correlation functional
 
 [Skala](https://github.com/microsoft/skala) is a machine-learned exchange-correlation functional from
@@ -328,19 +338,11 @@ Available names are `skala-1.1` (recommended), `skala-1.1-rev1`, `skala-1.1-rev0
 See [`examples/ex44_Skala_neural_functional.py`](examples/ex44_Skala_neural_functional.py) for a runnable
 version, with and without the dispersion correction.
 
-#### Installation
+#### Getting the model
 
-Only PyTorch is required at run time:
-
-```bash
-pip install torch huggingface_hub
-```
-
-Skala's own `pyproject.toml` lists PySCF and e3nn as dependencies, but those are needed only by
-`skala.pyscf`, `skala.gpu4pyscf`, `skala.ase` and the *trainable* model definition. PyFock uses none of
-them: it reads the published TorchScript checkpoint directly, so `pip install skala` is unnecessary. This
-also removes the Linux/macOS restriction in Skala's packaging, which comes from PySCF — the checkpoints
-are platform-independent and **Skala works on Windows through PyFock**.
+`pip install "pyfock[skala]"` is all that is needed (see
+[Optional Dependencies](#optional-dependencies)) — notably *not* the `skala` package itself, which is
+why this works on Windows despite Skala's own packaging being Linux/macOS only.
 
 The 2.4 MB checkpoint is downloaded from Hugging Face on first use and cached afterwards. Its SHA-256 is
 verified against the digests published by Microsoft before it is loaded, because TorchScript
@@ -374,26 +376,14 @@ Consequences worth knowing:
 - **CPU only for now.** `use_gpu=True` raises a clear error: the GPU path needs a CUDA build of PyTorch
   plus a CuPy↔Torch bridge (zero-copy through DLPack) that is not wired up yet.
 - **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
-- **Analytical nuclear gradients are supported** (CPU, density fitting), so Skala can be used for
-  geometry optimization and anything else built on forces — see below.
+- **Analytical nuclear gradients are supported** (CPU, density fitting), so Skala works for geometry
+  optimization like any other functional — see
+  [Analytical Forces & Geometry Optimization](#analytical-forces--geometry-optimization).
 - **Dispersion is off by default** — pass `dispersion=True` to include it, see below.
 - **The model carries about 1e-9 Ha of its own numerical noise.** Presenting the network with differently
   shaped batches (a different `max_points_per_chunk`) shifts the energy at that level. Within one
   calculation the chunking is fixed, so the shift is systematic rather than random and SCF convergence to
   `1e-8` is unaffected — but do not expect two runs with different chunk sizes to agree bit for bit.
-
-#### Forces and geometry optimization
-
-`DFT_Grad` works with Skala exactly as it does with a semilocal functional:
-
-```python
-dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1')
-dftObj.scf()
-result = DFT_Grad(dftObj).calculate()
-forces = result['forces']
-```
-
-and the ASE calculator on top of it gives geometry optimization, NEB and MD.
 
 #### Dispersion
 
@@ -449,11 +439,10 @@ Skala ships the total energies behind its benchmark report as `benchmark/referen
 def2-SVP/TZVP/QZVP, for ~30 molecules from GMTKN55 and a conformer benchmark. The geometries are pulled
 from `grimme-lab/GMTKN55` at a pinned commit.
 
-One detail is easy to get wrong: the **Skala energies there include the D3 correction**. The benchmark
-runner never mentions D3, but it builds the method through `SkalaKS`, whose constructor defaults to
-`with_dftd3=True`, so `mf.kernel()` returns the corrected energy. The plain PySCF functionals in the
-same set (r2scan, m06-2x, b3lyp5) get no such treatment. Comparing a bare PyFock Skala energy against
-them leaves a residual exactly equal to the dispersion energy.
+One detail is easy to get wrong: the **Skala energies there include the D3 correction**, because the
+runner builds the method through `SkalaKS`, whose constructor defaults to `with_dftd3=True`. The plain
+PySCF functionals in the same set do not. Comparing a bare PyFock Skala energy against them leaves a
+residual exactly equal to the dispersion energy.
 
 `benchmarks_tests/validate_skala_reference.py` downloads both, runs PyFock under the matching protocol
 (spherical orbitals via `dftObj.sao = True`, density fitting with `def2-universal-jkfit`, grid level 3,
@@ -472,9 +461,8 @@ anything to do with Skala. Over H2, H2O, H2O2 and H3N at def2-SVP and def2-TZVP:
 | skala-1.1 | 3.2e-08 Ha | 1.1e-07 Ha |
 | r2SCAN (control) | 7.0e-08 Ha | 2.2e-07 Ha |
 
-PyFock reproduces the published Skala energies to within the reference data's own run-to-run spread, and
-slightly *better* than it reproduces r2SCAN. `tests/test_skala.py` keeps one of these values (H2 at
-def2-SVP) as a permanent end-to-end regression check.
+PyFock reproduces the published Skala energies to within the reference data's own run-to-run spread.
+`tests/test_skala.py` keeps one of these values (H2 at def2-SVP) as a permanent regression check.
 
 #### Cost
 
@@ -588,7 +576,7 @@ benchmark commands, memory accounting, and limitations of the surrounding driver
 ### Analytical Forces & Geometry Optimization
 
 After a converged DFT calculation, analytical nuclear gradients (and forces)
-are available directly via `DFT_Grad` (density fitting; LDA/GGA/meta-GGA; CPU):
+are available directly via `DFT_Grad` (density fitting; LDA/GGA/meta-GGA and Skala; CPU):
 
 ```python
 from pyfock import DFT_Grad

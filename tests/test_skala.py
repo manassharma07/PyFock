@@ -180,17 +180,22 @@ def test_analytical_gradient_matches_finite_differences(skala):
 
     PyFock evaluates analytical XC gradients on a fixed grid -- the dependence of the Becke weights on
     the nuclear positions is not differentiated -- for every functional, Skala included. So this is a
-    consistency check at that level of theory, not an exactness check: the tolerance is set by that
-    approximation rather than by the implementation. ``benchmarks_tests/benchmark_skala_gradients.py``
-    quantifies it properly by running r2SCAN alongside as a control; there Skala comes out *below* the
-    semilocal baseline. Only one atom is displaced here to keep the test to six extra SCFs.
+    consistency check at that level of theory rather than an exactness check;
+    ``benchmarks_tests/benchmark_skala_gradients.py`` quantifies the approximation properly by running
+    r2SCAN alongside as a control, where Skala comes out *below* the semilocal baseline.
+
+    Only one atom is displaced, which keeps this to six extra SCFs. Note the basis matters more than the
+    grid here: at sto-3g the two agree to only ~1e-3 relative, because two basis functions describe H2
+    so poorly, while def2-SVP on the same coarse grid agrees to ~1e-5. The convergence threshold is
+    deliberately not tighter than 1e-8 either -- on a system this small PyFock's DIIS subspace goes
+    singular below that and pollutes the converged density.
     """
     mol = Mol(coordfile=str(H2_XYZ)) if H2_XYZ.is_file() else Mol(atoms=[['H', 0.0, 0.0, 0.0],
                                                                          ['H', 0.0, 0.0, 0.74]])
-    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='sto-3g')})
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
     auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
     dft = DFT(mol, basis, auxbasis, xc='skala-1.1', grids=Grids(mol, level=1, verbose=False))
-    dft.conv_crit = 1e-10
+    dft.conv_crit = 1e-8
     with contextlib.redirect_stdout(io.StringIO()):
         dft.scf()
         assert dft.converged
@@ -199,7 +204,9 @@ def test_analytical_gradient_matches_finite_differences(skala):
 
     assert np.all(np.isfinite(analytical))
     scale = max(float(np.abs(numerical[0]).max()), 1e-6)
-    assert np.allclose(analytical[0], numerical[0], atol=2e-4 * scale + 1e-6)
+    # Observed agreement is ~1e-5 relative; this leaves an order of magnitude of headroom while still
+    # being four orders tighter than any dropped or mis-scaled term would be.
+    assert np.allclose(analytical[0], numerical[0], atol=1e-4 * scale + 1e-8)
 
 
 def test_explicit_nuclear_term_is_present(system, skala):
