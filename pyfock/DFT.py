@@ -221,7 +221,7 @@ class DFT:
     """
     def __init__(self, mol, basis, auxbasis=None, conv_crit=1e-7, dmat_guess_method=None, 
                 xc=None, grids=None, gridsLevel=3, use_pyscf_grids=False, blocksize=None,
-                save_ao_values=False, use_gpu=False, ncores=1, dispersion=None):
+                save_ao_values=False, use_gpu=False, ncores=1, dispersion=None, skala_gpu=False):
 
         self.mol = mol
         """ Molecular object for which the DFT calculation will be performed """
@@ -387,6 +387,12 @@ class DFT:
         # CAO or SAO
         self.sao = False
         """ Whether to use SAO basis or CAO basis. Default is CAO basis. """
+
+        self.skala_gpu = skala_gpu
+        """Evaluate the Skala neural functional on the GPU while the rest of the SCF stays on the CPU.
+        Skala is a PyTorch model and dominates the exchange-correlation cost, so moving just it to the
+        device gives most of the speedup without needing PyFock's full CuPy path. Requires a CUDA build
+        of PyTorch; ignored for conventional functionals."""
 
         self.dispersion = dispersion
         """DFT-D3 dispersion correction (:mod:`pyfock.Dispersion`), added to the total energy after the
@@ -1188,11 +1194,15 @@ class DFT:
         if XC.is_skala(xc):
             if self.use_gpu:
                 raise NotImplementedError(
-                    'The Skala functionals are currently implemented on the CPU only (use_gpu=False). '
-                    'The GPU path needs a CUDA build of PyTorch and a CuPy<->Torch bridge for the '
-                    'density and the potential, which is not wired up yet.')
+                    "PyFock's full GPU SCF path does not support Skala yet (the Coulomb and Vxc "
+                    'assembly would need a CuPy<->Torch bridge). Use use_gpu=False with '
+                    'skala_gpu=True to run the neural functional itself on the GPU, which is where '
+                    'nearly all of its cost is.')
             xc = XC.canonical_skala_name(xc)
-            skala = XC.load_skala(xc, use_gpu=False)
+            skala = XC.load_skala(xc, use_gpu=bool(self.skala_gpu))
+            if self.skala_gpu:
+                print('\nSkala will be evaluated on the GPU (skala_gpu=True); the rest of the SCF '
+                      'runs on the CPU.', flush=True)
         self.skala = skala
 
         # D3 dispersion parameters. True means "whatever the functional itself declares" (Skala 1.1

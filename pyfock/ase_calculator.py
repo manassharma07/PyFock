@@ -19,6 +19,7 @@ from pprint import pformat
 import numpy as np
 from ase.calculators.calculator import Calculator, all_changes
 
+from .Basis import Basis
 from .DFT import DFT
 from .Data import Data
 from .Mol import Mol
@@ -116,6 +117,22 @@ class PyFockCalculator(Calculator):
     The converged AO density matrix is checkpointed after each successful
     calculation and used as the initial guess for the next compatible ASE
     geometry. Pass ``reuse_density=False`` to disable this behavior.
+
+    ASE asks for the energy and the forces in two separate calls, so by default the forces are computed
+    together with the energy and the second call is served from the cache; without that every geometry
+    would run the SCF twice. Pass ``forces_with_energy=False`` if you only ever want energies.
+
+    Pass ``run_in_process=True`` to run each step in the calling process instead of a subprocess. The
+    subprocess is the safer default -- a crash or a non-converged step cannot take the optimizer with it,
+    and every step leaves a complete PyFock output file on disk -- but it starts cold each time,
+    paying the imports again, re-reading the Skala checkpoint, warming TorchScript up and rebuilding the
+    CUDA context. None of that depends on the geometry, so for a geometry optimization it is pure
+    repetition: one water step costs about 10 s in a fresh process against 2 s in a warm one. Staying in-process is what makes
+    ``skala_gpu=True`` pay off during an optimization, since the model is then loaded once rather than
+    once per step. Nothing large is carried between steps either way -- only the converged density matrix
+    on disk, as the next SCF's starting guess. Two things to know: BLAS thread counts come from the
+    environment at import time, so set ``OMP_NUM_THREADS`` and friends before importing numpy rather than
+    relying on ``ncores``, and no per-step output file is written.
     """
 
     implemented_properties = ["energy", "forces"]
@@ -133,6 +150,8 @@ class PyFockCalculator(Calculator):
         "force_method": "central",
         "force_use_fixed_grids": True,
         "reuse_density": True,
+        "run_in_process": False,
+        "forces_with_energy": True,
     }
     _cached_dft_attr_names = None
 
@@ -152,6 +171,8 @@ class PyFockCalculator(Calculator):
         force_method="central",
         force_use_fixed_grids=True,
         reuse_density=True,
+        run_in_process=False,
+        forces_with_energy=True,
         **kwargs,
     ):
         super().__init__()
@@ -182,6 +203,8 @@ class PyFockCalculator(Calculator):
         self.parameters["force_method"] = force_method
         self.parameters["force_use_fixed_grids"] = force_use_fixed_grids
         self.parameters["reuse_density"] = bool(reuse_density)
+        self.parameters["run_in_process"] = bool(run_in_process)
+        self.parameters["forces_with_energy"] = bool(forces_with_energy)
 
         self.directory = os.path.abspath(directory)
         self.pyfock_options = canonical_options
@@ -416,6 +439,7 @@ class PyFockCalculator(Calculator):
         workdir,
         task_name,
         compute_forces=False,
+        allow_numerical_forces=True,
         compute_dipole=False,
         density_guess_path=None,
     ):
@@ -546,7 +570,7 @@ if {self._render_value(compute_forces)}:
             print("WARNING: Analytical gradients are not available for this "
                   "configuration: " + str(exc))
             print("Falling back to numerical finite-difference forces.")
-    if force_results is None:
+    if force_results is None and {self._render_value(allow_numerical_forces)}:
         grad_obj = DFT_NumGrad(
             dft_obj,
             step_size={self._render_value(self.parameters["force_step_size"])},
@@ -557,7 +581,8 @@ if {self._render_value(compute_forces)}:
         )
         force_results = grad_obj.calculate()
         result["force_method_used"] = "numerical"
-    result["forces_au_bohr"] = np.asarray(force_results["forces"]).tolist()
+    if force_results is not None:
+        result["forces_au_bohr"] = np.asarray(force_results["forces"]).tolist()
 
 if {self._render_value(compute_dipole)}:
     dipole_matrix = Integrals.dipole_moment_mat_symm(basis)
@@ -571,6 +596,108 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
             handle.write(script)
 
         return script_path, os.path.join(workdir, output_filename)
+
+    def _run_in_process(self, workdir, xyz_path, compute_forces, allow_numerical_forces,
+                        density_guess_path):
+        """Run one geometry in this process and return the same summary dict the subprocess returns.
+
+        A fresh subprocess starts cold every step: it repeats the imports, re-reads the Skala checkpoint,
+        warms TorchScript up again and builds a new CUDA context, none of which depends on the geometry.
+        (PyFock's own Numba kernels are compiled with ``cache=True``, so they reload from disk cheaply.)
+        Staying in one process keeps all of it alive across steps -- the Skala model in particular lives
+        in a module-level cache, so ``skala_gpu=True`` loads it once instead of once per step. The grids,
+        the AO values and the integrals are rebuilt either way; those move with the atoms. Nothing is
+        kept alive between geometries: the DFT object goes out of scope when this returns.
+        """
+        from .DFT_Grad import DFT_Grad
+        from .DFT_NumGrad import DFT_NumGrad
+
+        options = self._prepare_runtime_options()
+        basis_name = self.parameters["basis"] or self._default_basis_name(self.atoms)
+
+        mol = Mol(coordfile=xyz_path, charge=self.parameters["charge"])
+        basis = Basis(mol, {"all": Basis.load(mol=mol, basis_name=basis_name)})
+        auxbasis = None
+        if options.get("isDF", True):
+            auxbasis_name = self.parameters["auxbasis"] or "def2-universal-jfit"
+            auxbasis = Basis(mol, {"all": Basis.load(mol=mol, basis_name=auxbasis_name)})
+
+        dft_obj = DFT(mol, basis, auxbasis)
+        for key, value in sorted(options.items()):
+            setattr(dft_obj, key, value)
+
+        summary = {"density_guess_used": False, "density_guess_source": None}
+        if density_guess_path is not None:
+            guess = np.load(density_guess_path, allow_pickle=False)
+            if guess.shape == (basis.bfs_nao, basis.bfs_nao) and np.all(np.isfinite(guess)):
+                dft_obj.dmat = np.asarray(guess, dtype=np.float64)
+                dft_obj.grid_pruning_use_core_guess = True
+                summary["density_guess_used"] = True
+                summary["density_guess_source"] = density_guess_path
+            else:
+                warnings.warn("Ignoring the previous density matrix: wrong shape or non-finite values.")
+
+        energy_au, dmat = dft_obj.scf()
+        converged = bool(getattr(dft_obj, "converged", False))
+        if converged:
+            np.save(os.path.join(workdir, "converged_dmat.npy"), np.asarray(dmat, dtype=np.float64))
+
+        gap_au = None
+        energies = getattr(dft_obj, "mo_energies", None)
+        occupations = getattr(dft_obj, "mo_occupations", None)
+        if energies is not None and occupations is not None:
+            occupied = np.where(np.asarray(occupations) > 1e-8)[0]
+            if len(occupied) and occupied[-1] + 1 < len(energies):
+                gap_au = float(energies[occupied[-1] + 1] - energies[occupied[-1]])
+
+        summary.update({
+            "converged": converged,
+            "niter": int(getattr(dft_obj, "niter", 0)),
+            "total_energy_au": float(energy_au),
+            "total_energy_ev": float(energy_au * Data.au2eVFactor),
+            "homo_lumo_gap_au": gap_au,
+            "homo_lumo_gap_ev": None if gap_au is None else gap_au * Data.au2eVFactor,
+        })
+        for key, attribute in (("xc_energy_au", "XC_energy"),
+                               ("coulomb_energy_au", "J_energy"),
+                               ("kinetic_energy_au", "Kinetic_energy"),
+                               ("electron_nuclear_energy_au", "Nuc_energy"),
+                               ("nuclear_repulsion_energy_au", "Nuclear_repulsion_energy")):
+            value = getattr(dft_obj, attribute, None)
+            summary[key] = None if value is None else float(value)
+
+        self.converged = converged
+        mode = self.parameters["convergence_check"]
+        if mode != "ignore" and not converged:
+            message = "PyFock calculation did not converge (in-process run)."
+            if mode == "error":
+                raise PyFockConvergenceError(message)
+            warnings.warn(message, PyFockConvergenceWarning)
+
+        if compute_forces:
+            force_results = None
+            if self.parameters["force_mode"] == "analytical":
+                try:
+                    force_results = DFT_Grad(
+                        dft_obj, grid_response=self.parameters["grid_response"]).calculate()
+                    summary["force_method_used"] = "analytical"
+                except (NotImplementedError, ValueError) as exc:
+                    warnings.warn("Analytical gradients are not available for this configuration: "
+                                  + str(exc) + ". Falling back to finite differences.")
+            if force_results is None and allow_numerical_forces:
+                force_results = DFT_NumGrad(
+                    dft_obj,
+                    step_size=self.parameters["force_step_size"],
+                    step_unit=self.parameters["force_step_unit"],
+                    method=self.parameters["force_method"],
+                    use_fixed_grids=self.parameters["force_use_fixed_grids"],
+                    verbose=False,
+                ).calculate()
+                summary["force_method_used"] = "numerical"
+            if force_results is not None:
+                summary["forces_au_bohr"] = np.asarray(force_results["forces"]).tolist()
+
+        return summary
 
     def _run_pyfock_script(self, workdir, script_path, output_path):
         with open(output_path, "w", encoding="utf-8") as output_handle:
@@ -638,17 +765,32 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
         xyz_path = os.path.join(step_dir, "structure.xyz")
         self._write_xyz(self.atoms, xyz_path)
 
-        compute_forces = "forces" in properties
+        # ASE asks for the energy and the forces in two separate calls. Computing only what was asked
+        # for would run the whole SCF twice per geometry, and the forces cost a small fraction of it, so
+        # they come along with the energy by default and the second call is served from the cache.
+        forces_requested = "forces" in properties
+        compute_forces = forces_requested or self.parameters["forces_with_energy"]
+        # ... but never let that turn into a numerical gradient behind the user's back: that would be
+        # 6N extra SCFs for an energy nobody asked forces for.
+        allow_numerical_forces = forces_requested
+
         density_guess_path = self._density_guess_path(self.atoms)
-        script_path, output_path = self._write_run_script(
-            self.atoms,
-            step_dir,
-            task_name="singlepoint",
-            compute_forces=compute_forces,
-            compute_dipole=False,
-            density_guess_path=density_guess_path,
-        )
-        summary = self._run_pyfock_script(step_dir, script_path, output_path)
+        if self.parameters["run_in_process"]:
+            output_path = None
+            summary = self._run_in_process(
+                step_dir, xyz_path, compute_forces, allow_numerical_forces, density_guess_path
+            )
+        else:
+            script_path, output_path = self._write_run_script(
+                self.atoms,
+                step_dir,
+                task_name="singlepoint",
+                compute_forces=compute_forces,
+                allow_numerical_forces=allow_numerical_forces,
+                compute_dipole=False,
+                density_guess_path=density_guess_path,
+            )
+            summary = self._run_pyfock_script(step_dir, script_path, output_path)
         density_checkpoint_path = os.path.join(step_dir, "converged_dmat.npy")
         if summary.get("converged", False) and os.path.isfile(density_checkpoint_path):
             self._last_density_path = density_checkpoint_path
@@ -657,30 +799,32 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
             )
         self._populate_common_results(summary)
 
-        if compute_forces:
-            if "forces_au_bohr" not in summary:
-                raise RuntimeError(
-                    f"Forces were requested but not found in '{output_path}'."
-                )
+        have_forces = "forces_au_bohr" in summary
+        if forces_requested and not have_forces:
+            raise RuntimeError(
+                "Forces were requested but not produced"
+                + ("." if output_path is None else f"; see '{output_path}'.")
+            )
+        if have_forces:
             self.results["forces"] = self._to_ev_forces(summary["forces_au_bohr"])
             self.pyfock_results["force_method_used"] = summary.get("force_method_used")
 
         self.pyfock_results["base_energy_ev"] = float(self.results["energy"])
         self.pyfock_results["base_free_energy_ev"] = float(self.results["free_energy"])
-        if compute_forces:
+        if have_forces:
             self.pyfock_results["base_forces_ev_ang"] = np.asarray(
                 self.results["forces"], dtype=np.float64
             ).tolist()
 
         if self.parameters["dispersion"]:
             disp_energy, disp_forces = self._compute_dispersion_correction(
-                self.atoms, compute_forces
+                self.atoms, have_forces
             )
             self.results["energy"] += disp_energy
             self.results["free_energy"] = self.results["energy"]
             self.pyfock_results["dispersion_energy_ev"] = disp_energy
             self.pyfock_results["total_energy_ev"] = float(self.results["energy"])
-            if compute_forces:
+            if have_forces:
                 self.results["forces"] = self.results["forces"] + disp_forces
                 self.pyfock_results["dispersion_forces_ev_ang"] = disp_forces.tolist()
                 self.pyfock_results["total_forces_ev_ang"] = np.asarray(

@@ -64,6 +64,7 @@
             <li><a href="#dispersion">Dispersion</a></li>
             <li><a href="#validating-against-the-published-reference-energies">Validating against the published reference energies</a></li>
             <li><a href="#cost">Cost</a></li>
+            <li><a href="#skala-on-the-gpu">Skala on the GPU</a></li>
           </ul>
         </li>
         <li><a href="#initial-guess-for-the-scf">Initial Guess for the SCF</a></li>
@@ -375,8 +376,10 @@ Consequences worth knowing:
   weights and the raw single-atom weights.
 - **Do not density-prune the grid.** The model's non-local features are integrals over each atom's full
   grid.
-- **CPU only for now.** `use_gpu=True` raises a clear error: the GPU path needs a CUDA build of PyTorch
-  plus a CuPy↔Torch bridge (zero-copy through DLPack) that is not wired up yet.
+- **The GPU runs the model, the CPU runs the rest.** Pass `skala_gpu=True` and the neural functional is
+  evaluated on the device while the integrals, the Coulomb term and the assembly of Vxc stay on the CPU
+  — see [Skala on the GPU](#skala-on-the-gpu). PyFock's *full* GPU SCF path (`use_gpu=True`) does not
+  support Skala and raises a clear error; it would need a CuPy↔Torch bridge that is not wired up yet.
 - **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
 - **Analytical nuclear gradients are supported**, so Skala works for geometry optimization like any
   other functional — see
@@ -497,6 +500,29 @@ on PyFock is *not* where the time goes: the extra density and potential passes c
 the system grows (21.7x to 10.8x against PBE), because the model's cost tracks the number of grid points
 while the semilocal functionals also carry AO work that grows with the basis.
 
+#### Skala on the GPU
+
+Skala is a PyTorch model, so it can be evaluated on the GPU without PyFock's own CuPy machinery. Pass
+`skala_gpu=True` and the model runs on the device while everything else — the integrals, the Coulomb
+term and the assembly of Vxc from the model's cotangents — stays on the CPU:
+
+```python
+dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1', dispersion=True, skala_gpu=True)
+```
+
+It works the same way through the ASE calculator, and forces come along with it:
+
+```python
+atoms.calc = PyFockCalculator(functional='skala-1.1', skala_gpu=True, dispersion=True)
+```
+
+All this needs is a CUDA build of PyTorch (`pip install torch --index-url
+https://download.pytorch.org/whl/cu128` for current cards); PyFock downloads the CUDA checkpoint, which
+is a separate file from the CPU one. `use_gpu=True`, the flag for PyFock's *full* GPU SCF path, is a
+different thing and still raises a clear error for Skala.
+
+`benchmarks_tests/benchmark_skala_gpu.py` measures the speedup and the CPU/GPU agreement, for
+single points and for geometry optimizations.
 
 ### Initial Guess for the SCF
 
@@ -608,6 +634,23 @@ water.calc = PyFockCalculator(functional="PBE", basis="def2-SVP",
 BFGS(water).run(fmax=0.02)
 ```
 
+By default each step runs in a fresh subprocess, which keeps a crashing or non-converging step from
+taking the optimizer down and leaves a full PyFock output on disk for every step. The price is that
+every step repeats the cold start — the imports, loading the Skala checkpoint and warming up
+TorchScript, and a CUDA context when `skala_gpu` is on — which for small molecules costs more than the
+step itself. (PyFock's own Numba kernels are compiled with `cache=True`, so they reload from disk and
+are a small part of it.) `run_in_process=True` runs the steps here instead and keeps all of that alive
+between them:
+
+```python
+PyFockCalculator(functional="skala-1.1", run_in_process=True)
+```
+
+It is the faster choice for Skala by a wide margin; keep the subprocess for long unattended runs. BLAS
+reads its thread count from the environment when numpy is first imported, so with `run_in_process=True`
+set `OMP_NUM_THREADS` at the top of your script rather than relying on `ncores` alone. See
+[`examples/ex45_ASE_geometry_optimization_with_Skala.py`](examples/ex45_ASE_geometry_optimization_with_Skala.py).
+
 #### Grid response
 
 By default the XC gradient treats the quadrature grid as fixed — its dependence on the nuclear
@@ -702,7 +745,7 @@ streamlit run app.py
 - [ ] Electron dynamics & Excited state calculations (RT-TDDFT)
 - [ ] Periodic boundary conditions
 - [x] Hybrid functionals with exact exchange (native B3LYP/PBE0 and LibXC hybrids, RI-K via DF_algo=11; CPU)
-- [x] Skala neural exchange-correlation functional, with analytical gradients (CPU)
+- [x] Skala neural exchange-correlation functional, with analytical gradients (CPU; model on GPU via `skala_gpu=True`)
 - [x] Grid-response XC gradients (Becke weight derivatives, `Grids.becke_weight_gradient`)
 - [ ] Multi-GPU parallelization
 - [ ] Basis set optimization tools
