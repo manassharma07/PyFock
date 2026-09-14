@@ -476,6 +476,152 @@ def _becke_partition_kernel(coords, atom_idx, atm_coords, inv_dist, a_table, use
             out[p] = P[atom_idx[p]] / s
 
 
+@njit(parallel=True, cache=True, nogil=True, fastmath=True, error_model="numpy")
+def _becke_weight_grad_kernel(coords, atom_idx, atm_coords, inv_dist, a_table, use_adjust,
+                              cot, blocksize, out):
+    # Accumulates sum_p cot[p] * d W_p / d R_C, where W_p = P_A(r_p) / sum_k P_k(r_p) is the Becke
+    # factor of the atom A the point belongs to, and r_p translates rigidly with that atom.
+    #
+    # Writing s_ij = (1 - f3(nu_ij))/2, P_i = prod_j s_ij, Z = sum_k P_k and W = P_A/Z, the chain rule
+    # through a single pair (i > j) gives
+    #     dW/dmu_ij = (B/2) * (L_ji (delta_jA - W) - L_ij (delta_iA - W)) / Z   with  B = f3'(nu) dnu/dmu
+    # where L_ij = P_i / s_ij. That ratio is the reason for the prefix/suffix products below: s_ij goes
+    # to zero wherever a cell boundary saturates, but the leave-one-out product stays finite, so forming
+    # L directly avoids a 0/0 that dividing would hit.
+    #
+    # mu_ij = (d_i - d_j)/R_ij depends on the nuclei both directly and through the point:
+    #     dmu/dR_i = (-e_i - mu E_ij)/R_ij,  dmu/dR_j = (e_j + mu E_ij)/R_ij,  dmu/dr = (e_i - e_j)/R_ij
+    # with e_i the unit vector from nucleus i to the point and E_ij the unit vector from j to i.
+    npts = coords.shape[0]
+    natm = atm_coords.shape[0]
+    nblocks = out.shape[0]
+    for ib in prange(nblocks):
+        p0 = ib * blocksize
+        p1 = min(p0 + blocksize, npts)
+        d = np.empty(natm)
+        inv_d = np.empty(natm)
+        S = np.empty((natm, natm))
+        L = np.empty((natm, natm))
+        B = np.empty((natm, natm))
+        pre = np.empty(natm + 1)
+        suf = np.empty(natm + 1)
+        for p in range(p0, p1):
+            cp = cot[p]
+            if cp == 0.0:
+                continue
+            x = coords[p, 0]
+            y = coords[p, 1]
+            z = coords[p, 2]
+            for k in range(natm):
+                dx = x - atm_coords[k, 0]
+                dy = y - atm_coords[k, 1]
+                dz = z - atm_coords[k, 2]
+                dk = np.sqrt(dx * dx + dy * dy + dz * dz)
+                d[k] = dk
+                inv_d[k] = 1.0 / dk
+                S[k, k] = 1.0
+
+            # Switching function and its derivative factor for every pair.
+            for i in range(natm):
+                for j in range(i):
+                    mu = (d[i] - d[j]) * inv_dist[i, j]
+                    if use_adjust:
+                        aij = a_table[i, j]
+                        nu = mu + aij * (1.0 - mu * mu)
+                        q = 1.0 - 2.0 * aij * mu
+                    else:
+                        nu = mu
+                        q = 1.0
+                    t1 = 1.5 * nu - 0.5 * nu * nu * nu
+                    t2 = 1.5 * t1 - 0.5 * t1 * t1 * t1
+                    g = 1.5 * t2 - 0.5 * t2 * t2 * t2
+                    S[i, j] = 0.5 * (1.0 - g)
+                    S[j, i] = 0.5 * (1.0 + g)
+                    B[i, j] = (3.375 * (1.0 - t2 * t2) * (1.0 - t1 * t1) * (1.0 - nu * nu)) * q
+
+            # Row products and their leave-one-out partners, without dividing.
+            Z = 0.0
+            for i in range(natm):
+                pre[0] = 1.0
+                for k in range(natm):
+                    pre[k + 1] = pre[k] * S[i, k]
+                suf[natm] = 1.0
+                for k in range(natm - 1, -1, -1):
+                    suf[k] = suf[k + 1] * S[i, k]
+                for k in range(natm):
+                    L[i, k] = pre[k] * suf[k + 1]
+                Z += pre[natm]
+
+            A = atom_idx[p]
+            W = L[A, A] / Z            # S[A, A] = 1, so L[A, A] is P_A
+            fac = 0.5 * cp / Z
+
+            for i in range(natm):
+                for j in range(i):
+                    wi = -W
+                    wj = -W
+                    if i == A:
+                        wi += 1.0
+                    if j == A:
+                        wj += 1.0
+                    coef = fac * B[i, j] * (L[j, i] * wj - L[i, j] * wi)
+                    if coef == 0.0:
+                        continue
+                    inv = inv_dist[i, j]
+                    mu = (d[i] - d[j]) * inv
+                    ci = coef * inv
+                    for dd in range(3):
+                        ei = (coords[p, dd] - atm_coords[i, dd]) * inv_d[i]
+                        ej = (coords[p, dd] - atm_coords[j, dd]) * inv_d[j]
+                        E = (atm_coords[i, dd] - atm_coords[j, dd]) * inv
+                        muE = mu * E
+                        out[ib, i, dd] += ci * (-ei - muE)
+                        out[ib, j, dd] += ci * (ej + muE)
+                        out[ib, A, dd] += ci * (ei - ej)
+
+
+def becke_weight_gradient(coords, atom_idx, atm_coords, a_table=None, cotangent=None, blocksize=256):
+    """``sum_p cotangent[p] * d P_A(r_p) / d R_C`` of the Becke partitioning, as an ``(natoms, 3)`` array.
+
+    This is the "grid response" that :func:`pyfock.Integrals.eval_xc_grad_2` neglects. Both routes by
+    which the nuclei enter are included: the explicit dependence of the partitioning on every nuclear
+    position, and the fact that each grid point translates rigidly with the atom whose atomic grid it
+    came from. Multiply ``cotangent`` by the raw volume elements beforehand (``grids.atomic_weights``)
+    if what you want is the derivative of the full quadrature weight ``w_p = vol_p * P_A(r_p)``.
+
+    Arguments match :func:`becke_partition_weights`. Runs in a parallel Numba kernel on the threads set
+    by the caller; the work is O(natoms^2) per grid point, the same as building the weights.
+    """
+    coords = np.ascontiguousarray(coords, dtype=np.float64)
+    atm_coords = np.ascontiguousarray(atm_coords, dtype=np.float64)
+    atom_idx = np.ascontiguousarray(atom_idx, dtype=np.int64)
+    natm = atm_coords.shape[0]
+    npts = coords.shape[0]
+    if natm < 2 or npts == 0:
+        return np.zeros((natm, 3))
+    cotangent = np.ascontiguousarray(cotangent, dtype=np.float64)
+
+    diff = atm_coords[:, None, :] - atm_coords[None, :, :]
+    dist = np.sqrt(np.einsum('ijk,ijk->ij', diff, diff))
+    inv_dist = np.zeros((natm, natm))
+    off = ~np.eye(natm, dtype=bool)
+    inv_dist[off] = 1.0 / dist[off]
+    if a_table is None:
+        a_table = np.zeros((natm, natm))
+        use_adjust = False
+    else:
+        a_table = np.ascontiguousarray(a_table, dtype=np.float64)
+        use_adjust = True
+
+    blocksize = int(blocksize)
+    nblocks = (npts + blocksize - 1) // blocksize
+    # One accumulator per block keeps the parallel reduction race-free; it is a few hundred kB.
+    out = np.zeros((nblocks, natm, 3))
+    _becke_weight_grad_kernel(coords, atom_idx, atm_coords, inv_dist, a_table, use_adjust,
+                              cotangent, blocksize, out)
+    return out.sum(axis=0)
+
+
 def becke_partition_weights(coords, atom_idx, atm_coords, a_table=None, blocksize=128):
     """Becke partitioning factors P_A(r)/sum_B P_B(r) of grid points belonging to the atoms ``atom_idx``.
 

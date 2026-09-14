@@ -1,33 +1,35 @@
 """Nuclear gradient of the Skala neural exchange-correlation functional (CPU).
 
-The XC gradient splits into two pieces, and only the second is specific to a neural functional.
+Writing the XC energy as ``E(rho_p, grad rho_p, tau_p, r_p, w_p, R)``, the nuclear gradient collects four
+kinds of term. The first is shared with every semilocal functional; the other three exist because Skala
+reads the grid geometry itself and because its features are integrals over each atomic grid.
 
-**The density-mediated part** is the ordinary meta-GGA gradient. Once the per-grid-point derivatives
-``dE/drho``, ``dE/d(grad rho)`` and ``dE/dtau`` are known, contracting them with the AO derivatives is
-functional-agnostic: the chain rule from grid quantities through the density matrix to the nuclei does
-not care where those derivatives came from. This module therefore runs exactly the contraction of
-:func:`pyfock.Integrals.eval_xc_grad_2`, with the ``F``/``Fx,Fy,Fz``/``G_tau`` intermediates taken from
-the model's cotangents instead of from ``vrho``/``vsigma``/``vtau``. Because the cotangents already
-carry the quadrature weights, the ``weights_block`` factors of the semilocal path are absent here.
+1. **Density-mediated (Pulay).** The basis functions centred on an atom move with it, changing the
+   density features at fixed grid points. Once the per-point derivatives ``dE/drho`` etc. are known, this
+   contraction is functional-agnostic, so it is exactly the meta-GGA contraction of
+   :func:`pyfock.Integrals.eval_xc_grad_2` with the model's cotangents in place of
+   ``vrho``/``vsigma``/``vtau``. Because the cotangents already carry the quadrature weights, the
+   ``weights_block`` factors of the semilocal path are absent here.
+2. **Grid translation.** The grid points of an atom translate rigidly with it, so the density features
+   evaluated *at those points* change even with the density field held fixed. This contributes
+   ``sum_{p in A} [c_rho grad rho + c_grad . grad grad rho + c_tau grad tau]`` and needs only the AO
+   Hessians that term 1 already evaluates.
+3. **Grid response.** The Becke partitioning weights depend on every nuclear position, and the points
+   they are evaluated at move too. :func:`pyfock.Grids.becke_weight_gradient` supplies ``dw/dR``.
+4. **Explicit.** Skala consumes the grid coordinates and the nuclear coordinates directly, so the model
+   depends on the geometry beyond the density. This falls out of the same reverse pass as the
+   cotangents.
 
-**The explicit part** has no semilocal analogue. Skala consumes the grid geometry itself -- the point
-coordinates and the nuclear coordinates are model inputs -- so the energy depends on the nuclear
-positions beyond the density. Both contributions fall out of the same reverse pass that produces the
-cotangents (see :meth:`pyfock.XC.SkalaFunctional.exc_and_potential` with ``nuclear_terms=True``).
-
-**What is left out.** The energy also depends on the nuclei through the Becke partitioning weights,
-``dE/dw . dw/dR``. PyFock does not evaluate ``dw/dR`` anywhere, and its semilocal analytical gradients
-make the same fixed-grid approximation (see :func:`pyfock.Integrals.eval_xc_grad_2`, which follows
-PySCF's default). Skala's own implementation notes that this weight-response term largely cancels
-against the grid-translation contribution, so the two are best thought of as a pair; the size of what is
-neglected here is measured against numerical gradients in
-``benchmarks_tests/benchmark_skala_gradients.py``.
+Terms 2 and 3 are large and of opposite sign -- they cancel to a large extent -- so neither may be
+included without the other. Omitting both (the fixed-grid approximation PyFock makes for semilocal
+functionals) costs about 1e-4 Ha/Bohr for a meta-GGA but about 1e-2 Ha/Bohr for Skala, which is the size
+of the forces themselves. That is why this driver evaluates them.
 
 Cost
 ----
-Three passes over the grid, the same shape as the energy driver: AO values and gradients to build the
-density, one model call, then AO values, gradients *and* Hessians for the contraction. Only the last is
-appreciably more expensive than an energy evaluation, and it is the same pass a meta-GGA gradient needs.
+Three passes over the grid: AO values and gradients to build the density, one model call, then AO values,
+gradients *and* Hessians for the contraction. The extra terms ride along on the third pass and on one
+reverse pass through the partitioning, so they add little over a meta-GGA gradient.
 """
 
 import numpy as np
@@ -44,10 +46,13 @@ from .eval_xc_skala import _bfs_arrays, _block_aos
 
 __all__ = ['eval_xc_grad_skala']
 
+# ao_hess components are stored as 0:xx 1:xy 2:xz 3:yy 4:yz 5:zz.
+_HESS = ((0, 1, 2), (1, 3, 4), (2, 4, 5))
+
 
 def eval_xc_grad_skala(basis, dmat, grids, skala, ncores=2, blocksize=5000,
                        list_nonzero_indices=None, count_nonzero_indices=None,
-                       max_points_per_chunk=250000, debug=False):
+                       max_points_per_chunk=250000, grid_response=True, debug=False):
     """XC gradient contributions of a Skala functional.
 
     Parameters
@@ -68,8 +73,12 @@ def eval_xc_grad_skala(basis, dmat, grids, skala, ncores=2, blocksize=5000,
         Per-block AO screening data, as built by the SCF driver.
     max_points_per_chunk : int
         Upper bound on the grid points handed to the model at once.
+    grid_response : bool
+        Include the grid-translation and Becke weight-response terms. Leaving them out reproduces the
+        fixed-grid approximation used for semilocal functionals, which is *not* accurate enough for
+        Skala; the switch exists to measure that.
     debug : bool
-        Print a breakdown of the time spent in the three passes.
+        Print a breakdown of the time spent in each pass.
 
     Returns
     -------
@@ -77,27 +86,30 @@ def eval_xc_grad_skala(basis, dmat, grids, skala, ncores=2, blocksize=5000,
         Per-basis-function contributions, in the same convention as
         :func:`pyfock.Integrals.eval_xc_grad_2`: the caller maps them onto atoms with
         ``np.add.at(grad, basis.bfs_atoms, -2.0 * dexc_dbf.T)``.
-    explicit_grad : (natm, 3) ndarray
-        The explicit nuclear gradient, already per atom. Added to the total gradient as it is.
+    atom_grad : (natm, 3) ndarray
+        Everything that is already resolved per atom -- the explicit, grid-translation and
+        grid-response terms. Added to the total gradient as it is.
     """
     if getattr(grids, 'atomic_weights', None) is None:
         raise ValueError(
             "Skala needs the unpartitioned single-atom quadrature weights, which the 'numgrid' grid "
             "scheme does not expose. Build the grid with the native scheme instead.")
 
-    coords = grids.coords
-    weights = grids.weights
+    coords, weights = grids.coords, grids.weights
     ngrids = coords.shape[0]
     nblocks = ngrids // blocksize
     nao = basis.bfs_nao
+    atom_idx = np.ascontiguousarray(grids.atom_idx, dtype=np.int64)
+    atom_coords = np.asarray(grids.mol.coordsBohrs, dtype=np.float64).reshape(-1, 3)
+    natm = atom_coords.shape[0]
     bfs = _bfs_arrays(basis)
     durations = {}
 
-    def block_bounds(iblock):
+    def bounds(iblock):
         lo = iblock * blocksize
         return lo, min(lo + blocksize, ngrids)
 
-    def block_indices(iblock):
+    def indices(iblock):
         if list_nonzero_indices is None:
             return None
         return list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]]
@@ -108,12 +120,11 @@ def eval_xc_grad_skala(basis, dmat, grids, skala, ncores=2, blocksize=5000,
     rho = np.zeros(ngrids)
     rho_grad = np.zeros((3, ngrids))
     tau = np.zeros(ngrids)
-
     for iblock in range(nblocks + 1):
-        lo, hi = block_bounds(iblock)
+        lo, hi = bounds(iblock)
         if hi <= lo:
             continue
-        idx = block_indices(iblock)
+        idx = indices(iblock)
         ao, ao_grad = _block_aos(bfs, coords[lo:hi], idx, None, None)
         dmat_block = dmat if idx is None else dmat[np.ix_(idx, idx)]
         Fmj = ao @ dmat_block
@@ -124,71 +135,78 @@ def eval_xc_grad_skala(basis, dmat, grids, skala, ncores=2, blocksize=5000,
 
     # ------------------------------------------------------------------ pass 2: one model call
     start = timer()
-    _, vrho, vgrad, vtau, explicit_grad = skala.exc_and_potential(
-        rho, rho_grad, tau, coords, weights, grids.atomic_weights, grids.atom_idx,
-        np.asarray(grids.mol.coordsBohrs, dtype=np.float64).reshape(-1, 3),
+    _, vrho, vgrad, vtau, atom_grad, dweights = skala.exc_and_potential(
+        rho, rho_grad, tau, coords, weights, grids.atomic_weights, atom_idx, atom_coords,
         max_points_per_chunk=max_points_per_chunk, nuclear_terms=True)
     durations['model'] = timer() - start
-    del rho, rho_grad, tau
+    del rho, tau
+    if not grid_response:
+        atom_grad = np.zeros_like(atom_grad)
+
+    # ------------------------------------------------------------------ grid response: dE/dw . dw/dR
+    start = timer()
+    if grid_response:
+        from pyfock.Grids import becke_weight_gradient, size_adjustment_table
+        a_table = size_adjustment_table(np.asarray(grids.mol.Zcharges, dtype=np.int64),
+                                        getattr(grids, 'size_adjustment', 'treutler'))
+        # dE/dw_p * dw_p/dR, with w_p = vol_p * P_A(r_p): the volume element rides along in the
+        # cotangent because only the partitioning factor depends on the nuclei.
+        atom_grad = atom_grad + becke_weight_gradient(coords, atom_idx, atom_coords, a_table,
+                                                      dweights * grids.atomic_weights)
+    durations['weights'] = timer() - start
 
     # ------------------------------------------------------------------ pass 3: AO contraction
     start = timer()
     numba.set_num_threads(1)
-    order = list(range(nblocks + 1))
+    order = [i for i in range(nblocks + 1) if bounds(i)[1] > bounds(i)[0]]
     random.shuffle(order)                       # load balancing, as in eval_xc_grad_2
     batch_size = 'auto' if 2 * ncores > nblocks else max(1, nblocks // (ncores * 2))
-    full_indices = np.arange(nao)
+    full = np.arange(nao)
 
-    # One BLAS thread inside the workers: they already parallelize over grid blocks.
     with threadpool_limits(limits=1, user_api='blas'):
         output = Parallel(n_jobs=ncores, backend='threading', require='sharedmem',
                           batch_size=batch_size)(
             delayed(_block_grad)(
-                coords[block_bounds(iblock)[0]:block_bounds(iblock)[1]],
-                dmat if block_indices(iblock) is None
-                else dmat[np.ix_(block_indices(iblock), block_indices(iblock))],
-                vrho[block_bounds(iblock)[0]:block_bounds(iblock)[1]],
-                vgrad[:, block_bounds(iblock)[0]:block_bounds(iblock)[1]],
-                vtau[block_bounds(iblock)[0]:block_bounds(iblock)[1]],
-                bfs,
-                full_indices if block_indices(iblock) is None else block_indices(iblock))
-            for iblock in order if block_bounds(iblock)[1] > block_bounds(iblock)[0])
+                coords[bounds(i)[0]:bounds(i)[1]],
+                dmat if indices(i) is None else dmat[np.ix_(indices(i), indices(i))],
+                vrho[bounds(i)[0]:bounds(i)[1]],
+                vgrad[:, bounds(i)[0]:bounds(i)[1]],
+                vtau[bounds(i)[0]:bounds(i)[1]],
+                rho_grad[:, bounds(i)[0]:bounds(i)[1]],
+                atom_idx[bounds(i)[0]:bounds(i)[1]],
+                natm, bfs, full if indices(i) is None else indices(i), grid_response)
+            for i in order)
 
     dexc_dbf = np.zeros((3, nao))
-    produced = [iblock for iblock in order if block_bounds(iblock)[1] > block_bounds(iblock)[0]]
-    for iblock, block in zip(produced, output):
-        idx = block_indices(iblock)
+    for iblock, (block, translation) in zip(order, output):
+        idx = indices(iblock)
         if idx is None:
             dexc_dbf += block
         else:
             dexc_dbf[:, idx] += block
+        atom_grad = atom_grad + translation
     numba.set_num_threads(ncores)
     durations['grad'] = timer() - start
 
     if debug:
-        print('Skala gradient timings (s): density %.3f, model %.3f, contraction %.3f'
-              % (durations['rho'], durations['model'], durations['grad']), flush=True)
+        print('Skala gradient timings (s): density %.3f, model %.3f, weights %.3f, contraction %.3f'
+              % (durations['rho'], durations['model'], durations['weights'], durations['grad']),
+              flush=True)
+    return dexc_dbf, atom_grad
 
-    return dexc_dbf, explicit_grad
 
-
-def _block_grad(coords_block, dmat, vrho_block, vgrad_block, vtau_block, bfs, non_zero_indices):
-    """Per-basis-function gradient contributions of one grid block.
-
-    This is the meta-GGA branch of :func:`pyfock.Integrals.eval_xc_grad_2.block_xc_grad_func` with the
-    functional evaluation replaced by the model's cotangents, which already include the quadrature
-    weights: ``F = dE/drho``, ``(Fx, Fy, Fz) = dE/d(grad rho)`` and ``G_tau = 0.5 * dE/dtau``.
-    """
+def _block_grad(coords_block, dmat, vrho_block, vgrad_block, vtau_block, rho_grad_block,
+                atom_idx_block, natm, bfs, non_zero_indices, grid_response):
+    """Per-basis-function gradient contributions of one grid block, and its grid-translation term."""
     numba.set_num_threads(1)
     ao, ao_grad, ao_hess = Integrals.bf_val_helpers.eval_bfs_grad_and_hess_sparse_internal_serial(
         bfs[0], bfs[1], bfs[2], bfs[3], bfs[4], bfs[5], bfs[6], coords_block, non_zero_indices)
 
     Fmj = ao @ dmat                                     # (chi D)[g, mu]
     Hgrad = [ao_grad[0] @ dmat, ao_grad[1] @ dmat, ao_grad[2] @ dmat]
-
     Fx, Fy, Fz = vgrad_block[0], vgrad_block[1], vgrad_block[2]
 
-    # aow[g, nu] = F chi_nu + sum_k Fk d_k chi_nu
+    # ---- 1. Pulay: the meta-GGA contraction of eval_xc_grad_2, cotangents already weighted.
     aow = vrho_block[:, None] * ao
     aow += Fx[:, None] * ao_grad[0]
     aow += Fy[:, None] * ao_grad[1]
@@ -200,8 +218,6 @@ def _block_grad(coords_block, dmat, vrho_block, vgrad_block, vtau_block, bfs, no
     res[1] = np.einsum('mj,mj->j', ao_grad[1], aowD)
     res[2] = np.einsum('mj,mj->j', ao_grad[2], aowD)
 
-    # Hessian terms: sum_k Fk * d_k d_d chi_mu contracted with (chi D).
-    # ao_hess components are ordered 0:xx 1:xy 2:xz 3:yy 4:yz 5:zz.
     hessF = Fx[:, None] * ao_hess[0] + Fy[:, None] * ao_hess[1] + Fz[:, None] * ao_hess[2]
     res[0] += np.einsum('mj,mj->j', hessF, Fmj)
     hessF = Fx[:, None] * ao_hess[1] + Fy[:, None] * ao_hess[3] + Fz[:, None] * ao_hess[4]
@@ -209,15 +225,27 @@ def _block_grad(coords_block, dmat, vrho_block, vgrad_block, vtau_block, bfs, no
     hessF = Fx[:, None] * ao_hess[2] + Fy[:, None] * ao_hess[4] + Fz[:, None] * ao_hess[5]
     res[2] += np.einsum('mj,mj->j', hessF, Fmj)
 
-    # tau term: sum_k G_tau (d_d d_k chi_mu) Hk[g, mu]
     Gtau = 0.5 * vtau_block
-    GHx = Gtau[:, None] * Hgrad[0]
-    GHy = Gtau[:, None] * Hgrad[1]
-    GHz = Gtau[:, None] * Hgrad[2]
-    res[0] += (np.einsum('mj,mj->j', ao_hess[0], GHx) + np.einsum('mj,mj->j', ao_hess[1], GHy)
-               + np.einsum('mj,mj->j', ao_hess[2], GHz))
-    res[1] += (np.einsum('mj,mj->j', ao_hess[1], GHx) + np.einsum('mj,mj->j', ao_hess[3], GHy)
-               + np.einsum('mj,mj->j', ao_hess[4], GHz))
-    res[2] += (np.einsum('mj,mj->j', ao_hess[2], GHx) + np.einsum('mj,mj->j', ao_hess[4], GHy)
-               + np.einsum('mj,mj->j', ao_hess[5], GHz))
-    return res
+    GH = [Gtau[:, None] * Hgrad[0], Gtau[:, None] * Hgrad[1], Gtau[:, None] * Hgrad[2]]
+    for d in range(3):
+        res[d] += sum(np.einsum('mj,mj->j', ao_hess[_HESS[d][k]], GH[k]) for k in range(3))
+
+    translation = np.zeros((natm, 3))
+    if not grid_response:
+        return res, translation
+
+    # ---- 2. Grid translation: the points of an atom move with it, so the density features evaluated
+    #         there change even at fixed density. d(rho)/dR_b = grad_b rho, and likewise for grad rho
+    #         (its Hessian) and tau (its gradient) -- all available from the AO Hessians above.
+    for b in range(3):
+        term = vrho_block * rho_grad_block[b]
+        for a in range(3):
+            # d(grad_a rho)/d b = 2 [ (d_a d_b chi) . (chi D) + (d_a chi) . (d_b chi D) ]
+            hessian_ab = 2.0 * (np.einsum('mj,mj->m', ao_hess[_HESS[a][b]], Fmj)
+                                + np.einsum('mj,mj->m', ao_grad[a], Hgrad[b]))
+            term += vgrad_block[a] * hessian_ab
+        # d(tau)/d b = sum_k (d_b d_k chi) . (d_k chi D)
+        grad_tau = sum(np.einsum('mj,mj->m', ao_hess[_HESS[b][k]], Hgrad[k]) for k in range(3))
+        term += vtau_block * grad_tau
+        translation[:, b] = np.bincount(atom_idx_block, weights=term, minlength=natm)
+    return res, translation

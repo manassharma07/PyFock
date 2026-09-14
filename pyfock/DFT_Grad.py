@@ -78,7 +78,7 @@ class DFT_Grad:
     """
 
     def __init__(self, dft_obj, threshold_schwarz_grad=1e-11, ecp_grad_mode='analytical',
-                 ecp_series_order=12, ecp_fd_step=1e-3, verbose=True):
+                 ecp_series_order=12, ecp_fd_step=1e-3, verbose=True, grid_response=None):
         if dft_obj is None:
             raise ValueError('ERROR: A PyFock DFT object is required.')
         if not getattr(dft_obj, 'converged', False):
@@ -99,10 +99,28 @@ class DFT_Grad:
         self.ecp_fd_step = ecp_fd_step
         self.verbose = verbose
 
+        # Grid response: differentiate the quadrature grid's own dependence on the nuclei (the points
+        # of an atom move with it, and the Becke weights depend on every nuclear position). Off by
+        # default for semilocal functionals, matching PySCF and PyFock's published references, but
+        # mandatory for Skala, whose features are integrals over each atomic grid.
+        self.grid_response = grid_response
+
         # Resolve the functional specification the same way DFT.scf does. Skala is not a LibXC
         # functional: the converged DFT object already holds the loaded model, and the gradient goes
         # through its own driver.
         self.skala = getattr(dft_obj, 'skala', None)
+        if self.grid_response is None:
+            self.grid_response = self.skala is not None
+        if self.skala is not None and not self.grid_response:
+            raise ValueError(
+                'grid_response=False is not usable with Skala: on a frozen grid its gradient is wrong '
+                'by ~1e-2 Ha/Bohr, the size of the forces themselves. Pass grid_response=True (the '
+                'default for Skala) or use DFT_NumGrad.')
+        if self.grid_response and getattr(dft_obj.grids, 'atomic_weights', None) is None:
+            raise ValueError(
+                "grid_response=True needs the unpartitioned single-atom quadrature weights, which the "
+                "'numgrid' grid scheme does not expose. Build the grid with the native scheme, e.g. "
+                "Grids(mol, level=3).")
         xc = dft_obj.xc
         if self.skala is not None:
             self.funcid = xc
@@ -318,12 +336,18 @@ class DFT_Grad:
                 count_nonzero_indices=count_nonzero_indices,
             )
         else:
-            dexc_dbf = Integrals.eval_xc_grad_2(
+            xc_result = Integrals.eval_xc_grad_2(
                 basis, dmat, weights_grid, coords_grid, funcid=self.funcid,
                 use_libxc=dft_obj.use_libxc, ncores=ncores, blocksize=blocksize,
                 list_nonzero_indices=list_nonzero_indices,
                 count_nonzero_indices=count_nonzero_indices,
+                grids=dft_obj.grids, grid_response=self.grid_response,
             )
+            # eval_xc_grad_2 only returns the per-atom grid-response term when it was asked for.
+            if self.grid_response:
+                dexc_dbf, explicit_xc_grad = xc_result
+            else:
+                dexc_dbf = xc_result
         grad_xc = np.zeros((natoms, 3))
         np.add.at(grad_xc, bfs_atoms, -2.0 * dexc_dbf.T)
         if explicit_xc_grad is not None:

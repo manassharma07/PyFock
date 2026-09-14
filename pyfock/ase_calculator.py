@@ -106,6 +106,13 @@ class PyFockCalculator(Calculator):
     forces; the ``force_step_size``/``force_step_unit``/``force_method``/
     ``force_use_fixed_grids`` parameters apply to the numerical path only.
 
+    ``grid_response`` controls whether the analytical XC gradient differentiates the quadrature grid's
+    own dependence on the nuclear positions -- the points of an atom translating with it, and the Becke
+    weights depending on every nucleus. ``None`` (default) keeps PyFock's convention: off for semilocal
+    functionals, on for Skala, where it is mandatory. ``True`` turns it on for any functional, which
+    makes the forces exactly translationally invariant (net force ~1e-13 instead of ~1e-4 Ha/Bohr) at
+    the cost of one extra pass over the partitioning. It requires the native ('treutler') grids.
+
     The converged AO density matrix is checkpointed after each successful
     calculation and used as the initial guess for the next compatible ASE
     geometry. Pass ``reuse_density=False`` to disable this behavior.
@@ -120,6 +127,7 @@ class PyFockCalculator(Calculator):
         "dispersion": False,
         "dispersion_kwargs": None,
         "force_mode": "analytical",
+        "grid_response": None,
         "force_step_size": 1.0e-3,
         "force_step_unit": "bohr",
         "force_method": "central",
@@ -138,6 +146,7 @@ class PyFockCalculator(Calculator):
         dispersion=False,
         dispersion_kwargs=None,
         force_mode="analytical",
+        grid_response=None,
         force_step_size=1.0e-3,
         force_step_unit="bohr",
         force_method="central",
@@ -167,6 +176,7 @@ class PyFockCalculator(Calculator):
             None if dispersion_kwargs is None else dict(dispersion_kwargs)
         )
         self.parameters["force_mode"] = force_mode
+        self.parameters["grid_response"] = grid_response
         self.parameters["force_step_size"] = force_step_size
         self.parameters["force_step_unit"] = force_step_unit
         self.parameters["force_method"] = force_method
@@ -529,7 +539,7 @@ if {self._render_value(compute_forces)}:
     force_results = None
     if force_mode == "analytical":
         try:
-            grad_obj = DFT_Grad(dft_obj)
+            grad_obj = DFT_Grad(dft_obj, grid_response={self._render_value(self.parameters["grid_response"])})
             force_results = grad_obj.calculate()
             result["force_method_used"] = "analytical"
         except (NotImplementedError, ValueError) as exc:

@@ -1,16 +1,30 @@
 """Analytical Skala nuclear gradients against numerical ones.
 
-PyFock's analytical XC gradients are evaluated on a fixed grid: the dependence of the Becke partitioning
-weights on the nuclear positions is not differentiated. That is a deliberate approximation, made for
-every functional (see :func:`pyfock.Integrals.eval_xc_grad_2`, which follows PySCF's default), and it is
-the only term missing from the Skala gradient as well.
+The Skala gradient carries the full grid response -- the Becke weight derivatives and the
+grid-translation term -- which PyFock omits for semilocal functionals. Omitting it for Skala is not an
+option: its features are integrals over each atomic grid, so a frozen grid costs ~1e-2 Ha/Bohr, the size
+of the forces themselves, against ~1e-4 for a meta-GGA.
 
-So the question this script answers is not "is the analytical gradient right" in the abstract, but "is
-Skala's analytical gradient as good as PyFock's already-accepted semilocal ones". It therefore runs a
-semilocal functional alongside Skala as a control: whatever discrepancy r2SCAN shows against a numerical
-gradient is the baseline cost of the fixed-grid approximation, and Skala should not be meaningfully
-worse. Timings are reported too, since numerical gradients cost 6N SCF calculations and the whole point
-of the analytical route is that it does not.
+Getting the numerical reference right turns out to matter more than the analytical code. Neither mode of
+``DFT_NumGrad`` is usable here:
+
+* ``use_fixed_grids=True`` freezes the grid, so it shares the fixed-grid approximation and agrees with a
+  gradient that lacks the grid response *for the wrong reason*;
+* ``use_fixed_grids=False`` sets ``grids = None`` on the displaced calculation, which makes the SCF
+  rebuild **and density-prune** the grid. The base calculation, handed an explicit grid, does not prune.
+  The finite difference then straddles two different energy functionals, and reports ~1e-3 Ha/Bohr of
+  disagreement that belongs entirely to the reference. That artefact does not shrink with grid level,
+  which is what gives it away.
+
+This script therefore builds its own reference: an explicit, unpruned grid at every displaced geometry,
+so both sides differentiate the same functional. Against that, the Skala gradient agrees to ~5e-6
+Ha/Bohr, the finite-difference truncation floor at a 1e-3 Bohr step.
+
+A semilocal functional runs alongside as a control. Timings are reported too, since numerical gradients
+cost 6N SCFs and the point of the analytical route is that it does not.
+
+Translational invariance is the sharpest single check here and needs no reference at all: the net force
+must vanish, and it does so to ~1e-14 only when the grid response is included.
 
 Run it as::
 
@@ -27,13 +41,42 @@ for variable in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                  'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS'):
     os.environ.setdefault(variable, str(ncores))
 
+import contextlib
+import io
+
 import numpy as np
 from timeit import default_timer as timer
 
-from pyfock import Basis, DFT, DFT_Grad, DFT_NumGrad, Grids, Mol
+from pyfock import Basis, Data, DFT, DFT_Grad, Grids, Mol
 
 
-def run(xc, mol, basis, auxbasis, level, conv_crit, numerical):
+def numerical_gradient(xc, atoms, basis_name, auxbasis_name, level, conv_crit, step_bohr=1e-3):
+    """Central-difference gradient with an explicit, unpruned grid rebuilt at every displacement."""
+    step_ang = step_bohr / Data.Angs2BohrFactor
+
+    def energy(geometry):
+        mol = Mol(atoms=[list(a) for a in geometry])
+        basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=basis_name)})
+        auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=auxbasis_name)})
+        dft = DFT(mol, basis, auxbasis, xc=xc, grids=Grids(mol, level=level, verbose=False))
+        dft.conv_crit, dft.max_itr, dft.ncores = conv_crit, 50, ncores
+        with contextlib.redirect_stdout(io.StringIO()):
+            value, _ = dft.scf()
+        return float(value)
+
+    gradient = np.zeros((len(atoms), 3))
+    for atom in range(len(atoms)):
+        for direction in range(3):
+            plus = [list(a) for a in atoms]
+            minus = [list(a) for a in atoms]
+            plus[atom][1 + direction] += step_ang
+            minus[atom][1 + direction] -= step_ang
+            gradient[atom, direction] = (energy(plus) - energy(minus)) / (2.0 * step_bohr)
+    return gradient
+
+
+def run(xc, mol, basis, auxbasis, level, conv_crit, numerical, atoms=None,
+        basis_name=None, auxbasis_name=None):
     """Converge the SCF, then take the analytical gradient and optionally a numerical one."""
     dft = DFT(mol, basis, auxbasis, xc=xc, grids=Grids(mol, level=level, verbose=False))
     dft.conv_crit = conv_crit
@@ -51,13 +94,14 @@ def run(xc, mol, basis, auxbasis, level, conv_crit, numerical):
     analytical = DFT_Grad(dft, verbose=False).calculate()
     t_analytical = timer() - start
 
-    result = {'analytical': np.asarray(analytical['gradient']), 't_analytical': t_analytical,
-              't_cold': t_cold,
+    gradient = np.asarray(analytical['gradient'])
+    result = {'analytical': gradient, 't_analytical': t_analytical, 't_cold': t_cold,
+              'net_force': float(np.abs(gradient.sum(axis=0)).max()),
               'xc_component': np.asarray(analytical['gradient_components']['xc'])}
     if numerical:
         start = timer()
-        result['numerical'] = np.asarray(
-            DFT_NumGrad(dft, verbose=False).calculate()['gradient'])
+        result['numerical'] = numerical_gradient(xc, atoms, basis_name, auxbasis_name, level,
+                                                 conv_crit)
         result['t_numerical'] = timer() - start
     return result
 
@@ -69,9 +113,9 @@ def report(label, result):
     max_abs = float(np.abs(difference).max())
     rms = float(np.sqrt(np.mean(difference ** 2)))
     scale = float(np.abs(result['numerical']).max())
-    print('%-12s max |diff| %9.2e   rms %9.2e   (largest force %7.2e)  '
-          'analytical %6.2f s (%5.1f s cold)   numerical %7.2f s   speed-up %6.1fx'
-          % (label, max_abs, rms, scale, result['t_analytical'], result['t_cold'],
+    print('%-12s max |diff| %9.2e   rms %9.2e   net force %9.2e   (largest force %7.2e)  '
+          'analytical %6.2f s   numerical %7.2f s   speed-up %6.1fx'
+          % (label, max_abs, rms, result['net_force'], scale, result['t_analytical'],
              result['t_numerical'], result['t_numerical'] / max(result['t_analytical'], 1e-9)))
     return max_abs, rms, scale
 
@@ -107,9 +151,12 @@ def main(argv=None):
           % args.conv_crit)
     print('=' * 118)
 
+    atoms = [[mol.atomicSpecies[i]] + list(np.asarray(mol.coords)[i]) for i in range(mol.natoms)]
+
     summary = {}
     for xc in args.functionals:
-        result = run(xc, mol, basis, auxbasis, args.level, args.conv_crit, not args.no_numerical)
+        result = run(xc, mol, basis, auxbasis, args.level, args.conv_crit, not args.no_numerical,
+                     atoms=atoms, basis_name=args.basis, auxbasis_name=args.auxbasis)
         summary[xc] = report(xc, result)
         if summary.get(xc) is None:
             print('%-12s analytical gradient in %.2f s (numerical skipped)' % (xc, result['t_analytical']))
@@ -118,11 +165,9 @@ def main(argv=None):
     skala = next((f for f in args.functionals if f.lower().startswith('skala')), None)
     if control and skala and summary.get(control) and summary.get(skala):
         print('-' * 118)
-        print('The %s row is the baseline: PyFock neglects the grid-weight response for every'
+        print('%s has no grid response (the semilocal approximation); Skala does. The net-force'
               % control)
-        print('functional, so that is what the fixed-grid approximation costs on this system.')
-        ratio = summary[skala][0] / max(summary[control][0], 1e-30)
-        print('Skala max |diff| is %.2fx the %s baseline.' % (ratio, control))
+        print('column shows it: exact translational invariance is only possible with the response.')
     return 0
 
 

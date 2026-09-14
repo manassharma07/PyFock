@@ -226,3 +226,41 @@ def test_scf_on_the_default_grid_reproduces_the_pyscf_grid_energy():
     with contextlib.redirect_stdout(io.StringIO()):
         e_numgrid, _ = dft.scf()
     assert dft.grids.scheme == "numgrid" and abs(e_numgrid - e_pyscf_grid) < 2e-5
+
+def test_becke_weight_gradient_matches_finite_differences():
+    """d(Becke factor)/dR from the Numba kernel against finite differences of the forward partitioning.
+
+    Both ways the nuclei enter are exercised: the explicit dependence of the partitioning on every
+    nuclear position, and the grid points translating rigidly with their own atom -- which is why the
+    displaced geometry below shifts the points too.
+    """
+    import numpy as np
+    from pyfock import Grids, Mol
+    from pyfock.Grids import becke_partition_weights, becke_weight_gradient, size_adjustment_table
+
+    mol = Mol(atoms=[['O', 0.0, 0.0, 0.117], ['H', 0.0, 0.757, -0.469], ['H', 0.0, -0.757, -0.469],
+                     ['O', 2.9, 0.1, 0.05], ['H', 3.4, 0.8, 0.3], ['H', 3.3, -0.6, -0.2]])
+    grids = Grids(mol, level=0, verbose=False)
+    coords, atom_idx = grids.coords, grids.atom_idx
+    centres = np.asarray(mol.coordsBohrs, dtype=np.float64).reshape(-1, 3)
+    table = size_adjustment_table(np.asarray(mol.Zcharges), 'treutler')
+
+    rng = np.random.default_rng(0)
+    cotangent = rng.standard_normal(coords.shape[0])
+    analytic = becke_weight_gradient(coords, atom_idx, centres, table, cotangent)
+
+    def value(displaced):
+        points = coords + (displaced - centres)[atom_idx]
+        return float(cotangent @ becke_partition_weights(points, atom_idx, displaced, table))
+
+    step = 1e-5
+    numeric = np.zeros_like(analytic)
+    for atom in range(centres.shape[0]):
+        for direction in range(3):
+            plus, minus = centres.copy(), centres.copy()
+            plus[atom, direction] += step
+            minus[atom, direction] -= step
+            numeric[atom, direction] = (value(plus) - value(minus)) / (2 * step)
+
+    scale = max(float(np.abs(numeric).max()), 1.0)
+    assert np.allclose(analytic, numeric, atol=1e-6 * scale)

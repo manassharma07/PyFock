@@ -69,7 +69,9 @@
         <li><a href="#initial-guess-for-the-scf">Initial Guess for the SCF</a></li>
         <li><a href="#xc-integration-grids">XC Integration Grids</a></li>
         <li><a href="#density-fitting-coulomb-algorithms-and-memory-budget">Density-Fitting Coulomb Algorithms and Memory Budget</a></li>
-        <li><a href="#analytical-forces--geometry-optimization">Analytical Forces &amp; Geometry Optimization</a></li>
+        <li><a href="#analytical-forces--geometry-optimization">Analytical Forces &amp; Geometry Optimization</a>
+          <ul><li><a href="#grid-response">Grid response</a></li></ul>
+        </li>
         <li><a href="#generating-visualization-files">Generating Visualization Files</a></li>
       </ul>
     </li>
@@ -376,9 +378,12 @@ Consequences worth knowing:
 - **CPU only for now.** `use_gpu=True` raises a clear error: the GPU path needs a CUDA build of PyTorch
   plus a CuPy↔Torch bridge (zero-copy through DLPack) that is not wired up yet.
 - **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
-- **Analytical nuclear gradients are supported** (CPU, density fitting), so Skala works for geometry
-  optimization like any other functional — see
-  [Analytical Forces & Geometry Optimization](#analytical-forces--geometry-optimization).
+- **Analytical nuclear gradients are supported**, so Skala works for geometry optimization like any
+  other functional — see
+  [Analytical Forces & Geometry Optimization](#analytical-forces--geometry-optimization). Unlike the
+  semilocal path, the Skala gradient includes the full grid response (Becke weight derivatives and the
+  grid-translation term); its features are integrals over each atomic grid, so a frozen grid would cost
+  ~1e-2 Ha/Bohr rather than the ~1e-4 it costs a meta-GGA.
 - **Dispersion is off by default** — pass `dispersion=True` to include it, see below.
 - **The model carries about 1e-9 Ha of its own numerical noise.** Presenting the network with differently
   shaped batches (a different `max_points_per_chunk`) shifts the energy at that level. Within one
@@ -603,6 +608,29 @@ water.calc = PyFockCalculator(functional="PBE", basis="def2-SVP",
 BFGS(water).run(fmax=0.02)
 ```
 
+#### Grid response
+
+By default the XC gradient treats the quadrature grid as fixed — its dependence on the nuclear
+positions is not differentiated. Passing `grid_response=True` adds the two terms
+that removes: the grid points of an atom translating with it, and the Becke weights depending on every
+nucleus. The forces then become exactly translationally invariant:
+
+```python
+DFT_Grad(dftObj, grid_response=True).calculate()
+PyFockCalculator(functional="PBE", basis="def2-SVP", grid_response=True)   # same flag in ASE
+```
+
+| net force (H2O / def2-SVP) | fixed grid | with grid response |
+|---|---|---|
+| LDA | 1.3e-05 | **2.9e-14** |
+| PBE | 7.8e-06 | **1.5e-14** |
+| r2SCAN | 8.9e-05 | **1.9e-14** |
+
+It costs one extra pass over the partitioning and needs the native (`'treutler'`) grids. For semilocal
+functionals it is a small correction and off by default, so existing results are unchanged. For Skala it
+is **mandatory** and on by default — its features are integrals over each atomic grid, so a frozen grid
+would be wrong by ~1e-2 Ha/Bohr, the size of the forces themselves.
+
 ### Generating Visualization Files
 
 ```python
@@ -675,6 +703,7 @@ streamlit run app.py
 - [ ] Periodic boundary conditions
 - [x] Hybrid functionals with exact exchange (native B3LYP/PBE0 and LibXC hybrids, RI-K via DF_algo=11; CPU)
 - [x] Skala neural exchange-correlation functional, with analytical gradients (CPU)
+- [x] Grid-response XC gradients (Becke weight derivatives, `Grids.becke_weight_gradient`)
 - [ ] Multi-GPU parallelization
 - [ ] Basis set optimization tools
 

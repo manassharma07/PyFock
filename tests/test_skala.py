@@ -175,23 +175,15 @@ def test_matches_published_reference_energy(skala):
     assert float(energy) == pytest.approx(-1.1683906705, abs=5e-7)
 
 
-def test_analytical_gradient_matches_finite_differences(skala):
-    """The analytical XC gradient against a numerical one, on one displaced atom.
+def test_gradient_is_translationally_invariant(skala):
+    """The net force must vanish, which no reference calculation is needed to check.
 
-    PyFock evaluates analytical XC gradients on a fixed grid -- the dependence of the Becke weights on
-    the nuclear positions is not differentiated -- for every functional, Skala included. So this is a
-    consistency check at that level of theory rather than an exactness check;
-    ``benchmarks_tests/benchmark_skala_gradients.py`` quantifies the approximation properly by running
-    r2SCAN alongside as a control, where Skala comes out *below* the semilocal baseline.
-
-    Only one atom is displaced, which keeps this to six extra SCFs. Note the basis matters more than the
-    grid here: at sto-3g the two agree to only ~1e-3 relative, because two basis functions describe H2
-    so poorly, while def2-SVP on the same coarse grid agrees to ~1e-5. The convergence threshold is
-    deliberately not tighter than 1e-8 either -- on a system this small PyFock's DIIS subspace goes
-    singular below that and pollutes the converged density.
+    This is the sharpest test of the grid response. Skala's features are integrals over each atomic
+    grid, so evaluating the gradient on a frozen grid -- the approximation PyFock makes for semilocal
+    functionals -- breaks translational invariance by ~1e-2 Ha/Bohr, the size of the forces themselves.
+    With the Becke weight derivatives and the grid-translation term included it returns to ~1e-14.
     """
-    mol = Mol(coordfile=str(H2_XYZ)) if H2_XYZ.is_file() else Mol(atoms=[['H', 0.0, 0.0, 0.0],
-                                                                         ['H', 0.0, 0.0, 0.74]])
+    mol = Mol(atoms=[list(atom) for atom in H2O])
     basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
     auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
     dft = DFT(mol, basis, auxbasis, xc='skala-1.1', grids=Grids(mol, level=1, verbose=False))
@@ -199,14 +191,24 @@ def test_analytical_gradient_matches_finite_differences(skala):
     with contextlib.redirect_stdout(io.StringIO()):
         dft.scf()
         assert dft.converged
-        analytical = DFT_Grad(dft, verbose=False).calculate()['gradient']
-        numerical = DFT_NumGrad(dft, verbose=False).calculate(atom_indices=[0])['gradient']
+        forces = DFT_Grad(dft, verbose=False).calculate()['forces']
 
-    assert np.all(np.isfinite(analytical))
-    scale = max(float(np.abs(numerical[0]).max()), 1e-6)
-    # Observed agreement is ~1e-5 relative; this leaves an order of magnitude of headroom while still
-    # being four orders tighter than any dropped or mis-scaled term would be.
-    assert np.allclose(analytical[0], numerical[0], atol=1e-4 * scale + 1e-8)
+    scale = float(np.abs(forces).max())
+    assert np.abs(forces.sum(axis=0)).max() < 1e-8 * max(scale, 1.0)
+
+
+def test_grid_response_matters(system, skala):
+    """Dropping the grid response must visibly change the gradient, and break translational invariance.
+
+    Guards against the terms being silently inert -- a wrong but plausible gradient is the failure mode
+    that cost the most time to find here.
+    """
+    mol, basis, grids, dmat = system
+    full = Integrals.eval_xc_grad_skala(basis, dmat, grids, skala, grid_response=True)
+    fixed = Integrals.eval_xc_grad_skala(basis, dmat, grids, skala, grid_response=False)
+    assert np.abs(full[1]).max() > 1e-4, 'the grid-response terms are not contributing'
+    assert np.abs(full[1] - fixed[1]).max() > 1e-4
+    assert np.allclose(full[0], fixed[0]), 'the Pulay term must not depend on the switch'
 
 
 def test_explicit_nuclear_term_is_present(system, skala):
@@ -233,11 +235,52 @@ def test_explicit_nuclear_term_is_present(system, skala):
     out = skala.exc_and_potential(rho, rho_grad, tau, grids.coords, grids.weights,
                                   grids.atomic_weights, grids.atom_idx, atom_coords,
                                   nuclear_terms=True)
-    assert len(out) == 5
-    explicit = out[4]
+    assert len(out) == 6
+    explicit, dweights = out[4], out[5]
     assert explicit.shape == atom_coords.shape
     assert np.all(np.isfinite(explicit))
-    assert np.abs(explicit).max() > 0.0, 'the explicit nuclear term must not be identically zero'
+    # dE/dw is what the Becke weight derivatives are contracted with; it must be real and non-trivial.
+    assert dweights.shape == (grids.size,)
+    assert np.all(np.isfinite(dweights))
+    assert np.abs(dweights).max() > 0.0, 'dE/dw must not be identically zero'
+
+
+def test_grid_response_works_for_semilocal_functionals():
+    """The grid response is functional-agnostic, so it must fix translational invariance for any of them.
+
+    Off by default for semilocal functionals (PyFock's published references were generated without it,
+    as is PySCF's default); this checks the opt-in path rather than a change of default.
+    """
+    mol = Mol(atoms=[list(atom) for atom in H2O])
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+
+    for xc in ('LDA', 'PBE', 'R2SCAN'):          # one per semilocal family
+        dft = DFT(mol, basis, auxbasis, xc=xc, grids=Grids(mol, level=1, verbose=False))
+        dft.conv_crit = 1e-9
+        with contextlib.redirect_stdout(io.StringIO()):
+            dft.scf()
+            fixed = DFT_Grad(dft, verbose=False, grid_response=False).calculate()['forces']
+            responsive = DFT_Grad(dft, verbose=False, grid_response=True).calculate()['forces']
+
+        scale = max(float(np.abs(responsive).max()), 1e-6)
+        assert np.abs(responsive.sum(axis=0)).max() < 1e-9 * scale, xc
+        assert np.abs(fixed.sum(axis=0)).max() > np.abs(responsive.sum(axis=0)).max(), xc
+        # It is a correction, not a different gradient.
+        assert np.abs(responsive - fixed).max() < 0.05 * scale, xc
+
+
+def test_skala_refuses_a_frozen_grid(skala):
+    """Skala without the grid response is wrong by the size of the forces, so it must not be offered."""
+    mol = Mol(atoms=[list(atom) for atom in H2O])
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+    dft = DFT(mol, basis, auxbasis, xc='skala-1.1', grids=Grids(mol, level=1, verbose=False))
+    dft.conv_crit = 1e-8
+    with contextlib.redirect_stdout(io.StringIO()):
+        dft.scf()
+    with pytest.raises(ValueError, match='not usable with Skala'):
+        DFT_Grad(dft, verbose=False, grid_response=False)
 
 
 def test_unknown_functional_name():

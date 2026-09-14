@@ -253,10 +253,11 @@ class SkalaFunctional:
         explicit_grad : (natm, 3) ndarray
             Only with ``nuclear_terms``: the explicit ``dE/dR``, i.e. the model's direct dependence on
             the nuclear coordinates plus the cotangent of every grid point gathered onto the atom whose
-            grid it belongs to (grid points translate rigidly with their atom). This is *not* the whole
-            XC gradient -- the density-mediated part comes from contracting ``vrho``/``vgrad``/``vtau``
-            with the AO derivatives, and the grid-weight response is not included; see
-            :func:`pyfock.Integrals.eval_xc_grad_skala`.
+            grid it belongs to (grid points translate rigidly with their atom).
+        dweights : (G,) ndarray
+            Only with ``nuclear_terms``: ``dE/dw_p``, the derivative with respect to each quadrature
+            weight. Contract it with ``dw/dR`` (:func:`pyfock.Grids.becke_weight_gradient`) to get
+            the grid-response part of the gradient.
         """
         import torch
 
@@ -295,6 +296,7 @@ class SkalaFunctional:
         # Explicit nuclear dependence (only assembled when the caller asks for it): Skala reads the grid
         # geometry itself, so the energy depends on the nuclear positions beyond the density.
         dgrid_m = torch.zeros_like(coords_m) if nuclear_terms else None
+        dweights_m = torch.zeros_like(weights_m) if nuclear_terms else None
         datom = torch.zeros_like(atom_coords_t) if nuclear_terms else None
 
         for atoms, start, stop in chunks:
@@ -307,16 +309,18 @@ class SkalaFunctional:
             chunk_atoms = torch.as_tensor(atoms, dtype=torch.long, device=device)
             chunk_sizes = torch.as_tensor(atom_sizes[atoms], dtype=torch.long, device=device)
             grid_coords = coords_m[sel]
+            grid_weights = weights_m[sel]
             chunk_atom_coords = atom_coords_t[chunk_atoms]
             if nuclear_terms:
                 grid_coords = grid_coords.detach().requires_grad_()
+                grid_weights = grid_weights.detach().requires_grad_()
                 chunk_atom_coords = chunk_atom_coords.detach().requires_grad_()
             features = {
                 'density': density,
                 'grad': grad,
                 'kin': kin,
                 'grid_coords': grid_coords,
-                'grid_weights': weights_m[sel],
+                'grid_weights': grid_weights,
                 'atomic_grid_weights': atomic_w_m[sel],
                 'atomic_grid_sizes': chunk_sizes,
                 'coarse_0_atomic_coords': chunk_atom_coords,
@@ -333,7 +337,7 @@ class SkalaFunctional:
                 # allow_unused: a functional that does not declare grid_coords or
                 # coarse_0_atomic_coords simply has no explicit nuclear dependence through it, and
                 # autograd hands back None rather than raising.
-                inputs = inputs + (grid_coords, chunk_atom_coords)
+                inputs = inputs + (grid_coords, grid_weights, chunk_atom_coords)
             cotangents = torch.autograd.grad(energy, inputs, allow_unused=nuclear_terms)
             c_rho, c_grad, c_kin = cotangents[0], cotangents[1], cotangents[2]
 
@@ -346,7 +350,9 @@ class SkalaFunctional:
                 if cotangents[3] is not None:
                     dgrid_m[sel] = cotangents[3]
                 if cotangents[4] is not None:
-                    datom.index_add_(0, chunk_atoms, cotangents[4])
+                    dweights_m[sel] = cotangents[4]
+                if cotangents[5] is not None:
+                    datom.index_add_(0, chunk_atoms, cotangents[5])
 
         vrho = np.empty(ngrids, dtype=np.float64)
         vtau = np.empty(ngrids, dtype=np.float64)
@@ -361,13 +367,15 @@ class SkalaFunctional:
         # that atom; the model's direct dependence on the nuclear coordinates adds on top.
         dgrid = np.empty((ngrids, 3), dtype=np.float64)
         dgrid[perm] = dgrid_m.cpu().numpy()
+        dweights = np.empty(ngrids, dtype=np.float64)
+        dweights[perm] = dweights_m.cpu().numpy()
         explicit = np.ascontiguousarray(datom.cpu().numpy(), dtype=np.float64)
         # bincount rather than np.add.at: the same segmented sum, but without the latter's
         # element-by-element unbuffered path, which is an order of magnitude slower on a large grid.
         for direction in range(3):
             explicit[:, direction] += np.bincount(atom_idx, weights=dgrid[:, direction],
                                                   minlength=natm)
-        return exc, vrho, vgrad, vtau, explicit
+        return exc, vrho, vgrad, vtau, explicit, dweights
 
 
 def load_skala(xc, use_gpu=False):

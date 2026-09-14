@@ -11,14 +11,18 @@ from pyfock import Integrals
 
 def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
                    ncores=2, blocksize=5000, list_nonzero_indices=None,
-                   count_nonzero_indices=None, debug=False):
+                   count_nonzero_indices=None, debug=False, grids=None, grid_response=False):
     """
     Evaluate the exchange-correlation contribution to the nuclear gradient
     using algorithm 2 (block-parallel CPU algorithm, same structure as
     :func:`eval_xc_2`).
 
-    For a fixed grid (no grid-weight response, same approximation as PySCF's
-    default) the XC gradient is
+    With ``grid_response=False`` (the default) the grid is treated as fixed -- its dependence on the
+    nuclear positions is not differentiated, the same approximation as PySCF's default. Passing the
+    ``grids`` object and ``grid_response=True`` adds the two terms that removes: the grid points of an
+    atom translating with it, and the Becke weights depending on every nuclear position. Together they
+    restore exact translational invariance (net force ~1e-13 instead of ~1e-4 Ha/Bohr), at the cost of
+    one extra pass over the partitioning. For a fixed grid the XC gradient is
 
         dExc/dR_{A,d} = -2 * sum_{mu in A} dexc_dbf[d, mu]
 
@@ -61,7 +65,18 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
     dexc_dbf : ndarray (3, nbf)
         Per-basis-function XC gradient contributions (see above). The caller
         maps them onto atoms via ``basis.bfs_atoms``.
+    atom_grad : ndarray (natoms, 3)
+        Returned **only** with ``grid_response=True``: the grid-response contribution, already resolved
+        per atom, to be added to the total gradient as it is. With the default ``grid_response=False``
+        this function returns ``dexc_dbf`` alone, exactly as before.
     """
+    if grid_response and grids is None:
+        raise ValueError('grid_response=True needs the grids object (pass grids=...).')
+    atom_idx = None
+    natm = 0
+    if grid_response:
+        atom_idx = np.ascontiguousarray(grids.atom_idx, dtype=np.int64)
+        natm = np.asarray(grids.mol.coordsBohrs).reshape(-1, 3).shape[0]
     ngrids = coords.shape[0]
     nblocks = ngrids // blocksize
 
@@ -117,7 +132,9 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
                     list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]],
                     funcx=funcx, funcc=funcc,
                     x_family_code=x_family_code, c_family_code=c_family_code,
-                    xc_family_dict=xc_family_dict)
+                    xc_family_dict=xc_family_dict, grid_response=grid_response, natm=natm,
+                    atom_idx_block=(None if atom_idx is None else
+                                    atom_idx[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)]))
                 for iblock in block_indices)
         else:
             full_indices = np.arange(basis.bfs_nao)
@@ -128,30 +145,48 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
                     dmat, funcid, use_libxc, bfs_data_as_np_arrays, full_indices,
                     funcx=funcx, funcc=funcc,
                     x_family_code=x_family_code, c_family_code=c_family_code,
-                    xc_family_dict=xc_family_dict)
+                    xc_family_dict=xc_family_dict, grid_response=grid_response, natm=natm,
+                    atom_idx_block=(None if atom_idx is None else
+                                    atom_idx[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)]))
                 for iblock in block_indices)
 
     dexc_dbf = np.zeros((3, basis.bfs_nao))
+    atom_grad = np.zeros((max(natm, 1), 3))
+    eps = np.zeros(ngrids) if grid_response else None
     indx_block_output = 0
     for iblock in block_indices:
+        block, translation, eps_block = output[indx_block_output]
         if list_nonzero_indices is not None:
             non_zero_indices = list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]]
-            dexc_dbf[:, non_zero_indices] += output[indx_block_output]
+            dexc_dbf[:, non_zero_indices] += block
         else:
-            dexc_dbf += output[indx_block_output]
+            dexc_dbf += block
+        if grid_response:
+            atom_grad += translation
+            lo = iblock * blocksize
+            eps[lo:lo + eps_block.shape[0]] = eps_block
         indx_block_output += 1
+
+    if grid_response:
+        from .xc_grid_response import weight_response_term
+        atom_grad = atom_grad + weight_response_term(grids, eps)
 
     numba.set_num_threads(ncores)
 
     output = 0
 
-    return dexc_dbf
+    # Backwards compatible: the default returns the array it always did, and only the opt-in
+    # grid_response path returns the extra per-atom term alongside it.
+    if not grid_response:
+        return dexc_dbf
+    return dexc_dbf, atom_grad
 
 
 def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
                        bfs_data_as_np_arrays, non_zero_indices,
                        funcx=None, funcc=None, x_family_code=None,
-                       c_family_code=None, xc_family_dict=None):
+                       c_family_code=None, xc_family_dict=None,
+                       grid_response=False, natm=0, atom_idx_block=None):
     numba.set_num_threads(1)
 
     bfs_coords = bfs_data_as_np_arrays[0]
@@ -165,8 +200,9 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
     is_gga = (xc_family_dict[x_family_code] != 'LDA' or xc_family_dict[c_family_code] != 'LDA')
     is_mgga = (xc_family_dict[x_family_code] == 'MGGA' or xc_family_dict[c_family_code] == 'MGGA')
 
-    # AO values, gradients (and Hessians for GGA/MGGA)
-    if is_gga:
+    # AO values, gradients (and Hessians for GGA/MGGA, or whenever the grid response is wanted:
+    # the translation term needs second derivatives even for an LDA's density gradient)
+    if is_gga or grid_response:
         ao_value_block, ao_grad_block, ao_hess_block = Integrals.bf_val_helpers.eval_bfs_grad_and_hess_sparse_internal_serial(
             bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, coords_block, non_zero_indices)
     else:
@@ -180,12 +216,14 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
     sigma_block = None
     tau_block = None
     Hgrad = None
-    if is_gga:
+    rho_grad_x = rho_grad_y = rho_grad_z = None
+    if is_gga or grid_response:
         rho_grad_x = 2.0 * np.einsum('mj,mj->m', Fmj, ao_grad_block[0])
         rho_grad_y = 2.0 * np.einsum('mj,mj->m', Fmj, ao_grad_block[1])
         rho_grad_z = 2.0 * np.einsum('mj,mj->m', Fmj, ao_grad_block[2])
-        sigma_block = rho_grad_x**2 + rho_grad_y**2 + rho_grad_z**2
-    if is_mgga:
+        if is_gga:
+            sigma_block = rho_grad_x**2 + rho_grad_y**2 + rho_grad_z**2
+    if is_mgga or (grid_response and is_gga):
         # Hk[g, mu] = sum_nu D_mu_nu (d_k chi_nu)(g) = (d_k chi @ D)[g, mu]
         Hgrad = [ao_grad_block[0] @ dmat, ao_grad_block[1] @ dmat, ao_grad_block[2] @ dmat]
         # tau = 0.5 sum_k sum_munu D_munu (d_k chi_mu)(d_k chi_nu)
@@ -209,6 +247,7 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
         if xc_family_dict[c_family_code] == 'MGGA':
             inp['tau'] = tau_block
         retc = funcc.compute(inp)
+        energy_density = (retx['zk'] + retc['zk']).ravel() if grid_response else None
         vrho = (retx['vrho'] + retc['vrho'])[:, 0]
         vsigma = 0.0
         if xc_family_dict[x_family_code] != 'LDA':
@@ -223,6 +262,7 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
     else:
         retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
         retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
+        energy_density = (retx[0] + retc[0]) if grid_response else None
         vrho = retx[1] + retc[1]
         vsigma = 0.0
         if xc_family_dict[x_family_code] != 'LDA':
@@ -291,4 +331,16 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
                        + np.einsum('mj,mj->j', ao_hess_block[4], GHy)
                        + np.einsum('mj,mj->j', ao_hess_block[5], GHz))
 
-    return res
+    if not grid_response:
+        return res, None, None
+
+    # Grid response: the points of an atom translate with it, and the Becke weights depend on every
+    # nuclear position. Both need only the cotangents already built above.
+    from .xc_grid_response import grid_translation_term
+    rho_grad = np.stack((rho_grad_x, rho_grad_y, rho_grad_z))
+    c_grad = np.stack((Fx, Fy, Fz)) if is_gga else None
+    c_tau = (weights_block * vtau) if is_mgga else None
+    translation = grid_translation_term(F, c_grad, c_tau, ao_grad_block, ao_hess_block,
+                                        Fmj, Hgrad, rho_grad, atom_idx_block, natm)
+    # dE/dw_p is the XC energy per unit volume, since E = sum_p w_p rho_p e_p.
+    return res, translation, rho_block * energy_density
