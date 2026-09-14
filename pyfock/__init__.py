@@ -18,7 +18,7 @@ Author: Manas Sharma
 For usage examples, demos, and API documentation, refer to the online documentation or example notebooks.  
 """
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 __author__ = 'Manas Sharma'
 __credits__ = 'Phys Whiz (bragitoff.com)'
 
