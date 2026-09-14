@@ -86,7 +86,7 @@
   - Classical Taketa-Huzinaga-O-ohata scheme
   - Rys quadrature method (roots 1–10) for efficient ERI evaluation
   - Obara-Saika method for ERI evaluation
-- ✅ **XC Functionals**: Support for LDA, GGA and meta-GGA functionals natively and via LibXC integration
+- ✅ **XC Functionals**: Support for LDA, GGA and meta-GGA functionals natively and optionally via LibXC integration, plus the Skala neural functional
 - ✅ **DIIS Convergence**: Direct inversion of iterative subspace for SCF acceleration
 - ✅ **Parallel Execution**: Multi-core CPU and multi-GPU support via Numba and Joblib
 - ✅ **Modular Design**: Standalone integral modules for benchmarking and embedding
@@ -163,6 +163,14 @@ For the ASE calculator (geometry optimization and the ASE ecosystem):
 pip install ase           # or: pip install pyfock[ase]
 ```
 PyFock itself imports and runs without ASE installed; ASE is only required when you use `PyFockCalculator`.
+
+For the **Skala** neural exchange-correlation functional:
+```bash
+pip install torch huggingface_hub
+```
+PyFock loads Skala's published TorchScript checkpoint directly with `torch.jit.load`, so the `skala`
+package itself is **not** needed — and neither are its dependencies PySCF (which has no Windows wheels)
+and e3nn. See [Skala: the neural exchange-correlation functional](#skala-the-neural-exchange-correlation-functional).
 
 ## Quick Start
 
@@ -280,6 +288,112 @@ dftObj.ncores = 4
 energyCrysX, dmat = dftObj.scf()
 print(f"SCF Energy: {energyCrysX} Ha")
 ```
+
+### Skala: the neural exchange-correlation functional
+
+[Skala](https://github.com/microsoft/skala) is a machine-learned exchange-correlation functional from
+Microsoft Research AI for Science that reaches hybrid-like accuracy at semilocal cost. Pass its name as
+the `xc` argument and nothing else changes:
+
+```python
+from pyfock import Basis, DFT, Grids, Mol
+
+mol      = Mol(coordfile='H2O.xyz')
+basis    = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+
+dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1', grids=Grids(mol, level=3))
+dftObj.conv_crit = 1e-8
+energy, dmat = dftObj.scf()
+```
+
+Available names are `skala-1.1` (recommended), `skala-1.1-rev1`, `skala-1.1-rev0` and `skala-1.0`.
+
+#### Installation
+
+Only PyTorch is required at run time:
+
+```bash
+pip install torch huggingface_hub
+```
+
+Skala's own `pyproject.toml` lists PySCF and e3nn as dependencies, but those are needed only by
+`skala.pyscf`, `skala.gpu4pyscf`, `skala.ase` and the *trainable* model definition. PyFock uses none of
+them: it reads the published TorchScript checkpoint directly, so `pip install skala` is unnecessary. This
+also removes the Linux/macOS restriction in Skala's packaging, which comes from PySCF — the checkpoints
+are platform-independent and **Skala works on Windows through PyFock**.
+
+The 2.4 MB checkpoint is downloaded from Hugging Face on first use and cached afterwards. Its SHA-256 is
+verified against the digests published by Microsoft before it is loaded, because TorchScript
+deserialization executes code from the file. To run without network access — or without
+`huggingface_hub` at all — download `skala-1.1-rev1.fun` from
+[huggingface.co/microsoft/skala-1.1](https://huggingface.co/microsoft/skala-1.1) and set:
+
+```bash
+export SKALA_LOCAL_MODEL_PATH=/path/to/skala-1.1-rev1.fun
+```
+
+Note that this path bypasses hash verification, so only point it at a file you trust.
+
+#### What is different about it
+
+Every other functional in PyFock is pointwise: the energy density at a grid point depends only on the
+density at that point. Skala is not — its non-local layers aggregate over the points of each atomic grid,
+so it consumes the whole grid at once and returns the total XC energy as a single number, and the
+potential comes from automatic differentiation of that number. PyFock therefore evaluates it in three
+passes (density over the whole grid → one model call → potential), rather than in the single fused
+blocked loop used for LDA/GGA/meta-GGA. The derivatives the model returns are exactly the
+`vrho`/`vsigma`/`vtau` intermediates the meta-GGA path already contracts with the AO values, so the
+potential assembly itself is unchanged.
+
+Consequences worth knowing:
+
+- **Grids must be the native `'treutler'` ones** (the default). Skala needs both the Becke-partitioned
+  weights and the raw single-atom weights.
+- **Do not density-prune the grid.** The model's non-local features are integrals over each atom's full
+  grid.
+- **CPU only for now.** `use_gpu=True` raises a clear error: the GPU path needs a CUDA build of PyTorch
+  plus a CuPy↔Torch bridge (zero-copy through DLPack) that is not wired up yet.
+- **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
+- **Analytical nuclear gradients are not available.** Forces would need the Pulay and grid-weight
+  derivative terms propagated through the network; use `DFT_NumGrad` for numerical forces.
+- **Dispersion is not included.** Skala 1.1 expects an additive DFT-D3 correction with B3LYP5 parameters
+  (`dftObj.skala.d3_settings()` returns `'b3lyp5'`). It does not enter the SCF, and PyFock does not add
+  it automatically, so the energy reported is the bare Skala energy. Add it separately if you are
+  comparing against published Skala numbers.
+- **The model carries about 1e-9 Ha of its own numerical noise.** Presenting the network with differently
+  shaped batches (a different `max_points_per_chunk`) shifts the energy at that level. Within one
+  calculation the chunking is fixed, so the shift is systematic rather than random and SCF convergence to
+  `1e-8` is unaffected — but do not expect two runs with different chunk sizes to agree bit for bit.
+
+#### Cost
+
+Skala is several times more expensive per SCF iteration than a semilocal functional. Measured with
+`benchmarks_tests/benchmark_skala.py` (def2-SVP, level-3 grid, 4 CPU cores, density fitting):
+
+| | H2O (3 atoms, 25 AOs, 34k grid points) | Caffeine (24 atoms, 260 AOs, 295k grid points) |
+|---|---|---|
+| PBE | -76.2740944860 Ha, 7 iter, 0.9 s | -679.1219071931 Ha, 15 iter, 20.1 s |
+| r2SCAN | -76.3187302439 Ha, 7 iter, 1.1 s | -679.5341593969 Ha, 12 iter, 29.2 s |
+| **skala-1.1** | **-76.3236300555 Ha, 7 iter, 10.0 s** | **-679.5460711592 Ha, 14 iter, 194.8 s** |
+
+One XC evaluation on an identical density and grid, which isolates the functional from any difference
+in iteration count:
+
+| | H2O | Caffeine |
+|---|---|---|
+| PBE | 0.036 s | 1.17 s |
+| r2SCAN | 0.109 s | 2.11 s |
+| skala-1.1 | 0.791 s | 12.57 s |
+| *of which the model itself* | *0.709 s (90%)* | *8.69 s (69%)* |
+| **slowdown vs PBE / r2SCAN** | **21.7x / 7.3x** | **10.8x / 5.9x** |
+
+Two things are worth reading out of this. First, the three-pass restructuring that non-locality forces
+on PyFock is *not* where the time goes: the extra density and potential passes cost 0.07 s of H2O's
+0.79 s, and the neural network is essentially the whole overhead. Second, the relative cost **falls** as
+the system grows (21.7x to 10.8x against PBE), because the model's cost tracks the number of grid points
+while the semilocal functionals also carry AO work that grows with the basis.
+
 
 ### Initial Guess for the SCF
 
@@ -462,6 +576,7 @@ streamlit run app.py
 - [ ] Electron dynamics & Excited state calculations (RT-TDDFT)
 - [ ] Periodic boundary conditions
 - [x] Hybrid functionals with exact exchange (native B3LYP/PBE0 and LibXC hybrids, RI-K via DF_algo=11; CPU)
+- [x] Skala neural exchange-correlation functional (CPU)
 - [ ] Multi-GPU parallelization
 - [ ] Basis set optimization tools
 

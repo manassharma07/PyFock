@@ -650,10 +650,11 @@ class Grids:
         charges = np.asarray(mol.Zcharges, dtype=np.int64)
 
         sorted_on_gpu = False
+        atomic_weights = None
         if scheme == 'treutler':
             if self.use_gpu:
                 try:
-                    coords, weights, atom_idx = self._build_treutler_gpu(atm_coords, charges, level, pruning,
+                    coords, weights, atom_idx, atomic_weights = self._build_treutler_gpu(atm_coords, charges, level, pruning,
                                                                          size_adjustment, points_per_element, sort)
                     sorted_on_gpu = sort and coords.shape[0] > 0
                 except Exception as error:
@@ -661,8 +662,9 @@ class Grids:
                           + '); building it on the CPU instead.', flush=True)
                     self.use_gpu = False
                     self.element_points = {}
+                    atomic_weights = None
             if not self.use_gpu:
-                coords, weights, atom_idx = self._build_treutler(atm_coords, charges, level, pruning, size_adjustment, points_per_element)
+                coords, weights, atom_idx, atomic_weights = self._build_treutler(atm_coords, charges, level, pruning, size_adjustment, points_per_element)
         else:
             coords, weights, atom_idx = self._build_numgrid(mol, basis, atm_coords, charges, level, preset,
                                                             radial_precision, angular_points, hardness)
@@ -674,6 +676,8 @@ class Grids:
             coords = coords[perm]
             weights = weights[perm]
             atom_idx = atom_idx[perm]
+            if atomic_weights is not None:
+                atomic_weights = atomic_weights[perm]
             self.is_sorted = True
 
         self.coords = np.ascontiguousarray(coords)
@@ -682,6 +686,11 @@ class Grids:
         """A NumPy array of length N, storing the quadrature weights corresponding to each grid point."""
         self.atom_idx = np.ascontiguousarray(atom_idx)
         """A NumPy integer array of length N with the index of the atom each grid point belongs to."""
+        self.atomic_weights = None if atomic_weights is None else np.ascontiguousarray(atomic_weights)
+        """The raw single-atom quadrature weights 4 pi r^2 dr w_ang of every point, i.e. :attr:`weights` before
+        the Becke partitioning factor is applied (``weights = atomic_weights * P_A(r)``). The Skala neural
+        functional needs both. ``None`` for the ``'numgrid'`` scheme, which partitions the weights itself and
+        never exposes the unpartitioned ones. Costs 8 bytes per grid point."""
 
         if verbose:
             print(self.describe(), flush=True)
@@ -747,21 +756,22 @@ class Grids:
             factors = becke_partition_weights(coords, atom_idx, atm_coords, a_table)
         finally:
             numba.set_num_threads(nthreads_before)
-        return coords, vol * factors, atom_idx
+        return coords, vol * factors, atom_idx, vol
 
     # ------------------------------------------------------------------
     def _build_treutler_gpu(self, atm_coords, charges, level, pruning, size_adjustment, points_per_element, sort):
         """The 'treutler' build of :meth:`_build_treutler` on the GPU (see :mod:`pyfock.Grids_cupy`).
 
         The box grouping is done on the device too when ``sort`` is set, so the returned arrays are already
-        ordered. Raises ``Grids_cupy.GridsGPUError`` when the GPU cannot be used.
+        ordered. Returns ``(coords, weights, atom_idx, atomic_weights)``, the last being the unpartitioned
+        single-atom weights. Raises ``Grids_cupy.GridsGPUError`` when the GPU cannot be used.
         """
         from . import Grids_cupy
         overrides = self._parse_points_per_element(points_per_element)
         self._record_element_points(charges, level, overrides)
         return Grids_cupy.build_treutler_grid_cupy(atm_coords, charges, level=level, pruning=pruning,
                                                    size_adjustment=size_adjustment, overrides=overrides,
-                                                   sort=sort)
+                                                   sort=sort, return_atomic_weights=True)
 
     # ------------------------------------------------------------------
     def _build_numgrid(self, mol, basis, atm_coords, charges, level, preset, radial_precision, angular_points, hardness):
@@ -846,17 +856,24 @@ class Grids:
         if self.is_sorted or self.coords.shape[0] == 0:
             return self
         atm_coords = np.asarray(self.mol.coordsBohrs, dtype=np.float64).reshape(-1, 3)
-        self.coords, self.weights, self.atom_idx = Grids.sort_by_boxes(self.coords, self.weights, atm_coords, self.atom_idx)
+        extra = [self.atom_idx] + ([] if self.atomic_weights is None else [self.atomic_weights])
+        sorted_arrays = Grids.sort_by_boxes(self.coords, self.weights, atm_coords, *extra)
+        self.coords, self.weights, self.atom_idx = sorted_arrays[0], sorted_arrays[1], sorted_arrays[2]
+        if self.atomic_weights is not None:
+            self.atomic_weights = sorted_arrays[3]
         self.is_sorted = True
         return self
 
     def prune_by_mask(self, keep):
-        """Keep only the points where the boolean array ``keep`` is True (coords, weights and atom_idx)."""
+        """Keep only the points where the boolean array ``keep`` is True (coords, weights, atom_idx and
+        atomic_weights)."""
         keep = np.asarray(keep, dtype=bool)
         self.coords = np.ascontiguousarray(self.coords[keep])
         self.weights = np.ascontiguousarray(self.weights[keep])
         if getattr(self, 'atom_idx', None) is not None and self.atom_idx.shape[0] == keep.shape[0]:
             self.atom_idx = np.ascontiguousarray(self.atom_idx[keep])
+        if getattr(self, 'atomic_weights', None) is not None and self.atomic_weights.shape[0] == keep.shape[0]:
+            self.atomic_weights = np.ascontiguousarray(self.atomic_weights[keep])
         return self
 
     @property

@@ -334,6 +334,10 @@ def xc_semilocal_family(funcids, use_libxc=False):
     ``use_libxc`` the families are taken from pylibxc (hybrids map to their semilocal
     family), otherwise from the native tables.
     """
+    from .skala_iface import is_skala
+    if is_skala(funcids):
+        # Skala consumes rho, grad rho and tau, so the quadrature needs exactly what a meta-GGA needs.
+        return 4
     ids = [funcids] if isinstance(funcids, int) else list(funcids)
     if use_libxc:
         import pylibxc

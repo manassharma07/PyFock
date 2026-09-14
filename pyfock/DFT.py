@@ -1163,7 +1163,21 @@ class DFT:
         if isDF==False:
             strict_schwarz = False
 
-        if xc!='HF':
+        # Skala, the neural functional, is not a LibXC functional: it resolves to a loaded TorchScript
+        # model rather than to a list of functional IDs, and is evaluated by its own driver further down.
+        # `xc` therefore stays the name string and the LibXC resolution below is skipped.
+        skala = None
+        if XC.is_skala(xc):
+            if self.use_gpu:
+                raise NotImplementedError(
+                    'The Skala functionals are currently implemented on the CPU only (use_gpu=False). '
+                    'The GPU path needs a CUDA build of PyTorch and a CuPy<->Torch bridge for the '
+                    'density and the potential, which is not wired up yet.')
+            xc = XC.canonical_skala_name(xc)
+            skala = XC.load_skala(xc, use_gpu=False)
+        self.skala = skala
+
+        if xc != 'HF' and skala is None:
             if self.use_libxc:
                 import pylibxc
             if isinstance(xc, list):
@@ -1198,6 +1212,8 @@ class DFT:
         exx_coef = 0.0
         if xc == 'HF':
             exx_coef = 1.0
+        elif skala is not None:
+            exx_coef = 0.0  # Skala is a pure semilocal functional: no exact-exchange admixture.
         else:
             if isinstance(xc, (tuple, np.ndarray)):
                 xc = list(xc)
@@ -1226,7 +1242,7 @@ class DFT:
             print('ERROR: RI exact exchange (HF and hybrid functionals) with density fitting is currently implemented only for CPU!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             exit()
-        if xc != 'HF' and (exx_coef > 0 or len(xc) == 1) and (self.use_gpu or XC_algo not in (None, 2)):
+        if xc != 'HF' and skala is None and (exx_coef > 0 or len(xc) == 1) and (self.use_gpu or XC_algo not in (None, 2)):
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             print('ERROR: Hybrid functionals (and single xc functional IDs) are currently supported only with XC_algo=2 on the CPU!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
@@ -1764,7 +1780,16 @@ class DFT:
             print('\n\n------------------------------------------------------', flush=True)
             print('Exchange-Correlation Functional')
             print('------------------------------------------------------\n', flush=True)
-            if self.use_libxc:
+            if skala is not None:
+                print(XC.skala_iface.citation(skala.name))
+                print('\nSkala is a neural functional: it is non-local over each atomic grid and its')
+                print('potential comes from automatic differentiation of the total XC energy.', flush=True)
+                if skala.d3_settings() is not None:
+                    print('\nNOTE: this functional is parametrised together with a DFT-D3 dispersion')
+                    print("correction ('" + str(skala.d3_settings()) + "'), which is additive, does not enter")
+                    print('the SCF, and is NOT added by PyFock. The energy below is the bare Skala energy.',
+                          flush=True)
+            elif self.use_libxc:
                 print("PyFock utilizes LibXC's pylibxc library. Citation:")
                 print(pylibxc.util.xc_reference())
                 print('\n\n')
@@ -1908,7 +1933,17 @@ class DFT:
                 # XC energy and potential
                 startxc = timer()
                 print('\n\n\n\nXC algo', XC_algo)
-                if not self.use_gpu:
+                if skala is not None:
+                    # Skala is non-local over each atomic grid, so it cannot be folded into the blocked
+                    # semilocal loop; it gets its own three-pass driver (see Integrals.eval_xc_skala).
+                    Exc, Vxc = Integrals.eval_xc_skala(basis, dmat, grids, skala, ncores=ncores,
+                                                       blocksize=blocksize,
+                                                       list_nonzero_indices=list_nonzero_indices,
+                                                       count_nonzero_indices=count_nonzero_indices,
+                                                       list_ao_values=list_ao_values,
+                                                       list_ao_grad_values=list_ao_grad_values,
+                                                       debug=debug)
+                elif not self.use_gpu:
                     if XC_algo==1:
                         # Much slower than JOBLIB version
                         # Still keeping it because, it can be useful when using GPUs

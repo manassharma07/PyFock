@@ -305,12 +305,14 @@ def box_grouping_order_cupy(atm_coords, coords, box_size=1.2, boundary_penalty=4
 # Complete build
 # ---------------------------------------------------------------------------------------------------------------
 def build_treutler_grid_cupy(atm_coords, charges, level=3, pruning='regions', size_adjustment='treutler',
-                             overrides=None, sort=True, box_size=1.2, cp_stream=None, to_host=True):
+                             overrides=None, sort=True, box_size=1.2, cp_stream=None, to_host=True,
+                             return_atomic_weights=False):
     """Build a complete native ('treutler') molecular grid on the GPU.
 
     Parameters are those of the CPU path (:meth:`pyfock.Grids.Grids._build_treutler`): ``overrides`` is
     ``{charge: (n_rad, n_ang)}`` and ``sort`` groups the points into ``box_size`` Bohr boxes.
     Returns ``(coords, weights, atom_idx)`` as NumPy arrays, or as CuPy arrays for ``to_host=False``.
+    With ``return_atomic_weights`` the unpartitioned single-atom weights are appended as a fourth array.
 
     Raises
     ------
@@ -334,7 +336,8 @@ def build_treutler_grid_cupy(atm_coords, charges, level=3, pruning='regions', si
         coords = coords[perm]
         weights = weights[perm]
         atom_idx = atom_idx[perm]
+        vol = vol[perm]
+    out = [coords, weights, atom_idx] + ([vol] if return_atomic_weights else [])
     if to_host:
-        return (np.ascontiguousarray(cp.asnumpy(coords)), np.ascontiguousarray(cp.asnumpy(weights)),
-                np.ascontiguousarray(cp.asnumpy(atom_idx)))
-    return cp.ascontiguousarray(coords), cp.ascontiguousarray(weights), cp.ascontiguousarray(atom_idx)
+        return tuple(np.ascontiguousarray(cp.asnumpy(array)) for array in out)
+    return tuple(cp.ascontiguousarray(array) for array in out)

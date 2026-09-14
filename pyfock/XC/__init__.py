@@ -73,7 +73,12 @@ __all__ = [
     'resolve_functional', 'get_functional_citation', 'get_family',
     'is_hybrid', 'get_exx_coefficient', 'get_hybrid_components', 'get_semilocal_family',
     'xc_semilocal_family', 'LIBXC_FAMILY_TO_SEMILOCAL',
+    'is_skala', 'canonical_skala_name', 'load_skala', 'SkalaFunctional', 'SKALA_FUNCTIONALS',
 ]
 
 
 
+
+# Skala, the neural XC functional (optional: needs PyTorch, imported lazily inside these).
+from .skala_iface import (is_skala, load_skala, SkalaFunctional, SKALA_FUNCTIONALS,
+                          canonical_name as canonical_skala_name)
