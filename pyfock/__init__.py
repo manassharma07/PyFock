@@ -35,6 +35,7 @@ from .DFT_NumGrad import DFT_NumGrad
 from .DFT_Grad import DFT_Grad
 from .HF_atoms import HF_atoms
 from . import Guess
+from . import Dispersion
 # from .PBC_ring import ring
 
 

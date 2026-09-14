@@ -24,3 +24,4 @@ examples/Notebook_Tutorial/ase_water_optimization/
 PyFock_GUI/
 PyFock_GUI_old/
 PyFock_Website
+benchmarks_tests/skala_reference_cache/

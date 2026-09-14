@@ -153,24 +153,41 @@ pip install pylibxc2
 
 ### Optional Dependencies
 
-For GPU acceleration:
+None of these are needed to import or run PyFock. Each is available as a pip *extra*:
+
+| Extra | Installs | Needed for |
+|---|---|---|
+| `pyfock[ase]` | `ase` | the `PyFockCalculator` ASE interface: geometry optimization, NEB, MD |
+| `pyfock[dispersion]` | `dftd3` | DFT-D3 corrections, `DFT(..., dispersion=...)` |
+| `pyfock[dispersion-gpu]` | `torch-dftd` | evaluating D3 on a GPU, through the ASE calculator |
+| `pyfock[skala]` | `torch`, `huggingface_hub`, `dftd3` | the Skala neural functional |
+
+Extras combine as usual:
+
+```bash
+pip install "pyfock[ase,skala]"
+```
+
+and work the same when installing from a clone:
+
+```bash
+pip install -e ".[ase,skala]"
+```
+
+GPU acceleration is kept separate, because the right wheel depends on your CUDA version:
+
 ```bash
 pip install cupy-cuda11x  # Replace 11x with your CUDA version
 ```
 
-For the ASE calculator (geometry optimization and the ASE ecosystem):
-```bash
-pip install ase           # or: pip install pyfock[ase]
-```
-PyFock itself imports and runs without ASE installed; ASE is only required when you use `PyFockCalculator`.
+Two notes:
 
-For the **Skala** neural exchange-correlation functional:
-```bash
-pip install torch huggingface_hub
-```
-PyFock loads Skala's published TorchScript checkpoint directly with `torch.jit.load`, so the `skala`
-package itself is **not** needed — and neither are its dependencies PySCF (which has no Windows wheels)
-and e3nn. See [Skala: the neural exchange-correlation functional](#skala-the-neural-exchange-correlation-functional).
+- ASE is only required when you actually use `PyFockCalculator`; PyFock imports and runs without it.
+- `pyfock[skala]` does **not** install the `skala` package. PyFock reads the published TorchScript
+  checkpoint directly with `torch.jit.load`, which avoids that package's own dependencies on PySCF
+  (no Windows wheels) and e3nn. `dftd3` is included because Skala is parametrised together with a
+  DFT-D3 correction, and it is what reproduces Skala's published numbers. See
+  [Skala: the neural exchange-correlation functional](#skala-the-neural-exchange-correlation-functional).
 
 ## Quick Start
 
@@ -308,6 +325,8 @@ energy, dmat = dftObj.scf()
 ```
 
 Available names are `skala-1.1` (recommended), `skala-1.1-rev1`, `skala-1.1-rev0` and `skala-1.0`.
+See [`examples/ex44_Skala_neural_functional.py`](examples/ex44_Skala_neural_functional.py) for a runnable
+version, with and without the dispersion correction.
 
 #### Installation
 
@@ -357,14 +376,92 @@ Consequences worth knowing:
 - **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
 - **Analytical nuclear gradients are not available.** Forces would need the Pulay and grid-weight
   derivative terms propagated through the network; use `DFT_NumGrad` for numerical forces.
-- **Dispersion is not included.** Skala 1.1 expects an additive DFT-D3 correction with B3LYP5 parameters
-  (`dftObj.skala.d3_settings()` returns `'b3lyp5'`). It does not enter the SCF, and PyFock does not add
-  it automatically, so the energy reported is the bare Skala energy. Add it separately if you are
-  comparing against published Skala numbers.
+- **Dispersion is off by default** — pass `dispersion=True` to include it, see below.
 - **The model carries about 1e-9 Ha of its own numerical noise.** Presenting the network with differently
   shaped batches (a different `max_points_per_chunk`) shifts the energy at that level. Within one
   calculation the chunking is fixed, so the shift is systematic rather than random and SCF convergence to
   `1e-8` is unaffected — but do not expect two runs with different chunk sizes to agree bit for bit.
+
+#### Dispersion
+
+Skala 1.1 is parametrised *together with* a DFT-D3 correction — the checkpoint declares it, and
+`dftObj.skala.d3_settings()` returns `'b3lyp5'`, meaning D3(BJ) damping with B3LYP5 parameters and no
+three-body term. Leaving it out is fine for comparisons against Skala's own reference energies (which
+exclude it) but wrong for anything where dispersion matters, such as non-covalent interactions or
+conformer ranking.
+
+D3 depends only on the atomic numbers, the coordinates and those damping parameters — not on the
+density. It never enters the Kohn-Sham matrix and cannot change the SCF, so PyFock evaluates it once
+after convergence and adds it to the total energy:
+
+```bash
+pip install dftd3
+```
+
+```python
+dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1', dispersion=True)
+energy, dmat = dftObj.scf()      # dispersion-corrected total energy
+print(dftObj.Edisp)              # the correction on its own, in Hartree
+```
+
+`dispersion=True` uses whatever the functional declares. For any other functional, name the
+parametrisation yourself — `dispersion='pbe'`, `dispersion='b3lyp'` — and tune the damping through
+`dftObj.dispersion_version` (default `'d3bj'`) and `dftObj.dispersion_atm` (default `False`).
+[`pyfock.Dispersion`](pyfock/Dispersion.py) also exposes `d3_energy` and `d3_energy_and_gradient`
+directly, the latter giving `dE_disp/dR` for forces. See
+[`examples/ex43_D3_dispersion_correction.py`](examples/ex43_D3_dispersion_correction.py).
+
+The ASE calculator uses the same backend by default:
+
+```python
+PyFockCalculator(functional='PBE', dispersion=True, dispersion_kwargs={'xc': 'pbe'})
+```
+
+`torch-dftd` (`pip install pyfock[dispersion-gpu]`) remains available there for GPU runs, where it
+evaluates the correction on the device. Select it with `backend='torch-dftd'`, or implicitly by asking
+for a non-CPU device:
+
+```python
+dispersion_kwargs={'xc': 'pbe', 'backend': 'torch-dftd', 'device': 'cuda'}
+```
+
+Note that Skala's own `skala.dispersion` module routes D3 through PySCF (`pyscf.dispersion.dftd3` or
+`dftd3.pyscf`), which is why PyFock does not use it. PyFock calls `dftd3.interface` from the same
+`simple-dftd3` package instead — identical numbers, no PySCF, and Windows wheels are available.
+
+#### Validating against the published reference energies
+
+Skala ships the total energies behind its benchmark report as `benchmark/reference/measurements.json`
+(a Git-LFS file, ~7.8 MB): 1221 converged runs over skala-1.1, r2scan, m06-2x and b3lyp5, each at
+def2-SVP/TZVP/QZVP, for ~30 molecules from GMTKN55 and a conformer benchmark. The geometries are pulled
+from `grimme-lab/GMTKN55` at a pinned commit.
+
+One detail is easy to get wrong: the **Skala energies there include the D3 correction**. The benchmark
+runner never mentions D3, but it builds the method through `SkalaKS`, whose constructor defaults to
+`with_dftd3=True`, so `mf.kernel()` returns the corrected energy. The plain PySCF functionals in the
+same set (r2scan, m06-2x, b3lyp5) get no such treatment. Comparing a bare PyFock Skala energy against
+them leaves a residual exactly equal to the dispersion energy.
+
+`benchmarks_tests/validate_skala_reference.py` downloads both, runs PyFock under the matching protocol
+(spherical orbitals via `dftObj.sao = True`, density fitting with `def2-universal-jkfit`, grid level 3,
+`conv_crit = 5e-6`, `dispersion=True` for Skala only) and tabulates the differences:
+
+```bash
+python validate_skala_reference.py --molecules H2O --basis def2-tzvp
+```
+
+It runs r2SCAN alongside Skala as a control: PyFock's r2SCAN is independently validated, so whatever it
+shows against the same reference measures the grid, basis and density-fitting baseline rather than
+anything to do with Skala. Over H2, H2O, H2O2 and H3N at def2-SVP and def2-TZVP:
+
+| | mean abs. difference | max |
+|---|---|---|
+| skala-1.1 | 3.2e-08 Ha | 1.1e-07 Ha |
+| r2SCAN (control) | 7.0e-08 Ha | 2.2e-07 Ha |
+
+PyFock reproduces the published Skala energies to within the reference data's own run-to-run spread, and
+slightly *better* than it reproduces r2SCAN. `tests/test_skala.py` keeps one of these values (H2 at
+def2-SVP) as a permanent end-to-end regression check.
 
 #### Cost
 

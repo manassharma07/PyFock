@@ -220,9 +220,9 @@ class DFT:
     >>> dft.run_scf()
     """
     def __init__(self, mol, basis, auxbasis=None, conv_crit=1e-7, dmat_guess_method=None, 
-                xc=None, grids=None, gridsLevel=3, use_pyscf_grids=False, blocksize=None, 
-                save_ao_values=False, use_gpu=False, ncores=1): 
-         
+                xc=None, grids=None, gridsLevel=3, use_pyscf_grids=False, blocksize=None,
+                save_ao_values=False, use_gpu=False, ncores=1, dispersion=None):
+
         self.mol = mol
         """ Molecular object for which the DFT calculation will be performed """
         if self.mol is None:
@@ -387,6 +387,24 @@ class DFT:
         # CAO or SAO
         self.sao = False
         """ Whether to use SAO basis or CAO basis. Default is CAO basis. """
+
+        self.dispersion = dispersion
+        """DFT-D3 dispersion correction (:mod:`pyfock.Dispersion`), added to the total energy after the
+        SCF has converged. It is a purely geometric, additive term and never enters the Kohn-Sham matrix.
+        ``None``/``False`` (default) leaves it out; ``True`` uses the parametrisation the functional
+        itself declares, which currently means Skala (``'b3lyp5'``); a string names the functional whose
+        D3 parameters to use, e.g. ``'pbe'`` or ``'b3lyp'``. Needs ``pip install dftd3``."""
+
+        self.dispersion_version = 'd3bj'
+        """Damping function of the D3 correction, ``'d3bj'`` (Becke-Johnson) by default, which is what
+        Skala is parametrised with. See :data:`pyfock.Dispersion.DAMPING_VERSIONS`."""
+
+        self.dispersion_atm = False
+        """Whether the D3 correction includes the three-body Axilrod-Teller-Muto term. Off by default,
+        matching Skala's own reference calculations."""
+
+        self.Edisp = 0.0
+        """Dispersion energy of the last :meth:`scf` call in Hartree, 0 when no correction was applied."""
 
         self.direct_scf = False 
         """ Only relevant for calculations without DF. If True, the 4c2e integrals are recalculated at every SCF iteration.
@@ -1177,6 +1195,25 @@ class DFT:
             skala = XC.load_skala(xc, use_gpu=False)
         self.skala = skala
 
+        # D3 dispersion parameters. True means "whatever the functional itself declares" (Skala 1.1
+        # declares 'b3lyp5'); a string names the functional whose D3 parameters to use.
+        dispersion_method = None
+        if self.dispersion:
+            if self.dispersion is True:
+                dispersion_method = skala.d3_settings() if skala is not None else None
+                if dispersion_method is None:
+                    raise ValueError(
+                        'dispersion=True asks for the D3 parametrisation declared by the functional, '
+                        'but ' + str(xc) + ' does not declare one. Name the parametrisation explicitly '
+                        "instead, e.g. dispersion='pbe'.")
+            else:
+                dispersion_method = str(self.dispersion)
+            # Fail now rather than after a converged SCF: the correction itself is only evaluated at
+            # the very end, so a missing dftd3 would otherwise waste the whole calculation.
+            from . import Dispersion as _Dispersion
+            _Dispersion.d3_energy(mol, dispersion_method, version=self.dispersion_version,
+                                  atm=self.dispersion_atm)
+
         if xc != 'HF' and skala is None:
             if self.use_libxc:
                 import pylibxc
@@ -1785,10 +1822,15 @@ class DFT:
                 print('\nSkala is a neural functional: it is non-local over each atomic grid and its')
                 print('potential comes from automatic differentiation of the total XC energy.', flush=True)
                 if skala.d3_settings() is not None:
-                    print('\nNOTE: this functional is parametrised together with a DFT-D3 dispersion')
-                    print("correction ('" + str(skala.d3_settings()) + "'), which is additive, does not enter")
-                    print('the SCF, and is NOT added by PyFock. The energy below is the bare Skala energy.',
-                          flush=True)
+                    print("\nThis functional is parametrised together with a DFT-D3 correction ('"
+                          + str(skala.d3_settings()) + "'),")
+                    if dispersion_method is None:
+                        print('which is additive, does not enter the SCF, and is NOT included below:')
+                        print('the energy reported is the bare Skala energy. Pass dispersion=True to')
+                        print('add it (needs pip install dftd3).', flush=True)
+                    else:
+                        print('which is added after the SCF has converged (dispersion='
+                              + repr(self.dispersion) + ').', flush=True)
             elif self.use_libxc:
                 print("PyFock utilizes LibXC's pylibxc library. Citation:")
                 print(pylibxc.util.xc_reference())
@@ -2192,7 +2234,26 @@ class DFT:
         
         self.converged = scf_converged
         self.niter = itr-1
-        
+
+        # D3 dispersion is a function of the geometry alone, so it is evaluated once here rather than
+        # inside the SCF loop; it cannot affect the converged density (see pyfock.Dispersion).
+        self.Edisp = 0.0
+        if dispersion_method is not None:
+            from . import Dispersion
+            self.Edisp = Dispersion.d3_energy(mol, dispersion_method, version=self.dispersion_version,
+                                              atm=self.dispersion_atm)
+            Etot = Etot + self.Edisp
+            print('\n\n------------------------------------------------------', flush=True)
+            print('DFT-D3 dispersion correction', flush=True)
+            print('------------------------------------------------------', flush=True)
+            print(Dispersion.citation(), flush=True)
+            print('\nParametrisation: ' + str(dispersion_method) + ' / ' + str(self.dispersion_version)
+                  + (' + ATM' if self.dispersion_atm else ' (two-body only)'), flush=True)
+            print('Dispersion energy = ' + repr(self.Edisp) + ' Ha', flush=True)
+            print('Total Energy (dispersion corrected) = ' + repr(Etot) + ' Ha', flush=True)
+            print('------------------------------------------------------\n', flush=True)
+
+
 
         durationSCF = timer() - startSCF
         # print(dmat)

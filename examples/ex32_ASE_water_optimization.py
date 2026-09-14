@@ -18,9 +18,11 @@ calc = PyFockCalculator(
     functional="PBE",
     basis="def2-SVP",
     auxbasis="def2-universal-jfit",
-    # Set dispersion=True and install torch-dftd to add D3 corrections.
+    # Set dispersion=True and install dftd3 to add D3 corrections (see ex43).
     # dispersion=True,
-    # dispersion_kwargs={"damping": "bj", "device": "cpu"},
+    # dispersion_kwargs={"xc": "pbe", "damping": "bj"},
+    # On a GPU, 'torch-dftd' evaluates the correction on the device instead:
+    # dispersion_kwargs={"xc": "pbe", "backend": "torch-dftd", "device": "cuda"},
     ncores=4,
     DF=True,
     save_ao_values=True,

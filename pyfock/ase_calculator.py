@@ -269,25 +269,77 @@ class PyFockCalculator(Calculator):
     def _to_eang_dipole(self, dipole_au):
         return np.asarray(dipole_au, dtype=np.float64) * Data.Bohr2AngsFactor
 
+    # torch-dftd spells the damping function differently from simple-dftd3.
+    _DAMPING_ALIASES = {"bj": "d3bj", "zero": "d3zero", "bjm": "d3bjm", "zerom": "d3zerom"}
+
     def _compute_dispersion_correction(self, atoms, compute_forces):
+        """Dispersion energy (eV) and forces (eV/Angstrom) for ``atoms``.
+
+        Two backends are available. The default, ``'dftd3'``, is simple-dftd3, the Grimme group's
+        reference implementation, reached through :mod:`pyfock.Dispersion`; it runs on the CPU, is what
+        the rest of PyFock uses, and needs no PyTorch. ``'torch-dftd'`` is the original backend here and
+        is worth keeping for GPU runs, where it evaluates the correction on the device alongside a GPU
+        SCF. It is selected explicitly with ``backend='torch-dftd'`` or implicitly by asking for a
+        non-CPU ``device``.
+        """
+        kwargs = dict(self.parameters.get("dispersion_kwargs") or {})
+        backend = kwargs.pop("backend", None)
+        if backend is None:
+            device = kwargs.get("device")
+            backend = "dftd3" if device is None or str(device) == "cpu" else "torch-dftd"
+
+        if backend == "dftd3":
+            return self._dispersion_dftd3(atoms, compute_forces, kwargs)
+        if backend == "torch-dftd":
+            return self._dispersion_torch_dftd(atoms, compute_forces, kwargs)
+        raise ValueError("Unknown dispersion backend '" + str(backend)
+                         + "'. Available: 'dftd3' (default, CPU) and 'torch-dftd' (GPU).")
+
+    def _dispersion_dftd3(self, atoms, compute_forces, kwargs):
+        """simple-dftd3 through :mod:`pyfock.Dispersion` (the default backend)."""
+        from . import Dispersion
+
+        method = kwargs.pop("xc", None) or kwargs.pop("method", None)
+        version = kwargs.pop("version", None) or kwargs.pop("damping", None) or "d3bj"
+        version = self._DAMPING_ALIASES.get(str(version).lower(), str(version).lower())
+        atm = bool(kwargs.pop("atm", False))
+        param = kwargs.pop("param", None)
+        kwargs.pop("device", None)  # meaningful only for the torch backend
+        if kwargs:
+            raise TypeError("Unexpected dispersion_kwargs for the 'dftd3' backend: "
+                            + ', '.join(sorted(kwargs)) + ". Supported: xc (or method), damping (or "
+                            "version), atm, param, backend.")
+        if method is None and param is None:
+            raise ValueError("The 'dftd3' dispersion backend needs the functional whose D3 parameters "
+                             "to use, e.g. dispersion_kwargs={'xc': 'pbe'}.")
+
+        # Multiply by Angs2BohrFactor rather than dividing by Bohr2AngsFactor: the two constants are
+        # not exact reciprocals (they differ in the 12th digit), and Mol uses the former, so this keeps
+        # the geometry bit-identical to the one the rest of PyFock would build.
+        geometry = (atoms.get_atomic_numbers(),
+                    np.asarray(atoms.get_positions(), dtype=np.float64) * Data.Angs2BohrFactor)
+        if compute_forces:
+            energy_au, gradient_au = Dispersion.d3_energy_and_gradient(
+                geometry, method, version=version, atm=atm, param=param)
+            # ASE wants forces, which are minus the gradient.
+            return energy_au * Data.au2eVFactor, self._to_ev_forces(-gradient_au)
+        energy_au = Dispersion.d3_energy(geometry, method, version=version, atm=atm, param=param)
+        return energy_au * Data.au2eVFactor, None
+
+    def _dispersion_torch_dftd(self, atoms, compute_forces, kwargs):
+        """torch-dftd, kept for GPU runs; ``kwargs`` are passed straight to its calculator."""
         try:
             from torch_dftd.torch_dftd3_calculator import TorchDFTD3Calculator
         except ImportError as exc:
             raise ImportError(
-                "Dispersion correction requires the optional 'torch-dftd' package. "
-                "Install it with: pip install torch-dftd"
+                "The 'torch-dftd' dispersion backend requires the optional 'torch-dftd' package. "
+                "Install it with: pip install torch-dftd, or use the default CPU backend "
+                "(backend='dftd3', pip install dftd3)."
             ) from exc
 
-        dispersion_kwargs = self.parameters.get("dispersion_kwargs")
-        if dispersion_kwargs is None:
-            dispersion_kwargs = {}
-        else:
-            dispersion_kwargs = dict(dispersion_kwargs)
-
-        dispersion_kwargs.setdefault("atoms", atoms.copy())
-        disp_atoms = dispersion_kwargs["atoms"]
-        disp_calc = TorchDFTD3Calculator(**dispersion_kwargs)
-        disp_atoms.calc = disp_calc
+        kwargs.setdefault("atoms", atoms.copy())
+        disp_atoms = kwargs["atoms"]
+        disp_atoms.calc = TorchDFTD3Calculator(**kwargs)
 
         disp_energy = float(disp_atoms.get_potential_energy())
         disp_forces = None

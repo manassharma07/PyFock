@@ -9,10 +9,13 @@ of them at once.
 """
 from __future__ import annotations
 
+import contextlib
+import io
+
 import numpy as np
 import pytest
 
-from pyfock import Basis, Grids, Integrals, Mol, XC
+from pyfock import Basis, Data, DFT, Grids, Integrals, Mol, XC
 
 
 torch = pytest.importorskip('torch', reason='Skala needs PyTorch')
@@ -75,7 +78,7 @@ def test_metadata(skala):
     assert skala.name == 'skala-1.1'
     assert {'density', 'grad', 'kin', 'grid_weights', 'atomic_grid_weights',
             'atomic_grid_sizes'} <= set(skala.features)
-    # Skala 1.1 is parametrised together with a D3 correction, which PyFock does not add itself.
+    # Skala 1.1 is parametrised together with a D3 correction; DFT(..., dispersion=True) picks this up.
     assert skala.d3_settings() == 'b3lyp5'
 
 
@@ -134,6 +137,37 @@ def test_blocksize_does_not_change_the_result(system, skala):
     fine = Integrals.eval_xc_skala(basis, dmat, grids, skala, blocksize=777, print_nelec=False)
     assert fine[0] == pytest.approx(coarse[0], rel=1e-10, abs=1e-12)
     assert np.allclose(fine[1], coarse[1], rtol=1e-9, atol=1e-11)
+
+
+def test_matches_published_reference_energy(skala):
+    """Reproduce one of Microsoft's published Skala total energies end to end.
+
+    The value is H2 at def2-SVP from ``benchmark/reference/measurements.json`` in the Skala repository,
+    with the geometry taken from GMTKN55 ``W4-11/h2/coord`` (in Bohr). Their protocol is spherical
+    orbitals, density fitting with def2-universal-jkfit, grid level 3 and ``conv_tol = 5e-6`` -- and the
+    published Skala numbers **include** the D3 correction, because ``SkalaKS`` attaches it by default.
+    This is the strongest single check in this file: it exercises the grid, the model, the potential and
+    the dispersion term together against a number PyFock had no part in producing.
+    """
+    pytest.importorskip('dftd3', reason='the reference energies include the D3 correction')
+
+    # The coord file is in Bohr and Mol takes Angstrom. Divide by Angs2BohrFactor rather than
+    # multiplying by Bohr2AngsFactor (the convention in DFT_Grad and DFT_NumGrad): Mol multiplies by
+    # that same constant, and the two are not exact reciprocals, so only this round trips faithfully.
+    scale = 1.0 / Data.Angs2BohrFactor
+    mol = Mol(atoms=[['H', 0.700986297 * scale, 0.0, -2e-9 * scale],
+                     ['H', -0.700986297 * scale, 0.0, 2e-9 * scale]])
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jkfit')})
+    dft = DFT(mol, basis, auxbasis, xc='skala-1.1',
+              grids=Grids(mol, level=3, verbose=False), dispersion=True)
+    dft.sao = True
+    dft.conv_crit = 5e-6
+    with contextlib.redirect_stdout(io.StringIO()):
+        energy, _ = dft.scf()
+
+    assert dft.converged
+    assert float(energy) == pytest.approx(-1.1683906705, abs=5e-7)
 
 
 def test_unknown_functional_name():

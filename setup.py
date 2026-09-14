@@ -35,9 +35,18 @@ setup(
     long_description_content_type='text/markdown',
     install_requires=requirements,
     extras_require={
-        # Optional features: the ASE calculator interface and D3 dispersion
+        # Optional features. None of these are needed to import or run PyFock.
         "ase": ["ase"],
-        "dispersion": ["ase", "torch-dftd"],
+        # D3 dispersion. `dftd3` is simple-dftd3, the Grimme group's reference implementation, and is
+        # the default backend everywhere on the CPU: DFT(dispersion=...), pyfock.Dispersion and the ASE
+        # calculator all go through it.
+        "dispersion": ["dftd3"],
+        # `torch-dftd` is only needed to evaluate the correction on a GPU, through the ASE calculator
+        # with dispersion_kwargs={'backend': 'torch-dftd', 'device': 'cuda'}.
+        "dispersion-gpu": ["torch-dftd"],
+        # The Skala neural functional: PyTorch to run the checkpoint, huggingface_hub to fetch it, and
+        # dftd3 for the D3 correction Skala is parametrised with.
+        "skala": ["torch>=2.12,<2.14", "huggingface_hub", "dftd3"],
     },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
