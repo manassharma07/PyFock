@@ -32,7 +32,8 @@ are joined with Becke's fuzzy-cell partitioning:
    smoothing iterations and the atomic-size adjustment a_ij = (chi - 1/chi)/4, |a| <= 1/2, applied
    to the square roots of the Bragg-Slater radii as proposed by Treutler and Ahlrichs
    (`size_adjustment='treutler'`; `'becke'` uses the radii themselves, `None` no adjustment). The
-   partition weights of all points are computed by a parallel Numba kernel over all atom pairs.
+   partition weights of all points are computed by a parallel Numba kernel over all atom pairs, or
+   on the GPU (see [below](#building-the-grid-on-the-gpu)).
 
 The Bragg-Slater radii are Slater's table (J. Chem. Phys. 41, 3199 (1964)) with the customary
 0.35 A for H and 1.40 A for He. The points are finally grouped into 1.2 Bohr boxes so that the
@@ -58,6 +59,84 @@ Build times (4 cores of an Apple M4, Numba kernel already compiled):
 
 The cost grows as N_points x N_atoms^2 because all atom pairs enter the partition weight of every
 point.
+
+### Building the grid on the GPU
+
+`Grids(mol, level=3, use_gpu=True)` builds the same grid on the device (`pyfock/Grids_cupy.py`), and
+`DFT.scf` does it automatically whenever the calculation itself runs on the GPU (`use_gpu=True`);
+`grids_options={'use_gpu': False}` keeps the generation on the CPU. The density pruning that follows
+the build runs on the GPU too (see [below](#pruning-the-grid-on-the-gpu)). All three steps of the build
+run on the device:
+
+1. **Atomic grids.** Only the distinct element templates (the cached single-atom grids) are uploaded.
+   The molecular point set is gathered from that pool on the device, so no array of the size of the
+   grid is built on the host or sent over the bus.
+2. **Partitioning.** A CUDA kernel that mirrors the Numba kernel pair for pair, one thread per grid
+   point. Each thread holds the distances to all atoms and their unnormalised cell functions in local
+   memory, so the kernel is compiled for a ladder of atom counts (32, 128, 512, 2048) and the smallest
+   variant that fits the molecule is launched. This step is what the build time consists of.
+3. **Box grouping.** The same 1.2 Bohr boxes, ordered by a stable device sort.
+
+The finished grid is copied back, so `coords`, `weights` and `atom_idx` are NumPy arrays either way.
+The points, their atom indices and their box order are bit for bit those of the CPU build. Individual
+weights are not quite: NVVM contracts multiply-adds into FMAs, which moves nu by an ulp, and where
+Becke's cutoff profile saturates (`0.5 * (1 - g)` with `g` within an ulp of 1) the ulp is amplified.
+Below a hundred atoms the weights still agree to 1e-13 absolute and the summed weights are bit for bit
+equal; for olestra (453 atoms) 83 of the 5.2 million points differ by up to 1.7e-8, which is 1.5e-10 of
+the largest weight there. The GPU value is the more accurate one (one rounding instead of two), and it
+integrates the same: the volume of the fuzzy cells agrees to 9e-14 relative and quadratures of
+nucleus-centred Gaussians, diffuse (alpha = 1) and sharp (alpha = 20), come out bit for bit equal on
+the two grids even for olestra. `tests/test_grids_cupy.py` checks the equalities.
+
+Build times (8 threads of a Core i9-12900K against an RTX 5070, both back ends warm;
+`benchmarks_tests/benchmark_grids_gpu.py` reproduces the table):
+
+| molecule | atoms | level | points | CPU | GPU | speed-up |
+|---|---|---|---|---|---|---|
+| water | 3 | 3 | 33,698 | 0.003 s | 0.004 s | 0.9x |
+| SnCl4 | 5 | 3 | 97,478 | 0.011 s | 0.004 s | 3.0x |
+| decane | 32 | 3 | 356,956 | 0.128 s | 0.022 s | 5.8x |
+| decane | 32 | 5 | 947,660 | 0.364 s | 0.055 s | 6.7x |
+| C60 | 60 | 3 | 847,080 | 0.749 s | 0.136 s | 5.5x |
+| C60 | 60 | 5 | 2,578,680 | 2.364 s | 0.408 s | 5.8x |
+| cholesterol | 74 | 3 | 846,436 | 1.133 s | 0.199 s | 5.7x |
+| taxol | 110 | 3 | 1,341,034 | 3.737 s | 0.681 s | 5.5x |
+| olestra | 453 | 3 | 5,196,590 | 305.1 s | 43.6 s | 7.0x |
+
+The kernel is double precision throughout, which on a GeForce card runs at 1/64 of the single-precision
+rate; that is what caps the speed-up at about 6x. Both sides scale as N_points x N_atoms^2, so the
+ratio is roughly constant. A molecule as small as water has too few points to fill the device and gains
+nothing. The first build of a session pays the CUDA compilation of the partition kernel (about 0.5 s,
+cached on disk by Numba afterwards), and the driver reserves the local-memory backing store of the
+launched variant (about 0.1 GB for the 32-atom kernel, 0.45 GB for the 512-atom one and 1.8 GB for the
+2048-atom one) - which is why the variant is chosen as small as it can be. Molecules with more than
+2048 atoms, a missing CuPy or a missing CUDA device fall back to the CPU build with a warning, and the
+`use_gpu` attribute records what was actually used.
+
+### Pruning the grid on the GPU
+
+`DFT.scf` drops the points that carry no density (|rho w| < 1e-11 with the starting density) before the
+SCF. `DFT.grid_pruning_mask` does that on whichever device the calculation runs on: the points are taken
+in blocks (the XC batch size on the GPU, 10000 on the CPU), only the basis functions whose radial cutoff
+reaches a block are evaluated, and rho is contracted as `(ao @ D) * ao` summed over the functions. On the
+GPU the AO values come from `eval_bfs_sparse_internal_cuda`, the same kernel the XC term uses, so the
+pruning sees exactly the AO values the SCF will.
+
+The block size only decides which basis functions are screened away, so the mask does not depend on it
+except for points sitting exactly on the threshold. Both back ends keep the same points: decane and
+cholesterol (DF-PBE/def2-SVP, level 3) prune to 287,848 and 649,509 points either way, with SCF energies
+equal to the run-to-run noise of the threading (about 1e-12 Ha).
+
+Times read off the `Pruning generated grids by rho` line of the SCF profile, same machine, both back ends
+warm:
+
+| molecule | points before -> after | CPU | GPU | speed-up | full SCF, CPU -> GPU pruning |
+|---|---|---|---|---|---|
+| decane | 356,956 -> 287,848 | 0.49 s | 0.11 s | 4.5x | 2.78 s -> 2.41 s |
+| cholesterol | 846,436 -> 649,509 | 2.46 s | 0.55 s | 4.5x | 16.05 s -> 14.15 s |
+
+Before this, the pruning cost several times the grid build it follows; it is now the smaller of the two
+again.
 
 ## The numgrid scheme and how the two compare
 

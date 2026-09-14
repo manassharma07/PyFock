@@ -522,7 +522,7 @@ class Grids:
         paper, Lebedev angular grids (tables provided by numgrid at run time), angular pruning by regions of
         the Bragg-Slater radius and Becke partitioning with Treutler's atomic-size adjustment. The numbers of
         radial points and the Lebedev orders of every level are tabulated per period of the element.
-        The partitioning runs in a parallel Numba kernel.
+        The partitioning runs in a parallel Numba kernel, or on the GPU with ``use_gpu=True``.
 
     ``'numgrid'``
         The grids of the numgrid library: LMG radial grids built from the smallest and largest exponents of a
@@ -535,7 +535,7 @@ class Grids:
 
     def __init__(self, mol=None, basis=None, level=3, radial_precision=None, ncores=os.cpu_count(),
                  scheme=None, preset=None, angular_points=None, hardness=3, sort=True, verbose=True,
-                 pruning='regions', size_adjustment='treutler', points_per_element=None):
+                 pruning='regions', size_adjustment='treutler', points_per_element=None, use_gpu=False):
         """
         Generate the molecular integration grid.
 
@@ -578,6 +578,15 @@ class Grids:
         points_per_element : dict, optional
             ``scheme='treutler'`` only: ``{element symbol or charge: (n_rad, n_ang)}`` overrides of the number
             of radial points and of the largest Lebedev grid, e.g. ``{'C': (75, 302)}``.
+        use_gpu : bool, default=False
+            ``scheme='treutler'`` only: build the grid on the GPU (:mod:`pyfock.Grids_cupy`) instead of with
+            the Numba CPU kernel. The points, the partitioning and the box grouping are all computed on the
+            device and the finished grid is copied back, so ``coords``, ``weights`` and ``atom_idx`` are
+            NumPy arrays either way: the points, their atom indices and their box order are identical to the
+            CPU ones and the weights agree to the last bits (see :mod:`pyfock.Grids_cupy`). Falls back to the
+            CPU with a warning when CuPy or a CUDA device is unavailable or the molecule has more atoms than
+            the kernels are compiled for (``Grids_cupy.MAX_GPU_ATOMS``). The attribute ``use_gpu`` records
+            what was actually used.
 
         Raises
         ------
@@ -631,17 +640,36 @@ class Grids:
         """'treutler' scheme: atomic-size adjustment of the partitioning ('treutler', 'becke' or None)."""
         self.element_points = {}
         """'treutler' scheme: (n_rad, n_ang) per element symbol (n_ang: largest Lebedev grid before pruning)."""
+        if use_gpu and scheme != 'treutler':
+            print("Warning: use_gpu is only available for the 'treutler' scheme; the " + scheme
+                  + ' grid is built on the CPU.', flush=True)
+        self.use_gpu = bool(use_gpu) and scheme == 'treutler'
+        """Whether the grid was built on the GPU (see the ``use_gpu`` argument)."""
 
         atm_coords = np.ascontiguousarray(np.asarray(mol.coordsBohrs, dtype=np.float64).reshape(-1, 3))
         charges = np.asarray(mol.Zcharges, dtype=np.int64)
 
+        sorted_on_gpu = False
         if scheme == 'treutler':
-            coords, weights, atom_idx = self._build_treutler(atm_coords, charges, level, pruning, size_adjustment, points_per_element)
+            if self.use_gpu:
+                try:
+                    coords, weights, atom_idx = self._build_treutler_gpu(atm_coords, charges, level, pruning,
+                                                                         size_adjustment, points_per_element, sort)
+                    sorted_on_gpu = sort and coords.shape[0] > 0
+                except Exception as error:
+                    print('Warning: the XC grid could not be built on the GPU (' + str(error)
+                          + '); building it on the CPU instead.', flush=True)
+                    self.use_gpu = False
+                    self.element_points = {}
+            if not self.use_gpu:
+                coords, weights, atom_idx = self._build_treutler(atm_coords, charges, level, pruning, size_adjustment, points_per_element)
         else:
             coords, weights, atom_idx = self._build_numgrid(mol, basis, atm_coords, charges, level, preset,
                                                             radial_precision, angular_points, hardness)
 
-        if sort and coords.shape[0] > 0:
+        if sorted_on_gpu:
+            self.is_sorted = True
+        elif sort and coords.shape[0] > 0:
             perm = box_grouping_order(atm_coords, coords)
             coords = coords[perm]
             weights = weights[perm]
@@ -664,7 +692,9 @@ class Grids:
         charge = int(charge)
         return Data.elementSymbols[charge] if 0 <= charge < len(Data.elementSymbols) else str(charge)
 
-    def _build_treutler(self, atm_coords, charges, level, pruning, size_adjustment, points_per_element):
+    @staticmethod
+    def _parse_points_per_element(points_per_element):
+        """``points_per_element`` keyed by element symbol or charge -> ``{charge: (n_rad, n_ang)}``."""
         overrides = {}
         if points_per_element:
             for key, value in points_per_element.items():
@@ -679,6 +709,22 @@ class Grids:
                 else:
                     z = int(key)
                 overrides[z] = (int(value[0]), int(value[1]))
+        return overrides
+
+    def _record_element_points(self, charges, level, overrides):
+        """Fill ``element_points`` with the (n_rad, n_ang) actually used for every element of the molecule."""
+        for z in charges:
+            z = int(z)
+            symbol = self._symbol(z)
+            if symbol in self.element_points:
+                continue
+            n_rad, n_ang = overrides.get(z, (None, None))
+            self.element_points[symbol] = (n_rad if n_rad is not None else radial_points_for_level(z, level),
+                                           n_ang if n_ang is not None else angular_points_for_level(z, level))
+
+    def _build_treutler(self, atm_coords, charges, level, pruning, size_adjustment, points_per_element):
+        overrides = self._parse_points_per_element(points_per_element)
+        self._record_element_points(charges, level, overrides)
 
         coords = []
         vol = []
@@ -687,10 +733,6 @@ class Grids:
             z = int(charges[ia])
             n_rad, n_ang = overrides.get(z, (None, None))
             c, v = single_atom_grid(z, level=level, pruning=pruning, n_rad=n_rad, n_ang=n_ang)
-            symbol = self._symbol(z)
-            if symbol not in self.element_points:
-                self.element_points[symbol] = (n_rad if n_rad is not None else radial_points_for_level(z, level),
-                                                n_ang if n_ang is not None else angular_points_for_level(z, level))
             coords.append(c + atm_coords[ia])
             vol.append(v)
             atom_idx.append(np.full(v.shape[0], ia, dtype=np.int64))
@@ -706,6 +748,20 @@ class Grids:
         finally:
             numba.set_num_threads(nthreads_before)
         return coords, vol * factors, atom_idx
+
+    # ------------------------------------------------------------------
+    def _build_treutler_gpu(self, atm_coords, charges, level, pruning, size_adjustment, points_per_element, sort):
+        """The 'treutler' build of :meth:`_build_treutler` on the GPU (see :mod:`pyfock.Grids_cupy`).
+
+        The box grouping is done on the device too when ``sort`` is set, so the returned arrays are already
+        ordered. Raises ``Grids_cupy.GridsGPUError`` when the GPU cannot be used.
+        """
+        from . import Grids_cupy
+        overrides = self._parse_points_per_element(points_per_element)
+        self._record_element_points(charges, level, overrides)
+        return Grids_cupy.build_treutler_grid_cupy(atm_coords, charges, level=level, pruning=pruning,
+                                                   size_adjustment=size_adjustment, overrides=overrides,
+                                                   sort=sort)
 
     # ------------------------------------------------------------------
     def _build_numgrid(self, mol, basis, atm_coords, charges, level, preset, radial_precision, angular_points, hardness):
@@ -763,8 +819,8 @@ class Grids:
             adjust_text = ('Treutler' if adjust == 'treutler' else 'Becke' if adjust == 'becke' else 'no') + ' atomic-size adjustment'
             sizes = ', '.join(sym + ' (' + str(n[0]) + ', ' + str(n[1]) + ')' for sym, n in self.element_points.items())
             text = ('Grids: Treutler-Ahlrichs radial + Lebedev angular grids, ' + prune_text
-                    + ', Becke partitioning with ' + adjust_text + '; level ' + str(self.level)
-                    + '; (n_rad, n_ang) per element: ' + sizes)
+                    + ', Becke partitioning with ' + adjust_text + ' (' + ('GPU' if self.use_gpu else 'CPU')
+                    + '); level ' + str(self.level) + '; (n_rad, n_ang) per element: ' + sizes)
         else:
             per_element = ', '.join(sym + ' (' + str(self.radial_points.get(sym, '?')) + ', ' + str(ang[0]) + '-' + str(ang[1]) + ')'
                                     for sym, ang in self.angular_points.items())

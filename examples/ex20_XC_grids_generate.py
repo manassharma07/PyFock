@@ -49,6 +49,12 @@ grids_becke = Grids(mol, level=3, ncores=ncores, size_adjustment='becke')
 # points_per_element: set the number of radial points and the largest angular grid yourself
 grids_custom = Grids(mol, level=3, ncores=ncores, points_per_element={'O': (75, 302), 'H': (50, 194)})
 
+# use_gpu: build the same grid on the GPU (points, atom indices and box order identical to the CPU
+#          build, weights to ~1e-13; about 6x faster from ~30 atoms on). Needs CuPy and a CUDA device,
+#          and falls back to the CPU with a warning when they are missing. grids.use_gpu says what ran.
+grids_gpu = Grids(mol, level=3, ncores=ncores, use_gpu=True)
+print('Grid built on the GPU:', grids_gpu.use_gpu)
+
 # numgrid scheme
 # preset 'compact' (default) gives grids of a similar size to the default scheme,
 # preset 'dense' gives the previous (denser) PyFock grids
@@ -80,6 +86,10 @@ dftObj = DFT(mol, basis, auxbasis, xc=xc, gridsLevel=3, ncores=ncores)
 dftObj.grids_options = {'pruning': None, 'size_adjustment': 'becke'}
 energy, dmat = dftObj.scf()
 print('Energy without pruning and with Becke size adjustment:', energy)
+
+# A GPU calculation builds the grid on the GPU as well; grids_options can turn that off
+dftObj = DFT(mol, basis, auxbasis, xc=xc, gridsLevel=3, ncores=ncores, use_gpu=True)
+dftObj.grids_options = {'use_gpu': False}   # generate the grid on the CPU anyway
 
 # numgrid scheme
 dftObj = DFT(mol, basis, auxbasis, xc=xc, gridsLevel=3, ncores=ncores)

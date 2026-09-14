@@ -96,7 +96,8 @@ class DFT:
         ('treutler', the default: Treutler-Ahlrichs radial grids, Lebedev angular grids, angular pruning and Becke
         partitioning; 'numgrid': numgrid grids with the `grids_preset`, `grids_radial_precision` and
         `grids_angular_points` attributes), and pruned with the starting density (points with |rho * w| < 1e-11
-        are dropped).
+        are dropped). With `use_gpu=True` the 'treutler' grid is generated on the GPU as well
+        (`grids_options={'use_gpu': False}` keeps that on the CPU).
 
     gridsLevel : int, optional
         Grid level, 0 (coarsest) to 9 (finest); default 3.
@@ -195,7 +196,9 @@ class DFT:
         CUDA thread configuration (Y dimension).
 
     dynamic_precision : bool
-        Whether to use precision switching during XC evaluation for performance gains.
+        Whether to use precision switching during XC evaluation for performance gains. GPU runs only
+        (XC_algo 1 and 3), where it is the default: single precision until the relative energy change
+        between two iterations falls below 5e-7, double precision from there on.
 
     keep_ints3c2e_in_gpu : bool
         Whether to keep 3-center 2-electron integrals in GPU memory to avoid transfers.
@@ -274,7 +277,8 @@ class DFT:
         def2-QZVP exponents), with the parameters of `grids_preset`. """
         self.grids_options = {}
         """ Extra keyword arguments for `Grids` with the 'treutler' scheme, e.g. {'pruning': None, 'size_adjustment': 'becke',
-        'points_per_element': {'C': (75, 302)}}. """
+        'points_per_element': {'C': (75, 302)}}. GPU runs (`use_gpu=True`) build the grid on the device;
+        {'use_gpu': False} keeps the generation on the CPU. """
         self.grids_preset = 'compact'
         """ numgrid parameter preset ('numgrid' scheme only): 'compact': radial precision and angular grids chosen per level such
         that the grid is similar in size to the 'treutler' grid of the same level (comparable accuracy at level 3 for light
@@ -423,8 +427,14 @@ class DFT:
         
         self.threads_x = int(self.max_threads_per_block/16)
         self.threads_y = int(self.max_threads_per_block/64)
-        self.dynamic_precision = False # Only for the XC term
-        """ Whether to use dynamic precision switching for XC term or not """
+        self.dynamic_precision = bool(use_gpu) # Only for the XC term
+        """ Whether to use dynamic precision switching for the XC term: the XC term is evaluated in single
+        precision until the relative energy change between two iterations falls below 5e-7 and in double
+        precision from there on, so the converged energy is a double-precision one (cholesterol/def2-SVP/PBE:
+        within 1e-12 Ha of a pure double-precision run, same number of iterations, 1.5x faster).
+        Default: True for GPU runs, and it only applies to them (XC_algo 1 and 3). `scf` turns it off for
+        meta-GGA functionals, whose tau single precision does not resolve well enough (about twice as many
+        iterations, and slower than double precision). """
         self.keep_ints3c2e_in_gpu = True
         """ Whether to keep the 3c2e integrals in GPU memory or not. 
         Recommended to keep in GPU memory to avoid CPU-GPU transfers at each iteration."""
@@ -480,8 +490,85 @@ class DFT:
         mf.grids.level = gridsLevel
         mf.grids.build()
         return mf.grids
-        
-    
+
+    def grid_pruning_mask(self, grids, basis, dmat, threshold_rho=1e-11, blocksize=None, cp_stream=None):
+        """Which grid points carry a non-negligible density: |rho * w| >= ``threshold_rho``.
+
+        The points are processed in blocks of ``blocksize``; in each block only the basis functions
+        whose radial cutoff reaches it are evaluated (the same screening as the XC term), so the cost is
+        far below that of the full AO matrix. Runs on the GPU when `use_gpu` is set (the AO values come
+        from the same CUDA kernel the XC term uses), otherwise in the parallel Numba kernels.
+
+        ``blocksize`` defaults to the XC batch size on the GPU (where the larger blocks pay off: fewer,
+        bigger kernels) and to 10000 on the CPU. It only decides which basis functions are screened away
+        per block, so the mask does not depend on it except for points right at the threshold.
+
+        Returns a NumPy boolean array of length ``len(grids.coords)``.
+        """
+        if blocksize is None:
+            blocksize = int(self.blocksize) if self.use_gpu and self.blocksize else 10000
+        coords = grids.coords
+        weights = grids.weights
+        ngrids = int(coords.shape[0])
+        nblocks = ngrids // blocksize
+        if not self.use_gpu:
+            list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices(
+                basis, coords, blocksize, nblocks, ngrids)
+            bfs_data = Integrals.bf_val_helpers.pack_bfs_data(basis)
+            keep = np.ones(ngrids, dtype=bool)
+        else:
+            # One stream for the CuPy allocations/contractions and the Numba kernels: the screening
+            # helper creates a non-blocking stream of its own when given none, which would not
+            # synchronize with the kernels launched on the default stream.
+            if cp_stream is None:
+                cp_stream = cp.cuda.get_current_stream()
+            cp_stream.use()
+            nb_stream = cuda.external_stream(cp_stream.ptr)
+            coords = cp.asarray(coords, dtype=cp.float64)
+            weights = cp.asarray(weights, dtype=cp.float64)
+            dmat = cp.asarray(dmat, dtype=cp.float64)
+            list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices_cupy(
+                basis, coords, blocksize, nblocks, ngrids, cp_stream)
+            bfs_data = [cp.asarray(a) for a in Integrals.bf_val_helpers.pack_bfs_data(basis)]
+            keep = cp.ones(ngrids, dtype=cp.bool_)
+            threads_per_block = (self.threads_x, self.threads_y)
+
+        for iblock in range(nblocks + 1):
+            offset = iblock * blocksize
+            end = min(offset + blocksize, ngrids)
+            if end <= offset:
+                continue
+            nonzero_indices_block = list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]]
+            if nonzero_indices_block.shape[0] == 0:
+                keep[offset:end] = False  # no basis function reaches these points: rho = 0
+                continue
+            coords_block = coords[offset:end]
+            if not self.use_gpu:
+                ao_value_block = Integrals.bf_val_helpers.eval_bfs(
+                    basis, coords_block, parallel=True, non_zero_indices=nonzero_indices_block, bfs_data=bfs_data)
+                idx_block = nonzero_indices_block.astype(np.int64)
+                rho_block = contract('ij,mi,mj->m', dmat[np.ix_(idx_block, idx_block)],
+                                     ao_value_block, ao_value_block)
+                keep[offset:end] = np.abs(rho_block * weights[offset:end]) >= threshold_rho
+            else:
+                nao_block = int(nonzero_indices_block.shape[0])
+                ao_value_block = cp.zeros((end - offset, nao_block), dtype=cp.float64)
+                blocks_per_grid = ((nao_block + self.threads_x - 1) // self.threads_x,
+                                   (end - offset + self.threads_y - 1) // self.threads_y)
+                Integrals.bf_val_helpers.eval_bfs_sparse_internal_cuda[blocks_per_grid, threads_per_block, nb_stream](
+                    bfs_data[0], bfs_data[1], bfs_data[2], bfs_data[3], bfs_data[4], bfs_data[5], bfs_data[6],
+                    coords_block, nonzero_indices_block, ao_value_block)
+                idx_block = nonzero_indices_block.astype(cp.int64)
+                # rho = sum_ij D_ij ao_mi ao_mj, contracted as the XC term does it
+                Fmj = ao_value_block @ dmat[cp.ix_(idx_block, idx_block)]
+                rho_block = (Fmj * ao_value_block).sum(axis=1)
+                keep[offset:end] = cp.abs(rho_block * weights[offset:end]) >= threshold_rho
+
+        if self.use_gpu:
+            cp_stream.synchronize()
+            keep = cp.asnumpy(keep)
+        return keep
+
     def nuclear_rep_energy(self, mol=None):
         """
         Compute the nuclear-nuclear repulsion energy.
@@ -1181,10 +1268,20 @@ class DFT:
                 threads_per_block = (self.threads_x, self.threads_y)
                 print('Threads per block configuration for the XC term: ', threads_per_block, flush=True)
                 print('Threads per block configuration for the all other calculations: ', (32, 32), flush=True)
-                if self.dynamic_precision:
-                    print('\n\nWill use dynamic precision. ')
+                # Meta-GGAs need tau = 1/2 sum |grad phi|^2, which single precision resolves badly: r2SCAN
+                # then takes about twice as many iterations and ends up slower than plain double precision
+                # (H2O 8 -> 19, decane 9 -> 19 iterations, ~2x wall time), with energies that vary by 1e-9 Ha
+                # between runs. The default therefore switches itself off for them.
+                dynamic_precision = self.dynamic_precision
+                if dynamic_precision and xc != 'HF' and XC.xc_semilocal_family(xc, self.use_libxc) == 4:
+                    print('\n\nDynamic precision is not used for meta-GGA functionals: single precision resolves')
+                    print('tau too poorly and the SCF then needs about twice as many iterations.', flush=True)
+                    dynamic_precision = False
+                if dynamic_precision:
+                    print('\n\nWill use dynamic precision (the default for GPU runs; set dynamic_precision=False to disable).')
                     print('This means that the XC term will be evaluated in single precision until the ')
-                    print('relative energy difference b/w successive iterations is less than 5.0E-6.')
+                    print('relative energy difference b/w successive iterations is less than 5.0E-7,')
+                    print('and in double precision from there on, so the converged energy is a double precision one.')
                     precision_XC = cp.float32
                 else:
                     precision_XC = cp.float64
@@ -1509,8 +1606,11 @@ class DFT:
                                   radial_precision=self.grids_radial_precision, angular_points=self.grids_angular_points)
                 else:
                     # Native grids: Treutler-Ahlrichs radial grids, Lebedev angular grids (numgrid tables),
-                    # angular pruning by radial regions, Becke partitioning with Treutler's atomic-size adjustment
-                    grids = Grids(mol, level=gridsLevel, ncores=ncores, scheme=self.grids_scheme, **self.grids_options)
+                    # angular pruning by radial regions, Becke partitioning with Treutler's atomic-size adjustment.
+                    # GPU runs build them on the device unless grids_options says otherwise.
+                    grids_options = dict(self.grids_options)
+                    grids_options.setdefault('use_gpu', self.use_gpu)
+                    grids = Grids(mol, level=gridsLevel, ncores=ncores, scheme=self.grids_scheme, **grids_options)
 
                 print('done!', flush=True)
                 durationgrids = timer() - startGrids
@@ -1522,34 +1622,12 @@ class DFT:
                 startGrids_prune_rho = timer()
                 if dmat_grid_pruning is None:
                     dmat_grid_pruning = dmat
-                threshold_rho = 1e-11
                 ngrids_temp = grids.coords.shape[0]
-                blocksize_temp = 10000
-                nblocks_temp = ngrids_temp//blocksize_temp
                 # Only the basis functions whose radial cutoff reaches a block of points are evaluated
-                # (the same screening as the XC evaluation), instead of the full AO matrix at every point
-                list_nonzero_indices_temp, count_nonzero_indices_temp = Integrals.bf_val_helpers.nonzero_ao_indices(basis, grids.coords, blocksize_temp, nblocks_temp, ngrids_temp)
-                bfs_data_temp = Integrals.bf_val_helpers.pack_bfs_data(basis)
-                keep = np.ones(ngrids_temp, dtype=bool)
-                for iblock in range(nblocks_temp+1):
-                    offset = iblock*blocksize_temp
-                    end = min(offset+blocksize_temp, ngrids_temp)
-                    if end <= offset:
-                        continue
-                    nonzero_indices_block = list_nonzero_indices_temp[iblock][0:count_nonzero_indices_temp[iblock]]
-                    if nonzero_indices_block.shape[0] == 0:
-                        keep[offset:end] = False  # no basis function reaches these points: rho = 0
-                        continue
-                    ao_value_block = Integrals.bf_val_helpers.eval_bfs(basis, grids.coords[offset:end], parallel=True,
-                                                                        non_zero_indices=nonzero_indices_block, bfs_data=bfs_data_temp)
-                    idx_block = nonzero_indices_block.astype(np.int64)
-                    rho_block = contract(
-                        'ij,mi,mj->m',
-                        dmat_grid_pruning[np.ix_(idx_block, idx_block)],
-                        ao_value_block,
-                        ao_value_block,
-                    )
-                    keep[offset:end] = np.abs(rho_block*grids.weights[offset:end]) >= threshold_rho
+                # (the same screening as the XC evaluation), instead of the full AO matrix at every point.
+                # GPU runs evaluate them with the same CUDA kernel the XC term uses.
+                keep = self.grid_pruning_mask(grids, basis, dmat_grid_pruning,
+                                              cp_stream=streams[0] if self.use_gpu else None)
                 ndeleted = int(ngrids_temp - np.count_nonzero(keep))
                 if hasattr(grids, 'prune_by_mask'):
                     grids.prune_by_mask(keep)

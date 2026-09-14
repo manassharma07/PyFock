@@ -81,7 +81,7 @@
 
 - ✅ **Pure Python Implementation**: Including molecular integral evaluations (overlap, kinetic, nuclear attraction, electron repulsion integrals)
 - ✅ **Density Fitting**: Efficient density fitting approximation with Cauchy-Schwarz screening
-- ✅ **GPU Acceleration**: Full GPU support for integral evaluation, XC term, and matrix operations
+- ✅ **GPU Acceleration**: Full GPU support for integral evaluation, XC term, and matrix operations. `use_gpu=True` runs the XC term in single precision until the relative energy change drops below 5e-7 and in double precision from there on (`dynamic_precision`, on by default since it is ~1.5x faster for the same converged energy; automatically disabled for meta-GGAs, whose tau single precision resolves too poorly)
 - ✅ **Multiple Integration Schemes**: 
   - Classical Taketa-Huzinaga-O-ohata scheme
   - Rys quadrature method (roots 1–10) for efficient ERI evaluation
@@ -95,7 +95,7 @@
 - ✅ **Effective Core Potentials**: Support for evaluation of ECP integrals
 - ✅ **Analytical gradients & forces**: Fast analytical nuclear gradients for density-fitted DFT — one-electron (overlap/kinetic/nuclear), DF Coulomb (3c2e + 2c2e), and XC for LDA, GGA and meta-GGA (native or LibXC) — matching PySCF forces and faster
 - ✅ **ASE Calculator**: Optional ASE interface (geometry optimization and the wider ASE ecosystem), using analytical forces by default
-- ✅ **XC integration grids**: Treutler-Ahlrichs radial and Lebedev angular grids with region-wise angular pruning and Becke partitioning (levels 0-9), built by a parallel Numba kernel; energies agree with PySCF to the SCF convergence threshold in our benchmarks; numgrid grids remain available as an alternative scheme
+- ✅ **XC integration grids**: Treutler-Ahlrichs radial and Lebedev angular grids with region-wise angular pruning and Becke partitioning (levels 0-9), built by a parallel Numba kernel or on the GPU (~6x faster, same grid); energies agree with PySCF to the SCF convergence threshold in our benchmarks; numgrid grids remain available as an alternative scheme
 - ✅ **SANO initial guess**: superposition of atomic natural-orbital densities (ANO-RCC-MB natural orbitals projected onto the calculation basis, no atomic SCF needed) as the default SCF starting point; it roughly halves the number of SCF iterations relative to the core-Hamiltonian guess and prunes the XC grid accurately
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
 
@@ -323,9 +323,17 @@ dftObj.grids_scheme = 'numgrid'; dftObj.grids_preset = 'compact'     # numgrid g
 dftObj.use_pyscf_grids = True                                        # or let PySCF build the grid (PySCF must be installed)
 ```
 
+A GPU calculation (`use_gpu=True`) also builds the grid on the GPU: the points, their atom indices and
+their box order are identical to the CPU build and the weights agree to ~1e-13, at about 6x the speed
+from roughly 30 atoms on (decane 0.13 s -> 0.02 s, taxol 3.7 s -> 0.68 s). It falls back to the CPU with
+a warning when CuPy or a CUDA device is missing; `grids_options={'use_gpu': False}` turns it off. The
+density pruning that follows the build runs on the GPU too, with the same AO kernel the XC term uses:
+it keeps exactly the same points as the CPU pruning at about 4.5x the speed (cholesterol 2.5 s -> 0.55 s).
+
 Standalone grids come from `Grids(mol, level=3)` (`coords`, `weights` and the atom index of every
-point, grouped into 1.2 Bohr boxes). See [docs/xc_grids.md](docs/xc_grids.md) for the construction,
-its validation and a study of what the numgrid grids can and cannot do.
+point, grouped into 1.2 Bohr boxes; `use_gpu=True` builds them on the GPU). See
+[docs/xc_grids.md](docs/xc_grids.md) for the construction, its validation and a study of what the
+numgrid grids can and cannot do.
 
 ### Density-Fitting Coulomb Algorithms and Memory Budget
 
