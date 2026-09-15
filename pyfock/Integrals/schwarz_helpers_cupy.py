@@ -21,6 +21,7 @@ except Exception as e:
         return decorator
     pass
 from .rys_helpers_cuda import coulomb_rys, coulomb_rys_3c2e, Roots, Roots_5, DATA_X, DATA_W
+from .cuda_compat import imax, imax3, imin
 
 @cuda.jit(fastmath=True, cache=True, max_registers=50)#(device=True)
 def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts, aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim, aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts, indx_startA, indx_endA, indx_startB, indx_endB, indx_startC, indx_endC, DATA_X, DATA_W, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, schwarz_threshold, offsets, strict_schwarz, out):
@@ -82,8 +83,8 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda(bfs_coords, bfs_contr_prim_
             val = 0.0
 
             if norder<=10: # Use rys quadrature # Good for upto i orbitals
-                n = int(max(la+lb,ma+mb,na+nb))
-                m = int(max(lc+ld,mc+md,nc+nd))
+                n = int(imax3(la+lb, ma+mb, na+nb))
+                m = int(imax3(lc+ld, mc+md, nc+nd))
                 
                 
                 #Loop over primitives
@@ -295,8 +296,8 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal_cuda_new(bfs_coords, bfs_con
                     val = 0.0
 
                     if norder <= 10:
-                        n = int(max(la+lb,ma+mb,na+nb))
-                        m = int(max(lc+ld,mc+md,nc+nd))
+                        n = int(imax3(la+lb, ma+mb, na+nb))
+                        m = int(imax3(lc+ld, mc+md, nc+nd))
                         
                         for kk in range(nprimk):
                             dkk = aux_bfs_coeffs[k][kk]

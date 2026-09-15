@@ -86,12 +86,15 @@ def gga_c_lyp_e_cupy(rho, sigma):
     # Return the values of the Lee-Yang-Parr energy density and potential
     # rho = cp.maximum(rho, 1e-12)
     # Constants
-    a = 0.04918
-    b = 0.132
-    c = 0.2533
-    d = 0.349
-    const = (3/10) * (3 * cp.pi ** 2) ** (2/3)
-    fac = 2 ** (11/3) * const
+    # cupy.fuse infers the type of bare Python scalars inside the kernel and may
+    # evaluate these constants in single precision; np.float64 pins them (see
+    # the CPU implementation above, which is the reference).
+    a = np.float64(0.04918)
+    b = np.float64(0.132)
+    c = np.float64(0.2533)
+    d = np.float64(0.349)
+    const = np.float64((3/10) * (3 * np.pi ** 2) ** (2/3))
+    fac = np.float64(2 ** (11/3) * const)
 
     rho_13 = rho ** (1 / 3)
     rho_m13 = 1 / rho_13
@@ -110,17 +113,20 @@ def gga_c_lyp_v_cupy(rho, sigma):
     # Adapted from https://github.com/dylan-jayatilaka/tonto/blob/master/foofiles/dft_functional.foo
     # Return the derivatives of the LYP correlation functional.
     # rho = cp.maximum(rho, 1e-12)
-    const = (3 / 10) * (3 * cp.pi ** 2) ** (2 / 3)
-    two_13 = 2 ** (1 / 3)
-    two_m13 = 1 / two_13
-    two_113 = 16 * two_m13
-    two_m113 = 1 / two_113
-    a = 0.04918
-    b = 0.132
-    c = 0.2533
-    d = 0.349
-    e = two_113 * const
-    ab9 = a * b / 9
+    # cupy.fuse infers the type of bare Python scalars inside the kernel and may
+    # evaluate these constants in single precision; np.float64 pins them (see
+    # the CPU implementation above, which is the reference).
+    const = np.float64((3 / 10) * (3 * np.pi ** 2) ** (2 / 3))
+    two_13 = np.float64(2 ** (1 / 3))
+    two_m13 = np.float64(1 / two_13)
+    two_113 = np.float64(16 * two_m13)
+    two_m113 = np.float64(1 / two_113)
+    a = np.float64(0.04918)
+    b = np.float64(0.132)
+    c = np.float64(0.2533)
+    d = np.float64(0.349)
+    e = np.float64(two_113 * const)
+    ab9 = np.float64(a * b / 9)
 
     rho1 = 0.5 * rho
     aa = 1/4 * sigma

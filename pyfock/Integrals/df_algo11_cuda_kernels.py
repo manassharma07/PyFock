@@ -6,7 +6,7 @@ KERNELS = {}
 
 
 @cuda.jit(cache=True)
-def build_0_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -21,14 +21,14 @@ def build_0_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 1, 1), float64)
     accum = cuda.local.array(1, float64)
     tmp = cuda.local.array(1, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 0, 0] = (build_0_0_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -43,14 +43,14 @@ def build_0_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 1, 2), float64)
     accum = cuda.local.array(3, float64)
     tmp = cuda.local.array(3, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 0, 1] = (build_0_0_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -65,14 +65,14 @@ def build_0_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 1, 3), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 0, 2] = (build_0_0_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -87,14 +87,14 @@ def build_0_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 1, 4), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 0, 3] = (build_0_0_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -109,14 +109,14 @@ def build_0_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 1, 5), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 0, 4] = (build_0_0_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -131,14 +131,14 @@ def build_0_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 1, 6), float64)
     accum = cuda.local.array(21, float64)
     tmp = cuda.local.array(21, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 0, 5] = (build_0_0_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -153,14 +153,14 @@ def build_0_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 1, 7), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 0, 6] = (build_0_0_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -175,14 +175,14 @@ def build_0_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 2, 1), float64)
     accum = cuda.local.array(3, float64)
     tmp = cuda.local.array(3, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 1, 0] = (build_0_1_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -197,14 +197,14 @@ def build_0_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 2, 2), float64)
     accum = cuda.local.array(9, float64)
     tmp = cuda.local.array(9, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 1, 1] = (build_0_1_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -219,14 +219,14 @@ def build_0_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 2, 3), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 1, 2] = (build_0_1_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -241,14 +241,14 @@ def build_0_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 2, 4), float64)
     accum = cuda.local.array(30, float64)
     tmp = cuda.local.array(30, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 1, 3] = (build_0_1_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -263,14 +263,14 @@ def build_0_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 2, 5), float64)
     accum = cuda.local.array(45, float64)
     tmp = cuda.local.array(45, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 1, 4] = (build_0_1_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -285,14 +285,14 @@ def build_0_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 2, 6), float64)
     accum = cuda.local.array(63, float64)
     tmp = cuda.local.array(63, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 1, 5] = (build_0_1_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -307,14 +307,14 @@ def build_0_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 2, 7), float64)
     accum = cuda.local.array(84, float64)
     tmp = cuda.local.array(84, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 1, 6] = (build_0_1_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -329,14 +329,14 @@ def build_0_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 3, 1), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 2, 0] = (build_0_2_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -351,14 +351,14 @@ def build_0_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 3, 2), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 2, 1] = (build_0_2_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -373,14 +373,14 @@ def build_0_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 3, 3), float64)
     accum = cuda.local.array(36, float64)
     tmp = cuda.local.array(36, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 2, 2] = (build_0_2_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -395,14 +395,14 @@ def build_0_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 3, 4), float64)
     accum = cuda.local.array(60, float64)
     tmp = cuda.local.array(60, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 2, 3] = (build_0_2_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -417,14 +417,14 @@ def build_0_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 3, 5), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 2, 4] = (build_0_2_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -439,14 +439,14 @@ def build_0_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 3, 6), float64)
     accum = cuda.local.array(126, float64)
     tmp = cuda.local.array(126, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 2, 5] = (build_0_2_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -461,14 +461,14 @@ def build_0_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 3, 7), float64)
     accum = cuda.local.array(168, float64)
     tmp = cuda.local.array(168, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 2, 6] = (build_0_2_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -483,14 +483,14 @@ def build_0_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 4, 1), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 3, 0] = (build_0_3_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -505,14 +505,14 @@ def build_0_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 4, 2), float64)
     accum = cuda.local.array(30, float64)
     tmp = cuda.local.array(30, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 3, 1] = (build_0_3_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -527,14 +527,14 @@ def build_0_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 4, 3), float64)
     accum = cuda.local.array(60, float64)
     tmp = cuda.local.array(60, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 3, 2] = (build_0_3_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -549,14 +549,14 @@ def build_0_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 4, 4), float64)
     accum = cuda.local.array(100, float64)
     tmp = cuda.local.array(100, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 3, 3] = (build_0_3_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -571,14 +571,14 @@ def build_0_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 4, 5), float64)
     accum = cuda.local.array(150, float64)
     tmp = cuda.local.array(150, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 3, 4] = (build_0_3_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -593,14 +593,14 @@ def build_0_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 4, 6), float64)
     accum = cuda.local.array(210, float64)
     tmp = cuda.local.array(210, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 3, 5] = (build_0_3_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -615,14 +615,14 @@ def build_0_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 4, 7), float64)
     accum = cuda.local.array(280, float64)
     tmp = cuda.local.array(280, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 3, 6] = (build_0_3_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -637,14 +637,14 @@ def build_0_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 5, 1), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 4, 0] = (build_0_4_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -659,14 +659,14 @@ def build_0_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 5, 2), float64)
     accum = cuda.local.array(45, float64)
     tmp = cuda.local.array(45, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 4, 1] = (build_0_4_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -681,14 +681,14 @@ def build_0_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 5, 3), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 4, 2] = (build_0_4_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -703,14 +703,14 @@ def build_0_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 5, 4), float64)
     accum = cuda.local.array(150, float64)
     tmp = cuda.local.array(150, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 4, 3] = (build_0_4_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -725,14 +725,14 @@ def build_0_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 5, 5), float64)
     accum = cuda.local.array(225, float64)
     tmp = cuda.local.array(225, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 4, 4] = (build_0_4_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -747,14 +747,14 @@ def build_0_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 5, 6), float64)
     accum = cuda.local.array(315, float64)
     tmp = cuda.local.array(315, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 4, 5] = (build_0_4_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -769,14 +769,14 @@ def build_0_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 5, 7), float64)
     accum = cuda.local.array(420, float64)
     tmp = cuda.local.array(420, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 4, 6] = (build_0_4_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -791,14 +791,14 @@ def build_0_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 6, 1), float64)
     accum = cuda.local.array(21, float64)
     tmp = cuda.local.array(21, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 5, 0] = (build_0_5_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -813,14 +813,14 @@ def build_0_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 6, 2), float64)
     accum = cuda.local.array(63, float64)
     tmp = cuda.local.array(63, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 5, 1] = (build_0_5_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -835,14 +835,14 @@ def build_0_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 6, 3), float64)
     accum = cuda.local.array(126, float64)
     tmp = cuda.local.array(126, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 5, 2] = (build_0_5_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -857,14 +857,14 @@ def build_0_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 6, 4), float64)
     accum = cuda.local.array(210, float64)
     tmp = cuda.local.array(210, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 5, 3] = (build_0_5_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -879,14 +879,14 @@ def build_0_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 6, 5), float64)
     accum = cuda.local.array(315, float64)
     tmp = cuda.local.array(315, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 5, 4] = (build_0_5_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -901,14 +901,14 @@ def build_0_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 6, 6), float64)
     accum = cuda.local.array(441, float64)
     tmp = cuda.local.array(441, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 5, 5] = (build_0_5_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -923,14 +923,14 @@ def build_0_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((1, 6, 7), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 5, 6] = (build_0_5_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_0_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -945,14 +945,14 @@ def build_0_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 7, 1), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 6, 0] = (build_0_6_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -967,14 +967,14 @@ def build_0_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 7, 2), float64)
     accum = cuda.local.array(84, float64)
     tmp = cuda.local.array(84, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 6, 1] = (build_0_6_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -989,14 +989,14 @@ def build_0_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 7, 3), float64)
     accum = cuda.local.array(168, float64)
     tmp = cuda.local.array(168, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 6, 2] = (build_0_6_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1011,14 +1011,14 @@ def build_0_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 7, 4), float64)
     accum = cuda.local.array(280, float64)
     tmp = cuda.local.array(280, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 6, 3] = (build_0_6_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1033,14 +1033,14 @@ def build_0_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((1, 7, 5), float64)
     accum = cuda.local.array(420, float64)
     tmp = cuda.local.array(420, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 6, 4] = (build_0_6_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_0_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1055,14 +1055,14 @@ def build_0_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((1, 7, 6), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 6, 5] = (build_0_6_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_0_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_0_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1077,14 +1077,14 @@ def build_0_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((1, 7, 7), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[0, 6, 6] = (build_0_6_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1099,14 +1099,14 @@ def build_1_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 1, 1), float64)
     accum = cuda.local.array(3, float64)
     tmp = cuda.local.array(3, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 0, 0] = (build_1_0_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1121,14 +1121,14 @@ def build_1_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 1, 2), float64)
     accum = cuda.local.array(9, float64)
     tmp = cuda.local.array(9, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 0, 1] = (build_1_0_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1143,14 +1143,14 @@ def build_1_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 1, 3), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 0, 2] = (build_1_0_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1165,14 +1165,14 @@ def build_1_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 1, 4), float64)
     accum = cuda.local.array(30, float64)
     tmp = cuda.local.array(30, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 0, 3] = (build_1_0_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1187,14 +1187,14 @@ def build_1_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 1, 5), float64)
     accum = cuda.local.array(45, float64)
     tmp = cuda.local.array(45, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 0, 4] = (build_1_0_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1209,14 +1209,14 @@ def build_1_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 1, 6), float64)
     accum = cuda.local.array(63, float64)
     tmp = cuda.local.array(63, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 0, 5] = (build_1_0_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1231,14 +1231,14 @@ def build_1_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 1, 7), float64)
     accum = cuda.local.array(84, float64)
     tmp = cuda.local.array(84, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 0, 6] = (build_1_0_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1253,14 +1253,14 @@ def build_1_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 2, 1), float64)
     accum = cuda.local.array(9, float64)
     tmp = cuda.local.array(9, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 1, 0] = (build_1_1_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1275,14 +1275,14 @@ def build_1_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 2, 2), float64)
     accum = cuda.local.array(27, float64)
     tmp = cuda.local.array(27, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 1, 1] = (build_1_1_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1297,14 +1297,14 @@ def build_1_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 2, 3), float64)
     accum = cuda.local.array(54, float64)
     tmp = cuda.local.array(54, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 1, 2] = (build_1_1_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1319,14 +1319,14 @@ def build_1_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 2, 4), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 1, 3] = (build_1_1_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1341,14 +1341,14 @@ def build_1_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 2, 5), float64)
     accum = cuda.local.array(135, float64)
     tmp = cuda.local.array(135, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 1, 4] = (build_1_1_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1363,14 +1363,14 @@ def build_1_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 2, 6), float64)
     accum = cuda.local.array(189, float64)
     tmp = cuda.local.array(189, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 1, 5] = (build_1_1_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1385,14 +1385,14 @@ def build_1_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 2, 7), float64)
     accum = cuda.local.array(252, float64)
     tmp = cuda.local.array(252, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 1, 6] = (build_1_1_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1407,14 +1407,14 @@ def build_1_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 3, 1), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 2, 0] = (build_1_2_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1429,14 +1429,14 @@ def build_1_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 3, 2), float64)
     accum = cuda.local.array(54, float64)
     tmp = cuda.local.array(54, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 2, 1] = (build_1_2_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1451,14 +1451,14 @@ def build_1_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 3, 3), float64)
     accum = cuda.local.array(108, float64)
     tmp = cuda.local.array(108, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 2, 2] = (build_1_2_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1473,14 +1473,14 @@ def build_1_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 3, 4), float64)
     accum = cuda.local.array(180, float64)
     tmp = cuda.local.array(180, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 2, 3] = (build_1_2_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1495,14 +1495,14 @@ def build_1_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 3, 5), float64)
     accum = cuda.local.array(270, float64)
     tmp = cuda.local.array(270, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 2, 4] = (build_1_2_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1517,14 +1517,14 @@ def build_1_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 3, 6), float64)
     accum = cuda.local.array(378, float64)
     tmp = cuda.local.array(378, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 2, 5] = (build_1_2_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1539,14 +1539,14 @@ def build_1_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 3, 7), float64)
     accum = cuda.local.array(504, float64)
     tmp = cuda.local.array(504, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 2, 6] = (build_1_2_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1561,14 +1561,14 @@ def build_1_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 4, 1), float64)
     accum = cuda.local.array(30, float64)
     tmp = cuda.local.array(30, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 3, 0] = (build_1_3_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1583,14 +1583,14 @@ def build_1_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 4, 2), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 3, 1] = (build_1_3_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1605,14 +1605,14 @@ def build_1_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 4, 3), float64)
     accum = cuda.local.array(180, float64)
     tmp = cuda.local.array(180, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 3, 2] = (build_1_3_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1627,14 +1627,14 @@ def build_1_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 4, 4), float64)
     accum = cuda.local.array(300, float64)
     tmp = cuda.local.array(300, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 3, 3] = (build_1_3_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1649,14 +1649,14 @@ def build_1_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 4, 5), float64)
     accum = cuda.local.array(450, float64)
     tmp = cuda.local.array(450, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 3, 4] = (build_1_3_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1671,14 +1671,14 @@ def build_1_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 4, 6), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 3, 5] = (build_1_3_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1693,14 +1693,14 @@ def build_1_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 4, 7), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 3, 6] = (build_1_3_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1715,14 +1715,14 @@ def build_1_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 5, 1), float64)
     accum = cuda.local.array(45, float64)
     tmp = cuda.local.array(45, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 4, 0] = (build_1_4_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1737,14 +1737,14 @@ def build_1_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 5, 2), float64)
     accum = cuda.local.array(135, float64)
     tmp = cuda.local.array(135, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 4, 1] = (build_1_4_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1759,14 +1759,14 @@ def build_1_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 5, 3), float64)
     accum = cuda.local.array(270, float64)
     tmp = cuda.local.array(270, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 4, 2] = (build_1_4_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1781,14 +1781,14 @@ def build_1_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 5, 4), float64)
     accum = cuda.local.array(450, float64)
     tmp = cuda.local.array(450, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 4, 3] = (build_1_4_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1803,14 +1803,14 @@ def build_1_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 5, 5), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 4, 4] = (build_1_4_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1825,14 +1825,14 @@ def build_1_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 5, 6), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 4, 5] = (build_1_4_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1847,14 +1847,14 @@ def build_1_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 5, 7), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 4, 6] = (build_1_4_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1869,14 +1869,14 @@ def build_1_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 6, 1), float64)
     accum = cuda.local.array(63, float64)
     tmp = cuda.local.array(63, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 5, 0] = (build_1_5_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1891,14 +1891,14 @@ def build_1_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 6, 2), float64)
     accum = cuda.local.array(189, float64)
     tmp = cuda.local.array(189, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 5, 1] = (build_1_5_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -1913,14 +1913,14 @@ def build_1_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 6, 3), float64)
     accum = cuda.local.array(378, float64)
     tmp = cuda.local.array(378, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 5, 2] = (build_1_5_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1935,14 +1935,14 @@ def build_1_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 6, 4), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 5, 3] = (build_1_5_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1957,14 +1957,14 @@ def build_1_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 6, 5), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 5, 4] = (build_1_5_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -1979,14 +1979,14 @@ def build_1_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 6, 6), float64)
     accum = cuda.local.array(11, float64)
     tmp = cuda.local.array(11, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 5, 5] = (build_1_5_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2001,14 +2001,14 @@ def build_1_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 6, 7), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 5, 6] = (build_1_5_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2023,14 +2023,14 @@ def build_1_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 7, 1), float64)
     accum = cuda.local.array(84, float64)
     tmp = cuda.local.array(84, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 6, 0] = (build_1_6_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2045,14 +2045,14 @@ def build_1_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 7, 2), float64)
     accum = cuda.local.array(252, float64)
     tmp = cuda.local.array(252, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 6, 1] = (build_1_6_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2067,14 +2067,14 @@ def build_1_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((2, 7, 3), float64)
     accum = cuda.local.array(504, float64)
     tmp = cuda.local.array(504, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 6, 2] = (build_1_6_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_1_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2089,14 +2089,14 @@ def build_1_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 7, 4), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 6, 3] = (build_1_6_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2111,14 +2111,14 @@ def build_1_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 7, 5), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 6, 4] = (build_1_6_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2133,14 +2133,14 @@ def build_1_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 7, 6), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 6, 5] = (build_1_6_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_1_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_1_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2155,14 +2155,14 @@ def build_1_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((2, 7, 7), float64)
     accum = cuda.local.array(19, float64)
     tmp = cuda.local.array(19, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[1, 6, 6] = (build_1_6_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2177,14 +2177,14 @@ def build_2_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 1, 1), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 0, 0] = (build_2_0_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2199,14 +2199,14 @@ def build_2_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 1, 2), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 0, 1] = (build_2_0_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2221,14 +2221,14 @@ def build_2_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 1, 3), float64)
     accum = cuda.local.array(36, float64)
     tmp = cuda.local.array(36, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 0, 2] = (build_2_0_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2243,14 +2243,14 @@ def build_2_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 1, 4), float64)
     accum = cuda.local.array(60, float64)
     tmp = cuda.local.array(60, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 0, 3] = (build_2_0_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2265,14 +2265,14 @@ def build_2_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 1, 5), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 0, 4] = (build_2_0_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2287,14 +2287,14 @@ def build_2_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 1, 6), float64)
     accum = cuda.local.array(126, float64)
     tmp = cuda.local.array(126, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 0, 5] = (build_2_0_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2309,14 +2309,14 @@ def build_2_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 1, 7), float64)
     accum = cuda.local.array(168, float64)
     tmp = cuda.local.array(168, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 0, 6] = (build_2_0_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2331,14 +2331,14 @@ def build_2_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 2, 1), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 1, 0] = (build_2_1_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2353,14 +2353,14 @@ def build_2_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 2, 2), float64)
     accum = cuda.local.array(54, float64)
     tmp = cuda.local.array(54, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 1, 1] = (build_2_1_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2375,14 +2375,14 @@ def build_2_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 2, 3), float64)
     accum = cuda.local.array(108, float64)
     tmp = cuda.local.array(108, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 1, 2] = (build_2_1_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2397,14 +2397,14 @@ def build_2_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 2, 4), float64)
     accum = cuda.local.array(180, float64)
     tmp = cuda.local.array(180, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 1, 3] = (build_2_1_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2419,14 +2419,14 @@ def build_2_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 2, 5), float64)
     accum = cuda.local.array(270, float64)
     tmp = cuda.local.array(270, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 1, 4] = (build_2_1_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2441,14 +2441,14 @@ def build_2_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 2, 6), float64)
     accum = cuda.local.array(378, float64)
     tmp = cuda.local.array(378, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 1, 5] = (build_2_1_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2463,14 +2463,14 @@ def build_2_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 2, 7), float64)
     accum = cuda.local.array(504, float64)
     tmp = cuda.local.array(504, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 1, 6] = (build_2_1_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2485,14 +2485,14 @@ def build_2_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 3, 1), float64)
     accum = cuda.local.array(36, float64)
     tmp = cuda.local.array(36, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 2, 0] = (build_2_2_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2507,14 +2507,14 @@ def build_2_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 3, 2), float64)
     accum = cuda.local.array(108, float64)
     tmp = cuda.local.array(108, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 2, 1] = (build_2_2_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2529,14 +2529,14 @@ def build_2_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 3, 3), float64)
     accum = cuda.local.array(216, float64)
     tmp = cuda.local.array(216, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 2, 2] = (build_2_2_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2551,14 +2551,14 @@ def build_2_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 3, 4), float64)
     accum = cuda.local.array(360, float64)
     tmp = cuda.local.array(360, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 2, 3] = (build_2_2_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2573,14 +2573,14 @@ def build_2_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 3, 5), float64)
     accum = cuda.local.array(540, float64)
     tmp = cuda.local.array(540, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 2, 4] = (build_2_2_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2595,14 +2595,14 @@ def build_2_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 3, 6), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 2, 5] = (build_2_2_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2617,14 +2617,14 @@ def build_2_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 3, 7), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 2, 6] = (build_2_2_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2639,14 +2639,14 @@ def build_2_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 4, 1), float64)
     accum = cuda.local.array(60, float64)
     tmp = cuda.local.array(60, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 3, 0] = (build_2_3_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2661,14 +2661,14 @@ def build_2_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 4, 2), float64)
     accum = cuda.local.array(180, float64)
     tmp = cuda.local.array(180, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 3, 1] = (build_2_3_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2683,14 +2683,14 @@ def build_2_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 4, 3), float64)
     accum = cuda.local.array(360, float64)
     tmp = cuda.local.array(360, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 3, 2] = (build_2_3_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2705,14 +2705,14 @@ def build_2_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 4, 4), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 3, 3] = (build_2_3_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2727,14 +2727,14 @@ def build_2_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 4, 5), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 3, 4] = (build_2_3_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2749,14 +2749,14 @@ def build_2_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 4, 6), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 3, 5] = (build_2_3_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2771,14 +2771,14 @@ def build_2_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 4, 7), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 3, 6] = (build_2_3_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2793,14 +2793,14 @@ def build_2_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 5, 1), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 4, 0] = (build_2_4_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2815,14 +2815,14 @@ def build_2_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 5, 2), float64)
     accum = cuda.local.array(270, float64)
     tmp = cuda.local.array(270, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 4, 1] = (build_2_4_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2837,14 +2837,14 @@ def build_2_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 5, 3), float64)
     accum = cuda.local.array(540, float64)
     tmp = cuda.local.array(540, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 4, 2] = (build_2_4_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2859,14 +2859,14 @@ def build_2_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 5, 4), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 4, 3] = (build_2_4_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2881,14 +2881,14 @@ def build_2_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 5, 5), float64)
     accum = cuda.local.array(11, float64)
     tmp = cuda.local.array(11, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 4, 4] = (build_2_4_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2903,14 +2903,14 @@ def build_2_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 5, 6), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 4, 5] = (build_2_4_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2925,14 +2925,14 @@ def build_2_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 5, 7), float64)
     accum = cuda.local.array(20, float64)
     tmp = cuda.local.array(20, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 4, 6] = (build_2_4_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2947,14 +2947,14 @@ def build_2_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 6, 1), float64)
     accum = cuda.local.array(126, float64)
     tmp = cuda.local.array(126, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 5, 0] = (build_2_5_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -2969,14 +2969,14 @@ def build_2_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 6, 2), float64)
     accum = cuda.local.array(378, float64)
     tmp = cuda.local.array(378, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 5, 1] = (build_2_5_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -2991,14 +2991,14 @@ def build_2_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 6, 3), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 5, 2] = (build_2_5_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3013,14 +3013,14 @@ def build_2_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 6, 4), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 5, 3] = (build_2_5_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3035,14 +3035,14 @@ def build_2_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 6, 5), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 5, 4] = (build_2_5_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3057,14 +3057,14 @@ def build_2_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 6, 6), float64)
     accum = cuda.local.array(21, float64)
     tmp = cuda.local.array(21, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 5, 5] = (build_2_5_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3079,14 +3079,14 @@ def build_2_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 6, 7), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 5, 6] = (build_2_5_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3101,14 +3101,14 @@ def build_2_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 7, 1), float64)
     accum = cuda.local.array(168, float64)
     tmp = cuda.local.array(168, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 6, 0] = (build_2_6_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3123,14 +3123,14 @@ def build_2_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((3, 7, 2), float64)
     accum = cuda.local.array(504, float64)
     tmp = cuda.local.array(504, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 6, 1] = (build_2_6_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_2_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3145,14 +3145,14 @@ def build_2_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 7, 3), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 6, 2] = (build_2_6_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3167,14 +3167,14 @@ def build_2_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 7, 4), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 6, 3] = (build_2_6_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3189,14 +3189,14 @@ def build_2_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 7, 5), float64)
     accum = cuda.local.array(20, float64)
     tmp = cuda.local.array(20, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 6, 4] = (build_2_6_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3211,14 +3211,14 @@ def build_2_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 7, 6), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 6, 5] = (build_2_6_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_2_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_2_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3233,14 +3233,14 @@ def build_2_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((3, 7, 7), float64)
     accum = cuda.local.array(37, float64)
     tmp = cuda.local.array(37, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[2, 6, 6] = (build_2_6_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3255,14 +3255,14 @@ def build_3_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 1, 1), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 0, 0] = (build_3_0_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3277,14 +3277,14 @@ def build_3_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 1, 2), float64)
     accum = cuda.local.array(30, float64)
     tmp = cuda.local.array(30, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 0, 1] = (build_3_0_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3299,14 +3299,14 @@ def build_3_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 1, 3), float64)
     accum = cuda.local.array(60, float64)
     tmp = cuda.local.array(60, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 0, 2] = (build_3_0_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3321,14 +3321,14 @@ def build_3_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 1, 4), float64)
     accum = cuda.local.array(100, float64)
     tmp = cuda.local.array(100, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 0, 3] = (build_3_0_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3343,14 +3343,14 @@ def build_3_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 1, 5), float64)
     accum = cuda.local.array(150, float64)
     tmp = cuda.local.array(150, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 0, 4] = (build_3_0_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3365,14 +3365,14 @@ def build_3_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 1, 6), float64)
     accum = cuda.local.array(210, float64)
     tmp = cuda.local.array(210, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 0, 5] = (build_3_0_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3387,14 +3387,14 @@ def build_3_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 1, 7), float64)
     accum = cuda.local.array(280, float64)
     tmp = cuda.local.array(280, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 0, 6] = (build_3_0_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3409,14 +3409,14 @@ def build_3_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 2, 1), float64)
     accum = cuda.local.array(30, float64)
     tmp = cuda.local.array(30, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 1, 0] = (build_3_1_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3431,14 +3431,14 @@ def build_3_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 2, 2), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 1, 1] = (build_3_1_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3453,14 +3453,14 @@ def build_3_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 2, 3), float64)
     accum = cuda.local.array(180, float64)
     tmp = cuda.local.array(180, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 1, 2] = (build_3_1_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3475,14 +3475,14 @@ def build_3_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 2, 4), float64)
     accum = cuda.local.array(300, float64)
     tmp = cuda.local.array(300, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 1, 3] = (build_3_1_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3497,14 +3497,14 @@ def build_3_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 2, 5), float64)
     accum = cuda.local.array(450, float64)
     tmp = cuda.local.array(450, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 1, 4] = (build_3_1_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3519,14 +3519,14 @@ def build_3_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 2, 6), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 1, 5] = (build_3_1_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3541,14 +3541,14 @@ def build_3_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 2, 7), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 1, 6] = (build_3_1_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3563,14 +3563,14 @@ def build_3_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 3, 1), float64)
     accum = cuda.local.array(60, float64)
     tmp = cuda.local.array(60, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 2, 0] = (build_3_2_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3585,14 +3585,14 @@ def build_3_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 3, 2), float64)
     accum = cuda.local.array(180, float64)
     tmp = cuda.local.array(180, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 2, 1] = (build_3_2_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3607,14 +3607,14 @@ def build_3_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 3, 3), float64)
     accum = cuda.local.array(360, float64)
     tmp = cuda.local.array(360, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 2, 2] = (build_3_2_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3629,14 +3629,14 @@ def build_3_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 3, 4), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 2, 3] = (build_3_2_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3651,14 +3651,14 @@ def build_3_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 3, 5), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 2, 4] = (build_3_2_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3673,14 +3673,14 @@ def build_3_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 3, 6), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 2, 5] = (build_3_2_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3695,14 +3695,14 @@ def build_3_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 3, 7), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 2, 6] = (build_3_2_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3717,14 +3717,14 @@ def build_3_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 4, 1), float64)
     accum = cuda.local.array(100, float64)
     tmp = cuda.local.array(100, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 3, 0] = (build_3_3_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3739,14 +3739,14 @@ def build_3_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 4, 2), float64)
     accum = cuda.local.array(300, float64)
     tmp = cuda.local.array(300, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 3, 1] = (build_3_3_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3761,14 +3761,14 @@ def build_3_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 4, 3), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 3, 2] = (build_3_3_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3783,14 +3783,14 @@ def build_3_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 4, 4), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 3, 3] = (build_3_3_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3805,14 +3805,14 @@ def build_3_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 4, 5), float64)
     accum = cuda.local.array(12, float64)
     tmp = cuda.local.array(12, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 3, 4] = (build_3_3_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3827,14 +3827,14 @@ def build_3_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 4, 6), float64)
     accum = cuda.local.array(17, float64)
     tmp = cuda.local.array(17, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 3, 5] = (build_3_3_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3849,14 +3849,14 @@ def build_3_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 4, 7), float64)
     accum = cuda.local.array(22, float64)
     tmp = cuda.local.array(22, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 3, 6] = (build_3_3_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3871,14 +3871,14 @@ def build_3_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 5, 1), float64)
     accum = cuda.local.array(150, float64)
     tmp = cuda.local.array(150, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 4, 0] = (build_3_4_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -3893,14 +3893,14 @@ def build_3_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 5, 2), float64)
     accum = cuda.local.array(450, float64)
     tmp = cuda.local.array(450, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 4, 1] = (build_3_4_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3915,14 +3915,14 @@ def build_3_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 5, 3), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 4, 2] = (build_3_4_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3937,14 +3937,14 @@ def build_3_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 5, 4), float64)
     accum = cuda.local.array(12, float64)
     tmp = cuda.local.array(12, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 4, 3] = (build_3_4_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3959,14 +3959,14 @@ def build_3_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 5, 5), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 4, 4] = (build_3_4_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -3981,14 +3981,14 @@ def build_3_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 5, 6), float64)
     accum = cuda.local.array(25, float64)
     tmp = cuda.local.array(25, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 4, 5] = (build_3_4_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4003,14 +4003,14 @@ def build_3_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 5, 7), float64)
     accum = cuda.local.array(33, float64)
     tmp = cuda.local.array(33, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 4, 6] = (build_3_4_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4025,14 +4025,14 @@ def build_3_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 6, 1), float64)
     accum = cuda.local.array(210, float64)
     tmp = cuda.local.array(210, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 5, 0] = (build_3_5_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4047,14 +4047,14 @@ def build_3_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 6, 2), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 5, 1] = (build_3_5_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4069,14 +4069,14 @@ def build_3_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 6, 3), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 5, 2] = (build_3_5_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4091,14 +4091,14 @@ def build_3_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 6, 4), float64)
     accum = cuda.local.array(17, float64)
     tmp = cuda.local.array(17, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 5, 3] = (build_3_5_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4113,14 +4113,14 @@ def build_3_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 6, 5), float64)
     accum = cuda.local.array(25, float64)
     tmp = cuda.local.array(25, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 5, 4] = (build_3_5_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4135,14 +4135,14 @@ def build_3_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 6, 6), float64)
     accum = cuda.local.array(35, float64)
     tmp = cuda.local.array(35, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 5, 5] = (build_3_5_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4157,14 +4157,14 @@ def build_3_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 6, 7), float64)
     accum = cuda.local.array(46, float64)
     tmp = cuda.local.array(46, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 5, 6] = (build_3_5_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4179,14 +4179,14 @@ def build_3_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((4, 7, 1), float64)
     accum = cuda.local.array(280, float64)
     tmp = cuda.local.array(280, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 6, 0] = (build_3_6_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_3_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4201,14 +4201,14 @@ def build_3_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 7, 2), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 6, 1] = (build_3_6_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4223,14 +4223,14 @@ def build_3_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 7, 3), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 6, 2] = (build_3_6_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4245,14 +4245,14 @@ def build_3_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 7, 4), float64)
     accum = cuda.local.array(22, float64)
     tmp = cuda.local.array(22, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 6, 3] = (build_3_6_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4267,14 +4267,14 @@ def build_3_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 7, 5), float64)
     accum = cuda.local.array(33, float64)
     tmp = cuda.local.array(33, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 6, 4] = (build_3_6_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4289,14 +4289,14 @@ def build_3_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 7, 6), float64)
     accum = cuda.local.array(46, float64)
     tmp = cuda.local.array(46, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 6, 5] = (build_3_6_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_3_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_3_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4311,14 +4311,14 @@ def build_3_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((4, 7, 7), float64)
     accum = cuda.local.array(62, float64)
     tmp = cuda.local.array(62, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[3, 6, 6] = (build_3_6_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4333,14 +4333,14 @@ def build_4_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 1, 1), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 0, 0] = (build_4_0_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4355,14 +4355,14 @@ def build_4_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 1, 2), float64)
     accum = cuda.local.array(45, float64)
     tmp = cuda.local.array(45, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 0, 1] = (build_4_0_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4377,14 +4377,14 @@ def build_4_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 1, 3), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 0, 2] = (build_4_0_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4399,14 +4399,14 @@ def build_4_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 1, 4), float64)
     accum = cuda.local.array(150, float64)
     tmp = cuda.local.array(150, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 0, 3] = (build_4_0_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4421,14 +4421,14 @@ def build_4_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 1, 5), float64)
     accum = cuda.local.array(225, float64)
     tmp = cuda.local.array(225, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 0, 4] = (build_4_0_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4443,14 +4443,14 @@ def build_4_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 1, 6), float64)
     accum = cuda.local.array(315, float64)
     tmp = cuda.local.array(315, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 0, 5] = (build_4_0_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4465,14 +4465,14 @@ def build_4_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 1, 7), float64)
     accum = cuda.local.array(420, float64)
     tmp = cuda.local.array(420, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 0, 6] = (build_4_0_6, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4487,14 +4487,14 @@ def build_4_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 2, 1), float64)
     accum = cuda.local.array(45, float64)
     tmp = cuda.local.array(45, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 1, 0] = (build_4_1_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4509,14 +4509,14 @@ def build_4_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 2, 2), float64)
     accum = cuda.local.array(135, float64)
     tmp = cuda.local.array(135, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 1, 1] = (build_4_1_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4531,14 +4531,14 @@ def build_4_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 2, 3), float64)
     accum = cuda.local.array(270, float64)
     tmp = cuda.local.array(270, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 1, 2] = (build_4_1_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4553,14 +4553,14 @@ def build_4_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 2, 4), float64)
     accum = cuda.local.array(450, float64)
     tmp = cuda.local.array(450, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 1, 3] = (build_4_1_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4575,14 +4575,14 @@ def build_4_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 2, 5), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 1, 4] = (build_4_1_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4597,14 +4597,14 @@ def build_4_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 2, 6), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 1, 5] = (build_4_1_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4619,14 +4619,14 @@ def build_4_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 2, 7), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 1, 6] = (build_4_1_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4641,14 +4641,14 @@ def build_4_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 3, 1), float64)
     accum = cuda.local.array(90, float64)
     tmp = cuda.local.array(90, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 2, 0] = (build_4_2_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4663,14 +4663,14 @@ def build_4_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 3, 2), float64)
     accum = cuda.local.array(270, float64)
     tmp = cuda.local.array(270, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 2, 1] = (build_4_2_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4685,14 +4685,14 @@ def build_4_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 3, 3), float64)
     accum = cuda.local.array(540, float64)
     tmp = cuda.local.array(540, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 2, 2] = (build_4_2_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4707,14 +4707,14 @@ def build_4_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 3, 4), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 2, 3] = (build_4_2_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4729,14 +4729,14 @@ def build_4_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 3, 5), float64)
     accum = cuda.local.array(11, float64)
     tmp = cuda.local.array(11, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 2, 4] = (build_4_2_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4751,14 +4751,14 @@ def build_4_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 3, 6), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 2, 5] = (build_4_2_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4773,14 +4773,14 @@ def build_4_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 3, 7), float64)
     accum = cuda.local.array(20, float64)
     tmp = cuda.local.array(20, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 2, 6] = (build_4_2_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4795,14 +4795,14 @@ def build_4_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 4, 1), float64)
     accum = cuda.local.array(150, float64)
     tmp = cuda.local.array(150, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 3, 0] = (build_4_3_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4817,14 +4817,14 @@ def build_4_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 4, 2), float64)
     accum = cuda.local.array(450, float64)
     tmp = cuda.local.array(450, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 3, 1] = (build_4_3_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4839,14 +4839,14 @@ def build_4_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 4, 3), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 3, 2] = (build_4_3_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4861,14 +4861,14 @@ def build_4_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 4, 4), float64)
     accum = cuda.local.array(12, float64)
     tmp = cuda.local.array(12, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 3, 3] = (build_4_3_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4883,14 +4883,14 @@ def build_4_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 4, 5), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 3, 4] = (build_4_3_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4905,14 +4905,14 @@ def build_4_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 4, 6), float64)
     accum = cuda.local.array(25, float64)
     tmp = cuda.local.array(25, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 3, 5] = (build_4_3_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4927,14 +4927,14 @@ def build_4_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 4, 7), float64)
     accum = cuda.local.array(33, float64)
     tmp = cuda.local.array(33, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 3, 6] = (build_4_3_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -4949,14 +4949,14 @@ def build_4_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 5, 1), float64)
     accum = cuda.local.array(225, float64)
     tmp = cuda.local.array(225, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 4, 0] = (build_4_4_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4971,14 +4971,14 @@ def build_4_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 5, 2), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 4, 1] = (build_4_4_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -4993,14 +4993,14 @@ def build_4_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 5, 3), float64)
     accum = cuda.local.array(11, float64)
     tmp = cuda.local.array(11, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 4, 2] = (build_4_4_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5015,14 +5015,14 @@ def build_4_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 5, 4), float64)
     accum = cuda.local.array(18, float64)
     tmp = cuda.local.array(18, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 4, 3] = (build_4_4_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5037,14 +5037,14 @@ def build_4_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 5, 5), float64)
     accum = cuda.local.array(27, float64)
     tmp = cuda.local.array(27, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 4, 4] = (build_4_4_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5059,14 +5059,14 @@ def build_4_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 5, 6), float64)
     accum = cuda.local.array(37, float64)
     tmp = cuda.local.array(37, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 4, 5] = (build_4_4_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5081,14 +5081,14 @@ def build_4_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 5, 7), float64)
     accum = cuda.local.array(50, float64)
     tmp = cuda.local.array(50, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 4, 6] = (build_4_4_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5103,14 +5103,14 @@ def build_4_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 6, 1), float64)
     accum = cuda.local.array(315, float64)
     tmp = cuda.local.array(315, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 5, 0] = (build_4_5_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5125,14 +5125,14 @@ def build_4_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 6, 2), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 5, 1] = (build_4_5_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5147,14 +5147,14 @@ def build_4_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 6, 3), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 5, 2] = (build_4_5_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5169,14 +5169,14 @@ def build_4_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 6, 4), float64)
     accum = cuda.local.array(25, float64)
     tmp = cuda.local.array(25, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 5, 3] = (build_4_5_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5191,14 +5191,14 @@ def build_4_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 6, 5), float64)
     accum = cuda.local.array(37, float64)
     tmp = cuda.local.array(37, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 5, 4] = (build_4_5_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5213,14 +5213,14 @@ def build_4_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 6, 6), float64)
     accum = cuda.local.array(52, float64)
     tmp = cuda.local.array(52, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 5, 5] = (build_4_5_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5235,14 +5235,14 @@ def build_4_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 6, 7), float64)
     accum = cuda.local.array(69, float64)
     tmp = cuda.local.array(69, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 5, 6] = (build_4_5_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5257,14 +5257,14 @@ def build_4_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((5, 7, 1), float64)
     accum = cuda.local.array(420, float64)
     tmp = cuda.local.array(420, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 6, 0] = (build_4_6_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_4_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5279,14 +5279,14 @@ def build_4_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 7, 2), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 6, 1] = (build_4_6_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5301,14 +5301,14 @@ def build_4_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 7, 3), float64)
     accum = cuda.local.array(20, float64)
     tmp = cuda.local.array(20, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 6, 2] = (build_4_6_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5323,14 +5323,14 @@ def build_4_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 7, 4), float64)
     accum = cuda.local.array(33, float64)
     tmp = cuda.local.array(33, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 6, 3] = (build_4_6_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5345,14 +5345,14 @@ def build_4_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 7, 5), float64)
     accum = cuda.local.array(50, float64)
     tmp = cuda.local.array(50, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 6, 4] = (build_4_6_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5367,14 +5367,14 @@ def build_4_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 7, 6), float64)
     accum = cuda.local.array(69, float64)
     tmp = cuda.local.array(69, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 6, 5] = (build_4_6_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_4_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_4_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5389,14 +5389,14 @@ def build_4_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((5, 7, 7), float64)
     accum = cuda.local.array(92, float64)
     tmp = cuda.local.array(92, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[4, 6, 6] = (build_4_6_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5411,14 +5411,14 @@ def build_5_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 1, 1), float64)
     accum = cuda.local.array(21, float64)
     tmp = cuda.local.array(21, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 0, 0] = (build_5_0_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5433,14 +5433,14 @@ def build_5_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 1, 2), float64)
     accum = cuda.local.array(63, float64)
     tmp = cuda.local.array(63, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 0, 1] = (build_5_0_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5455,14 +5455,14 @@ def build_5_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 1, 3), float64)
     accum = cuda.local.array(126, float64)
     tmp = cuda.local.array(126, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 0, 2] = (build_5_0_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5477,14 +5477,14 @@ def build_5_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 1, 4), float64)
     accum = cuda.local.array(210, float64)
     tmp = cuda.local.array(210, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 0, 3] = (build_5_0_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5499,14 +5499,14 @@ def build_5_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 1, 5), float64)
     accum = cuda.local.array(315, float64)
     tmp = cuda.local.array(315, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 0, 4] = (build_5_0_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5521,14 +5521,14 @@ def build_5_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 1, 6), float64)
     accum = cuda.local.array(441, float64)
     tmp = cuda.local.array(441, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 0, 5] = (build_5_0_5, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5543,14 +5543,14 @@ def build_5_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 1, 7), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 0, 6] = (build_5_0_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5565,14 +5565,14 @@ def build_5_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 2, 1), float64)
     accum = cuda.local.array(63, float64)
     tmp = cuda.local.array(63, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 1, 0] = (build_5_1_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5587,14 +5587,14 @@ def build_5_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 2, 2), float64)
     accum = cuda.local.array(189, float64)
     tmp = cuda.local.array(189, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 1, 1] = (build_5_1_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5609,14 +5609,14 @@ def build_5_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 2, 3), float64)
     accum = cuda.local.array(378, float64)
     tmp = cuda.local.array(378, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 1, 2] = (build_5_1_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5631,14 +5631,14 @@ def build_5_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 2, 4), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 1, 3] = (build_5_1_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5653,14 +5653,14 @@ def build_5_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 2, 5), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 1, 4] = (build_5_1_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5675,14 +5675,14 @@ def build_5_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 2, 6), float64)
     accum = cuda.local.array(11, float64)
     tmp = cuda.local.array(11, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 1, 5] = (build_5_1_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5697,14 +5697,14 @@ def build_5_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 2, 7), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 1, 6] = (build_5_1_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5719,14 +5719,14 @@ def build_5_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 3, 1), float64)
     accum = cuda.local.array(126, float64)
     tmp = cuda.local.array(126, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 2, 0] = (build_5_2_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5741,14 +5741,14 @@ def build_5_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 3, 2), float64)
     accum = cuda.local.array(378, float64)
     tmp = cuda.local.array(378, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 2, 1] = (build_5_2_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5763,14 +5763,14 @@ def build_5_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 3, 3), float64)
     accum = cuda.local.array(6, float64)
     tmp = cuda.local.array(6, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 2, 2] = (build_5_2_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5785,14 +5785,14 @@ def build_5_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 3, 4), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 2, 3] = (build_5_2_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5807,14 +5807,14 @@ def build_5_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 3, 5), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 2, 4] = (build_5_2_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5829,14 +5829,14 @@ def build_5_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 3, 6), float64)
     accum = cuda.local.array(21, float64)
     tmp = cuda.local.array(21, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 2, 5] = (build_5_2_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5851,14 +5851,14 @@ def build_5_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 3, 7), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 2, 6] = (build_5_2_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -5873,14 +5873,14 @@ def build_5_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 4, 1), float64)
     accum = cuda.local.array(210, float64)
     tmp = cuda.local.array(210, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 3, 0] = (build_5_3_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5895,14 +5895,14 @@ def build_5_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 4, 2), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 3, 1] = (build_5_3_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5917,14 +5917,14 @@ def build_5_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 4, 3), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 3, 2] = (build_5_3_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5939,14 +5939,14 @@ def build_5_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 4, 4), float64)
     accum = cuda.local.array(17, float64)
     tmp = cuda.local.array(17, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 3, 3] = (build_5_3_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5961,14 +5961,14 @@ def build_5_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 4, 5), float64)
     accum = cuda.local.array(25, float64)
     tmp = cuda.local.array(25, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 3, 4] = (build_5_3_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -5983,14 +5983,14 @@ def build_5_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 4, 6), float64)
     accum = cuda.local.array(35, float64)
     tmp = cuda.local.array(35, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 3, 5] = (build_5_3_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6005,14 +6005,14 @@ def build_5_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 4, 7), float64)
     accum = cuda.local.array(46, float64)
     tmp = cuda.local.array(46, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 3, 6] = (build_5_3_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6027,14 +6027,14 @@ def build_5_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 5, 1), float64)
     accum = cuda.local.array(315, float64)
     tmp = cuda.local.array(315, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 4, 0] = (build_5_4_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6049,14 +6049,14 @@ def build_5_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 5, 2), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 4, 1] = (build_5_4_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6071,14 +6071,14 @@ def build_5_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 5, 3), float64)
     accum = cuda.local.array(15, float64)
     tmp = cuda.local.array(15, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 4, 2] = (build_5_4_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6093,14 +6093,14 @@ def build_5_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 5, 4), float64)
     accum = cuda.local.array(25, float64)
     tmp = cuda.local.array(25, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 4, 3] = (build_5_4_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6115,14 +6115,14 @@ def build_5_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 5, 5), float64)
     accum = cuda.local.array(37, float64)
     tmp = cuda.local.array(37, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 4, 4] = (build_5_4_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6137,14 +6137,14 @@ def build_5_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 5, 6), float64)
     accum = cuda.local.array(52, float64)
     tmp = cuda.local.array(52, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 4, 5] = (build_5_4_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6159,14 +6159,14 @@ def build_5_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 5, 7), float64)
     accum = cuda.local.array(69, float64)
     tmp = cuda.local.array(69, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 4, 6] = (build_5_4_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6181,14 +6181,14 @@ def build_5_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((6, 6, 1), float64)
     accum = cuda.local.array(441, float64)
     tmp = cuda.local.array(441, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 5, 0] = (build_5_5_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_5_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6203,14 +6203,14 @@ def build_5_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 6, 2), float64)
     accum = cuda.local.array(11, float64)
     tmp = cuda.local.array(11, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 5, 1] = (build_5_5_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6225,14 +6225,14 @@ def build_5_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 6, 3), float64)
     accum = cuda.local.array(21, float64)
     tmp = cuda.local.array(21, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 5, 2] = (build_5_5_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6247,14 +6247,14 @@ def build_5_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 6, 4), float64)
     accum = cuda.local.array(35, float64)
     tmp = cuda.local.array(35, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 5, 3] = (build_5_5_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6269,14 +6269,14 @@ def build_5_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 6, 5), float64)
     accum = cuda.local.array(52, float64)
     tmp = cuda.local.array(52, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 5, 4] = (build_5_5_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6291,14 +6291,14 @@ def build_5_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 6, 6), float64)
     accum = cuda.local.array(73, float64)
     tmp = cuda.local.array(73, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 5, 5] = (build_5_5_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6313,14 +6313,14 @@ def build_5_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 6, 7), float64)
     accum = cuda.local.array(97, float64)
     tmp = cuda.local.array(97, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 5, 6] = (build_5_5_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6335,14 +6335,14 @@ def build_5_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 7, 1), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 6, 0] = (build_5_6_0, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6357,14 +6357,14 @@ def build_5_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 7, 2), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 6, 1] = (build_5_6_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6379,14 +6379,14 @@ def build_5_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 7, 3), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 6, 2] = (build_5_6_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6401,14 +6401,14 @@ def build_5_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 7, 4), float64)
     accum = cuda.local.array(46, float64)
     tmp = cuda.local.array(46, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 6, 3] = (build_5_6_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6423,14 +6423,14 @@ def build_5_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 7, 5), float64)
     accum = cuda.local.array(69, float64)
     tmp = cuda.local.array(69, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 6, 4] = (build_5_6_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6445,14 +6445,14 @@ def build_5_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 7, 6), float64)
     accum = cuda.local.array(97, float64)
     tmp = cuda.local.array(97, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 6, 5] = (build_5_6_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_5_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_5_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6467,14 +6467,14 @@ def build_5_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((6, 7, 7), float64)
     accum = cuda.local.array(129, float64)
     tmp = cuda.local.array(129, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[5, 6, 6] = (build_5_6_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6489,14 +6489,14 @@ def build_6_0_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 1, 1), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 0, 0] = (build_6_0_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6511,14 +6511,14 @@ def build_6_0_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 1, 2), float64)
     accum = cuda.local.array(84, float64)
     tmp = cuda.local.array(84, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 0, 1] = (build_6_0_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6533,14 +6533,14 @@ def build_6_0_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 1, 3), float64)
     accum = cuda.local.array(168, float64)
     tmp = cuda.local.array(168, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 0, 2] = (build_6_0_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6555,14 +6555,14 @@ def build_6_0_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 1, 4), float64)
     accum = cuda.local.array(280, float64)
     tmp = cuda.local.array(280, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 0, 3] = (build_6_0_3, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6577,14 +6577,14 @@ def build_6_0_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 1, 5), float64)
     accum = cuda.local.array(420, float64)
     tmp = cuda.local.array(420, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 0, 4] = (build_6_0_4, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6599,14 +6599,14 @@ def build_6_0_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 1, 6), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 0, 5] = (build_6_0_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6621,14 +6621,14 @@ def build_6_0_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 1, 7), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 0, 6] = (build_6_0_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6643,14 +6643,14 @@ def build_6_1_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 2, 1), float64)
     accum = cuda.local.array(84, float64)
     tmp = cuda.local.array(84, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 1, 0] = (build_6_1_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6665,14 +6665,14 @@ def build_6_1_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 2, 2), float64)
     accum = cuda.local.array(252, float64)
     tmp = cuda.local.array(252, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 1, 1] = (build_6_1_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6687,14 +6687,14 @@ def build_6_1_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 2, 3), float64)
     accum = cuda.local.array(504, float64)
     tmp = cuda.local.array(504, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 1, 2] = (build_6_1_2, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6709,14 +6709,14 @@ def build_6_1_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 2, 4), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 1, 3] = (build_6_1_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6731,14 +6731,14 @@ def build_6_1_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 2, 5), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 1, 4] = (build_6_1_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6753,14 +6753,14 @@ def build_6_1_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 2, 6), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 1, 5] = (build_6_1_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6775,14 +6775,14 @@ def build_6_1_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 2, 7), float64)
     accum = cuda.local.array(19, float64)
     tmp = cuda.local.array(19, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 1, 6] = (build_6_1_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6797,14 +6797,14 @@ def build_6_2_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 3, 1), float64)
     accum = cuda.local.array(168, float64)
     tmp = cuda.local.array(168, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 2, 0] = (build_6_2_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6819,14 +6819,14 @@ def build_6_2_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 3, 2), float64)
     accum = cuda.local.array(504, float64)
     tmp = cuda.local.array(504, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 2, 1] = (build_6_2_1, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6841,14 +6841,14 @@ def build_6_2_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 3, 3), float64)
     accum = cuda.local.array(8, float64)
     tmp = cuda.local.array(8, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 2, 2] = (build_6_2_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6863,14 +6863,14 @@ def build_6_2_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 3, 4), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 2, 3] = (build_6_2_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6885,14 +6885,14 @@ def build_6_2_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 3, 5), float64)
     accum = cuda.local.array(20, float64)
     tmp = cuda.local.array(20, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 2, 4] = (build_6_2_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6907,14 +6907,14 @@ def build_6_2_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 3, 6), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 2, 5] = (build_6_2_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6929,14 +6929,14 @@ def build_6_2_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 3, 7), float64)
     accum = cuda.local.array(37, float64)
     tmp = cuda.local.array(37, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 2, 6] = (build_6_2_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -6951,14 +6951,14 @@ def build_6_3_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 4, 1), float64)
     accum = cuda.local.array(280, float64)
     tmp = cuda.local.array(280, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 3, 0] = (build_6_3_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6973,14 +6973,14 @@ def build_6_3_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 4, 2), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 3, 1] = (build_6_3_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -6995,14 +6995,14 @@ def build_6_3_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 4, 3), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 3, 2] = (build_6_3_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7017,14 +7017,14 @@ def build_6_3_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 4, 4), float64)
     accum = cuda.local.array(22, float64)
     tmp = cuda.local.array(22, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 3, 3] = (build_6_3_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7039,14 +7039,14 @@ def build_6_3_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 4, 5), float64)
     accum = cuda.local.array(33, float64)
     tmp = cuda.local.array(33, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 3, 4] = (build_6_3_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7061,14 +7061,14 @@ def build_6_3_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 4, 6), float64)
     accum = cuda.local.array(46, float64)
     tmp = cuda.local.array(46, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 3, 5] = (build_6_3_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7083,14 +7083,14 @@ def build_6_3_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 4, 7), float64)
     accum = cuda.local.array(62, float64)
     tmp = cuda.local.array(62, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 3, 6] = (build_6_3_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.grid(1)
     lane = 0
     if item >= items.shape[0]:
@@ -7105,14 +7105,14 @@ def build_6_4_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.local.array((7, 5, 1), float64)
     accum = cuda.local.array(420, float64)
     tmp = cuda.local.array(420, float64)
-    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 1, False, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 4, 0] = (build_6_4_0, 32, False)
 
 
 @cuda.jit(cache=True)
-def build_6_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7127,14 +7127,14 @@ def build_6_4_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 5, 2), float64)
     accum = cuda.local.array(10, float64)
     tmp = cuda.local.array(10, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 4, 1] = (build_6_4_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7149,14 +7149,14 @@ def build_6_4_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 5, 3), float64)
     accum = cuda.local.array(20, float64)
     tmp = cuda.local.array(20, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 4, 2] = (build_6_4_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7171,14 +7171,14 @@ def build_6_4_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 5, 4), float64)
     accum = cuda.local.array(33, float64)
     tmp = cuda.local.array(33, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 4, 3] = (build_6_4_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7193,14 +7193,14 @@ def build_6_4_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 5, 5), float64)
     accum = cuda.local.array(50, float64)
     tmp = cuda.local.array(50, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 4, 4] = (build_6_4_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7215,14 +7215,14 @@ def build_6_4_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 5, 6), float64)
     accum = cuda.local.array(69, float64)
     tmp = cuda.local.array(69, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 4, 5] = (build_6_4_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7237,14 +7237,14 @@ def build_6_4_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 5, 7), float64)
     accum = cuda.local.array(92, float64)
     tmp = cuda.local.array(92, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 4, 6] = (build_6_4_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7259,14 +7259,14 @@ def build_6_5_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 6, 1), float64)
     accum = cuda.local.array(5, float64)
     tmp = cuda.local.array(5, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 5, 0] = (build_6_5_0, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7281,14 +7281,14 @@ def build_6_5_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 6, 2), float64)
     accum = cuda.local.array(14, float64)
     tmp = cuda.local.array(14, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 5, 1] = (build_6_5_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7303,14 +7303,14 @@ def build_6_5_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 6, 3), float64)
     accum = cuda.local.array(28, float64)
     tmp = cuda.local.array(28, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 5, 2] = (build_6_5_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7325,14 +7325,14 @@ def build_6_5_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 6, 4), float64)
     accum = cuda.local.array(46, float64)
     tmp = cuda.local.array(46, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 5, 3] = (build_6_5_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7347,14 +7347,14 @@ def build_6_5_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 6, 5), float64)
     accum = cuda.local.array(69, float64)
     tmp = cuda.local.array(69, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 5, 4] = (build_6_5_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7369,14 +7369,14 @@ def build_6_5_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 6, 6), float64)
     accum = cuda.local.array(97, float64)
     tmp = cuda.local.array(97, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 5, 5] = (build_6_5_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7391,14 +7391,14 @@ def build_6_5_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 6, 7), float64)
     accum = cuda.local.array(129, float64)
     tmp = cuda.local.array(129, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 5, 6] = (build_6_5_6, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7413,14 +7413,14 @@ def build_6_6_0(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 7, 1), float64)
     accum = cuda.local.array(7, float64)
     tmp = cuda.local.array(7, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 6, 0] = (build_6_6_0, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7435,14 +7435,14 @@ def build_6_6_1(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 7, 2), float64)
     accum = cuda.local.array(19, float64)
     tmp = cuda.local.array(19, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 6, 1] = (build_6_6_1, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7457,14 +7457,14 @@ def build_6_6_2(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 7, 3), float64)
     accum = cuda.local.array(37, float64)
     tmp = cuda.local.array(37, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 6, 2] = (build_6_6_2, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7479,14 +7479,14 @@ def build_6_6_3(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 7, 4), float64)
     accum = cuda.local.array(62, float64)
     tmp = cuda.local.array(62, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 6, 3] = (build_6_6_3, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7501,14 +7501,14 @@ def build_6_6_4(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 7, 5), float64)
     accum = cuda.local.array(92, float64)
     tmp = cuda.local.array(92, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 6, 4] = (build_6_6_4, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7523,14 +7523,14 @@ def build_6_6_5(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 7, 6), float64)
     accum = cuda.local.array(129, float64)
     tmp = cuda.local.array(129, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 6, 5] = (build_6_6_5, 128, True)
 
 
 @cuda.jit(cache=True)
-def build_6_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w):
+def build_6_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask):
     item = cuda.blockIdx.x
     lane = cuda.threadIdx.x
     if item >= items.shape[0]:
@@ -7545,7 +7545,7 @@ def build_6_6_6(orbital, auxiliary, shells, aux_shells, pairs, items, offsets, v
     sz = cuda.shared.array((7, 7, 7), float64)
     accum = cuda.local.array(172, float64)
     tmp = cuda.local.array(172, float64)
-    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w,
+    evaluate_item(item, lane, 128, True, orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp)
 
 KERNELS[6, 6, 6] = (build_6_6_6, 128, True)

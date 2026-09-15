@@ -205,7 +205,7 @@ def _build_batch(plan, batch, offsets, values):
         kernel[(batch.low_count + threads - 1) // threads, threads, plan.nb_stream](
             plan.orbital, plan.auxiliary, plan.shells, plan.aux_shells, plan.pairs,
             cuda.as_cuda_array(batch.items[:batch.low_count], sync=False),
-            nb_offsets, nb_values, nb_x, nb_w)
+            nb_offsets, nb_values, nb_x, nb_w, plan.masked, plan.mask)
     for cls, start, end in batch.groups:
         if end <= batch.low_count:
             continue
@@ -214,7 +214,8 @@ def _build_batch(plan, batch, offsets, values):
         blocks = end - start if cooperative else (end - start + threads - 1) // threads
         kernel[blocks, threads, plan.nb_stream](
             plan.orbital, plan.auxiliary, plan.shells, plan.aux_shells, plan.pairs,
-            cuda.as_cuda_array(items, sync=False), nb_offsets, nb_values, nb_x, nb_w)
+            cuda.as_cuda_array(items, sync=False), nb_offsets, nb_values, nb_x, nb_w,
+            plan.masked, plan.mask)
     if plan.sao and batch.items.shape[0]:
         project_items[batch.items.shape[0], 64, plan.nb_stream](
             batch.items, plan.pairs, plan.aux_shells, offsets, values, plan.device['projectors'])
@@ -277,6 +278,13 @@ def build_plan_cupy(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e,
         high_roots = (2 * plan.shell_l.max() + plan.aux_l.max()) // 2 + 1 > 5
         plan.data_x = cp.asarray(DATA_X) if high_roots else cp.empty(0, dtype=cp.float64)
         plan.data_w = cp.asarray(DATA_W) if high_roots else cp.empty(0, dtype=cp.float64)
+        # Algorithm 11 evaluates every surviving primitive pair, so the shared kernels get
+        # ``masked=False`` and placeholders of the dtypes algorithm 12 passes: one compiled
+        # specialization serves both (the device arrays must outlive the launches).
+        plan.masked = False
+        plan.mask_arrays = (cp.zeros(1, dtype=cp.int64), cp.zeros(1, dtype=cp.int32),
+                            cp.zeros((1, 1), dtype=cp.bool_))
+        plan.mask = tuple(cuda.as_cuda_array(a, sync=False) for a in plan.mask_arrays)
         plan.values = cp.zeros(plan.n_elements_cached, dtype=cp.float64)
         plan.cached = _make_batch(plan, plan.work_build)
         direct = plan.work_iter[plan.pair_offset[plan.work_iter] < 0]

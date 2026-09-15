@@ -14,6 +14,7 @@ import math
 from numba import njit , prange
 import numpy as np
 import numba
+from .cuda_compat import imax, imax3, imin
 
 
 def kin_mat_symm_shell_cupy(basis, slice=None, cp_stream=None):
@@ -259,7 +260,7 @@ def kin_mat_symm_shell_internal_cuda(bfs_offset, bfs_nbfshell, bfs_coords, bfs_c
                     Nik = bfs_prim_norms[ibf,ik]
                     temp2 = temp1*Ni*Nik
                 
-                    for jbf in range(j, j + min(bfs_nbfshell[jshell], ibf+1)):
+                    for jbf in range(j, j + imin(bfs_nbfshell[jshell], ibf+1)):
                         Nj = bfs_contr_prim_norms[jbf]
                         lmnj = bfs_lmn[jbf]
                         Njk = bfs_prim_norms[jbf,jk]

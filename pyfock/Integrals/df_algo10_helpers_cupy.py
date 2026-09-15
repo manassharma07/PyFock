@@ -40,6 +40,7 @@ from .rys_helpers_cuda import coulomb_rys, coulomb_rys_3c2e, Roots, Roots_5, DAT
 from .df_algo10_helpers import (
     STRICT_PAIR_CUTOFF, pack_basis_arrays, aux_shell_arrays, sao_aux_projectors,
     check_sao_bounds_are_shell_constant)
+from .cuda_compat import imax, imax3, imin
 
 __all__ = [
     'eri_4c2e_diag_cupy',
@@ -129,8 +130,8 @@ def rys_eri_4c2e_diag_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs_lmn, b
         ld, md, nd = lmnj
 
         norder = int((la + ma + na + lb + mb + nb + lc + mc + nc + ld + md + nd) / 2 + 1)
-        n = int(max(la + lb, ma + mb, na + nb))
-        m = int(max(lc + ld, mc + md, nc + nd))
+        n = int(imax3(la + lb, ma + mb, na + nb))
+        m = int(imax3(lc + ld, mc + md, nc + nd))
         roots = cuda.local.array((10), numba.float64)
         weights = cuda.local.array((10), numba.float64)
         G = cuda.local.array((13, 13), numba.float64)
@@ -330,8 +331,8 @@ def rys_3c2e_tri_schwarz_sparse_algo10_internal_cuda(bfs_coords, bfs_contr_prim_
                     val = 0.0
 
                     if norder <= 10:
-                        n = int(max(la + lb, ma + mb, na + nb))
-                        m = int(max(lc + ld, mc + md, nc + nd))
+                        n = int(imax3(la + lb, ma + mb, na + nb))
+                        m = int(imax3(lc + ld, mc + md, nc + nd))
 
                         for kk in range(nprimk):
                             dkk = aux_bfs_coeffs[k][kk]
@@ -485,8 +486,8 @@ def rys_3c2e_tri_schwarz_sparse_algo10_sao_internal_cuda(bfs_coords, bfs_contr_p
                     val = 0.0
 
                     if norder <= 10:
-                        n = int(max(la + lb, ma + mb, na + nb))
-                        m = int(max(lc + ld, mc + md, nc + nd))
+                        n = int(imax3(la + lb, ma + mb, na + nb))
+                        m = int(imax3(lc + ld, mc + md, nc + nd))
 
                         for kk in range(nprimk):
                             dkk = aux_bfs_coeffs[k][kk]

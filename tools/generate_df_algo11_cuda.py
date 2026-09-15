@@ -3,6 +3,9 @@
 Run from any directory: python tools/generate_df_algo11_cuda.py
 Only kernels actually used by a basis are JIT compiled. Keep this generator and
 the generated module together in changes to scratch sizing or tier selection.
+
+The same kernels serve DF_algo=11 and DF_algo=12: ``masked``/``mask`` select the
+far-field primitive-pair mask of algorithm 12 (see df_algo11_cuda_core).
 """
 from itertools import product
 from pathlib import Path
@@ -13,7 +16,8 @@ def generate():
             'from numba import cuda, float64\n',
             'from .df_algo11_cuda_core import evaluate_item\n\n',
             'KERNELS = {}\n']
-    args = 'orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w'
+    args = ('orbital, auxiliary, shells, aux_shells, pairs, items, offsets, values, data_x, data_w, '
+            'masked, mask')
     for a, b, c in product(range(7), repeat=3):
         n = (a + 1) * (a + 2) * (b + 1) * (b + 2) * (c + 1) * (c + 2) // 8
         cooperative = n > 540

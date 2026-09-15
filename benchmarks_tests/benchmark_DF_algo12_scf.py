@@ -22,21 +22,45 @@ peak resident memory of the process. Geometries come from benchmarks_tests/<name
 import argparse
 import json
 import os
-import resource
 import subprocess
 import sys
 import time
 from pathlib import Path
+
+try:
+    import resource          # POSIX only
+except ImportError:
+    resource = None
+try:
+    import ctypes            # Windows peak working set
+except ImportError:
+    ctypes = None
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 FUNCTIONALS = {'pbe': ([101, 130], '101,130'), 'r2scan': ([497, 498], '497,498'), 'lda': ([1, 7], '1,7')}
 
 
+class _PROCESS_MEMORY_COUNTERS(ctypes.Structure if ctypes else object):
+    _fields_ = [('cb', ctypes.c_uint32), ('PageFaultCount', ctypes.c_uint32),
+                ('PeakWorkingSetSize', ctypes.c_size_t), ('WorkingSetSize', ctypes.c_size_t),
+                ('QuotaPeakPagedPoolUsage', ctypes.c_size_t), ('QuotaPagedPoolUsage', ctypes.c_size_t),
+                ('QuotaPeakNonPagedPoolUsage', ctypes.c_size_t), ('QuotaNonPagedPoolUsage', ctypes.c_size_t),
+                ('PagefileUsage', ctypes.c_size_t), ('PeakPagefileUsage', ctypes.c_size_t)] if ctypes else []
+
+
 def peak_rss_gb():
-    """Peak resident set size of this process in GB (ru_maxrss is bytes on macOS, kB on Linux)."""
-    raw = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return raw / 1e9 if sys.platform == 'darwin' else raw / 1e6
+    """Peak resident set size of this process in GB, on POSIX and on Windows."""
+    if resource is not None:
+        raw = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return raw / 1e9 if sys.platform == 'darwin' else raw / 1e6
+    if ctypes is not None and sys.platform == 'win32':
+        counters = _PROCESS_MEMORY_COUNTERS()
+        counters.cb = ctypes.sizeof(counters)
+        handle = ctypes.windll.kernel32.GetCurrentProcess()
+        if ctypes.windll.psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
+            return counters.PeakWorkingSetSize / 1e9
+    return float('nan')
 
 
 def worker_pyfock(args):
@@ -139,7 +163,8 @@ def worker_pyscf(args):
 
 
 def run_subprocess(cmd):
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(cmd, capture_output=True, text=True,
+                          encoding='utf-8', errors='replace')
     for line in proc.stdout.splitlines()[::-1]:
         if line.startswith('RESULT '):
             return json.loads(line[7:])
@@ -169,6 +194,10 @@ def df_memory(res):
 
 
 def main():
+    # PyFock prints a logo with block characters; keep redirected logs from failing on Windows code pages.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, 'reconfigure'):
+            stream.reconfigure(errors='replace')
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--molecules', nargs='+', default=['H2O', 'Benzene', 'Caffeine', 'Serotonin', 'Cholesterol'])
     parser.add_argument('--functionals', nargs='+', default=['pbe'], choices=sorted(FUNCTIONALS))

@@ -1,11 +1,4 @@
 Cupy is not installed. GPU acceleration is not availble.
-Warning: could not query the CUDA device in DFT.__init__ (Error at driver init: 
-
-CUDA driver library cannot be found.
-If you are sure that a CUDA driver is installed,
-try setting environment variable NUMBA_CUDA_DRIVER
-with the file path of the CUDA driver shared library.
-:); assuming 1024 threads per block.
 
 ======================================================================
 PyFock Python Program for Quantum Chemistry Simulations
@@ -20,7 +13,7 @@ PyFock Python Program for Quantum Chemistry Simulations
 
 ======================================================================
 
-Version:  0.1.8
+Version:  0.1.9
 Citation: M. Sharma and M. Sierka, PyFock: A Just-In-Time Compiled 
 Gaussian Basis DFT Python Code for CPU and GPU Architectures
 
@@ -115,19 +108,18 @@ Number of auxiliary basis functions (in Cartesian atomic orbital basis):  85
 
 
 ============= System Information =============
-Operating System: Darwin 24.6.0
+Operating System: Windows 11
 System Type: 64bit
-CPU Model: Apple M4
-Number of Cores: 10
-Number of Threads: 10
-Memory (GB): 16.0
+CPU Model: Intel64 Family 6 Model 151 Stepping 2, GenuineIntel
+Number of Cores: 16
+Number of Threads: 24
+Memory (GB): 31.75
 
 ======================================================================
 
 Running DFT using 4 threads for Numba.
 
 
-GPU acceleration requested but cannot be enabled as Cupy is not installed.
 
 
 Spherical Atomic Orbitals (5d, 7f, 10g...) are being used!
@@ -142,7 +134,7 @@ Calculating one electron integrals...
 
 Core H size in GB  0.0
 done!
-Time taken 0.49 seconds.
+Time taken 0.16 seconds.
 
 
 
@@ -152,23 +144,23 @@ Stricter version of Schwarz screening:  False
 Calculating three centered two electron and two-centered two-electron integrals...
 
 
-Time taken for two-centered two-electron integrals 0.11 seconds.
+Time taken for two-centered two-electron integrals 0.03 seconds.
 
 
 
 Performing Schwarz screening (shell-blocked DF_algo=11)...
 Threshold  1e-09
-Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.03
-Total time taken for Schwarz screening 0.03 seconds.
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.01
+Total time taken for Schwarz screening 0.01 seconds.
 
 DF_algo=11: 78 of 78 shell pairs significant, 27625 block elements (0.000 GB); cached 78 pairs = 100.0% of the elements (0.000 GB), the rest is recomputed in every SCF iteration
-Time taken for the shell-blocked three-center integrals:  0.11
+Time taken for the shell-blocked three-center integrals:  0.04
 Two Center Two electron ERI size in GB  5.78e-05
 Three Center Two electron ERI (cached shell-pair blocks) size in GB  0.000221
 Three-centered two electron evaluation done!
 Time taken for Cholesky factorization of two-centered two-electron integrals 0.0 seconds.
 
-Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  0.25 seconds.
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  0.08 seconds.
 
 
 
@@ -181,7 +173,7 @@ Generating grids...
 
 
 Grids level:  3
-Grids: Treutler-Ahlrichs radial + Lebedev angular grids, NWChem pruning, Becke partitioning with Treutler atomic-size adjustment (PySCF-equivalent); level 3; (n_rad, n_ang) per element: O (75, 302), H (50, 302); 33698 points.
+Grids: Treutler-Ahlrichs radial + Lebedev angular grids, region-wise angular pruning, Becke partitioning with Treutler atomic-size adjustment (CPU); level 3; (n_rad, n_ang) per element: O (75, 302), H (50, 302); 33698 points.
 done!
 Time taken 0.01 seconds.
 
@@ -190,7 +182,7 @@ Pruning generated grids by rho...
 
 
 done!
-Time taken 0.03 seconds.
+Time taken 0.02 seconds.
 
 
 Deleted 4889 grid points.
@@ -216,7 +208,7 @@ You have asked to save the values of significant basis functions on grid points 
 Please note: This will require addtional memory that is approximately: 0.0 GB
 Calculating the value of significantly contributing basis functions (atomic orbitals)...
 done!
-Time taken 0.01 seconds.
+Time taken 0.0 seconds.
 
 
 
@@ -236,7 +228,7 @@ S. H. Vosko, L. Wilk, and M. Nusair, Can. J. Phys. 58, 1200 (1980).
 
 
 XC algo 2
-Number of electrons:  9.999999993143076
+Number of electrons:  9.99999999314307
 
 
 
@@ -245,36 +237,36 @@ Number of electrons:  9.999999993143076
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -243.9347557108422
+Electron-Nuclear Energy         -243.9347557108420
 Nuclear repulsion Energy           9.1306668752190
-Kinetic Energy                   108.0050350948700
-Coulomb Energy                    71.7933726671599
+Kinetic Energy                   108.0050350948699
+Coulomb Energy                    71.7933726671598
 Exchange-Correlation Energy      -12.0647634423375
 --------------------------------------------------
-Total Energy                     -67.0704445159309
+Total Energy                     -67.0704445159308
 --------------------------------------------------
 
 
 
-Energy difference :  67.0704445159309
+Energy difference :  67.07044451593079
 
 
-HOMO-LUMO gap: 0.11972353771726957 au
+HOMO-LUMO gap: 0.11972353771726602 au
 HOMO-LUMO gap: 3.258 eV
 
 
-Time taken for the previous iteration: 0.52 seconds 
+Time taken for the previous iteration: 0.11 seconds 
 
 
 
-Density matrix difference norm:  18.84639452686585 
+Density matrix difference norm:  18.846394526865776 
 
 
 
 
 
 XC algo 2
-Number of electrons:  9.999988085239115
+Number of electrons:  9.99998808523912
 
 
 
@@ -294,25 +286,25 @@ Total Energy                     -66.7004937476992
 
 
 
-Energy difference :  0.3699507682317176
+Energy difference :  0.36995076823156126
 
 
-HOMO-LUMO gap: 0.9836964739907601 au
+HOMO-LUMO gap: 0.9836964739907529 au
 HOMO-LUMO gap: 26.768 eV
 
 
-Time taken for the previous iteration: 0.15 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  16.895038214549903 
+Density matrix difference norm:  16.895038214549817 
 
 
 
 
 
 XC algo 2
-Number of electrons:  9.999999704382944
+Number of electrons:  9.999999704382946
 
 
 
@@ -321,36 +313,36 @@ Number of electrons:  9.999999704382944
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -212.7889100619864
+Electron-Nuclear Energy         -212.7889100619863
 Nuclear repulsion Energy           9.1306668752190
-Kinetic Energy                    83.2767604134222
-Coulomb Energy                    55.5886289954987
+Kinetic Energy                    83.2767604134221
+Coulomb Energy                    55.5886289954986
 Exchange-Correlation Energy       -9.8392932864817
 --------------------------------------------------
-Total Energy                     -74.6321470643282
+Total Energy                     -74.6321470643283
 --------------------------------------------------
 
 
 
-Energy difference :  7.9316533166289815
+Energy difference :  7.931653316629053
 
 
-HOMO-LUMO gap: 0.48523981236721786 au
+HOMO-LUMO gap: 0.48523981236722 au
 HOMO-LUMO gap: 13.204 eV
 
 
-Time taken for the previous iteration: 0.06 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  1.032471369049708 
+Density matrix difference norm:  1.0324713690496983 
 
 
 
 
 
 XC algo 2
-Number of electrons:  9.999999698297039
+Number of electrons:  9.999999698297025
 
 
 
@@ -359,29 +351,29 @@ Number of electrons:  9.999999698297039
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -203.0416847817000
+Electron-Nuclear Energy         -203.0416847816998
 Nuclear repulsion Energy           9.1306668752190
 Kinetic Energy                    77.7694203018077
-Coulomb Energy                    49.5718909690976
+Coulomb Energy                    49.5718909690975
 Exchange-Correlation Energy       -9.0992641177548
 --------------------------------------------------
-Total Energy                     -75.6689707533305
+Total Energy                     -75.6689707533304
 --------------------------------------------------
 
 
 
-Energy difference :  1.0368236890023041
+Energy difference :  1.0368236890020768
 
 
-HOMO-LUMO gap: 0.33454201097551295 au
+HOMO-LUMO gap: 0.33454201097550107 au
 HOMO-LUMO gap: 9.103 eV
 
 
-Time taken for the previous iteration: 0.05 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  0.28487958013286413 
+Density matrix difference norm:  0.28487958013291004 
 
 
 
@@ -397,29 +389,29 @@ Number of electrons:  9.999999687963681
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -201.1570144390605
+Electron-Nuclear Energy         -201.1570144390597
 Nuclear repulsion Energy           9.1306668752190
-Kinetic Energy                    76.9105511351157
-Coulomb Energy                    48.3124282247039
+Kinetic Energy                    76.9105511351152
+Coulomb Energy                    48.3124282247036
 Exchange-Correlation Energy       -8.9544427388061
 --------------------------------------------------
-Total Energy                     -75.7578109428281
+Total Energy                     -75.7578109428280
 --------------------------------------------------
 
 
 
-Energy difference :  0.08884018949761696
+Energy difference :  0.08884018949760275
 
 
-HOMO-LUMO gap: 0.24272844496576776 au
+HOMO-LUMO gap: 0.2427284449657566 au
 HOMO-LUMO gap: 6.605 eV
 
 
-Time taken for the previous iteration: 0.04 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  0.3502082403326044 
+Density matrix difference norm:  0.35020824033253917 
 
 
 
@@ -435,36 +427,36 @@ Number of electrons:  9.999999679540846
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -198.1390675393173
+Electron-Nuclear Energy         -198.1390675393174
 Nuclear repulsion Energy           9.1306668752190
-Kinetic Energy                    75.4273161279406
+Kinetic Energy                    75.4273161279407
 Coulomb Energy                    46.5307375757647
 Exchange-Correlation Energy       -8.7439495409587
 --------------------------------------------------
-Total Energy                     -75.7942965013517
+Total Energy                     -75.7942965013516
 --------------------------------------------------
 
 
 
-Energy difference :  0.036485558523622785
+Energy difference :  0.03648555852366542
 
 
-HOMO-LUMO gap: 0.25702563873960244 au
+HOMO-LUMO gap: 0.2570256387395938 au
 HOMO-LUMO gap: 6.994 eV
 
 
-Time taken for the previous iteration: 0.09 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  0.05585977646384667 
+Density matrix difference norm:  0.05585977646386464 
 
 
 
 
 
 XC algo 2
-Number of electrons:  9.999999684222406
+Number of electrons:  9.999999684222413
 
 
 
@@ -475,34 +467,34 @@ Energies (in Hartrees)
 
 Electron-Nuclear Energy         -198.5085865552789
 Nuclear repulsion Energy           9.1306668752190
-Kinetic Energy                    75.5921602874369
+Kinetic Energy                    75.5921602874370
 Coulomb Energy                    46.7605262203552
 Exchange-Correlation Energy       -8.7703045708573
 --------------------------------------------------
-Total Energy                     -75.7955377431250
+Total Energy                     -75.7955377431251
 --------------------------------------------------
 
 
 
-Energy difference :  0.0012412417733287384
+Energy difference :  0.0012412417734424253
 
 
-HOMO-LUMO gap: 0.25903767179945775 au
+HOMO-LUMO gap: 0.2590376717994452 au
 HOMO-LUMO gap: 7.049 eV
 
 
-Time taken for the previous iteration: 0.05 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  0.007718718292301749 
+Density matrix difference norm:  0.007718718292280122 
 
 
 
 
 
 XC algo 2
-Number of electrons:  9.999999684279738
+Number of electrons:  9.999999684279736
 
 
 
@@ -511,13 +503,13 @@ Number of electrons:  9.999999684279738
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -198.5744518409558
+Electron-Nuclear Energy         -198.5744518409557
 Nuclear repulsion Energy           9.1306668752190
 Kinetic Energy                    75.6235844100654
-Coulomb Energy                    46.7995676286787
+Coulomb Energy                    46.7995676286786
 Exchange-Correlation Energy       -8.7749206883213
 --------------------------------------------------
-Total Energy                     -75.7955536153140
+Total Energy                     -75.7955536153141
 --------------------------------------------------
 
 
@@ -525,22 +517,22 @@ Total Energy                     -75.7955536153140
 Energy difference :  1.5872189010224247e-05
 
 
-HOMO-LUMO gap: 0.25874780924781793 au
+HOMO-LUMO gap: 0.2587478092478158 au
 HOMO-LUMO gap: 7.041 eV
 
 
-Time taken for the previous iteration: 0.06 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  0.001320139122938884 
+Density matrix difference norm:  0.0013201391229165737 
 
 
 
 
 
 XC algo 2
-Number of electrons:  9.999999684263999
+Number of electrons:  9.999999684264
 
 
 
@@ -549,7 +541,7 @@ Number of electrons:  9.999999684263999
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -198.5629659899850
+Electron-Nuclear Energy         -198.5629659899851
 Nuclear repulsion Energy           9.1306668752190
 Kinetic Energy                    75.6178964908838
 Coulomb Energy                    46.7929736572066
@@ -560,25 +552,25 @@ Total Energy                     -75.7955542801334
 
 
 
-Energy difference :  6.648193107139377e-07
+Energy difference :  6.64819296503083e-07
 
 
-HOMO-LUMO gap: 0.2587417657769228 au
+HOMO-LUMO gap: 0.2587417657769099 au
 HOMO-LUMO gap: 7.041 eV
 
 
-Time taken for the previous iteration: 0.05 seconds 
+Time taken for the previous iteration: 0.03 seconds 
 
 
 
-Density matrix difference norm:  1.5618245083496915e-05 
+Density matrix difference norm:  1.5618245126633762e-05 
 
 
 
 
 
 XC algo 2
-Number of electrons:  9.999999684261912
+Number of electrons:  9.999999684261898
 
 
 
@@ -587,10 +579,10 @@ Number of electrons:  9.999999684261912
 
 Energies (in Hartrees)
 
-Electron-Nuclear Energy         -198.5629601708799
+Electron-Nuclear Energy         -198.5629601708798
 Nuclear repulsion Energy           9.1306668752190
-Kinetic Energy                    75.6178982291517
-Coulomb Energy                    46.7929657154310
+Kinetic Energy                    75.6178982291516
+Coulomb Energy                    46.7929657154309
 Exchange-Correlation Energy       -8.7741249290858
 --------------------------------------------------
 Total Energy                     -75.7955542801641
@@ -598,34 +590,34 @@ Total Energy                     -75.7955542801641
 
 
 
-Energy difference :  3.070965703955153e-11
+Energy difference :  3.0738078748981934e-11
 
 SCF Converged after 10 iterations!
 
 -------------------------------------
-Total Energy =  -75.79555428016407
+Total Energy =  -75.79555428016411
 -------------------------------------
 
 
 
-Time taken : 1.99 seconds.
+Time taken : 0.66 seconds.
 
 
 
 -------------------------------------------------------------
 Profiling (Wall times in seconds)
 -------------------------------------------------------------
-Preprocessing                           0.05
-Density Fitting                         0.36
-    DF (gamma)                          0.19
-    DF (coeff)                          0.03
-    DF (Jtri)                           0.11
+Preprocessing                           0.02
+Density Fitting                         0.12
+    DF (gamma)                          0.04
+    DF (coeff)                          0.02
+    DF (Jtri)                           0.04
     DF (Cholesky)                       0.0
-DIIS                                    0.03
-KS matrix diagonalization               0.27
-One electron Integrals (S, T, Vnuc)     0.49
-Coulomb Integrals (2c2e + 3c2e)         0.25
+DIIS                                    0.02
+KS matrix diagonalization               0.03
+One electron Integrals (S, T, Vnuc)     0.16
+Coulomb Integrals (2c2e + 3c2e)         0.08
 Grids construction                      0.01
-Exchange-Correlation Term               0.25
-Misc.                                   0.28
-Complete SCF                            1.99
+Exchange-Correlation Term               0.16
+Misc.                                   0.06
+Complete SCF                            0.66

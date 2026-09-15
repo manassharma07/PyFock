@@ -594,32 +594,46 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
 
         elif DF_algo==12:
             # Near field: shell-blocked Rys blocks (as DF_algo=11); far field: multipole expansions
-            # (Integrals.df_algo12_helpers).  CPU only.
-            if use_gpu:
-                raise NotImplementedError('DF_algo=12 is implemented for the CPU only (DFT.scf falls back to DF_algo=11 on the GPU).')
+            # (Integrals.df_algo12_helpers; Integrals.df_algo12_helpers_cupy on the GPU).
             if rihf:
                 raise NotImplementedError('RI exact exchange needs the complete three-center blocks: use DF_algo=11 for HF and hybrid functionals.')
             print('\n\nPerforming Schwarz screening (multipole-accelerated DF_algo=12)...')
             print('Threshold ', threshold_schwarz)
             startSchwarz = timer()
             start_4c2e_diag = timer()
-            ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
-            sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-            sqrt_diag_ints2c2e = np.sqrt(np.abs(np.diag(ints2c2e)))
+            if use_gpu:
+                if max(basis.shells) - 1 > 4:
+                    # As in DF_algo=11: the legacy CUDA Schwarz diagonal silently omits pairs
+                    # requiring >10 roots; the CPU diagonal has an analytic fallback for them.
+                    ints4c2e_diag = cp.asarray(Integrals.schwarz_helpers.eri_4c2e_diag(basis))
+                else:
+                    ints4c2e_diag = Integrals.df_algo10_helpers_cupy.eri_4c2e_diag_cupy(basis, cp_stream=cp.cuda.get_current_stream())
+                xp = cp
+                build_plan = Integrals.df_algo12_helpers_cupy.build_plan_cupy
+                if not keep_ints3c2e_in_gpu:
+                    print('DF_algo=12 keeps the cached near-field blocks and the far-field moments on the GPU; '
+                          'use max_memory_ints3c2e to limit device storage.', flush=True)
+            else:
+                ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
+                xp = np
+                build_plan = Integrals.df_algo12_helpers.build_plan
+            sqrt_ints4c2e_diag = xp.sqrt(xp.abs(ints4c2e_diag))
+            sqrt_diag_ints2c2e = xp.sqrt(xp.abs(xp.diag(ints2c2e)))
             print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(timer() - start_4c2e_diag, 2))
             durationSchwarz = timer() - startSchwarz
             print('Total time taken for Schwarz screening '+str(round(durationSchwarz, 2))+' seconds.\n', flush=True)
             start_plan = timer()
-            ints3c2e = Integrals.df_algo12_helpers.build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e,
-                                                              threshold_schwarz, strict_schwarz, sao=dftObj.sao,
-                                                              max_memory_gb=dftObj.max_memory_ints3c2e,
-                                                              options=getattr(dftObj, 'multipole_options', None))
+            ints3c2e = build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e,
+                                  threshold_schwarz, strict_schwarz, sao=dftObj.sao,
+                                  max_memory_gb=dftObj.max_memory_ints3c2e,
+                                  options=getattr(dftObj, 'multipole_options', None))
             print(ints3c2e.summary(), flush=True)
             print('Time taken for the near-field three-center integrals and far-field moments: ', round(timer() - start_plan, 2),
                   ' (' + ', '.join('%s %.2f' % (k, v) for k, v in ints3c2e.timings.items() if k != 'total') + ')', flush=True)
             if strict_schwarz:
                 start_strict_schwarz_nuc_mat = timer()
-                V = Integrals.nuc_mat_symm(basis, mol, None, sqrt_ints4c2e_diag)
+                V = (Integrals.nuc_mat_symm_cupy(basis, mol, None, None, sqrt_ints4c2e_diag)
+                     if use_gpu else Integrals.nuc_mat_symm(basis, mol, None, sqrt_ints4c2e_diag))
                 H = T + V
                 print('Time taken to evaluate the nuclear potential matrix with strict Schwarz screening: ', round(timer() - start_strict_schwarz_nuc_mat, 2), flush=True)
 
@@ -713,6 +727,8 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
         print('Three Center Two electron ERI (cached near-field blocks) size in GB ', ints3c2e.memory_gb, flush=True)
         print('Far-field multipole moments size in GB ', ints3c2e.moments_gb, flush=True)
+        if use_gpu:
+            print('GPU direct-batch workspace size in GB ', ints3c2e.temporary_memory_gb, flush=True)
     if DF_algo==11:
         print('Two Center Two electron ERI size in GB ',ints2c2e.nbytes/1e9, flush=True)
         if getattr(ints3c2e, 'exchange', None) is not None:
@@ -930,21 +946,26 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
             durationDF_Jtri += timer() - startDF_Jtri
     if DF_algo==12:
         # Near field from the stored blocks, far field through the multipole expansions
-        # (Integrals.df_algo12_helpers); CPU only.
+        # (Integrals.df_algo12_helpers; Integrals.df_algo12_helpers_cupy on the GPU).
         plan = ints3c2e
         startDF_gamma = timer()
-        gamma_alpha = Integrals.df_algo12_helpers.gamma_from_plan(plan, dmat)
+        gamma_alpha = (Integrals.df_algo12_helpers_cupy.gamma_from_plan_cupy(plan, dmat)
+                       if use_gpu else Integrals.df_algo12_helpers.gamma_from_plan(plan, dmat))
         durationDF_gamma += timer() - startDF_gamma
         startDF_coeff = timer()
         with threadpool_limits(limits=ncores, user_api='blas'):
-            if not cholesky:
+            if use_gpu:
+                df_coeff = cp.linalg.solve(ints2c2e, gamma_alpha)
+                cp.cuda.get_current_stream().synchronize()
+            elif not cholesky:
                 df_coeff = scipy.linalg.solve(ints2c2e, gamma_alpha, overwrite_a=False, overwrite_b=False)
             else:
                 df_coeff = scipy.linalg.cho_solve(cho_decomp_ints2c2e, gamma_alpha, overwrite_b=False, check_finite=True)
         durationDF_coeff += timer() - startDF_coeff
-        Ecoul_temp = np.dot(df_coeff, gamma_alpha)
+        Ecoul_temp = (cp.dot(df_coeff, gamma_alpha) if use_gpu else np.dot(df_coeff, gamma_alpha))
         startDF_Jtri = timer()
-        J = Integrals.df_algo12_helpers.J_from_plan(plan, df_coeff)
+        J = (Integrals.df_algo12_helpers_cupy.J_from_plan_cupy(plan, df_coeff)
+             if use_gpu else Integrals.df_algo12_helpers.J_from_plan(plan, df_coeff))
         durationDF_Jtri += timer() - startDF_Jtri
     durationDF = durationDF + timer() - startDF
 

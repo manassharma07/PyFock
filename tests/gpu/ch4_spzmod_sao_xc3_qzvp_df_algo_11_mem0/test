@@ -8,8 +8,8 @@ from pathlib import Path
 # This is the equivalent of a TURBOTEST CRIT file: the command/files and every
 # quantity to compare are visible and editable here.
 TEST = {
-    "name": "GPU DF_algo=11 / CH4 / SPZMOD / CAO / XC_algo 2 / def2-QZVP",
-    "description": "Tetrahedral CH4 with native modified PZ81 correlation.",
+    "name": "GPU DF_algo=11 / CH4 / SPZMOD / SAO / XC_algo 3 / def2-QZVP / df_algo_11_mem0",
+    "description": "Tetrahedral CH4, shell-blocked DF_algo=11 recomputing all 3c2e integrals every SCF iteration (max_memory_ints3c2e=0).",
     "input": "input.py",
     "output": "output.test.txt",
     "reference": "output.ref.txt",
@@ -18,8 +18,8 @@ TEST = {
     "auxbasis": "def2-universal-jfit",
     "xc_name": "SPZMOD",
     "xc_ids": [1, 10],
-    "ao_basis": "CAO",
-    "xc_algo": 2,
+    "ao_basis": "SAO",
+    "xc_algo": 3,
     "device": "gpu",
     "use_pyscf_grids": True,
     "use_libxc": False,

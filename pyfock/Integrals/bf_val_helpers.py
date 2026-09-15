@@ -14,6 +14,7 @@ except Exception as e:
         return decorator
 from numba import cuda
 import math
+from .cuda_compat import imax, imax3, imin
 
 def pack_bfs_data(basis):
     """Pack the per-basis-function data of ``basis`` into the NumPy arrays the
@@ -1102,7 +1103,7 @@ def nonzero_ao_indices_batch_cuda(coords, bfs_coords, bfs_radius_cutoff, nblocks
         coord_bf = bfs_coords[ibf]
         offset = iblock*blocksize
         # Loop over the grid points and check if the value of the basis function is greater than the threshold
-        for igrd in range(offset,  min(offset+blocksize, ngrids)):
+        for igrd in range(offset,  imin(offset+blocksize, ngrids)):
             coord_grid = coords[igrd]
             x = coord_grid[0]-coord_bf[0]
             y = coord_grid[1]-coord_bf[1]

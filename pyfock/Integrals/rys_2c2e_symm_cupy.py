@@ -15,6 +15,7 @@ from numba import njit , prange
 import numpy as np
 import numba
 from .rys_helpers_cuda import coulomb_rys, Roots, DATA_X, DATA_W
+from .cuda_compat import imax, imax3, imin
 
 
 def rys_2c2e_symm_cupy(basis, slice=None, cp_stream=None):
@@ -159,8 +160,8 @@ def rys_2c2e_symm_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
             
 
             norder = int((la+ma+na+lc+mc+nc)/2+1 ) 
-            n = int(max(la,ma,na))
-            m = int(max(lc,mc,nc))
+            n = int(imax3(la, ma, na))
+            m = int(imax3(lc, mc, nc))
             roots = cuda.local.array((8), numba.float64) # Good for upto j shells; j orbitals have an angular momentum of 7;
             weights = cuda.local.array((8), numba.float64) # Good for upto j shells; j orbitals have an angular momentum of 7;
             G = cuda.local.array((8, 8), numba.float64) # Good for upto j shells; j orbitals have an angular momentum of 7;

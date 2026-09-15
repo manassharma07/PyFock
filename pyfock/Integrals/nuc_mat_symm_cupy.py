@@ -14,6 +14,7 @@ import math
 from numba import njit , prange
 import numpy as np
 import numba
+from .cuda_compat import imax, imax3, imin
 
 
 def nuc_mat_symm_cupy(basis, mol, slice=None, cp_stream=None, sqrt_ints4c2e_diag=None):
@@ -406,7 +407,7 @@ def nuc_mat_symm_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_np
                             facm[m] = c2k(m,ma,mb,PI[1],PJ[1])
                         for n in range(0, na+nb+1):
                             facn[n] = c2k(n,na,nb,PI[2],PJ[2])
-                        for li in range(max(la+lb, ma+mb, na+nb)//2+1):
+                        for li in range(imax3(la+lb, ma+mb, na+nb)//2+1):
                             epsilonl[li] = epsilon**(li)
 
                         Vc = 0.0

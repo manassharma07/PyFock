@@ -142,7 +142,7 @@ class DFT:
         Algorithm selector for DF (reserved for developer use). 11 (default) is the shell-blocked
         CPU/GPU algorithm that honours ``max_memory_ints3c2e`` and also provides RI-HF exchange
         (``xc='HF'``, CPU); 12 adds multipole expansions for the far-field three-center integrals
-        (CPU, pure functionals; see ``multipole_options``); 10 is the previous default.
+        (CPU/GPU, pure functionals; see ``multipole_options``); 10 is the previous default.
 
     multipole_options : dict
         Parameters of the far-field multipole expansions of DF_algo=12 (``precision``, ``lmax``,
@@ -150,8 +150,9 @@ class DFT:
         :data:`pyfock.Integrals.df_algo12_helpers.DEFAULT_OPTIONS`.
 
     max_memory_ints3c2e : float or None
-        Memory budget (GB) for the stored three-center integrals with DF_algo=11
-        (None = store everything significant, 0 = recompute every SCF iteration).
+        Memory budget (GB) for the stored three-center integrals with DF_algo=11, or for the
+        near-field blocks with DF_algo=12 (None = store everything significant, 0 = recompute
+        every SCF iteration).
 
     XC_algo : int
         Algorithm selector for XC evaluation (2 for CPU, 3 for GPU).
@@ -323,14 +324,16 @@ class DFT:
         RI-HF (xc='HF') works with DF_algo=1, 2, 3 and 11 (CPU). With 11 the screened blocks are
         orthonormalized in the fit metric once after the integral build (true spherical fit space
         in SAO mode) and both J and the exchange matrix K are contracted from these rows.
-        DF_algo=12 (CPU, pure functionals): the near-field three-center integrals are evaluated and
+        DF_algo=12 (CPU/GPU, pure functionals): the near-field three-center integrals are evaluated and
         stored as in DF_algo=11, while well-separated (distribution, auxiliary function) pairs are
         treated through multipole expansions (exact finite moments of the primitive pair products and
         of the auxiliary functions, box-level expansions truncated at ``lmax``); see
-        `multipole_options` and pyfock.Integrals.df_algo12_helpers. On the GPU it falls back to 11."""
+        `multipole_options`, pyfock.Integrals.df_algo12_helpers and, for the CUDA driver,
+        pyfock.Integrals.df_algo12_helpers_cupy. The 'low_memory' option is CPU only."""
 
         self.max_memory_ints3c2e = None
-        """ Memory budget in GB for the screened three-center integrals when DF_algo=11.
+        """ Memory budget in GB for the screened three-center integrals when DF_algo=11 or 12
+        (with 12 it applies to the near-field blocks; the far-field moments are always stored).
         None (default): keep every significant shell-pair block in memory. A smaller budget keeps the
         most expensive blocks and recomputes the remaining ones in every SCF iteration; 0 recomputes
         everything (direct DF-J). On the GPU this caps cached device values; a separate bounded
@@ -1208,10 +1211,6 @@ class DFT:
 
         if isDF==False:
             strict_schwarz = False
-        if isDF and DF_algo == 12 and self.use_gpu:
-            print('DF_algo=12 (multipole-accelerated density fitting) is implemented for the CPU only; using DF_algo=11 on the GPU.', flush=True)
-            DF_algo = 11
-
         # Skala, the neural functional, is not a LibXC functional: it resolves to a loaded TorchScript
         # model rather than to a list of functional IDs, and is evaluated by its own driver further down.
         # `xc` therefore stays the name string and the LibXC resolution below is skipped.
@@ -1455,7 +1454,7 @@ class DFT:
         # DF_algo = 8 (no longer works or maintained) # Similar to 6, except that here the significant indices are not stored resulting in 50% memory savings. The drawback is that it only works in serial which is useful for Google colab or Kaggle perhaps.
         # DF_algo = 9 (no longer works or maintained) # 
         # DF_algo = 11 # Shell-blocked Rys evaluation with block-sparse storage and a memory budget (CPU/GPU).
-        # DF_algo = 12 # DF_algo=11 for the near field plus multipole expansions for the far-field three-center integrals (CPU).
+        # DF_algo = 12 # DF_algo=11 for the near field plus multipole expansions for the far-field three-center integrals (CPU/GPU).
         # DF_algo = 10 # Previous default: Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
 
         V_ecp = None

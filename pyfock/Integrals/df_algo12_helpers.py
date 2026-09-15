@@ -1354,7 +1354,35 @@ def build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshol
                sao=False, max_memory_gb=None, ncores=None, options=None):
     """
     Screen, classify (near/far field), evaluate the near-field row blocks (within the
-    memory budget) and the far-field moments.
+    memory budget) and the far-field moments.  Arguments as in :func:`_plan_metadata`.
+
+    Returns
+    -------
+    DFAlgo12Plan
+    """
+    plan = _plan_metadata(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold,
+                          strict_schwarz, sao, max_memory_gb, ncores, options)
+    t0 = timer()
+    plan.values = np.zeros(plan.n_elements_cached, dtype=np.float64)
+    if plan.work_build.size:
+        bin_off, bin_items = _lpt_bins(plan.work_build, plan.build_cost, plan.nthreads)
+        _build_cached(bin_off, bin_items, plan.pair_I, plan.pair_J, plan.pair_offset,
+                      plan.pair_nrows, plan.pair_ncols, plan.values, *_kernel_args(plan), plan.pp_group,
+                      plan.grp_branch_eff, plan.ff_eff, plan.dims)
+    plan.timings['near_field'] = timer() - t0
+    plan.timings['total'] = plan.timings.get('metadata_total', 0.0) + plan.timings['near_field']
+    return plan
+
+
+def _plan_metadata(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold, strict_schwarz,
+                   sao=False, max_memory_gb=None, ncores=None, options=None):
+    """
+    Everything except the near-field integral values: screening, the branch geometry and the
+    near/far classification, the profitability rule, the near-field column map, the far-field
+    moments and their branch-centred translations, and the cache selection.  Shared by the CPU
+    driver (:func:`build_plan`) and the CUDA driver
+    (:mod:`~pyfock.Integrals.df_algo12_helpers_cupy`), which is why no integral is evaluated and
+    no value array is allocated here.
 
     Parameters
     ----------
@@ -1661,15 +1689,10 @@ def build_plan(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshol
     plan.build_cost = cost[cached_idx]
     plan._iter_bins = {}
     plan.max_nrows = int(plan.pair_nrows[uncached_idx].max()) if uncached_idx.size else 1
-
-    plan.values = np.zeros(plan.n_elements_cached, dtype=np.float64)
-    if plan.work_build.size:
-        bin_off, bin_items = _lpt_bins(plan.work_build, plan.build_cost, nthreads)
-        _build_cached(bin_off, bin_items, plan.pair_I, plan.pair_J, plan.pair_offset,
-                      plan.pair_nrows, plan.pair_ncols, plan.values, *_kernel_args(plan), plan.pp_group,
-                      plan.grp_branch_eff, plan.ff_eff, plan.dims)
-    timings['near_field'] = timer() - t0
-    timings['total'] = timer() - t_start
+    plan.sig = sig
+    plan.npp_arr = npp_arr
+    timings['caching'] = timer() - t0
+    timings['metadata_total'] = timer() - t_start
     plan.timings = timings
     return plan
 

@@ -51,16 +51,19 @@ def lda_c_vwn_rpa(rho):
 @fuse(kernel_name='lda_c_vwn_rpa_cupy_')
 def lda_c_vwn_rpa_cupy_(rho):
     rho = cp.maximum(rho, 1e-12)
-    a = 0.0310907
-    b = 13.0720
-    c = 42.7198
-    x0 = -0.409286
-    pi34 = (3 / (4 * cp.pi))**(1 / 3)
+    # cupy.fuse infers the type of bare Python scalars inside the kernel and may
+    # evaluate these constants in single precision; np.float64 pins them (see
+    # the CPU implementation above, which is the reference).
+    a = np.float64(0.0310907)
+    b = np.float64(13.0720)
+    c = np.float64(42.7198)
+    x0 = np.float64(-0.409286)
+    pi34 = np.float64((3 / (4 * np.pi))**(1 / 3))
     rs = pi34 * cp.power(rho, -1 / 3)
-    q = cp.sqrt(4 * c - b * b)
-    f1 = 2 * b / q
-    f2 = b * x0 / (x0 * x0 + b * x0 + c)
-    f3 = 2 * (2 * x0 + b) / q
+    q = np.float64(np.sqrt(4 * c - b * b))
+    f1 = np.float64(2 * b / q)
+    f2 = np.float64(b * x0 / (x0 * x0 + b * x0 + c))
+    f3 = np.float64(2 * (2 * x0 + b) / q)
     rs12 = cp.sqrt(rs)
     fx = rs + b * rs12 + c
     qx = cp.arctan(q / (2 * rs12 + b))

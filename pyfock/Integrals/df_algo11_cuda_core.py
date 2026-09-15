@@ -4,6 +4,21 @@ Small items use one thread; large items use one block, shared Rys/shift tables,
 and strided component accumulators. No integral is evaluated per AO function.
 The build writes Cartesian values; a separate row-owned pass projects whole
 auxiliary shells, including h/i shells, without in-place read/write races.
+
+``evaluate_item`` serves both density-fitting algorithms. With ``masked`` false
+(algorithm 11) every surviving primitive pair of the shell pair contributes and
+``mask`` is ignored; with ``masked`` true (algorithm 12) a primitive pair is
+skipped for auxiliary shell ``K`` when its branch is far field for that shell,
+so the block holds the near-field part only and the rest comes from the
+multipole expansions. ``mask`` is ``(pp_off, pp_branch, ff)``: the branch of
+primitive pair ``(ip, jp)`` of pair ``p`` is ``pp_branch[pp_off[p] + ip * nprimB
++ jp]`` and ``ff[branch, K]`` is its far-field flag. The index is dense in
+``(ip, jp)`` rather than a count of surviving pairs on purpose: the device would
+otherwise have to reproduce the host's Gaussian-product pre-screen decision
+exactly, and a one-ulp disagreement would shift every later branch of that shell
+pair. Pairs the host dropped carry a branch whose row is far field everywhere, so
+they are skipped here too even if this pre-screen keeps them. Both callers pass
+arrays of the same dtypes, so one specialization is compiled.
 """
 import math
 
@@ -15,9 +30,10 @@ from .rys_helpers_cuda import Roots, Recur_3c2e, Shift_3c2e
 
 @cuda.jit(device=True, cache=True)
 def evaluate_item(item, lane, stride, cooperative, orbital, auxiliary, shells,
-                  aux_shells, pairs, items, offsets, values, data_x, data_w,
+                  aux_shells, pairs, items, offsets, values, data_x, data_w, masked, mask,
                   roots, weights, gx, gy, gz, sx, sy, sz, accum, tmp):
     coords, lmn, nprim, expnts, coef = orbital
+    pp_off, pp_branch, ff = mask
     acoords, almn, anprim, aexpnts, acoef = auxiliary
     off, nbf, ls = shells
     aoff, anbf, als = aux_shells
@@ -42,6 +58,8 @@ def evaluate_item(item, lane, stride, cooperative, orbital, auxiliary, shells,
             gp = alpha + beta
             ab = alpha * beta
             if ab / gp * r2 > EXP_ARG_CUTOFF:
+                continue
+            if masked and ff[pp_branch[pp_off[p] + ip * nprim[b0] + jp], K]:
                 continue
             px = (alpha * coords[a0, 0] + beta * coords[b0, 0]) / gp
             py = (alpha * coords[a0, 1] + beta * coords[b0, 1]) / gp

@@ -12,7 +12,7 @@ basis_set_name = "def2-QZVP"
 auxbasis_name = "def2-universal-jfit"
 xc_ids = [1, 10]  # SPZMOD
 ao_basis = "SAO"
-xc_algo = 2
+xc_algo = 3
 
 os.environ["OMP_NUM_THREADS"] = str(ncores)
 os.environ["OPENBLAS_NUM_THREADS"] = str(ncores)

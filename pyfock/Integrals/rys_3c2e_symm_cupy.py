@@ -17,6 +17,7 @@ import numba
 from .rys_helpers_cuda import coulomb_rys, Roots, DATA_X, DATA_W
 from .schwarz_helpers import eri_4c2e_diag
 from .rys_2c2e_symm_cupy import rys_2c2e_symm_cupy
+from .cuda_compat import imax, imax3, imin
 
 
 def rys_3c2e_symm_cupy(basis, auxbasis, slice=None, schwarz=False, schwarz_threshold=1e-9, cp_stream=None):
@@ -203,8 +204,8 @@ def rys_3c2e_symm_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_n
                 val = 0.0
 
                 if norder<=10: # Use rys quadrature # Good for upto i orbitals
-                    n = int(max(la+lb,ma+mb,na+nb))
-                    m = int(max(lc+ld,mc+md,nc+nd))
+                    n = int(imax3(la+lb, ma+mb, na+nb))
+                    m = int(imax3(lc+ld, mc+md, nc+nd))
                     
                     
                     #Loop over primitives
@@ -346,8 +347,8 @@ def rys_3c2e_symm_internal_cuda_new(bfs_coords, bfs_contr_prim_norms, bfs_lmn, b
                         val = 0.0
 
                         if norder<=10: # Use rys quadrature # Good for upto i orbitals
-                            n = int(max(la+lb,ma+mb,na+nb))
-                            m = int(max(lc+ld,mc+md,nc+nd))
+                            n = int(imax3(la+lb, ma+mb, na+nb))
+                            m = int(imax3(lc+ld, mc+md, nc+nd))
                             
                             for kk in range(nprimk):
                                 dkk = aux_bfs_coeffs[k][kk]

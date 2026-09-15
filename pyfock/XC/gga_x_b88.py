@@ -88,11 +88,14 @@ def gga_x_b88_e_cupy(rho, sigma):
     # rho_cutoff = 1e-12  # define rho_cutoff constant
     # rho = cp.maximum(rho, 1e-12)
 
-    beta = 0.0042  # beta parameter
-    beta6 = 6 * beta
-    const = (3 / 2) * ((3 / (4 * cp.pi)) ** (1 / 3))
-    two_m13 = 2 ** (-1 / 3)
-    two_m43 = 1 / 2 * two_m13
+    # cupy.fuse infers the type of bare Python scalars inside the kernel and may
+    # evaluate these constants in single precision; np.float64 pins them (see
+    # the CPU implementation above, which is the reference).
+    beta = np.float64(0.0042)  # beta parameter
+    beta6 = np.float64(6 * beta)
+    const = np.float64((3 / 2) * ((3 / (4 * np.pi)) ** (1 / 3)))
+    two_m13 = np.float64(2 ** (-1 / 3))
+    two_m43 = np.float64(1 / 2 * two_m13)
 
 
     rho_13 = rho ** (1 / 3)
@@ -118,11 +121,14 @@ def gga_x_b88_v_cupy(rho, sigma):
     # rho = cp.maximum(rho, 1e-12)
     sigma = cp.maximum(sigma, 1e-30)
 
-    beta = 0.0042  # beta parameter
-    beta2 = 2 * beta
-    beta6 = 6 * beta
-    bbta6 = 6 * beta * beta
-    const = 3 / 2 * (3 / (4 * cp.pi)) ** (1 / 3)
+    # cupy.fuse infers the type of bare Python scalars inside the kernel and may
+    # evaluate these constants in single precision; np.float64 pins them (see
+    # the CPU implementation above, which is the reference).
+    beta = np.float64(0.0042)  # beta parameter
+    beta2 = np.float64(2 * beta)
+    beta6 = np.float64(6 * beta)
+    bbta6 = np.float64(6 * beta * beta)
+    const = np.float64(3 / 2 * (3 / (4 * np.pi)) ** (1 / 3))
 
     rho1 = 0.5 * rho
     rho_13 = rho1 ** (1 / 3)

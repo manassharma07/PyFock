@@ -86,16 +86,19 @@ def gga_c_pbe_cupy_(rho, sigma):
 
     rho = cp.maximum(rho, 1e-12)
 
-    beta = 0.06672455060314922
-    gamma = (1 - cp.log(2)) / cp.pi**2
+    # cupy.fuse infers the type of bare Python scalars inside the kernel and may
+    # evaluate these constants in single precision; np.float64 pins them (see
+    # the CPU implementation above, which is the reference).
+    beta = np.float64(0.06672455060314922)
+    gamma = np.float64((1 - np.log(2)) / np.pi**2)
 
-    pi34 = (3 / (4 * cp.pi))**(1 / 3)
+    pi34 = np.float64((3 / (4 * np.pi))**(1 / 3))
     rs = pi34 * rho**(-1 / 3)
     norm_dn = cp.sqrt(sigma)
     ec, vc = lda_c_pw_mod_cupy_(rho)
 
-    kf = (9 / 4 * cp.pi)**(1 / 3) / rs
-    ks = cp.sqrt(4 * kf / cp.pi)
+    kf = np.float64((9 / 4 * np.pi)**(1 / 3)) / rs
+    ks = cp.sqrt(4 * kf / np.float64(np.pi))
     divt = 2 * ks * rho
     t = norm_dn / divt
     expec = cp.exp(-ec / gamma)

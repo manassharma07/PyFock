@@ -10,7 +10,7 @@ dft = DFT(mol, basis, aux, xc=[1, 7], conv_crit=1e-7, gridsLevel=3,
 # The reference output was generated with the core-Hamiltonian guess (PyFock's default is now 'sano')
 dft.dmat_guess_method = "core"
 dft.max_itr = 35
-dft.XC_algo = 2
+dft.XC_algo = 3
 dft.DF_algo = 10
 dft.sao = True
 dft.strict_schwarz = False

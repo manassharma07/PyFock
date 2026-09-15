@@ -5,7 +5,7 @@ from pathlib import Path
 TEST = {'name': 'h2o_lda_cao_svp_df_algo_11_mem0', 'description': 'Native-grid GPU versus CPU algorithm 11.',
         'input': 'input.py', 'output': 'output.test.txt', 'reference': 'output.ref.txt',
         'report': 'test.report.txt', 'basis': 'def2-SVP', 'auxbasis': 'def2-universal-jfit',
-        'xc_name': 'LDA(1,7)', 'xc_ids': [1, 7], 'ao_basis': 'CAO', 'xc_algo': 2,
+        'xc_name': 'LDA(1,7)', 'xc_ids': [1, 7], 'ao_basis': 'CAO', 'xc_algo': 3,
         'device': 'gpu', 'use_pyscf_grids': False, 'use_libxc': False}
 CHECKS = [{'name': 'SCF converged', 'match': r'SCF Converged after', 'kind': 'text'},
           {'name': 'Total energy', 'match': r'^Total Energy\s+([-+0-9.eE]+)\s*$', 'tol': 1e-8}]

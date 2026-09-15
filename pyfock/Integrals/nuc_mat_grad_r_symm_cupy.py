@@ -22,6 +22,7 @@ import numba
 # fragile under the CUDA simulator and add compile-time coupling) while
 # avoiding duplicating the big Boys Taylor table.
 from .nuc_mat_symm_cupy import TABLE, LOOKUP_TABLE, LOOKUP_TABLE_COMB
+from .cuda_compat import imax, imax3, imin
 
 
 @cuda.jit(fastmath=True, cache=True, device=True)
@@ -260,7 +261,7 @@ def primitive_nuc_single_center_cuda(la, ma, na, lb, mb, nb, alphaik, alphajk,
     for n in range(max_n + 1):
         facn[n] = c2k(n, na, nb, PIz_, PJz_)
 
-    maxlmn = max(max_l, max_m, max_n)
+    maxlmn = imax3(max_l, max_m, max_n)
     for li in range(maxlmn // 2 + 1):
         epsilonl[li] = epsilon**li
 
