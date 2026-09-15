@@ -140,8 +140,14 @@ class DFT:
 
     DF_algo : int
         Algorithm selector for DF (reserved for developer use). 11 (default) is the shell-blocked
-        CPU algorithm that honours ``max_memory_ints3c2e`` and also provides RI-HF exchange
-        (``xc='HF'``, CPU); 10 is the previous default and is used automatically on the GPU.
+        CPU/GPU algorithm that honours ``max_memory_ints3c2e`` and also provides RI-HF exchange
+        (``xc='HF'``, CPU); 12 adds multipole expansions for the far-field three-center integrals
+        (CPU, pure functionals; see ``multipole_options``); 10 is the previous default.
+
+    multipole_options : dict
+        Parameters of the far-field multipole expansions of DF_algo=12 (``precision``, ``lmax``,
+        ``box_size``, ``separation``, ``class_factor``); missing keys take the defaults of
+        :data:`pyfock.Integrals.df_algo12_helpers.DEFAULT_OPTIONS`.
 
     max_memory_ints3c2e : float or None
         Memory budget (GB) for the stored three-center integrals with DF_algo=11
@@ -316,7 +322,12 @@ class DFT:
         a lot of memory as the complete 3c2e tensor is stored in memory.
         RI-HF (xc='HF') works with DF_algo=1, 2, 3 and 11 (CPU). With 11 the screened blocks are
         orthonormalized in the fit metric once after the integral build (true spherical fit space
-        in SAO mode) and both J and the exchange matrix K are contracted from these rows."""
+        in SAO mode) and both J and the exchange matrix K are contracted from these rows.
+        DF_algo=12 (CPU, pure functionals): the near-field three-center integrals are evaluated and
+        stored as in DF_algo=11, while well-separated (distribution, auxiliary function) pairs are
+        treated through multipole expansions (exact finite moments of the primitive pair products and
+        of the auxiliary functions, box-level expansions truncated at ``lmax``); see
+        `multipole_options` and pyfock.Integrals.df_algo12_helpers. On the GPU it falls back to 11."""
 
         self.max_memory_ints3c2e = None
         """ Memory budget in GB for the screened three-center integrals when DF_algo=11.
@@ -324,6 +335,17 @@ class DFT:
         most expensive blocks and recomputes the remaining ones in every SCF iteration; 0 recomputes
         everything (direct DF-J). On the GPU this caps cached device values; a separate bounded
         buffer holds direct batches. Ignored by the other DF algorithms."""
+
+        self.multipole_options = {}
+        """ Far-field parameters of DF_algo=12 (pyfock.Integrals.df_algo12_helpers.DEFAULT_OPTIONS gives the
+        defaults): 'precision' (overlap error of the multipole approximation relative to a unit-charge interaction,
+        1e-10), 'lmax' (order of the box expansions, 12), 'box_size' (bohr, 2.5), 'separation' (a box interacts
+        through multipoles only with atoms farther than separation x its radius, 4.0), 'class_factor'
+        (geometric factor of the extent classes within a box, 4), 'break_even' (a group of distributions is
+        expanded only once it has at least this many far-field auxiliary functions per expansion coefficient,
+        1) and 'low_memory' (False; True drops the pre-translated box-centred moments and re-translates every
+        group in each SCF iteration, which saves that storage and costs iteration time, same numbers to
+        rounding). Ignored by the other DF algorithms."""
 
         self.blocksize = blocksize
         """ Block size for the evaulation of XC term on grids. For CPUs a value of ~5000 is recommended. For GPUs, a value >20480 is recommended. """
@@ -1186,6 +1208,9 @@ class DFT:
 
         if isDF==False:
             strict_schwarz = False
+        if isDF and DF_algo == 12 and self.use_gpu:
+            print('DF_algo=12 (multipole-accelerated density fitting) is implemented for the CPU only; using DF_algo=11 on the GPU.', flush=True)
+            DF_algo = 11
 
         # Skala, the neural functional, is not a LibXC functional: it resolves to a loaded TorchScript
         # model rather than to a list of functional IDs, and is evaluated by its own driver further down.
@@ -1382,11 +1407,11 @@ class DFT:
         isSchwarz = True
         
         if strict_schwarz:
-            if not (DF_algo in (6, 10, 11)):
+            if not (DF_algo in (6, 10, 11, 12)):
                 print('Warning: The stricter variation of Schwarz screening is only compatible with DF algo #6 or #10 so turning it off.')
                 strict_schwarz = False
         if cholesky:
-            if not (DF_algo in (6, 10, 11)):
+            if not (DF_algo in (6, 10, 11, 12)):
                 print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with DF algo #6 or #10 so turning it off.')
                 cholesky = False
         if cholesky:
@@ -1430,6 +1455,7 @@ class DFT:
         # DF_algo = 8 (no longer works or maintained) # Similar to 6, except that here the significant indices are not stored resulting in 50% memory savings. The drawback is that it only works in serial which is useful for Google colab or Kaggle perhaps.
         # DF_algo = 9 (no longer works or maintained) # 
         # DF_algo = 11 # Shell-blocked Rys evaluation with block-sparse storage and a memory budget (CPU/GPU).
+        # DF_algo = 12 # DF_algo=11 for the near field plus multipole expansions for the far-field three-center integrals (CPU).
         # DF_algo = 10 # Previous default: Similar to 8, but parallelized with the use of Cholesky decomposition for the 2c2e integrals which results in further memory savings and speed up.
 
         V_ecp = None
@@ -2070,7 +2096,7 @@ class DFT:
                     Ecoul = contract('ij,ji->', dmat, J)*0.5
                     if exx_coef > 0:
                         Eexchange = -exx_coef*contract('ij,ji->', dmat, K)*0.25
-            if isDF and (DF_algo in (6, 10, 11)):
+            if isDF and (DF_algo in (6, 10, 11, 12)):
                 Ecoul = Ecoul*2 - 0.5*Ecoul_temp # This is the correct formula for Coulomb energy with DF
             
             Etot_new = Enuc + Eecp + Ekin + Enn + Ecoul
@@ -2287,7 +2313,7 @@ class DFT:
         print('Preprocessing                          ', round(durationXCpreprocessing + durationAO_values + durationgrids_prune_rho + durationSchwarz, 2), flush=True)
         if isDF:
             print('Density Fitting                        ', round(durationDF, 2), flush=True)
-            if DF_algo in (6, 10, 11):
+            if DF_algo in (6, 10, 11, 12):
                 print('    DF (gamma)                         ', round(durationDF_gamma, 2), flush=True)
                 print('    DF (coeff)                         ', round(durationDF_coeff, 2), flush=True)
                 print('    DF (Jtri)                          ', round(durationDF_Jtri, 2), flush=True)

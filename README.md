@@ -580,11 +580,35 @@ numgrid grids can and cannot do.
 
 ### Density-Fitting Coulomb Algorithms and Memory Budget
 
-The Coulomb term is evaluated with density fitting and Schwarz screening. Two CPU/GPU
+The Coulomb term is evaluated with density fitting and Schwarz screening. Three
 algorithms are available through `DFT.DF_algo`:
 
-- `11` (default): shell-blocked Rys evaluation with block-sparse storage. It honours a
+- `11` (default): shell-blocked Rys evaluation with block-sparse storage (CPU/GPU). It honours a
   memory budget for the stored integrals:
+- `12`: multipole-accelerated density fitting (CPU, pure functionals). The near-field
+  three-center integrals are evaluated and stored as in `11`; well-separated pairs of a
+  basis-function-product distribution and an auxiliary function are handled through
+  multipole expansions (exact finite moments of the primitive pair products and of the
+  auxiliary functions, box-level expansions truncated at `lmax`). Energies agree with `11`
+  to ~1e-8 Hartree. Both the speed-up and the memory saving grow with the extent of the
+  molecule, since the far field is what they come from (def2-SVP, 4 cores, three-center
+  build plus all per-iteration Coulomb work):
+
+  | System | far field | time vs `11` | stored integrals + moments |
+  |---|---|---|---|
+  | Caffeine (14 bohr across) | 4.0% | 0.9x | 0.18 -> 0.19 GB |
+  | Cholesterol (35 bohr) | 32.4% | 1.5x | 1.61 -> 1.28 GB |
+  | Icosane C20H42 (48 bohr) | 52.6% | 1.4x | 0.58 -> 0.37 GB |
+  | Tetracontane C40H82 (95 bohr) | 74.7% | 2.7x | 2.41 -> 0.80 GB |
+
+  The crossover is around 25 to 30 bohr of molecular extent; below it a group of distributions is
+  mostly not expanded at all, because it is only expanded when it has enough far-field auxiliary
+  functions to pay for the expansion. `{'low_memory': True}` drops the pre-translated box-centred
+  moments and re-derives them each iteration, which takes icosane from 0.37 to 0.28 GB for about
+  20% slower Coulomb iterations and identical energies.
+  Parameters are set through `dft_obj.multipole_options`, e.g.
+  `{'precision': 1e-10, 'lmax': 12, 'box_size': 2.5, 'separation': 4.0}`; see
+  [docs/df_algo12_multipoles.md](docs/df_algo12_multipoles.md).
 - `10`: the previous default, per-function Rys evaluation with sparse triangular storage
   of the screened three-center integrals. It gives the same energies (identical to
   ~1e-10 Hartree in the CPU comparisons). It remains selectable for benchmarking.
