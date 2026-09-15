@@ -4,9 +4,14 @@
 integrals of `DF_algo=11` for the *near field* and multipole expansions for the *far
 field*, in the spirit of the continuous fast multipole method (White, Johnson, Gill,
 Head-Gordon, Chem. Phys. Lett. 230, 8 (1994)) applied to the three-center integrals of
-the resolution of the identity. Code: `pyfock/Integrals/df_algo12_helpers.py` (algorithm)
-and `pyfock/Integrals/multipole_helpers.py` (solid harmonics, translations, Gaussian
-moments). CPU only, pure (non-hybrid) functionals.
+the resolution of the identity. Code: `pyfock/Integrals/df_algo12_helpers.py` (algorithm),
+`pyfock/Integrals/df_algo12_helpers_cupy.py` with `df_algo12_cuda_core.py` (CUDA driver) and
+`pyfock/Integrals/multipole_helpers.py` (solid harmonics, translations, Gaussian moments).
+
+It is the **default** since PyFock 0.2.1, on the CPU and on the GPU, for pure (non-hybrid)
+functionals. Runs that need RI exact exchange (`xc='HF'`, hybrid functionals) fall back to
+`DF_algo=11` automatically, since exchange contracts the three-center blocks the far field
+replaces.
 
 ```python
 dft_obj.DF_algo = 12
@@ -218,8 +223,9 @@ and can be combined with it.
 
 ## 6. Limitations and possible extensions
 
-* CPU only; `use_gpu=True` falls back to `DF_algo=11`. RI exact exchange (HF, hybrid
-  functionals) needs the complete three-center blocks and is refused with `DF_algo=12`.
+* RI exact exchange (HF, hybrid functionals) needs the complete three-center blocks, so those
+  runs use `DF_algo=11` instead (chosen automatically). `low_memory=True` is CPU only and is
+  rejected on the GPU.
 * The branch <-> atom coupling is a single level (`n_branches x n_atoms` pairs). A box
   hierarchy on the auxiliary side would make it linear scaling for systems with several
   hundred atoms; for the molecules above it is not the bottleneck.

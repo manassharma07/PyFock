@@ -139,10 +139,12 @@ class DFT:
         Whether to use Rys quadrature for evaluating electron repulsion integrals.
 
     DF_algo : int
-        Algorithm selector for DF (reserved for developer use). 11 (default) is the shell-blocked
-        CPU/GPU algorithm that honours ``max_memory_ints3c2e`` and also provides RI-HF exchange
-        (``xc='HF'``, CPU); 12 adds multipole expansions for the far-field three-center integrals
-        (CPU/GPU, pure functionals; see ``multipole_options``); 10 is the previous default.
+        Algorithm selector for DF (reserved for developer use). 12 (default, CPU/GPU) is the
+        shell-blocked algorithm with multipole expansions for the far-field three-center integrals
+        (pure functionals; see ``multipole_options``); 11 is the same near-field algorithm without
+        the far field and is selected automatically for RI exact exchange (``xc='HF'`` and hybrid
+        functionals, CPU), which needs the complete three-center blocks; 10 is the former default.
+        Both 11 and 12 honour ``max_memory_ints3c2e``.
 
     multipole_options : dict
         Parameters of the far-field multipole expansions of DF_algo=12 (``precision``, ``lmax``,
@@ -150,9 +152,10 @@ class DFT:
         :data:`pyfock.Integrals.df_algo12_helpers.DEFAULT_OPTIONS`.
 
     max_memory_ints3c2e : float or None
-        Memory budget (GB) for the stored three-center integrals with DF_algo=11, or for the
-        near-field blocks with DF_algo=12 (None = store everything significant, 0 = recompute
-        every SCF iteration).
+        Memory budget (GB) for the stored three-center integrals: the near-field blocks with
+        DF_algo=12, every significant block with DF_algo=11 (None = store everything significant,
+        0 = recompute every SCF iteration). The far-field moments of DF_algo=12 are always stored;
+        ``multipole_options['low_memory']`` reduces them on the CPU.
 
     XC_algo : int
         Algorithm selector for XC evaluation (2 for CPU, 3 for GPU).
@@ -314,22 +317,24 @@ class DFT:
         """ Use rys quadrature for the evaluation of two electron integrals (with and without DF)
         In case of DF, only rys quadrature based evaluation of ERIs is supported."""
 
-        self.DF_algo = 11
+        self.DF_algo = 12
         """ This is only for developers. Users should not change it.
-        DF_algo=11 (default, CPU/GPU): the significant 3c2e integrals are evaluated shell-blocked, stored
-        block-sparse in memory throughout the SCF (or partially/never, see max_memory_ints3c2e).
-        DF_algo=10: the previous default (per-function evaluation, sparse triangular storage); it is
+        DF_algo=12 (default, CPU/GPU, pure functionals): the near-field three-center integrals are
+        evaluated shell-blocked and stored as in DF_algo=11, while well-separated (distribution,
+        auxiliary function) pairs are treated through multipole expansions (exact finite moments of
+        the primitive pair products and of the auxiliary functions, box-level expansions truncated
+        at ``lmax``); see `multipole_options`, pyfock.Integrals.df_algo12_helpers and, for the CUDA
+        driver, pyfock.Integrals.df_algo12_helpers_cupy. The 'low_memory' option is CPU only.
+        DF_algo=11 (CPU/GPU): the same shell-blocked evaluation without the far field, i.e. every
+        significant 3c2e integral is stored block-sparse in memory throughout the SCF (or
+        partially/never, see max_memory_ints3c2e). RI exact exchange needs those complete blocks,
+        so a run with xc='HF' or a hybrid functional falls back from 12 to 11 automatically.
+        DF_algo=10: the former default (per-function evaluation, sparse triangular storage); it is
         selectable on both CPU and GPU. Alternatives 1 and 2 are only for reference and take up
         a lot of memory as the complete 3c2e tensor is stored in memory.
         RI-HF (xc='HF') works with DF_algo=1, 2, 3 and 11 (CPU). With 11 the screened blocks are
         orthonormalized in the fit metric once after the integral build (true spherical fit space
-        in SAO mode) and both J and the exchange matrix K are contracted from these rows.
-        DF_algo=12 (CPU/GPU, pure functionals): the near-field three-center integrals are evaluated and
-        stored as in DF_algo=11, while well-separated (distribution, auxiliary function) pairs are
-        treated through multipole expansions (exact finite moments of the primitive pair products and
-        of the auxiliary functions, box-level expansions truncated at ``lmax``); see
-        `multipole_options`, pyfock.Integrals.df_algo12_helpers and, for the CUDA driver,
-        pyfock.Integrals.df_algo12_helpers_cupy. The 'low_memory' option is CPU only."""
+        in SAO mode) and both J and the exchange matrix K are contracted from these rows."""
 
         self.max_memory_ints3c2e = None
         """ Memory budget in GB for the screened three-center integrals when DF_algo=11 or 12
@@ -1303,6 +1308,13 @@ class DFT:
             else:
                 exx_coef = sum(XC.get_exx_coefficient(fid) for fid in xc)
         self.exx_coef = exx_coef
+        if exx_coef > 0 and isDF and DF_algo == 12:
+            # The far field of DF_algo=12 replaces whole (ij|P) blocks by multipole expansions,
+            # while RI exact exchange contracts the blocks themselves. Fall back to the near-field
+            # algorithm, which is DF_algo=12 without the far field.
+            print('RI exact exchange (HF and hybrid functionals) needs the complete three-center '
+                  'blocks: using DF_algo=11 instead of the default DF_algo=12.', flush=True)
+            DF_algo = 11
         if exx_coef > 0 and isDF and DF_algo not in (1, 2, 3, 11):
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             print('ERROR: RI exact exchange (HF and hybrid functionals) is currently implemented only for DF_algo=1, 2, 3, or 11!')
@@ -1407,11 +1419,11 @@ class DFT:
         
         if strict_schwarz:
             if not (DF_algo in (6, 10, 11, 12)):
-                print('Warning: The stricter variation of Schwarz screening is only compatible with DF algo #6 or #10 so turning it off.')
+                print('Warning: The stricter variation of Schwarz screening is only compatible with DF algo #6, #10, #11 or #12 so turning it off.')
                 strict_schwarz = False
         if cholesky:
             if not (DF_algo in (6, 10, 11, 12)):
-                print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with DF algo #6 or #10 so turning it off.')
+                print('Warning: The Cholesky decomposition of 2c2e integrals is only compatible with DF algo #6, #10, #11 or #12 so turning it off.')
                 cholesky = False
         if cholesky:
             if self.use_gpu:
