@@ -15,6 +15,14 @@ from pyfock.Basis import Basis
 from pyfock.Mol import Mol
 
 
+def _to_host(array):
+    """NumPy view of an array that may be on the device after a ``use_gpu`` SCF."""
+    if array is None or isinstance(array, np.ndarray):
+        return array
+    getter = getattr(array, 'get', None)   # CuPy's own transfer; np.asarray refuses a device array
+    return np.asarray(getter() if getter is not None else array)
+
+
 class DFT_Grad:
     """
     Analytical nuclear gradients (and forces) for converged PyFock DFT
@@ -83,8 +91,15 @@ class DFT_Grad:
             raise ValueError('ERROR: A PyFock DFT object is required.')
         if not getattr(dft_obj, 'converged', False):
             raise ValueError('ERROR: The supplied DFT object must already be converged.')
+        # A GPU SCF is fine. The gradient itself is CPU code, so the converged quantities it reads --
+        # the density matrix, the MOs and the grid -- are brought back to the host. The SCF is the
+        # larger half of a geometry-optimization step, so this is worth having even though the gradient
+        # does not run on the device.
+        self.grids = dft_obj.grids
         if dft_obj.use_gpu:
-            raise NotImplementedError('Analytical gradients are currently implemented for CPU only.')
+            self.grids = copy.copy(dft_obj.grids)   # shallow: only the arrays below are replaced
+            for name in ('coords', 'weights', 'atomic_weights', 'atom_idx'):
+                setattr(self.grids, name, _to_host(getattr(dft_obj.grids, name, None)))
         if not dft_obj.isDF:
             raise NotImplementedError('Analytical gradients are currently implemented for density-fitted (isDF=True) calculations only.')
         if dft_obj.xc == 'HF' or getattr(dft_obj, 'exx_coef', 0.0) > 0:
@@ -116,7 +131,7 @@ class DFT_Grad:
                 'grid_response=False is not usable with Skala: on a frozen grid its gradient is wrong '
                 'by ~1e-2 Ha/Bohr, the size of the forces themselves. Pass grid_response=True (the '
                 'default for Skala) or use DFT_NumGrad.')
-        if self.grid_response and getattr(dft_obj.grids, 'atomic_weights', None) is None:
+        if self.grid_response and getattr(self.grids, 'atomic_weights', None) is None:
             raise ValueError(
                 "grid_response=True needs the unpartitioned single-atom quadrature weights, which the "
                 "'numgrid' grid scheme does not expose. Build the grid with the native scheme, e.g. "
@@ -135,9 +150,9 @@ class DFT_Grad:
     def _energy_weighted_dmat(self):
         """Energy-weighted density matrix W in the CAO basis."""
         dft_obj = self.dft_obj
-        mo_coeff = dft_obj.mo_coefficients
-        mo_energy = dft_obj.mo_energies
-        mo_occ = dft_obj.mo_occupations
+        mo_coeff = _to_host(dft_obj.mo_coefficients)
+        mo_energy = _to_host(dft_obj.mo_energies)
+        mo_occ = _to_host(dft_obj.mo_occupations)
         if mo_coeff is None or mo_energy is None or mo_occ is None:
             raise ValueError('The converged DFT object must contain MO coefficients, energies and occupations.')
         mo_occ = np.asarray(mo_occ)
@@ -224,7 +239,7 @@ class DFT_Grad:
 
         numba.set_num_threads(ncores)
 
-        dmat = np.ascontiguousarray(dft_obj.dmat, dtype=np.float64)
+        dmat = np.ascontiguousarray(_to_host(dft_obj.dmat), dtype=np.float64)
         bfs_atoms = np.asarray(basis.bfs_atoms, dtype=np.int64)
 
         timings = {}
@@ -313,7 +328,7 @@ class DFT_Grad:
 
         # ---------------- XC ----------------
         start = timer()
-        grids = dft_obj.grids
+        grids = self.grids
         coords_grid = np.asarray(grids.coords)
         weights_grid = np.asarray(grids.weights)
         ngrids = coords_grid.shape[0]
@@ -331,7 +346,7 @@ class DFT_Grad:
             # Skala also depends on the nuclear positions explicitly, through the grid geometry it
             # reads; that part comes back already resolved per atom (see eval_xc_grad_skala).
             dexc_dbf, explicit_xc_grad = Integrals.eval_xc_grad_skala(
-                basis, dmat, dft_obj.grids, self.skala, ncores=ncores, blocksize=blocksize,
+                basis, dmat, self.grids, self.skala, ncores=ncores, blocksize=blocksize,
                 list_nonzero_indices=list_nonzero_indices,
                 count_nonzero_indices=count_nonzero_indices,
             )
@@ -341,7 +356,7 @@ class DFT_Grad:
                 use_libxc=dft_obj.use_libxc, ncores=ncores, blocksize=blocksize,
                 list_nonzero_indices=list_nonzero_indices,
                 count_nonzero_indices=count_nonzero_indices,
-                grids=dft_obj.grids, grid_response=self.grid_response,
+                grids=self.grids, grid_response=self.grid_response,
             )
             # eval_xc_grad_2 only returns the per-atom grid-response term when it was asked for.
             if self.grid_response:
@@ -379,7 +394,7 @@ class DFT_Grad:
             print('---------------------------------------------------------\n')
 
         return {
-            'energy': dft_obj.Total_energy,
+            'energy': float(dft_obj.Total_energy),
             'gradient': gradient,
             'forces': forces,
             'gradient_components': {

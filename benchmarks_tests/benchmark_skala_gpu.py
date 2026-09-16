@@ -119,36 +119,49 @@ if section == 'opt':
     from ase.optimize import LBFGSLineSearch
     from pyfock import PyFockCalculator
 
+    # The gradient itself is CPU code in every one of these: use_gpu=True runs the SCF on the device and
+    # DFT_Grad brings the converged density, MOs and grid back to the host. The SCF is the larger half
+    # of a step, so it still pays.
+    CONFIGS = [('cpu', {}),
+               ('skala_gpu', {'skala_gpu': True}),
+               ('full gpu', {'use_gpu': True})]
+
     print()
     print('=' * 100)
     print('Geometry optimization (ASE LBFGSLineSearch, fmax = 0.02 eV/A, started 3% stretched)')
     print('=' * 100)
-    print('%-9s %-12s %7s   %-24s   %11s %11s'
-          % ('system', 'mode', 'steps', 'time cpu -> gpu (s)', 'bond cpu', 'bond gpu'))
+    print('%-8s %-11s %8s  %8s  %15s  %15s   %8s'
+          % ('system', 'mode', 'steps', 'cpu (s)', 'skala_gpu (s)', 'full gpu (s)', 'bond (A)'))
     print('-' * 100)
 
     for name, filename, pair in [('water', 'h2o.xyz', (0, 1)), ('ethane', 'Ethane.xyz', (0, 1))]:
         for in_process in (False, True):
             result = {}
-            for skala_gpu in (False, True):
+            for label, options in CONFIGS:
                 atoms = read(os.path.join(EXAMPLES, filename))
                 atoms.positions *= 1.03
                 atoms.calc = PyFockCalculator(
                     functional='skala-1.1', basis=BASIS, auxbasis=AUXBASIS, ncores=ncores,
-                    conv_crit=CONV, save_ao_values=True, skala_gpu=skala_gpu, dispersion=True,
+                    conv_crit=CONV, save_ao_values=True, dispersion=True,
                     dispersion_kwargs={'xc': 'b3lyp5'}, run_in_process=in_process,
                     directory='opt_%s_%s_%s' % (name, 'inproc' if in_process else 'subproc',
-                                                'gpu' if skala_gpu else 'cpu'))
+                                                label.replace(' ', '_')),
+                    **options)
                 optimizer = LBFGSLineSearch(atoms, logfile=None)
                 with contextlib.redirect_stdout(io.StringIO()):
                     start = time.perf_counter()
                     optimizer.run(fmax=0.02)
                     elapsed = time.perf_counter() - start
-                result[skala_gpu] = (elapsed, atoms.get_distance(*pair), optimizer.get_number_of_steps())
-            (t_cpu, d_cpu, steps), (t_gpu, d_gpu, steps_gpu) = result[False], result[True]
-            print('%-9s %-12s %3d/%-3d %9.1f -> %6.1f (%5.2fx)   %9.4f A %9.4f A'
-                  % (name, 'in-process' if in_process else 'subprocess', steps, steps_gpu,
-                     t_cpu, t_gpu, t_cpu / t_gpu, d_cpu, d_gpu))
+                result[label] = (elapsed, atoms.get_distance(*pair), optimizer.get_number_of_steps())
+
+            base = result['cpu'][0]
+            bonds = [result[label][1] for label, _ in CONFIGS]
+            print('%-8s %-11s %2d/%d/%-3d %8.1f  %6.1f (%5.2fx)  %6.1f (%5.2fx)   %8.4f (+-%.4f)'
+                  % (name, 'in-process' if in_process else 'subprocess',
+                     result['cpu'][2], result['skala_gpu'][2], result['full gpu'][2], base,
+                     result['skala_gpu'][0], base / result['skala_gpu'][0],
+                     result['full gpu'][0], base / result['full gpu'][0],
+                     bonds[0], max(bonds) - min(bonds)))
 
     print()
     print('The in-process rows start warm, since the warm-up above already ran; a cold start adds about')

@@ -1,0 +1,623 @@
+XC not specified, defaulting to LDA functional (LibXC codes: 1, 7)
+Using converged density matrix from the previous ASE step.
+
+======================================================================
+PyFock Python Program for Quantum Chemistry Simulations
+                                        by Manas Sharma
+======================================================================
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m[38;5;45m█[0m  [38;5;51m█[0m[38;5;51m█[0m    [38;5;87m█[0m[38;5;87m█[0m [38;5;123m█[0m[38;5;123m█[0m[38;5;123m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m  [38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m   [38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m   [38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m█[0m[38;5;45m█[0m [38;5;45m░[0m[38;5;45m█[0m[38;5;51m█[0m  [38;5;51m█[0m[38;5;51m█[0m[38;5;87m░[0m [38;5;87m█[0m[38;5;87m█[0m[38;5;87m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m [38;5;159m█[0m[38;5;159m█[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;219m░[0m [38;5;219m█[0m[38;5;219m█[0m  [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m 
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m   [38;5;45m░[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m░[0m  [38;5;87m█[0m[38;5;87m█[0m[38;5;87m█[0m[38;5;123m█[0m[38;5;123m█[0m   [38;5;159m█[0m[38;5;159m█[0m    [38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m      [38;5;219m█[0m[38;5;219m█[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m  
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m░[0m[38;5;45m░[0m    [38;5;51m░[0m[38;5;51m█[0m[38;5;87m█[0m[38;5;87m░[0m   [38;5;123m█[0m[38;5;123m█[0m[38;5;123m░[0m[38;5;159m░[0m[38;5;159m░[0m   [38;5;195m█[0m[38;5;195m█[0m    [38;5;225m█[0m[38;5;219m█[0m [38;5;219m█[0m[38;5;219m█[0m      [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m 
+[38;5;39m█[0m[38;5;39m█[0m         [38;5;51m█[0m[38;5;87m█[0m    [38;5;123m█[0m[38;5;123m█[0m      [38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;219m░[0m [38;5;219m░[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m  [38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m░[0m[38;5;39m░[0m         [38;5;51m░[0m[38;5;87m░[0m    [38;5;123m░[0m[38;5;123m░[0m       [38;5;195m░[0m[38;5;195m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m   [38;5;219m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m [38;5;213m░[0m[38;5;213m░[0m   [38;5;213m░[0m[38;5;213m░[0m
+
+======================================================================
+
+Version:  0.2.1
+Citation: M. Sharma and M. Sierka, PyFock: A Just-In-Time Compiled 
+Gaussian Basis DFT Python Code for CPU and GPU Architectures
+
+======================================================================
+
+📧 Contact Information:
+   Developer: Dr. Manas Sharma (PhD Physics)
+   Email: manas.sharma@uni-jena.de
+   Website: https://manas.bragitoff.com/
+
+📚 Resources:
+   Documentation: https://pyfock-docs.bragitoff.com
+   Official Website: https://pyfock.bragitoff.com/
+   GitHub Repo: https://github.com/manassharma07/pyfock
+   Web GUI: https://pyfock-gui.bragitoff.com/
+
+======================================================================
+
+
+
+ Time to get inspired by a great quantum chemist :)
+
+
+======================================================================
+ ____        _   _               __               _ 
+|  _ \ _   _| |_| |__   ___ _ __ / _| ___  _ __ __| |
+| |_) | | | | __| '_ \ / _ \ '__| |_ / _ \| '__/ _` |
+|  _ <| |_| | |_| | | |  __/ |  |  _| (_) | | | (_| |
+|_| \_\\__,_|\__|_| |_|\___|_|  |_|  \___/|_|  \__,_|
+======================================================================
+
+   
+                                                                         
+                                ........                                 
+                             ....  .   .,.,,,..                          
+                         ..      ....,,:,,,::,::,                        
+                      .,     ....,:::,..,::,::::::,                      
+                     .,   .....           .,:::;:;;..                    
+                     :.....                 .......,:,                   
+                    :,...                       ..:::::                  
+                    ...                     ....   :::;,                 
+                    ..                       ...   .::::                 
+                    ..                        ...  ..;:;                 
+                   . .                       ....  ..,:;.                
+                     .                 ,.    ...,  ...,:.                
+                    ,.;-;--:.     :--+--;-;:....:, ....:                 
+                    ,,.,;++-:    ,**+++;,,,,....,, ....-.                
+                     . -++:.,.  .,;:;,:;,;:,.  ..: .,:,:,                
+                     .   .      ...       .    ..:.,,:.:;.               
+                    ..          ..             ...,,:  ,:.               
+                    .            ..           .....,-, .,                
+                    .      .    .  ,          .....,:,.,.                
+                     .      ,,,;-;.:          .....  .,.                 
+                     ,    ..::,,;++;.         ....;..,                   
+                     ..   ,.,.;,,.:-;:,.     ....,+,.                    
+                      : ..,:;;:,,:;;-;;+;    ....:-.                     
+                      ..,+**-,,::;--+++++,  ....::;.                     
+                       ,.,:.  ...........   ...::.;;,                    
+                        .     .,,,.        ...;,.,:,..                   
+                        .,                ..,;,.., , .,.                 
+                          ..            .,,::.,:,  ,    .,..             
+                          .,,     ..,,:;;:,,,::,  ..     ,......         
+                       ..,. .,.::;;;;;:,,,,::,    ,      ..    .....     
+                   .... ..   ,  ...  .,,::,      ,        ,              
+               .....   ..    ,.    .,.:,.      .:         ..             
+            ...        .     .,..   .::      .,,,          ,             
+         ..          ..       -;....  ,    ,,.,:            .            
+                              :;:...,.....,;:,:            ..            
+                    .         ,. ...     .;, ..        .,.               
+                     .        .,    ,   ,-.  ,          ..               
+                      .       ...   ,  ,;,  ,            .               
+                              ..,   ,..:;   .             ,              
+                                .. ,    :. ,             ,               
+                                                                         
+                                                                         
+                      :;--+-:;;, ;-;;;;+;--;;---;                        
+                       .......   ... . .... ....                         
+                                                                         
+   
+   
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║         All science is either physics or stamp collecting.           ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║                                                       ~ rutherford   ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+
+
+Number of atoms:  3
+
+
+Number of basis functions or Cartesian atomic orbitals (6d, 10f, 15g and so on):  25
+
+
+Number of auxiliary basis functions (in Cartesian atomic orbital basis):  85
+
+======================================================================
+
+
+============= System Information =============
+Operating System: Windows 11
+System Type: 64bit
+CPU Model: Intel64 Family 6 Model 151 Stepping 2, GenuineIntel
+Number of Cores: 16
+Number of Threads: 24
+Memory (GB): 31.75
+
+======================================================================
+
+Running DFT using 4 threads for Numba.
+
+
+
+
+Cartesian Atomic Orbitals (6d, 10f, 15g...) are being used!
+
+
+
+Calculating overlap and kinetic integrals...
+
+
+Core H size in GB  0.0
+done!
+Time taken 0.12 seconds.
+
+
+Initial guess: SANO (superposition of atomic natural-orbital densities)
+  Spherically averaged atomic densities from the ANO-RCC-MB natural orbitals for O, H, projected onto the calculation basis and renormalized.
+  Electrons in the guess density: 10.0000 of 10 (the calculation basis represents 99.86% of the atomic natural orbitals)
+  Time taken: 0.037 seconds.
+  References for the SANO initial guess (please cite):
+   [1] J. Almlöf, K. Faegri Jr., K. Korsell, "Principles for a direct SCF approach to LCAO-MO ab-initio calculations", J. Comput. Chem. 3, 385 (1982). doi:10.1002/jcc.540030314
+   [2] J. H. Van Lenthe, R. Zwaans, H. J. J. Van Dam, M. F. Guest, "Starting SCF calculations by superposition of atomic densities", J. Comput. Chem. 27, 926 (2006). doi:10.1002/jcc.20393
+   [3] P.-O. Widmark, P.-Å. Malmqvist, B. O. Roos, "Density matrix averaged atomic natural orbital (ANO) basis sets for correlated molecular wave functions", Theor. Chim. Acta 77, 291 (1990). doi:10.1007/BF01120130
+   [4] B. O. Roos, R. Lindh, P.-Å. Malmqvist, V. Veryazov, P.-O. Widmark, "Main group atoms and dimers studied with a new relativistic ANO basis set", J. Phys. Chem. A 108, 2851 (2004). doi:10.1021/jp031064+
+   [5] B. P. Pritchard, D. Altarawy, B. Didier, T. D. Gibson, T. L. Windus, "A new Basis Set Exchange: an open, up-to-date resource for the molecular sciences community", J. Chem. Inf. Model. 59, 4814 (2019). doi:10.1021/acs.jcim.9b00725
+   [6] Q. Sun et al., "Recent developments in the PySCF program package", J. Chem. Phys. 153, 024109 (2020). doi:10.1063/5.0006074 (the ANO projection scheme of its "minao" guess is followed here)
+
+
+
+User requested to use Rys Quadrature Algorithm for the evaluation of ERIs
+Stricter version of Schwarz screening:  True
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.02 seconds.
+
+
+
+Performing Schwarz screening (multipole-accelerated DF_algo=12)...
+Threshold  1e-09
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.01
+Total time taken for Schwarz screening 0.01 seconds.
+
+DF_algo=12: 78 of 78 shell pairs significant; far field: 0.0% of the 27625 significant (ij|P) and 0.0% of their Rys work (9 branches in 3 boxes of 2.50 bohr, lmax=12, 167 moment centres, 0.000 GB of branch-centred moments); near field: 27625 elements (0.000 GB), cached 100.0% (0.000 GB)
+Time taken for the near-field three-center integrals and far-field moments:  0.16  (setup 0.00, geometry 0.01, classification 0.00, profitability 0.09, columns 0.01, moments 0.01, translated_moments 0.00, caching 0.00, metadata_total 0.13, near_field 0.03)
+Time taken to evaluate the nuclear potential matrix with strict Schwarz screening:  0.01
+Two Center Two electron ERI size in GB  5.78e-05
+Three Center Two electron ERI (cached near-field blocks) size in GB  0.000221
+Far-field multipole moments size in GB  3.2928e-05
+Three-centered two electron evaluation done!
+Time taken for Cholesky factorization of two-centered two-electron integrals 0.0 seconds.
+
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  0.2 seconds.
+
+
+
+------------------------------------------------------
+Numerical Integration for XC Term
+------------------------------------------------------
+
+
+Generating grids...
+
+
+Grids level:  3
+Grids: Treutler-Ahlrichs radial + Lebedev angular grids, region-wise angular pruning, Becke partitioning with Treutler atomic-size adjustment (CPU); level 3; (n_rad, n_ang) per element: O (75, 302), H (50, 302); 33698 points.
+done!
+Time taken 0.01 seconds.
+
+
+Skipping the density pruning of the grids: Skala integrates over each
+atomic grid, so pruning changes its features (~2e-4 Ha on water).
+
+
+No. of supplied/generated grid points (after pruning):  33698
+Size (in GB) for storing the coordinates of grid:       0.001
+Size (in GB) for storing the weights of grid:           0.0
+Size (in GB) for storing the density at gridpoints:     0.0
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  5000
+No. of batches:  7
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.0 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    25
+Average no. of basis functions contributing to a batch of grid points:    24
+
+You have asked to save the values of significant basis functions and their gradients on grid points so as to avoid recalculation for each SCF cycle.
+Please note: This will require addtional memory that is approximately: 0.0 GB
+Calculating the value of significantly contributing basis functions (atomic orbitals)...
+done!
+Time taken 0.02 seconds.
+
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+SKALA-1.1: Microsoft Research AI for Science, "Accurate and scalable exchange-correlation with deep learning", https://github.com/microsoft/skala (MIT).
+
+Skala is a neural functional: it is non-local over each atomic grid and its
+potential comes from automatic differentiation of the total XC energy.
+
+This functional is parametrised together with a DFT-D3 correction ('b3lyp5'),
+which is additive, does not enter the SCF, and is NOT included below:
+the energy reported is the bare Skala energy. Pass dispersion=True to
+add it (needs pip install dftd3).
+------------------------------------------------------
+
+
+
+
+
+
+
+
+XC algo 2
+Number of electrons:  10.037370654122855
+
+
+
+------Iteration 1--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.8137798001270
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.5142056644251
+Coulomb Energy                    47.1144514893462
+Exchange-Correlation Energy       -9.3313732013258
+--------------------------------------------------
+Total Energy                     -76.3544622107801
+--------------------------------------------------
+
+
+
+Energy difference :  76.3544622107801
+
+
+HOMO-LUMO gap: 0.30972925216020186 au
+HOMO-LUMO gap: 8.428 eV
+
+
+Time taken for the previous iteration: 0.94 seconds 
+
+
+
+Density matrix difference norm:  0.06072371857248124 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.99999979228181
+
+
+
+------Iteration 2--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.4774251745711
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.4579870883860
+Coulomb Energy                    46.8372250047547
+Exchange-Correlation Energy       -9.3031020272669
+--------------------------------------------------
+Total Energy                     -76.3232814717959
+--------------------------------------------------
+
+
+
+Energy difference :  0.03118073898416185
+
+
+HOMO-LUMO gap: 0.31854156412551193 au
+HOMO-LUMO gap: 8.668 eV
+
+
+Time taken for the previous iteration: 0.77 seconds 
+
+
+
+Density matrix difference norm:  0.03824394577337231 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999788667182
+
+
+
+------Iteration 3--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.8237630663977
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.6277558566100
+Coulomb Energy                    47.0389497449373
+Exchange-Correlation Energy       -9.3282076317282
+--------------------------------------------------
+Total Energy                     -76.3232314596771
+--------------------------------------------------
+
+
+
+Energy difference :  5.001211879118728e-05
+
+
+HOMO-LUMO gap: 0.3132328017775837 au
+HOMO-LUMO gap: 8.523 eV
+
+
+Time taken for the previous iteration: 0.67 seconds 
+
+
+
+Density matrix difference norm:  0.024246651797247942 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999792567037
+
+
+
+------Iteration 4--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.5846789149256
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.5081334525188
+Coulomb Energy                    46.9026354038993
+Exchange-Correlation Energy       -9.3115485796175
+--------------------------------------------------
+Total Energy                     -76.3234250012236
+--------------------------------------------------
+
+
+
+Energy difference :  0.00019354154649420252
+
+
+HOMO-LUMO gap: 0.3140937834894102 au
+HOMO-LUMO gap: 8.547 eV
+
+
+Time taken for the previous iteration: 0.67 seconds 
+
+
+
+Density matrix difference norm:  0.004251681249355353 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999791945777
+
+
+
+------Iteration 5--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.6213281094791
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.5262529260039
+Coulomb Energy                    46.9236559274699
+Exchange-Correlation Energy       -9.3140482702324
+--------------------------------------------------
+Total Energy                     -76.3234338893363
+--------------------------------------------------
+
+
+
+Energy difference :  8.888112631666445e-06
+
+
+HOMO-LUMO gap: 0.3140723302462792 au
+HOMO-LUMO gap: 8.546 eV
+
+
+Time taken for the previous iteration: 0.68 seconds 
+
+
+
+Density matrix difference norm:  0.00011541561686568308 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999791968875
+
+
+
+------Iteration 6--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.6218939662851
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.5265960312923
+Coulomb Energy                    46.9239107343132
+Exchange-Correlation Energy       -9.3140803380164
+--------------------------------------------------
+Total Energy                     -76.3234339017948
+--------------------------------------------------
+
+
+
+Energy difference :  1.2458514220270445e-08
+
+
+HOMO-LUMO gap: 0.3140728068588046 au
+HOMO-LUMO gap: 8.546 eV
+
+
+Time taken for the previous iteration: 0.68 seconds 
+
+
+
+Density matrix difference norm:  2.3244909404572402e-05 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999791968607
+
+
+
+------Iteration 7--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.6219234504121
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.5266112661349
+Coulomb Energy                    46.9239270516807
+Exchange-Correlation Energy       -9.3140823948163
+--------------------------------------------------
+Total Energy                     -76.3234338905114
+--------------------------------------------------
+
+
+
+Energy difference :  1.1283347589596815e-08
+
+
+HOMO-LUMO gap: 0.3140732550804769 au
+HOMO-LUMO gap: 8.546 eV
+
+
+Time taken for the previous iteration: 0.68 seconds 
+
+
+
+Density matrix difference norm:  3.426504134256256e-06 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.999999791969671
+
+
+
+------Iteration 8--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.6219203635018
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.5266086819954
+Coulomb Energy                    46.9239264385518
+Exchange-Correlation Energy       -9.3140823006762
+--------------------------------------------------
+Total Energy                     -76.3234339067294
+--------------------------------------------------
+
+
+
+Energy difference :  1.621798162432242e-08
+
+
+HOMO-LUMO gap: 0.3140732055715869 au
+HOMO-LUMO gap: 8.546 eV
+
+
+Time taken for the previous iteration: 0.7 seconds 
+
+
+
+Density matrix difference norm:  2.2936109109359857e-07 
+
+
+
+
+
+XC algo 2
+Number of electrons:  9.99999979196976
+
+
+
+------Iteration 9--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -198.6219187154334
+Nuclear repulsion Energy           9.1620336369014
+Kinetic Energy                    75.5266078244632
+Coulomb Energy                    46.9239255344139
+Exchange-Correlation Energy       -9.3140821853205
+--------------------------------------------------
+Total Energy                     -76.3234339049754
+--------------------------------------------------
+
+
+
+Energy difference :  1.7540315866426681e-09
+
+SCF Converged after 9 iterations!
+
+-------------------------------------
+Total Energy =  -76.32343390497539
+-------------------------------------
+
+
+
+Time taken : 8.7 seconds.
+
+
+
+-------------------------------------------------------------
+Profiling (Wall times in seconds)
+-------------------------------------------------------------
+Preprocessing                           0.03
+Density Fitting                         0.16
+    DF (gamma)                          0.06
+    DF (coeff)                          0.06
+    DF (Jtri)                           0.05
+    DF (Cholesky)                       0.0
+DIIS                                    0.06
+KS matrix diagonalization               0.06
+One electron Integrals (S, T, Vnuc)     0.12
+Coulomb Integrals (2c2e + 3c2e)         0.2
+Grids construction                      0.01
+Exchange-Correlation Term               6.1
+Misc.                                   1.96
+Complete SCF                            8.7
+
+---------------------------------------------------------
+Analytical gradient timings (seconds)
+---------------------------------------------------------
+nuclear_repulsion                  0.000
+kinetic                            0.009
+nuclear_attraction                 0.021
+overlap                            0.008
+df_coefficients                    0.036
+coulomb_3c2e_grad                  0.029
+coulomb_2c2e_grad                  0.017
+xc                                 0.844
+total                              0.965
+---------------------------------------------------------
+
+PYFOCK_RESULT_JSON={"converged": true, "coulomb_energy_au": 46.92392553441389, "density_guess_source": "D:\\pyfock\\benchmarks_tests\\opt_water_subproc_cpu\\step_0001\\converged_dmat.npy", "density_guess_used": true, "electron_nuclear_energy_au": -198.62191871543337, "force_method_used": "analytical", "forces_au_bohr": [[0.007486717003427734, 0.0003950498271184967, -0.008870852725606171], [-0.002017123001959331, -0.0003084620915195383, 0.006408122962252655], [-0.005469594002043998, -8.658773559576047e-05, 0.00246272976336559]], "homo_lumo_gap_au": 0.3140732055715869, "homo_lumo_gap_ev": 8.546347935634525, "kinetic_energy_au": 75.52660782446318, "niter": 8, "nuclear_repulsion_energy_au": 9.162033636901379, "total_energy_au": -76.32343390497539, "total_energy_ev": -2076.861732306064, "xc_energy_au": -9.31408218532048}
