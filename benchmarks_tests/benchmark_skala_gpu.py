@@ -52,11 +52,10 @@ def single_point(mol, skala_gpu, save_ao_values, use_gpu=False):
         start = time.perf_counter()
         energy, _ = dft.scf()
         t_scf = time.perf_counter() - start
-        forces, t_forces = None, 0.0
-        if not use_gpu:      # DFT_Grad is CPU-only, so a full-GPU run reports the SCF alone
-            start = time.perf_counter()
-            forces = np.asarray(DFT_Grad(dft, verbose=False).calculate()['forces'])
-            t_forces = time.perf_counter() - start
+        # DFT_Grad follows the SCF: a use_gpu run gets the device gradient as well.
+        start = time.perf_counter()
+        forces = np.asarray(DFT_Grad(dft, verbose=False).calculate()['forces'])
+        t_forces = time.perf_counter() - start
     return float(energy), forces, t_scf, t_forces, dft.niter
 
 
@@ -97,17 +96,21 @@ if section == 'single':
     # The whole SCF on the device, Skala included (Integrals.eval_xc_skala_cupy).
     print()
     print('=' * 100)
-    print('Single point: the whole SCF on the GPU (use_gpu=True); forces stay on the CPU')
+    print('Single point: the whole SCF and the forces on the GPU (use_gpu=True)')
     print('=' * 100)
-    print('%-9s %5s %7s   %-28s %10s' % ('system', 'atoms', 'iter', 'SCF cpu -> gpu (s)', 'dE (Ha)'))
+    print('%-9s %5s %7s   %-28s %-28s %10s %10s'
+          % ('system', 'atoms', 'iter', 'SCF cpu -> gpu (s)', 'forces cpu -> gpu (s)',
+             'dE (Ha)', 'max|dF|'))
     print('-' * 100)
 
     for name, mol, save_ao_values in systems:
-        e_cpu, _, scf_cpu, _, iters = single_point(mol, False, save_ao_values)
-        e_gpu, _, scf_gpu, _, iters_gpu = single_point(mol, False, save_ao_values, use_gpu=True)
-        print('%-9s %5d %3d/%-3d   %9.1f -> %7.1f (%5.2fx) %10.2e'
+        e_cpu, f_cpu, scf_cpu, grad_cpu, iters = single_point(mol, False, save_ao_values)
+        e_gpu, f_gpu, scf_gpu, grad_gpu, iters_gpu = single_point(mol, False, save_ao_values,
+                                                                  use_gpu=True)
+        print('%-9s %5d %3d/%-3d   %9.1f -> %7.1f (%5.2fx) %9.1f -> %7.1f (%5.2fx) %10.2e %10.2e'
               % (name, mol.natoms, iters, iters_gpu, scf_cpu, scf_gpu, scf_cpu / scf_gpu,
-                 abs(e_cpu - e_gpu)))
+                 grad_cpu, grad_gpu, grad_cpu / grad_gpu,
+                 abs(e_cpu - e_gpu), np.abs(f_cpu - f_gpu).max()))
 
 
 if section == 'opt':
@@ -119,9 +122,8 @@ if section == 'opt':
     from ase.optimize import LBFGSLineSearch
     from pyfock import PyFockCalculator
 
-    # The gradient itself is CPU code in every one of these: use_gpu=True runs the SCF on the device and
-    # DFT_Grad brings the converged density, MOs and grid back to the host. The SCF is the larger half
-    # of a step, so it still pays.
+    # 'full gpu' now means the gradient too: DFT_Grad follows the SCF, so use_gpu=True runs both
+    # halves of a step on the device. The other two configurations keep the gradient on the host.
     CONFIGS = [('cpu', {}),
                ('skala_gpu', {'skala_gpu': True}),
                ('full gpu', {'use_gpu': True})]

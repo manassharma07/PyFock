@@ -43,14 +43,19 @@ def rys_2c2e_symm_cupy(basis, slice=None, cp_stream=None):
     #that the second dimension is that of the largest list. So that
     #it can accomadate all the lists.
     maxnprim = max(basis.bfs_nprim)
-    bfs_coeffs = cp.zeros([basis.bfs_nao, maxnprim])
-    bfs_expnts = cp.zeros([basis.bfs_nao, maxnprim])
-    bfs_prim_norms = cp.zeros([basis.bfs_nao, maxnprim])
+    # Pack on the host and upload once: filling these element by element on the device costs one
+    # kernel launch per primitive, which for a few hundred basis functions dominates the routine.
+    coeffs = np.zeros((basis.bfs_nao, maxnprim))
+    expnts = np.zeros((basis.bfs_nao, maxnprim))
+    prim_norms = np.zeros((basis.bfs_nao, maxnprim))
     for i in range(basis.bfs_nao):
         for j in range(basis.bfs_nprim[i]):
-            bfs_coeffs[i,j] = basis.bfs_coeffs[i][j]
-            bfs_expnts[i,j] = basis.bfs_expnts[i][j]
-            bfs_prim_norms[i,j] = basis.bfs_prim_norms[i][j]
+            coeffs[i, j] = basis.bfs_coeffs[i][j]
+            expnts[i, j] = basis.bfs_expnts[i][j]
+            prim_norms[i, j] = basis.bfs_prim_norms[i][j]
+    bfs_coeffs = cp.asarray(coeffs)
+    bfs_expnts = cp.asarray(expnts)
+    bfs_prim_norms = cp.asarray(prim_norms)
         
 
     DATA_X_cuda = cp.asarray(DATA_X)

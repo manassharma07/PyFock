@@ -1157,3 +1157,110 @@ def nonzero_ao_indices_cupy(basis, coords, blocksize, nblocks, ngrids, cp_stream
         # cp._default_memory_pool.free_all_blocks()
     
     return list_nonzero_indices, count_nonzero_indices
+
+@cuda.jit(fastmath=True, cache=True, max_registers=64)
+def eval_bfs_grad_and_hess_sparse_internal_cuda(bfs_coords, bfs_contr_prim_norms, bfs_nprim,
+                                                bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts,
+                                                coord, bf_indices, out_ao, out_ao_grad,
+                                                out_ao_hess):
+    """Device version of :func:`eval_bfs_grad_and_hess_sparse_internal_serial`.
+
+    Fills the AO values, the three first derivatives and the six independent second derivatives
+    (ordered xx, xy, xz, yy, yz, zz) of the screened basis functions on a block of grid points.
+    The XC gradient needs the Hessian for any non-LDA functional and for the grid-response term.
+    """
+    nao = bf_indices.shape[0]
+    ncoord = coord.shape[0]
+    indx, igrd = cuda.grid(2)
+    if indx >= nao or igrd >= ncoord:
+        return
+
+    ibf = bf_indices[indx]
+    x = coord[igrd, 0] - bfs_coords[ibf, 0]
+    y = coord[igrd, 1] - bfs_coords[ibf, 1]
+    z = coord[igrd, 2] - bfs_coords[ibf, 2]
+    exponent_dist_sq = x * x + y * y + z * z
+
+    Ni = bfs_contr_prim_norms[ibf]
+    lx = bfs_lmn[ibf, 0]
+    ly = bfs_lmn[ibf, 1]
+    lz = bfs_lmn[ibf, 2]
+
+    xl = x ** lx
+    ym = y ** ly
+    zn = z ** lz
+
+    value = 0.0
+    gx = 0.0
+    gy = 0.0
+    gz = 0.0
+    hxx = 0.0
+    hxy = 0.0
+    hxz = 0.0
+    hyy = 0.0
+    hyz = 0.0
+    hzz = 0.0
+
+    for ik in range(bfs_nprim[ibf]):
+        alpha = bfs_expnts[ibf, ik]
+        pref = (Ni * bfs_prim_norms[ibf, ik] * bfs_coeffs[ibf, ik]
+                * math.exp(-alpha * exponent_dist_sq))
+        two_alpha = 2.0 * alpha
+        four_alpha_sq = two_alpha * two_alpha
+
+        # d/dx [x^l e] = (l x^(l-1) - 2 a x^(l+1)) e
+        # d2/dx2 [x^l e] = (l(l-1) x^(l-2) - 2 a (2l+1) x^l + 4 a^2 x^(l+2)) e
+        if lx == 0:
+            fx = 1.0
+            dfx = -two_alpha * x
+            d2fx = -two_alpha + four_alpha_sq * x * x
+        else:
+            fx = xl
+            dfx = lx * x ** (lx - 1) - two_alpha * x * xl
+            d2fx = -two_alpha * (2 * lx + 1) * xl + four_alpha_sq * x * x * xl
+            if lx > 1:
+                d2fx += lx * (lx - 1) * x ** (lx - 2)
+
+        if ly == 0:
+            fy = 1.0
+            dfy = -two_alpha * y
+            d2fy = -two_alpha + four_alpha_sq * y * y
+        else:
+            fy = ym
+            dfy = ly * y ** (ly - 1) - two_alpha * y * ym
+            d2fy = -two_alpha * (2 * ly + 1) * ym + four_alpha_sq * y * y * ym
+            if ly > 1:
+                d2fy += ly * (ly - 1) * y ** (ly - 2)
+
+        if lz == 0:
+            fz = 1.0
+            dfz = -two_alpha * z
+            d2fz = -two_alpha + four_alpha_sq * z * z
+        else:
+            fz = zn
+            dfz = lz * z ** (lz - 1) - two_alpha * z * zn
+            d2fz = -two_alpha * (2 * lz + 1) * zn + four_alpha_sq * z * z * zn
+            if lz > 1:
+                d2fz += lz * (lz - 1) * z ** (lz - 2)
+
+        value += pref * fx * fy * fz
+        gx += pref * dfx * fy * fz
+        gy += pref * fx * dfy * fz
+        gz += pref * fx * fy * dfz
+        hxx += pref * d2fx * fy * fz
+        hxy += pref * dfx * dfy * fz
+        hxz += pref * dfx * fy * dfz
+        hyy += pref * fx * d2fy * fz
+        hyz += pref * fx * dfy * dfz
+        hzz += pref * fx * fy * d2fz
+
+    out_ao[igrd, indx] = value
+    out_ao_grad[0, igrd, indx] = gx
+    out_ao_grad[1, igrd, indx] = gy
+    out_ao_grad[2, igrd, indx] = gz
+    out_ao_hess[0, igrd, indx] = hxx
+    out_ao_hess[1, igrd, indx] = hxy
+    out_ao_hess[2, igrd, indx] = hxz
+    out_ao_hess[3, igrd, indx] = hyy
+    out_ao_hess[4, igrd, indx] = hyz
+    out_ao_hess[5, igrd, indx] = hzz

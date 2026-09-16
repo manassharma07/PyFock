@@ -14,6 +14,11 @@ from pyfock import Data
 from pyfock.Basis import Basis
 from pyfock.Mol import Mol
 
+try:
+    import cupy as cp
+except Exception:                                  # pragma: no cover - CPU-only install
+    cp = None
+
 
 def _to_host(array):
     """NumPy view of an array that may be on the device after a ``use_gpu`` SCF."""
@@ -21,6 +26,22 @@ def _to_host(array):
         return array
     getter = getattr(array, 'get', None)   # CuPy's own transfer; np.asarray refuses a device array
     return np.asarray(getter() if getter is not None else array)
+
+
+def _contract_grad_r_gpu(dX_r, mat):
+    """contract('dij,ij->id', dX_r, mat) for a device ``(3, nbf, nbf)`` bra-center r-gradient.
+
+    Done one Cartesian direction at a time so the elementwise temporary is (nbf, nbf) rather than
+    another copy of the whole tensor. The result is (nbf, 3), so it comes back to the host for the
+    per-atom scatter; the device tensor is freed here rather than at the end of the caller's scope.
+    """
+    mat_d = cp.asarray(mat)
+    out = cp.empty((dX_r.shape[1], 3))
+    for d in range(3):
+        out[:, d] = cp.sum(dX_r[d] * mat_d, axis=1)
+    out = cp.asnumpy(out)
+    del dX_r
+    return out
 
 
 class DFT_Grad:
@@ -59,8 +80,13 @@ class DFT_Grad:
     Currently supported: restricted KS-DFT with density fitting (the DF
     gradient corresponds to the robust-fit Coulomb energy used by all DF
     algorithms), LDA, GGA and meta-GGA (tau-dependent) functionals via either
-    the native PyFock functionals or pylibxc, and ECPs, CPU only.
+    the native PyFock functionals or pylibxc, Skala, and ECPs.
     Laplacian-dependent meta-GGAs are not yet supported.
+
+    With ``use_gpu=True`` every term above except the ECP one is evaluated on
+    the GPU by a device port of the corresponding CPU routine; the results
+    agree to round-off (see ``benchmarks_tests/benchmark_DFT_gradients_gpu.py``).
+    The default follows the SCF, so a GPU SCF is followed by a GPU gradient.
 
     Parameters
     ----------
@@ -69,6 +95,10 @@ class DFT_Grad:
     threshold_schwarz_grad : float, optional
         Screening threshold used for the contracted 3c2e derivative
         integrals (includes density/coefficient weighting).
+    use_gpu : bool, optional
+        Evaluate the gradient on the GPU. ``None`` (default) inherits
+        ``dft_obj.use_gpu``. The ECP term has no device implementation and
+        stays on the CPU.
     ecp_grad_mode : {'analytical', 'fd'}, optional
         How to evaluate the ECP gradient term. 'analytical' (default)
         differentiates the series ECP integrals; 'fd' differentiates the ECP
@@ -86,20 +116,27 @@ class DFT_Grad:
     """
 
     def __init__(self, dft_obj, threshold_schwarz_grad=1e-11, ecp_grad_mode='analytical',
-                 ecp_series_order=12, ecp_fd_step=1e-3, verbose=True, grid_response=None):
+                 ecp_series_order=12, ecp_fd_step=1e-3, verbose=True, grid_response=None,
+                 use_gpu=None):
         if dft_obj is None:
             raise ValueError('ERROR: A PyFock DFT object is required.')
         if not getattr(dft_obj, 'converged', False):
             raise ValueError('ERROR: The supplied DFT object must already be converged.')
-        # A GPU SCF is fine. The gradient itself is CPU code, so the converged quantities it reads --
-        # the density matrix, the MOs and the grid -- are brought back to the host. The SCF is the
-        # larger half of a geometry-optimization step, so this is worth having even though the gradient
-        # does not run on the device.
+        # The converged quantities the gradient reads -- the density matrix, the MOs and the grid --
+        # are brought back to the host whatever the SCF ran on. The device routines want them packed
+        # their own way anyway, and these are small next to the work done with them.
         self.grids = dft_obj.grids
         if dft_obj.use_gpu:
             self.grids = copy.copy(dft_obj.grids)   # shallow: only the arrays below are replaced
             for name in ('coords', 'weights', 'atomic_weights', 'atom_idx'):
                 setattr(self.grids, name, _to_host(getattr(dft_obj.grids, name, None)))
+
+        if use_gpu is None:
+            use_gpu = bool(getattr(dft_obj, 'use_gpu', False))
+        if use_gpu and cp is None:
+            raise RuntimeError('use_gpu=True was requested but CuPy is not available.')
+        self.use_gpu = bool(use_gpu)
+        self._cp_stream = None      # set by calculate() for the duration of a device gradient
         if not dft_obj.isDF:
             raise NotImplementedError('Analytical gradients are currently implemented for density-fitted (isDF=True) calculations only.')
         if dft_obj.xc == 'HF' or getattr(dft_obj, 'exx_coef', 0.0) > 0:
@@ -230,6 +267,21 @@ class DFT_Grad:
             Dictionary with `energy`, `gradient` (natoms, 3) in Ha/Bohr,
             `forces` (= -gradient) and per-term `timings`.
         """
+        if not self.use_gpu:
+            self._cp_stream = None
+            return self._calculate()
+        # One stream for the whole gradient, made current for its duration. Several of the CuPy
+        # integral routines pack their basis arrays with the stream that is current on entry and
+        # only then create the one they launch on, which is a race unless the two are the same
+        # stream; see Integrals.cuda_stream for the details.
+        cp_stream, _ = Integrals.cuda_stream.gradient_stream()
+        self._cp_stream = cp_stream
+        with cp_stream:
+            result = self._calculate()
+        cp_stream.synchronize()
+        return result
+
+    def _calculate(self):
         dft_obj = self.dft_obj
         mol = dft_obj.mol
         basis = dft_obj.basis
@@ -241,8 +293,18 @@ class DFT_Grad:
 
         dmat = np.ascontiguousarray(_to_host(dft_obj.dmat), dtype=np.float64)
         bfs_atoms = np.asarray(basis.bfs_atoms, dtype=np.int64)
+        use_gpu = self.use_gpu
 
         timings = {}
+
+        # Schwarz diagonals, shared by the fitting-coefficient, 3c2e-derivative and
+        # nuclear-attraction steps. Each device routine would otherwise rebuild them.
+        sqrt_ints4c2e_diag = sqrt_diag_ints2c2e = None
+        if use_gpu:
+            start = timer()
+            sqrt_ints4c2e_diag = np.sqrt(np.abs(Integrals.schwarz_helpers.eri_4c2e_diag(basis)))
+            sqrt_diag_ints2c2e = np.sqrt(np.abs(Integrals.rys_2c2e_diag(auxbasis)))
+            timings['schwarz_diagonals'] = timer() - start
 
         # ---------------- Nuclear repulsion ----------------
         start = timer()
@@ -252,51 +314,77 @@ class DFT_Grad:
         # ---------------- Kinetic (Pulay-type) ----------------
         # dT_r[d, i, j] = dT_ij / d(center of bf i)
         start = timer()
-        dT_r = Integrals.kin_mat_grad_r_symm(basis)
-        tmpT = contract('dij,ij->id', dT_r, dmat)
+        if use_gpu:
+            tmpT = _contract_grad_r_gpu(
+                Integrals.kin_mat_grad_r_symm_cupy(basis, cp_stream=self._cp_stream), dmat)
+        else:
+            dT_r = Integrals.kin_mat_grad_r_symm(basis)
+            tmpT = contract('dij,ij->id', dT_r, dmat)
+            dT_r = None
         grad_T = np.zeros((natoms, 3))
         np.add.at(grad_T, bfs_atoms, 2.0 * tmpT)
-        dT_r = None
         timings['kinetic'] = timer() - start
 
         # ---------------- Nuclear attraction ----------------
         # Full derivative incl. operator (Hellmann-Feynman) contributions,
         # contracted with the density matrix on the fly.
         start = timer()
-        grad_V = Integrals.rys_nuc_grad_contract(basis, mol, dmat, ncores=ncores)
+        if use_gpu:
+            grad_V = Integrals.rys_nuc_grad_contract_cupy(
+                basis, mol, dmat, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag,
+                cp_stream=self._cp_stream)
+        else:
+            grad_V = Integrals.rys_nuc_grad_contract(basis, mol, dmat, ncores=ncores)
         timings['nuclear_attraction'] = timer() - start
 
         # ---------------- Overlap (Pulay) ----------------
         start = timer()
         W = self._energy_weighted_dmat()
-        dS_r = Integrals.overlap_mat_grad_r_symm(basis)
-        tmpS = contract('dij,ij->id', dS_r, W)
+        if use_gpu:
+            tmpS = _contract_grad_r_gpu(
+                Integrals.overlap_mat_grad_r_symm_cupy(basis, cp_stream=self._cp_stream), W)
+        else:
+            dS_r = Integrals.overlap_mat_grad_r_symm(basis)
+            tmpS = contract('dij,ij->id', dS_r, W)
+            dS_r = None
         grad_S = np.zeros((natoms, 3))
         np.add.at(grad_S, bfs_atoms, -2.0 * tmpS)
-        dS_r = None
         timings['overlap'] = timer() - start
 
         # ---------------- DF Coulomb ----------------
         # gamma_P = sum_ij D_ij (ij|P);  c = (P|Q)^-1 gamma
-        # The 3c2e tensor is only needed transiently for gamma, so it is
-        # evaluated in chunks over the auxiliary dimension to bound memory.
+        # The 3c2e tensor is only needed transiently for gamma, so on the CPU it is evaluated in
+        # chunks over the auxiliary dimension to bound memory; the device kernel contracts it as it
+        # goes and never forms it.
         start = timer()
-        ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
         nbf = basis.bfs_nao
         naux = auxbasis.bfs_nao
-        max_chunk_bytes = 1e9
-        chunk_naux = max(1, min(naux, int(max_chunk_bytes / (nbf * nbf * 8))))
-        gamma = np.zeros(naux)
+        if use_gpu:
+            ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis, cp_stream=self._cp_stream)
+            if dft_obj.sao:
+                # The spherical transform below is host code, and the metric is only naux x naux.
+                ints2c2e = cp.asnumpy(ints2c2e)
+            gamma = Integrals.rys_3c2e_gamma_contract_cupy(
+                basis, auxbasis, dmat,
+                threshold_schwarz=min(dft_obj.threshold_schwarz, 1e-9),
+                sqrt_ints4c2e_diag=sqrt_ints4c2e_diag,
+                sqrt_diag_ints2c2e=sqrt_diag_ints2c2e, cp_stream=self._cp_stream)
+        else:
+            ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
+            max_chunk_bytes = 1e9
+            chunk_naux = max(1, min(naux, int(max_chunk_bytes / (nbf * nbf * 8))))
+            gamma = np.zeros(naux)
+            with threadpool_limits(limits=ncores, user_api='blas'):
+                for c0 in range(0, naux, chunk_naux):
+                    c1 = min(c0 + chunk_naux, naux)
+                    ints3c2e_chunk = Integrals.rys_3c2e_symm(
+                        basis, auxbasis, slice=[0, nbf, 0, nbf, c0, c1],
+                        schwarz=True,
+                        threshold_schwarz=min(dft_obj.threshold_schwarz, 1e-9),
+                    )
+                    gamma[c0:c1] = contract('ijP,ij->P', ints3c2e_chunk, dmat)
+                    ints3c2e_chunk = None
         with threadpool_limits(limits=ncores, user_api='blas'):
-            for c0 in range(0, naux, chunk_naux):
-                c1 = min(c0 + chunk_naux, naux)
-                ints3c2e_chunk = Integrals.rys_3c2e_symm(
-                    basis, auxbasis, slice=[0, nbf, 0, nbf, c0, c1],
-                    schwarz=True,
-                    threshold_schwarz=min(dft_obj.threshold_schwarz, 1e-9),
-                )
-                gamma[c0:c1] = contract('ijP,ij->P', ints3c2e_chunk, dmat)
-                ints3c2e_chunk = None
             if dft_obj.sao:
                 # With SAOs the SCF performs the density fitting in the
                 # spherical auxiliary space. The effective Cartesian
@@ -308,21 +396,36 @@ class DFT_Grad:
                 gamma_sph = c2sph_aux @ gamma
                 c_sph = scipy.linalg.solve(ints2c2e_sph, gamma_sph, assume_a='pos')
                 df_coeff = c2sph_aux.T @ c_sph
+            elif use_gpu:
+                # cuSOLVER's Cholesky solve, so the naux x naux metric never leaves the device.
+                df_coeff = cp.asnumpy(cp.linalg.solve(ints2c2e, cp.asarray(gamma)))
             else:
                 df_coeff = scipy.linalg.solve(ints2c2e, gamma, assume_a='pos')
         ints2c2e = None
         timings['df_coefficients'] = timer() - start
 
         start = timer()
-        grad_J3c = Integrals.rys_3c2e_grad_contract(
-            basis, auxbasis, dmat, df_coeff,
-            schwarz=True, threshold_schwarz=self.threshold_schwarz_grad,
-            ncores=ncores,
-        )
+        if use_gpu:
+            grad_J3c = Integrals.rys_3c2e_grad_contract_cupy(
+                basis, auxbasis, dmat, df_coeff,
+                schwarz=True, threshold_schwarz=self.threshold_schwarz_grad,
+                sqrt_ints4c2e_diag=sqrt_ints4c2e_diag,
+                sqrt_diag_ints2c2e=sqrt_diag_ints2c2e, cp_stream=self._cp_stream,
+            )
+        else:
+            grad_J3c = Integrals.rys_3c2e_grad_contract(
+                basis, auxbasis, dmat, df_coeff,
+                schwarz=True, threshold_schwarz=self.threshold_schwarz_grad,
+                ncores=ncores,
+            )
         timings['coulomb_3c2e_grad'] = timer() - start
 
         start = timer()
-        grad_J2c = Integrals.rys_2c2e_grad_contract(auxbasis, df_coeff, ncores=ncores)
+        if use_gpu:
+            grad_J2c = Integrals.rys_2c2e_grad_contract_cupy(auxbasis, df_coeff,
+                                                             cp_stream=self._cp_stream)
+        else:
+            grad_J2c = Integrals.rys_2c2e_grad_contract(auxbasis, df_coeff, ncores=ncores)
         grad_J = grad_J3c - 0.5 * grad_J2c
         timings['coulomb_2c2e_grad'] = timer() - start
 
@@ -345,11 +448,24 @@ class DFT_Grad:
         if self.skala is not None:
             # Skala also depends on the nuclear positions explicitly, through the grid geometry it
             # reads; that part comes back already resolved per atom (see eval_xc_grad_skala).
-            dexc_dbf, explicit_xc_grad = Integrals.eval_xc_grad_skala(
+            skala_grad = (Integrals.eval_xc_grad_skala_cupy if use_gpu
+                          else Integrals.eval_xc_grad_skala)
+            skala_kwargs = {} if not use_gpu else {'cp_stream': self._cp_stream}
+            dexc_dbf, explicit_xc_grad = skala_grad(
                 basis, dmat, self.grids, self.skala, ncores=ncores, blocksize=blocksize,
                 list_nonzero_indices=list_nonzero_indices,
-                count_nonzero_indices=count_nonzero_indices,
+                count_nonzero_indices=count_nonzero_indices, **skala_kwargs,
             )
+        elif use_gpu:
+            xc_result = Integrals.eval_xc_grad_2_cupy(
+                basis, dmat, weights_grid, coords_grid, funcid=self.funcid,
+                use_libxc=dft_obj.use_libxc, blocksize=blocksize,
+                list_nonzero_indices=list_nonzero_indices,
+                count_nonzero_indices=count_nonzero_indices,
+                grids=self.grids, grid_response=self.grid_response,
+                cp_stream=self._cp_stream,
+            )
+            dexc_dbf, explicit_xc_grad = xc_result if self.grid_response else (xc_result, None)
         else:
             xc_result = Integrals.eval_xc_grad_2(
                 basis, dmat, weights_grid, coords_grid, funcid=self.funcid,

@@ -378,7 +378,8 @@ Consequences worth knowing:
   grid.
 - **The GPU is supported**, either way round: `use_gpu=True` runs the whole SCF on the device, and
   `skala_gpu=True` moves only the neural functional there and leaves the rest on the CPU. See
-  [Skala on the GPU](#skala-on-the-gpu). Forces are still CPU-only.
+  [Skala on the GPU](#skala-on-the-gpu). Forces follow the SCF, so `use_gpu=True` puts both halves of
+  a geometry step on the device.
 - **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
 - **Analytical nuclear gradients are supported**, so Skala works for geometry optimization like any
   other functional — see
@@ -529,8 +530,9 @@ three-pass driver as on the CPU (`Integrals.eval_xc_skala_cupy`). Everything ins
 semilocal GPU code.
 
 `benchmarks_tests/benchmark_skala_gpu.py` measures the speedup and the CPU/GPU agreement, for
-single points and for geometry optimizations. **Forces are CPU-only**: `DFT_Grad` raises for
-`use_gpu=True`, so geometry optimization still runs the gradient on the host.
+single points and for geometry optimizations. Forces run on the device too -- `DFT_Grad` follows the
+SCF -- so a `use_gpu=True` geometry optimization never returns to the host for a step; see
+[Forces on the GPU](#forces-on-the-gpu).
 
 ### Initial Guess for the SCF
 
@@ -639,7 +641,7 @@ benchmark commands, memory accounting, and limitations of the surrounding driver
 ### Analytical Forces & Geometry Optimization
 
 After a converged DFT calculation, analytical nuclear gradients (and forces)
-are available directly via `DFT_Grad` (density fitting; LDA/GGA/meta-GGA and Skala; CPU):
+are available directly via `DFT_Grad` (density fitting; LDA/GGA/meta-GGA and Skala; CPU or GPU):
 
 ```python
 from pyfock import DFT_Grad
@@ -650,6 +652,61 @@ result = grad.calculate()
 forces = result["forces"]      # (natoms, 3) in Ha/Bohr
 gradient = result["gradient"]  # = -forces
 ```
+
+#### Forces on the GPU
+
+`DFT_Grad` follows the SCF: converge with `use_gpu=True` and the gradient runs on the device too, so
+a geometry step never returns to the host. Pass `use_gpu` explicitly to override that in either
+direction:
+
+```python
+DFT_Grad(dftObj).calculate()                  # follows dftObj.use_gpu
+DFT_Grad(dftObj, use_gpu=True).calculate()    # device gradient after a CPU SCF
+DFT_Grad(dftObj, use_gpu=False).calculate()   # host gradient after a GPU SCF
+```
+
+Every term has a device implementation except the ECP one, which stays on the CPU. The 3c2e
+derivative, the fitting coefficients and the nuclear attraction are shell-triplet CUDA kernels; the
+XC term (semilocal and Skala, with or without the grid response) is CuPy over the grid blocks.
+
+Gradient wall time only, from the same converged SCF (RTX 5070 against 8 CPU cores, PBE,
+`def2-universal-jfit`, level-3 grid):
+
+| molecule | atoms | def2-SVP CPU | def2-SVP GPU | speed-up | def2-TZVP speed-up |
+|---|---|---|---|---|---|
+| H2O | 3 | 0.08 s | 0.07 s | 1.0x | 1.5x |
+| Benzene | 12 | 1.09 s | 0.23 s | 4.7x | 6.7x |
+| Caffeine | 24 | 4.57 s | 0.67 s | 6.8x | 9.5x |
+| Serotonin | 25 | 3.96 s | 0.64 s | 6.2x | 8.8x |
+| Adenine-Thymine | 30 | 7.56 s | 0.94 s | 8.1x | |
+| Cholesterol | 74 | 32.0 s | 3.54 s | 9.0x | |
+| C60 | 60 | 92.2 s | 10.7 s | 8.6x | |
+
+Small molecules do not fill the device -- water breaks even -- and the gain arrives once the shell
+triplets outnumber the cores by enough, then grows with the basis. The device and host gradients
+agree to 1e-12 - 1e-11 Ha/Bohr on forces of order 1e-1, which is round-off in the contraction, and
+against finite differences (grid response on, 1e-3 Bohr step) the GPU gradient is right to 1.0e-6
+Ha/Bohr for water and 2.6e-7 for benzene -- the truncation floor of the reference, not of the
+gradient.
+
+Two functionals sit apart from that picture, for reasons that are properties of the functional
+rather than of the gradient.
+
+*r2SCAN* reaches only 2.5 - 2.7x. Its native implementation has no analytic potential: it
+finite-differences its own energy expression, seven evaluations of ~160 elementwise operations. That
+is launch-bound on the device -- the same call costs 24 ms on a 20k-point block and 21 ms on a
+120k-point one -- so it speeds up ~3.6x while everything around it speeds up ~7x, and Amdahl does the
+rest. The same finite differencing puts the device/host agreement at ~5e-9 rather than ~1e-12.
+
+*Skala* reaches ~5x on caffeine, but its per-molecule ratios are worth reading as +-50%: the model
+call is a PyTorch forward/backward whose cost varies by an order of magnitude between identical
+calls, and with ~7 GB of the card reserved by PyTorch the CuPy pool takes several gradients to reach
+a steady state. Serotonin measures 3.0x inside the benchmark suite and 4.6x on its own. Time it with
+`--repeats`, and treat the first two gradients in a process as warm-up.
+
+`benchmarks_tests/benchmark_DFT_gradients_gpu.py` reproduces all of the above, including the
+finite-difference check; `tests/test_grad_gpu.py` checks each device routine against its CPU
+counterpart.
 
 For geometry optimization, use the ASE calculator (requires `ase`). It uses
 the analytical forces by default and falls back to finite differences only for

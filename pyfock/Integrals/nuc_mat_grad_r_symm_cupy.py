@@ -123,10 +123,8 @@ def nuc_mat_grad_r_symm_cupy(basis, mol, slice=None, sqrt_ints4c2e_diag=None, cp
     ``wrt_atoms=True`` path / ``rys_nuc_grad_contract`` adds it). For the
     symmetric block the (j, i) entry is filled with the ket-center derivative.
 
-    NOTE: Not yet executed on a CUDA device (developed on a CPU-only machine).
-    It mirrors the verified ``nuc_mat_symm_cupy`` machinery and the verified
-    ``nuc_mat_grad_r_symm`` math; validate against the CPU routine before
-    production use.
+    Checked element-wise against the CPU routine in ``tests/test_grad_gpu.py``, and used by
+    ``DFT_Grad(use_gpu=True)``.
     """
     bfs_coords = cp.array([basis.bfs_coords])
     bfs_contr_prim_norms = cp.array([basis.bfs_contr_prim_norms])
@@ -137,14 +135,19 @@ def nuc_mat_grad_r_symm_cupy(basis, mol, slice=None, sqrt_ints4c2e_diag=None, cp
     natoms = mol.natoms
 
     maxnprim = max(basis.bfs_nprim)
-    bfs_coeffs = cp.zeros([basis.bfs_nao, maxnprim])
-    bfs_expnts = cp.zeros([basis.bfs_nao, maxnprim])
-    bfs_prim_norms = cp.zeros([basis.bfs_nao, maxnprim])
+    # Pack on the host and upload once: filling these element by element on the device costs one
+    # kernel launch per primitive, which for a few hundred basis functions dominates the routine.
+    coeffs = np.zeros((basis.bfs_nao, maxnprim))
+    expnts = np.zeros((basis.bfs_nao, maxnprim))
+    prim_norms = np.zeros((basis.bfs_nao, maxnprim))
     for i in range(basis.bfs_nao):
         for j in range(basis.bfs_nprim[i]):
-            bfs_coeffs[i, j] = basis.bfs_coeffs[i][j]
-            bfs_expnts[i, j] = basis.bfs_expnts[i][j]
-            bfs_prim_norms[i, j] = basis.bfs_prim_norms[i][j]
+            coeffs[i, j] = basis.bfs_coeffs[i][j]
+            expnts[i, j] = basis.bfs_expnts[i][j]
+            prim_norms[i, j] = basis.bfs_prim_norms[i][j]
+    bfs_coeffs = cp.asarray(coeffs)
+    bfs_expnts = cp.asarray(expnts)
+    bfs_prim_norms = cp.asarray(prim_norms)
 
     if slice is None:
         slice = [0, basis.bfs_nao, 0, basis.bfs_nao]
