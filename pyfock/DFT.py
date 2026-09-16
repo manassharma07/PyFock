@@ -1221,15 +1221,14 @@ class DFT:
         # `xc` therefore stays the name string and the LibXC resolution below is skipped.
         skala = None
         if XC.is_skala(xc):
-            if self.use_gpu:
-                raise NotImplementedError(
-                    "PyFock's full GPU SCF path does not support Skala yet (the Coulomb and Vxc "
-                    'assembly would need a CuPy<->Torch bridge). Use use_gpu=False with '
-                    'skala_gpu=True to run the neural functional itself on the GPU, which is where '
-                    'nearly all of its cost is.')
             xc = XC.canonical_skala_name(xc)
-            skala = XC.load_skala(xc, use_gpu=bool(self.skala_gpu))
-            if self.skala_gpu:
+            # On a GPU run the model goes to the device along with everything else; on a CPU run
+            # skala_gpu moves just the model, which is where nearly all of Skala's cost sits.
+            skala = XC.load_skala(xc, use_gpu=bool(self.use_gpu) or bool(self.skala_gpu))
+            if self.use_gpu:
+                print('\nSkala will be evaluated on the GPU, like the rest of the SCF '
+                      '(Integrals.eval_xc_skala_cupy).', flush=True)
+            elif self.skala_gpu:
                 print('\nSkala will be evaluated on the GPU (skala_gpu=True); the rest of the SCF '
                       'runs on the CPU.', flush=True)
         self.skala = skala
@@ -1372,6 +1371,10 @@ class DFT:
                 # (H2O 8 -> 19, decane 9 -> 19 iterations, ~2x wall time), with energies that vary by 1e-9 Ha
                 # between runs. The default therefore switches itself off for them.
                 dynamic_precision = self.dynamic_precision
+                if dynamic_precision and skala is not None:
+                    print('\n\nSkala is a float64 model, so the XC term cannot be evaluated in single')
+                    print('precision; dynamic precision is disabled.', flush=True)
+                    dynamic_precision = False
                 if dynamic_precision and xc != 'HF' and XC.xc_semilocal_family(xc, self.use_libxc) == 4:
                     print('\n\nDynamic precision is not used for meta-GGA functionals: single precision resolves')
                     print('tau too poorly and the SCF then needs about twice as many iterations.', flush=True)
@@ -2036,14 +2039,24 @@ class DFT:
                 print('\n\n\n\nXC algo', XC_algo)
                 if skala is not None:
                     # Skala is non-local over each atomic grid, so it cannot be folded into the blocked
-                    # semilocal loop; it gets its own three-pass driver (see Integrals.eval_xc_skala).
-                    Exc, Vxc = Integrals.eval_xc_skala(basis, dmat, grids, skala, ncores=ncores,
-                                                       blocksize=blocksize,
-                                                       list_nonzero_indices=list_nonzero_indices,
-                                                       count_nonzero_indices=count_nonzero_indices,
-                                                       list_ao_values=list_ao_values,
-                                                       list_ao_grad_values=list_ao_grad_values,
-                                                       debug=debug)
+                    # semilocal loop, where every block calls the functional on its own points; it gets
+                    # its own three-pass driver instead.
+                    if self.use_gpu:
+                        Exc, Vxc = Integrals.eval_xc_skala_cupy(
+                            basis, dmat_cp, grids, skala, blocksize=blocksize,
+                            list_nonzero_indices=list_nonzero_indices,
+                            count_nonzero_indices=count_nonzero_indices,
+                            list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values,
+                            debug=debug, threads_per_block=threads_per_block)
+                        Vxc = cp.asarray(Vxc, dtype=cp.float64)
+                    else:
+                        Exc, Vxc = Integrals.eval_xc_skala(basis, dmat, grids, skala, ncores=ncores,
+                                                           blocksize=blocksize,
+                                                           list_nonzero_indices=list_nonzero_indices,
+                                                           count_nonzero_indices=count_nonzero_indices,
+                                                           list_ao_values=list_ao_values,
+                                                           list_ao_grad_values=list_ao_grad_values,
+                                                           debug=debug)
                 elif not self.use_gpu:
                     if XC_algo==1:
                         # Much slower than JOBLIB version

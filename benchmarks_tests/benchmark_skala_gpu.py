@@ -41,20 +41,23 @@ BENZENE = [['C', 0.0, 1.3970, 0.0], ['C', 1.2098, 0.6985, 0.0], ['C', 1.2098, -0
            ['H', 0.0, -2.4810, 0.0], ['H', -2.1486, -1.2405, 0.0], ['H', -2.1486, 1.2405, 0.0]]
 
 
-def single_point(mol, skala_gpu, save_ao_values):
+def single_point(mol, skala_gpu, save_ao_values, use_gpu=False):
     basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=BASIS)})
     auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=AUXBASIS)})
-    dft = DFT(mol, basis, auxbasis, xc='skala-1.1', dispersion=True, skala_gpu=skala_gpu)
+    dft = DFT(mol, basis, auxbasis, xc='skala-1.1', dispersion=True, skala_gpu=skala_gpu,
+              use_gpu=use_gpu)
     dft.conv_crit, dft.ncores, dft.save_ao_values = CONV, ncores, save_ao_values
 
     with contextlib.redirect_stdout(io.StringIO()):
         start = time.perf_counter()
         energy, _ = dft.scf()
         t_scf = time.perf_counter() - start
-        start = time.perf_counter()
-        forces = DFT_Grad(dft, verbose=False).calculate()['forces']
-        t_forces = time.perf_counter() - start
-    return float(energy), np.asarray(forces), t_scf, t_forces, dft.niter
+        forces, t_forces = None, 0.0
+        if not use_gpu:      # DFT_Grad is CPU-only, so a full-GPU run reports the SCF alone
+            start = time.perf_counter()
+            forces = np.asarray(DFT_Grad(dft, verbose=False).calculate()['forces'])
+            t_forces = time.perf_counter() - start
+    return float(energy), forces, t_scf, t_forces, dft.niter
 
 
 print('GPU: %s' % torch.cuda.get_device_name(0))
@@ -65,6 +68,7 @@ print('%d CPU cores, %s/%s, level-3 grid, conv_crit %g\n' % (ncores, BASIS, AUXB
 water = Mol(coordfile=os.path.join(EXAMPLES, 'h2o.xyz'))
 single_point(water, skala_gpu=False, save_ao_values=True)
 single_point(water, skala_gpu=True, save_ao_values=True)
+single_point(water, skala_gpu=False, save_ao_values=True, use_gpu=True)
 print('warm-up done\n')
 
 
@@ -89,6 +93,21 @@ if section == 'single':
               % (name, mol.natoms, iters, iters_gpu,
                  scf_cpu, scf_gpu, scf_cpu / scf_gpu, grad_cpu, grad_gpu, grad_cpu / grad_gpu,
                  abs(e_cpu - e_gpu), np.abs(f_cpu - f_gpu).max()))
+
+    # The whole SCF on the device, Skala included (Integrals.eval_xc_skala_cupy).
+    print()
+    print('=' * 100)
+    print('Single point: the whole SCF on the GPU (use_gpu=True); forces stay on the CPU')
+    print('=' * 100)
+    print('%-9s %5s %7s   %-28s %10s' % ('system', 'atoms', 'iter', 'SCF cpu -> gpu (s)', 'dE (Ha)'))
+    print('-' * 100)
+
+    for name, mol, save_ao_values in systems:
+        e_cpu, _, scf_cpu, _, iters = single_point(mol, False, save_ao_values)
+        e_gpu, _, scf_gpu, _, iters_gpu = single_point(mol, False, save_ao_values, use_gpu=True)
+        print('%-9s %5d %3d/%-3d   %9.1f -> %7.1f (%5.2fx) %10.2e'
+              % (name, mol.natoms, iters, iters_gpu, scf_cpu, scf_gpu, scf_cpu / scf_gpu,
+                 abs(e_cpu - e_gpu)))
 
 
 if section == 'opt':

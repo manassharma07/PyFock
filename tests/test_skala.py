@@ -289,3 +289,33 @@ def test_unknown_functional_name():
     assert XC.canonical_skala_name('SKALA-1.1') == 'skala-1.1'
     with pytest.raises(ValueError, match='Unknown Skala functional'):
         XC.canonical_skala_name('skala-9.9')
+
+
+def test_gpu_scf_matches_the_cpu_scf():
+    """The whole SCF on the device must reproduce the CPU energy.
+
+    This is the regression test for stream ordering in ``Integrals.eval_xc_skala_cupy``: the AO kernel
+    and the CuPy contractions that read its output have to be on one stream. When they were not, the
+    SCF still ran, but it wandered ~2e-2 Ha away to a slightly different place on every attempt.
+    """
+    cp = pytest.importorskip('cupy')
+    from numba import cuda
+    try:
+        if not (cuda.is_available() and cp.cuda.runtime.getDeviceCount() > 0):
+            pytest.skip('no CUDA device')
+    except cp.cuda.runtime.CUDARuntimeError:
+        pytest.skip('no CUDA device')
+
+    mol = Mol(atoms=[list(atom) for atom in H2O])
+    energies = {}
+    for use_gpu in (False, True):
+        basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+        auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+        dft = DFT(mol, basis, auxbasis, xc='skala-1.1', use_gpu=use_gpu)
+        dft.conv_crit = 1e-8
+        with contextlib.redirect_stdout(io.StringIO()):
+            energies[use_gpu], _ = dft.scf()
+
+    # Float64 reductions associate differently on the device, which leaves ~1e-7 Ha; the bug this
+    # guards against was five orders of magnitude larger.
+    assert abs(energies[True] - energies[False]) < 1e-5

@@ -376,10 +376,9 @@ Consequences worth knowing:
   weights and the raw single-atom weights.
 - **Do not density-prune the grid.** The model's non-local features are integrals over each atom's full
   grid.
-- **The GPU runs the model, the CPU runs the rest.** Pass `skala_gpu=True` and the neural functional is
-  evaluated on the device while the integrals, the Coulomb term and the assembly of Vxc stay on the CPU
-  — see [Skala on the GPU](#skala-on-the-gpu). PyFock's *full* GPU SCF path (`use_gpu=True`) does not
-  support Skala and raises a clear error; it would need a CuPy↔Torch bridge that is not wired up yet.
+- **The GPU is supported**, either way round: `use_gpu=True` runs the whole SCF on the device, and
+  `skala_gpu=True` moves only the neural functional there and leaves the rest on the CPU. See
+  [Skala on the GPU](#skala-on-the-gpu). Forces are still CPU-only.
 - **Closed-shell (restricted) only**, like the rest of PyFock's DFT.
 - **Analytical nuclear gradients are supported**, so Skala works for geometry optimization like any
   other functional — see
@@ -502,27 +501,36 @@ while the semilocal functionals also carry AO work that grows with the basis.
 
 #### Skala on the GPU
 
-Skala is a PyTorch model, so it can be evaluated on the GPU without PyFock's own CuPy machinery. Pass
-`skala_gpu=True` and the model runs on the device while everything else — the integrals, the Coulomb
-term and the assembly of Vxc from the model's cotangents — stays on the CPU:
+There are two ways to use a GPU, and they compose with the rest of PyFock exactly as they do for any
+other functional. `use_gpu=True` runs the whole SCF on the device — integrals, Coulomb term, AO values,
+density, the model and the Vxc assembly:
+
+```python
+dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1', dispersion=True, use_gpu=True)
+```
+
+`skala_gpu=True` instead moves only the neural functional and leaves the rest of the SCF on the CPU.
+That is useful when the GPU path is unavailable or unwanted, since the model alone is most of Skala's
+cost:
 
 ```python
 dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1', dispersion=True, skala_gpu=True)
+atoms.calc = PyFockCalculator(functional='skala-1.1', skala_gpu=True, dispersion=True)  # same in ASE
 ```
 
-It works the same way through the ASE calculator, and forces come along with it:
-
-```python
-atoms.calc = PyFockCalculator(functional='skala-1.1', skala_gpu=True, dispersion=True)
-```
-
-All this needs is a CUDA build of PyTorch (`pip install torch --index-url
+Both need a CUDA build of PyTorch (`pip install torch --index-url
 https://download.pytorch.org/whl/cu128` for current cards); PyFock downloads the CUDA checkpoint, which
-is a separate file from the CPU one. `use_gpu=True`, the flag for PyFock's *full* GPU SCF path, is a
-different thing and still raises a clear error for Skala.
+is a separate file from the CPU one. `use_gpu=True` additionally needs CuPy, as it does for every
+functional. Skala is a float64 model, so `dynamic_precision` is switched off for it automatically.
+
+Non-locality is the only thing that changes on the device: Skala cannot be folded into the per-block
+loop of `eval_xc_3_cupy`, where each block calls the functional on its own points, so it gets the same
+three-pass driver as on the CPU (`Integrals.eval_xc_skala_cupy`). Everything inside those passes is the
+semilocal GPU code.
 
 `benchmarks_tests/benchmark_skala_gpu.py` measures the speedup and the CPU/GPU agreement, for
-single points and for geometry optimizations.
+single points and for geometry optimizations. **Forces are CPU-only**: `DFT_Grad` raises for
+`use_gpu=True`, so geometry optimization still runs the gradient on the host.
 
 ### Initial Guess for the SCF
 
@@ -769,7 +777,7 @@ streamlit run app.py
 - [ ] Electron dynamics & Excited state calculations (RT-TDDFT)
 - [ ] Periodic boundary conditions
 - [x] Hybrid functionals with exact exchange (native B3LYP/PBE0 and LibXC hybrids, RI-K via DF_algo=11; CPU)
-- [x] Skala neural exchange-correlation functional, with analytical gradients (CPU; model on GPU via `skala_gpu=True`)
+- [x] Skala neural exchange-correlation functional, on CPU and GPU, with analytical gradients (CPU)
 - [x] Grid-response XC gradients (Becke weight derivatives, `Grids.becke_weight_gradient`)
 - [ ] Multi-GPU parallelization
 - [ ] Basis set optimization tools
