@@ -31,6 +31,7 @@ def nuc_mat_symm_cupy(basis, mol, slice=None, cp_stream=None, sqrt_ints4c2e_diag
     # The integrals are performed using the formulas
 
     #We convert the required properties to numpy arrays as this is what Numba likes.
+    upload_stream = cp.cuda.get_current_stream()  # the stream the uploads below are issued on
     bfs_coords = cp.array([basis.bfs_coords])
     bfs_contr_prim_norms = cp.array([basis.bfs_contr_prim_norms])
     bfs_lmn = cp.array([basis.bfs_lmn])
@@ -110,6 +111,9 @@ def nuc_mat_symm_cupy(basis, mol, slice=None, cp_stream=None, sqrt_ints4c2e_diag
     else:
         nb_stream = cuda.external_stream(cp_stream.ptr)
         cp_stream.use()
+    if cp_stream.ptr != upload_stream.ptr:
+        # The inputs were uploaded asynchronously on upload_stream; order the kernel after them.
+        cp_stream.wait_event(upload_stream.record())
 
     thread_x = 32
     thread_y = 32

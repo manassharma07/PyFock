@@ -30,6 +30,7 @@ def kin_mat_symm_cupy(basis, slice=None, cp_stream=None):
     # The integrals are performed using the formulas
 
     #We convert the required properties to numpy arrays as this is what Numba likes.
+    upload_stream = cp.cuda.get_current_stream()  # the stream the uploads below are issued on
     bfs_coords = cp.array([basis.bfs_coords])
     bfs_contr_prim_norms = cp.array([basis.bfs_contr_prim_norms])
     bfs_lmn = cp.array([basis.bfs_lmn])
@@ -100,6 +101,9 @@ def kin_mat_symm_cupy(basis, slice=None, cp_stream=None):
     else:
         nb_stream = cuda.external_stream(cp_stream.ptr)
         cp_stream.use()
+    if cp_stream.ptr != upload_stream.ptr:
+        # The inputs were uploaded asynchronously on upload_stream; order the kernel after them.
+        cp_stream.wait_event(upload_stream.record())
 
 
     blocks_per_grid = ((num_rows + (thread_x - 1))//thread_x, (num_cols + (thread_y - 1))//thread_y) 

@@ -61,11 +61,15 @@ PROJ_G = np.ascontiguousarray(_PROJ[4, :15, :15])
 
 def _stream_pair(cp_stream):
     """Return (cp_stream, numba external stream), creating a non-blocking stream if needed."""
+    upload_stream = cp.cuda.get_current_stream()  # the callers upload their inputs on it before calling this
     if cp_stream is None:
         cp.cuda.Device(0).use()
         cp_stream = cp.cuda.Stream(non_blocking=True)
     nb_stream = cuda.external_stream(cp_stream.ptr)
     cp_stream.use()
+    if cp_stream.ptr != upload_stream.ptr:
+        # The inputs were uploaded asynchronously on upload_stream; order the kernel after them.
+        cp_stream.wait_event(upload_stream.record())
     return cp_stream, nb_stream
 
 
