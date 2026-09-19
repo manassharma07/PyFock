@@ -341,6 +341,11 @@ Available names are `skala-1.1` (recommended), `skala-1.1-rev1`, `skala-1.1-rev0
 See [`examples/ex44_Skala_neural_functional.py`](examples/ex44_Skala_neural_functional.py) for a runnable
 version, with and without the dispersion correction.
 
+Two Kaggle notebooks walk through the integration and can be run in the browser:
+[Skala in PyFock vs. PySCF](https://www.kaggle.com/code/ducktape07/skala-pyfock-vs-pyscf) runs Skala on the CPU, checks PyFock's results against PySCF,
+compares the timings (PyFock is considerably faster) and finishes with a geometry optimization;
+[PyFock + Skala on a Tesla T4](https://www.kaggle.com/code/ducktape07/pyfock-skala-on-gpu-tesla-t4) shows how to run Skala on the GPU and benchmarks it.
+
 #### Getting the model
 
 `pip install "pyfock[skala]"` is all that is needed (see
@@ -533,6 +538,9 @@ semilocal GPU code.
 single points and for geometry optimizations. Forces run on the device too -- `DFT_Grad` follows the
 SCF -- so a `use_gpu=True` geometry optimization never returns to the host for a step; see
 [Forces on the GPU](#forces-on-the-gpu).
+
+The [PyFock + Skala on a Tesla T4](https://www.kaggle.com/code/ducktape07/pyfock-skala-on-gpu-tesla-t4) Kaggle notebook shows the GPU setup end to end and
+benchmarks the PyFock + Skala integration on Kaggle's free T4.
 
 ### Initial Guess for the SCF
 
@@ -811,6 +819,8 @@ streamlit run app.py
 - [x] [Kaggle Notebook: Benchmarking PyFock against PySCF](https://www.kaggle.com/code/ducktape07/pyfock-vs-pyscf#10.-Timing-summary-table)
 - [x] [Kaggle Notebook: PyFock GPU Dynamic Precision](https://www.kaggle.com/code/ducktape07/pyfock-gpu-dynamic-precision)
 - [x] [Kaggle Notebook: PySCF vs. PyFock GPU Benchmark](https://www.kaggle.com/code/ducktape07/pyscf-vs-pyfock-gpu-benchmark)
+- [x] [Kaggle Notebook: Skala in PyFock vs. PySCF (CPU): accuracy, speed and geometry optimization](https://www.kaggle.com/code/ducktape07/skala-pyfock-vs-pyscf)
+- [x] [Kaggle Notebook: PyFock + Skala on the GPU (Tesla T4): setup and benchmark](https://www.kaggle.com/code/ducktape07/pyfock-skala-on-gpu-tesla-t4)
 
 
 ## Documentation
