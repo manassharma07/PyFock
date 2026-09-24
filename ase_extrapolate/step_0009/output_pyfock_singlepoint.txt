@@ -1,0 +1,377 @@
+Cupy is not installed. GPU acceleration is not availble.
+XC not specified, defaulting to LDA functional (LibXC codes: 1, 7)
+Initial guess from earlier ASE steps: extrapolated from the converged densities of the previous 5 geometries (weights -0.413, 0.816, -0.408, -0.738, 1.743).
+Density projection/extrapolation code originally written by Prof. Vincenzo Barone; added to PyFock and adapted by Manas Sharma with his permission.
+
+======================================================================
+PyFock Python Program for Quantum Chemistry Simulations
+                                        by Manas Sharma
+======================================================================
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m[38;5;45m█[0m  [38;5;51m█[0m[38;5;51m█[0m    [38;5;87m█[0m[38;5;87m█[0m [38;5;123m█[0m[38;5;123m█[0m[38;5;123m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m  [38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m   [38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m   [38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m█[0m[38;5;45m█[0m [38;5;45m░[0m[38;5;45m█[0m[38;5;51m█[0m  [38;5;51m█[0m[38;5;51m█[0m[38;5;87m░[0m [38;5;87m█[0m[38;5;87m█[0m[38;5;87m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m [38;5;159m█[0m[38;5;159m█[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;219m░[0m [38;5;219m█[0m[38;5;219m█[0m  [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m 
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m   [38;5;45m░[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m░[0m  [38;5;87m█[0m[38;5;87m█[0m[38;5;87m█[0m[38;5;123m█[0m[38;5;123m█[0m   [38;5;159m█[0m[38;5;159m█[0m    [38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m      [38;5;219m█[0m[38;5;219m█[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m  
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m░[0m[38;5;45m░[0m    [38;5;51m░[0m[38;5;51m█[0m[38;5;87m█[0m[38;5;87m░[0m   [38;5;123m█[0m[38;5;123m█[0m[38;5;123m░[0m[38;5;159m░[0m[38;5;159m░[0m   [38;5;195m█[0m[38;5;195m█[0m    [38;5;225m█[0m[38;5;219m█[0m [38;5;219m█[0m[38;5;219m█[0m      [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m 
+[38;5;39m█[0m[38;5;39m█[0m         [38;5;51m█[0m[38;5;87m█[0m    [38;5;123m█[0m[38;5;123m█[0m      [38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;219m░[0m [38;5;219m░[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m  [38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m░[0m[38;5;39m░[0m         [38;5;51m░[0m[38;5;87m░[0m    [38;5;123m░[0m[38;5;123m░[0m       [38;5;195m░[0m[38;5;195m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m   [38;5;219m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m [38;5;213m░[0m[38;5;213m░[0m   [38;5;213m░[0m[38;5;213m░[0m
+
+======================================================================
+
+Version:  0.2.2
+Citation: M. Sharma and M. Sierka, PyFock: A Just-In-Time Compiled 
+Gaussian Basis DFT Python Code for CPU and GPU Architectures
+
+======================================================================
+
+📧 Contact Information:
+   Developer: Dr. Manas Sharma (PhD Physics)
+   Email: manas.sharma@uni-jena.de
+   Website: https://manas.bragitoff.com/
+
+📚 Resources:
+   Documentation: https://pyfock-docs.bragitoff.com
+   Official Website: https://pyfock.bragitoff.com/
+   GitHub Repo: https://github.com/manassharma07/pyfock
+   Web GUI: https://pyfock-gui.bragitoff.com/
+
+======================================================================
+
+
+
+ Time to get inspired by a great quantum chemist :)
+
+
+======================================================================
+ ____  _                  
+|  _ \(_)_ __ __ _  ___   
+| | | | | '__/ _` |/ __|  
+| |_| | | | | (_| | (__   
+|____/|_|_|  \__,_|\___|  
+======================================================================
+
+   
+             ..,.,,.,,,,,,......         ,-
+          ..,,::::::,,,,,::;:,,,:,       ,-
+         .,:::::,,,....,,,,::,.,::,.     ,-
+       ,:;::,:;:,::,,,,,,,,,..,:-:;;     .-
+     .,:;::;:,,,::;:,,,;,,:,..,:;;::;    .+
+    :,:::::;---::;-+::::+::;..,:--::;,   .%
+   ,::::::::;;,,...;-;:;;+;:..;::.,--:.. .?
+   ,:::::::,.       .,,::::,..,.   .;;, .,*
+   :::::;;,                          :+, ,+
+   ::::-;                             ,-,:*
+   ;;:;-.                              :--?
+   ;;:;:                                ;+?
+   ::--,                                .+*
+   ;-+:.                                 -?
+   :;:,                                  ;*
+   :;::,.                                -*
+   ;;;;;,      .,;;:-;:,.           .,,, ;*
+   ::::;       .. .:-??*?;.     .;+**;,, ,*
+   --;;-        .:-+++--;;,    ,-**+;;: .;*
+   .,;:-.      .,,;??;,;,,.   .++;*%*:;..:+
+   . ,;;.          .. ...      ,,.,,.   ,,+
+   :;                ..        ....     ,,-
+   ..                           ,       ,,-
+                                 .      ,.-
+                        .        .      ..-
+   .                    .,:-;:,:::.    ...+
+   .,;:,                 ,::,,;-;.     , ,+
+    .:.:             .,,,;-;-++--::.   , ,-
+   ,.:  ,            :;:,,::,,,,,,::  ,. ,-
+   . ,  .,           ,:::::::::,,,.   ,  ,-
+    .:,  ,:.              ..,,,,.    ,.  ,-
+     ,..  .:,.            ,;;;;,    ..   ,-
+     : ,    ,,,.                   ,.    ,-
+     ,. .    ......               ,....  ,-
+     .,  ,.   ....::,.       .  .,.   ..,:-
+      .,   .  .......,:::::,::::,        ,-
+       ,    ..  ..........:,,            ,+
+   
+   
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║       God used beautiful mathematics in creating the world.          ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║                                                            ~ dirac   ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+
+
+Number of atoms:  9
+
+
+Number of basis functions or Cartesian atomic orbitals (6d, 10f, 15g and so on):  75
+
+
+Number of auxiliary basis functions (in Cartesian atomic orbital basis):  255
+
+======================================================================
+
+
+============= System Information =============
+Operating System: Darwin 24.6.0
+System Type: 64bit
+CPU Model: Apple M4
+Number of Cores: 10
+Number of Threads: 10
+Memory (GB): 16.0
+
+======================================================================
+
+Running DFT using 4 threads for Numba.
+
+
+
+
+Cartesian Atomic Orbitals (6d, 10f, 15g...) are being used!
+
+
+
+Calculating overlap and kinetic integrals...
+
+
+Core H size in GB  0.0
+done!
+Time taken 0.08 seconds.
+
+
+Initial guess: SANO (superposition of atomic natural-orbital densities)
+  Spherically averaged atomic densities from the ANO-RCC-MB natural orbitals for C, O, H, projected onto the calculation basis and renormalized.
+  Electrons in the guess density: 26.0000 of 26 (the calculation basis represents 99.94% of the atomic natural orbitals)
+  Time taken: 0.193 seconds.
+  References for the SANO initial guess (please cite):
+   [1] J. Almlöf, K. Faegri Jr., K. Korsell, "Principles for a direct SCF approach to LCAO-MO ab-initio calculations", J. Comput. Chem. 3, 385 (1982). doi:10.1002/jcc.540030314
+   [2] J. H. Van Lenthe, R. Zwaans, H. J. J. Van Dam, M. F. Guest, "Starting SCF calculations by superposition of atomic densities", J. Comput. Chem. 27, 926 (2006). doi:10.1002/jcc.20393
+   [3] P.-O. Widmark, P.-Å. Malmqvist, B. O. Roos, "Density matrix averaged atomic natural orbital (ANO) basis sets for correlated molecular wave functions", Theor. Chim. Acta 77, 291 (1990). doi:10.1007/BF01120130
+   [4] B. O. Roos, R. Lindh, P.-Å. Malmqvist, V. Veryazov, P.-O. Widmark, "Main group atoms and dimers studied with a new relativistic ANO basis set", J. Phys. Chem. A 108, 2851 (2004). doi:10.1021/jp031064+
+
+
+
+User requested to use Rys Quadrature Algorithm for the evaluation of ERIs
+Stricter version of Schwarz screening:  True
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.03 seconds.
+
+
+
+Performing Schwarz screening (multipole-accelerated DF_algo=12)...
+Threshold  1e-09
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.01
+Total time taken for Schwarz screening 0.01 seconds.
+
+DF_algo=12: 650 of 666 shell pairs significant; far field: 0.0% of the 709410 significant (ij|P) and 0.2% of their Rys work (45 branches in 18 boxes of 2.50 bohr, lmax=12, 1517 moment centres, 0.000 GB of branch-centred moments); near field: 709410 elements (0.006 GB), cached 100.0% (0.006 GB)
+Time taken for the near-field three-center integrals and far-field moments:  0.08  (setup 0.00, geometry 0.01, classification 0.01, profitability 0.03, columns 0.01, moments 0.00, translated_moments 0.00, caching 0.00, metadata_total 0.06, near_field 0.03)
+Time taken to evaluate the nuclear potential matrix with strict Schwarz screening:  0.01
+Two Center Two electron ERI size in GB  0.0005202
+Three Center Two electron ERI (cached near-field blocks) size in GB  0.00567528
+Far-field multipole moments size in GB  0.000351456
+Three-centered two electron evaluation done!
+Time taken for Cholesky factorization of two-centered two-electron integrals 0.0 seconds.
+
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  0.12 seconds.
+
+
+
+------------------------------------------------------
+Numerical Integration for XC Term
+------------------------------------------------------
+
+
+Generating grids...
+
+
+Grids level:  3
+Grids: Treutler-Ahlrichs radial + Lebedev angular grids, region-wise angular pruning, Becke partitioning with Treutler atomic-size adjustment (CPU); level 3; (n_rad, n_ang) per element: C (75, 302), O (75, 302), H (50, 302); 101166 points.
+done!
+Time taken 0.01 seconds.
+
+
+Pruning generated grids by rho...
+
+
+done!
+Time taken 0.1 seconds.
+
+
+Deleted 15090 grid points.
+
+No. of supplied/generated grid points (after pruning):  86076
+Size (in GB) for storing the coordinates of grid:       0.002
+Size (in GB) for storing the weights of grid:           0.001
+Size (in GB) for storing the density at gridpoints:     0.001
+
+Will use batching to evaluate the XC term for memory efficiency.
+Batch size:  5000
+No. of batches:  18
+
+Preliminary processing for XC term evaluations...
+Calculating the value of basis functions (atomic orbitals) and get the indices of siginificantly contributing functions...
+done!
+Time taken 0.0 seconds.
+
+Maximum no. of basis functions contributing to a batch of grid points:    74
+Average no. of basis functions contributing to a batch of grid points:    66
+
+
+------------------------------------------------------
+Exchange-Correlation Functional
+------------------------------------------------------
+
+J. P. Perdew, K. Burke, and M. Ernzerhof, Phys. Rev. Lett. 77, 3865 (1996).
+J. P. Perdew, K. Burke, and M. Ernzerhof, Phys. Rev. Lett. 77, 3865 (1996).
+------------------------------------------------------
+
+
+
+
+
+
+
+
+XC algo 2
+Number of electrons:  25.999991947503293
+
+
+
+------Iteration 1--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -523.2271121953484
+Nuclear repulsion Energy          81.3180416804414
+Kinetic Energy                   152.5294775483372
+Coulomb Energy                   156.0571861818729
+Exchange-Correlation Energy      -21.4054089238489
+--------------------------------------------------
+Total Energy                    -154.7278157085456
+--------------------------------------------------
+
+
+
+Energy difference :  154.72781570854565
+
+
+HOMO-LUMO gap: 0.24008297524881428 au
+HOMO-LUMO gap: 6.533 eV
+
+
+Time taken for the previous iteration: 0.47 seconds 
+
+
+
+Density matrix difference norm:  0.003798313112723622 
+
+
+
+
+
+XC algo 2
+Number of electrons:  25.999991967725748
+
+
+
+------Iteration 2--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -523.2232154810904
+Nuclear repulsion Energy          81.3180416804414
+Kinetic Energy                   152.5266920888211
+Coulomb Energy                   156.0558068665465
+Exchange-Correlation Energy      -21.4051867670762
+--------------------------------------------------
+Total Energy                    -154.7278616123575
+--------------------------------------------------
+
+
+
+Energy difference :  4.5903811894731916e-05
+
+
+HOMO-LUMO gap: 0.24023095482808068 au
+HOMO-LUMO gap: 6.537 eV
+
+
+Time taken for the previous iteration: 0.18 seconds 
+
+
+
+Density matrix difference norm:  0.0014876530675817354 
+
+
+
+
+
+XC algo 2
+Number of electrons:  25.99999196606948
+
+
+
+------Iteration 3--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -523.2285227898047
+Nuclear repulsion Energy          81.3180416804414
+Kinetic Energy                   152.5298190934978
+Coulomb Energy                   156.0583776627999
+Exchange-Correlation Energy      -21.4055773226578
+--------------------------------------------------
+Total Energy                    -154.7278616757234
+--------------------------------------------------
+
+
+
+Energy difference :  6.336586011457257e-08
+
+SCF Converged after 3 iterations!
+
+-------------------------------------
+Total Energy =  -154.7278616757234
+-------------------------------------
+
+
+
+Time taken : 1.33 seconds.
+
+
+
+-------------------------------------------------------------
+Profiling (Wall times in seconds)
+-------------------------------------------------------------
+Preprocessing                           0.1
+Density Fitting                         0.09
+    DF (gamma)                          0.05
+    DF (coeff)                          0.01
+    DF (Jtri)                           0.03
+    DF (Cholesky)                       0.0
+DIIS                                    0.03
+KS matrix diagonalization               0.25
+One electron Integrals (S, T, Vnuc)     0.08
+Coulomb Integrals (2c2e + 3c2e)         0.12
+Grids construction                      0.01
+Exchange-Correlation Term               0.45
+Misc.                                   0.21
+Complete SCF                            1.33
+
+---------------------------------------------------------
+Analytical gradient timings (seconds)
+---------------------------------------------------------
+nuclear_repulsion                  0.000
+kinetic                            0.008
+nuclear_attraction                 0.018
+overlap                            0.007
+df_coefficients                    0.085
+coulomb_3c2e_grad                  0.117
+coulomb_2c2e_grad                  0.015
+xc                                 0.223
+total                              0.474
+---------------------------------------------------------
+
+PYFOCK_RESULT_JSON={"converged": true, "coulomb_energy_au": 156.05837766279993, "density_guess_info": {"implementation": "pyfock", "method": "extrapolate", "npoints": 5, "time": 0.08774195799999995, "weights": [-0.4133752968140223, 0.8164979235268306, -0.40813815249350405, -0.7382979503193543, 1.7433134761000502]}, "density_guess_source": "/Users/manas/Documents/PyFock/ase_extrapolate/step_0008/converged_dmat.npy", "density_guess_used": true, "electron_nuclear_energy_au": -523.2285227898047, "force_method_used": "analytical", "forces_au_bohr": [[0.0007388997262442604, 4.651450645937194e-05, 0.0005779428900093905], [-0.0001485434124676721, -0.000800845589667587, -3.5071781024050355e-05], [0.0009034958315314069, 0.0010876095764952298, 0.00010590214183125307], [-0.0004892339718740035, 0.00048477080791156646, 0.00020578111007746314], [-0.0007747985708551827, -0.0005545365239902345, -0.0017259221958861592], [0.0009968044775560715, -0.0005480957162076194, 0.0010737929675823654], [-0.002019157283673745, 0.00015979509675294323, 0.0001869884163225254], [0.0012618128256940385, -0.0002516226160916013, 0.000499703876354729], [-0.0004276043658323781, 0.00039750640191899, -0.0009256268210791063]], "homo_lumo_gap_au": 0.24023095482808068, "homo_lumo_gap_ev": 6.537002483653495, "kinetic_energy_au": 152.5298190934978, "niter": 3, "nuclear_repulsion_energy_au": 81.31804168044144, "total_energy_au": -154.7278616757234, "total_energy_ev": -4210.350064122415, "xc_energy_au": -21.405577322657837}

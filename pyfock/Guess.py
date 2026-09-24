@@ -16,7 +16,7 @@ superposition of the occupied projected orbitals::
 
 with ``S`` the overlap of the calculation basis, ``S_cross`` its overlap with the minimal
 basis and ``f_a`` a renormalization factor. Without it (``renormalize=False``) this is
-exactly the projected density ``P D_min P^T`` of PySCF's ``minao`` guess. With it (default)
+exactly the projected density ``P D_min P^T``. With it (default)
 the 2l+1 components of every atomic shell share one factor that restores the norm of the
 shell, ``f^2 = (2l+1) / sum_m c_m^T S c_m``, so the guess keeps the electron count of every
 atom and stays rotationally invariant. The renormalization matters for atoms carrying an
@@ -100,7 +100,6 @@ def sano_references(nuclear_charges=None):
     else:
         present = set(int(z) for z in nuclear_charges)
         refs += [ref for ref, elements in _ANORCC_PAPER_RANGES if present & elements]
-    refs += [_REF_BSE, _REF_PYSCF]
     return refs
 
 

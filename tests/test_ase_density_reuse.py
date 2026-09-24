@@ -15,15 +15,8 @@ def make_h2():
     return Atoms("H2", positions=[[0.0, 0.0, 0.0], [0.0, 0.0, 0.74]])
 
 
-def test_density_checkpoint_is_reused_after_geometry_change(tmp_path, monkeypatch):
-    calc = PyFockCalculator(
-        functional="PBE",
-        basis="sto-3g",
-        directory=str(tmp_path / "calc"),
-    )
-    atoms = make_h2()
-    atoms.calc = calc
-    density_guesses = []
+def _fake_runs(calc, monkeypatch, sources_seen):
+    """Replace the subprocess by a stub that records the checkpoints offered to each step."""
 
     def fake_write_run_script(
         atoms,
@@ -32,9 +25,9 @@ def test_density_checkpoint_is_reused_after_geometry_change(tmp_path, monkeypatc
         compute_forces=False,
         allow_numerical_forces=True,
         compute_dipole=False,
-        density_guess_path=None,
+        density_sources=None,
     ):
-        density_guesses.append(density_guess_path)
+        sources_seen.append(list(density_sources or []))
         return str(Path(workdir) / "run.py"), str(Path(workdir) / "output.txt")
 
     def fake_run_pyfock_script(workdir, script_path, output_path):
@@ -46,21 +39,59 @@ def test_density_checkpoint_is_reused_after_geometry_change(tmp_path, monkeypatc
             "total_energy_ev": -27.2114,
             "forces_au_bohr": np.zeros((2, 3)).tolist(),
             "force_method_used": "analytical",
-            "density_guess_used": density_guesses[-1] is not None,
-            "density_guess_source": density_guesses[-1],
+            "density_guess_used": bool(sources_seen[-1]),
+            "density_guess_source": sources_seen[-1][-1][1] if sources_seen[-1] else None,
         }
 
     monkeypatch.setattr(calc, "_write_run_script", fake_write_run_script)
     monkeypatch.setattr(calc, "_run_pyfock_script", fake_run_pyfock_script)
 
+
+def test_density_checkpoint_is_reused_after_geometry_change(tmp_path, monkeypatch):
+    calc = PyFockCalculator(
+        functional="PBE",
+        basis="sto-3g",
+        directory=str(tmp_path / "calc"),
+    )
+    atoms = make_h2()
+    atoms.calc = calc
+    sources_seen = []
+    _fake_runs(calc, monkeypatch, sources_seen)
+
     atoms.get_forces()
-    first_checkpoint = tmp_path / "calc" / "step_0001" / "converged_dmat.npy"
+    first = tmp_path / "calc" / "step_0001"
     atoms.positions[1, 2] += 0.01
     atoms.get_forces()
 
-    assert density_guesses == [None, str(first_checkpoint)]
+    assert sources_seen == [[], [(str(first / "structure.xyz"), str(first / "converged_dmat.npy"))]]
     assert calc.pyfock_results["density_guess_used"] is True
-    assert calc.pyfock_results["density_guess_source"] == str(first_checkpoint)
+    assert calc.pyfock_results["density_guess_source"] == str(first / "converged_dmat.npy")
+
+
+def test_extrapolation_keeps_the_latest_checkpoints(tmp_path, monkeypatch):
+    calc = PyFockCalculator(
+        functional="PBE",
+        basis="sto-3g",
+        density_guess="extrapolate",
+        density_guess_options={"max_points": 3},
+        directory=str(tmp_path / "calc"),
+    )
+    atoms = make_h2()
+    atoms.calc = calc
+    sources_seen = []
+    _fake_runs(calc, monkeypatch, sources_seen)
+    for _ in range(5):
+        atoms.get_forces()
+        atoms.positions[1, 2] += 0.01
+
+    assert [len(s) for s in sources_seen] == [0, 1, 2, 3, 3]
+    steps = [Path(xyz).parent.name for xyz, _ in calc._density_checkpoints]
+    assert steps == ["step_0003", "step_0004", "step_0005"]
+    assert [Path(xyz).parent.name for xyz, _ in sources_seen[-1]] == ["step_0002", "step_0003", "step_0004"]
+    # a geometry computed again (same step directory) replaces its entry instead of adding one
+    atoms.positions[1, 2] -= 0.01
+    calc._remember_density_checkpoint(atoms, *calc._density_checkpoints[-1])
+    assert [Path(xyz).parent.name for xyz, _ in calc._density_checkpoints] == steps
 
 
 def test_density_checkpoint_can_be_disabled_or_rejected_as_incompatible(tmp_path):
@@ -71,9 +102,10 @@ def test_density_checkpoint_can_be_disabled_or_rejected_as_incompatible(tmp_path
     )
     atoms = make_h2()
     checkpoint = tmp_path / "converged_dmat.npy"
+    structure = tmp_path / "structure.xyz"
     np.save(checkpoint, np.eye(2))
-    calc._last_density_path = str(checkpoint)
-    calc._last_density_compatibility_token = calc._density_compatibility_token(atoms)
+    calc._write_xyz(atoms, str(structure))
+    calc._remember_density_checkpoint(atoms, str(structure), str(checkpoint))
 
     displaced = atoms.copy()
     displaced.positions[1, 2] += 0.01
@@ -86,6 +118,49 @@ def test_density_checkpoint_can_be_disabled_or_rejected_as_incompatible(tmp_path
 
     calc.parameters["reuse_density"] = False
     assert calc._density_guess_path(displaced) is None
+
+
+def test_invalid_density_guess_settings_fail_early(tmp_path):
+    with pytest.raises(ValueError):
+        PyFockCalculator(functional="PBE", density_guess="bogus", directory=str(tmp_path))
+    with pytest.raises(TypeError):
+        PyFockCalculator(functional="PBE", density_guess="extrapolate",
+                         density_guess_options={"bogus": 1}, directory=str(tmp_path))
+    with pytest.raises(ValueError):
+        PyFockCalculator(functional="PBE", density_guess="transfer",
+                         density_guess_options={"implementation": "original"}, directory=str(tmp_path))
+
+
+@pytest.mark.parametrize("in_process", [True, False])
+@pytest.mark.parametrize("options", [None, {"implementation": "original"}])
+def test_extrapolated_guess_along_a_path(tmp_path, in_process, options):
+    """Three geometries: the third SCF starts from the extrapolation of the first two."""
+    atoms = make_h2()
+    atoms.calc = PyFockCalculator(
+        functional="PBE",
+        basis="def2-SVP",
+        conv_crit=1e-8,
+        density_guess="extrapolate",
+        density_guess_options=options,
+        run_in_process=in_process,
+        directory=str(tmp_path / "calc"),
+    )
+    energies, infos = [], []
+    for _ in range(3):
+        energies.append(atoms.get_potential_energy())
+        infos.append(atoms.calc.pyfock_results["density_guess_info"])
+        atoms.positions[1, 2] += 0.02
+    assert infos[0] is None and infos[1]["npoints"] == 1 and infos[2]["npoints"] == 2
+    expected_weights = [-1.0, 2.0]
+    np.testing.assert_allclose(infos[2]["weights"], expected_weights, atol=1e-8)
+    assert infos[2]["implementation"] == ("original" if options else "pyfock")
+
+    # same energy as a calculation that starts from scratch
+    fresh = make_h2()
+    fresh.positions[1, 2] += 0.04
+    fresh.calc = PyFockCalculator(functional="PBE", basis="def2-SVP", conv_crit=1e-8,
+                                  run_in_process=True, directory=str(tmp_path / "fresh"))
+    assert energies[2] == pytest.approx(fresh.get_potential_energy(), abs=1e-5)
 
 
 def test_run_in_process_matches_the_subprocess(tmp_path):

@@ -2305,7 +2305,8 @@ class DFT:
 
         
         self.converged = scf_converged
-        self.niter = itr-1
+        # A converged SCF leaves the loop through `break`, before `itr` is incremented.
+        self.niter = itr if scf_converged else itr-1
 
         # D3 dispersion is a function of the geometry alone, so it is evaluated once here rather than
         # inside the SCF loop; it cannot affect the converged density (see pyfock.Dispersion).

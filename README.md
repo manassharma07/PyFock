@@ -141,6 +141,7 @@
 - ✅ **ASE Calculator**: Optional ASE interface (geometry optimization and the wider ASE ecosystem), using analytical forces by default
 - ✅ **XC integration grids**: Treutler-Ahlrichs radial and Lebedev angular grids with region-wise angular pruning and Becke partitioning (levels 0-9), built by a parallel Numba kernel or on the GPU (~6x faster, same grid); energies agree with PySCF to the SCF convergence threshold in our benchmarks; numgrid grids remain available as an alternative scheme
 - ✅ **SANO initial guess**: superposition of atomic natural-orbital densities (ANO-RCC-MB natural orbitals projected onto the calculation basis, no atomic SCF needed) as the default SCF starting point; it roughly halves the number of SCF iterations relative to the core-Hamiltonian guess and prunes the XC grid accurately
+- ✅ **Extrapolated starting densities in geometry optimizations**: `density_guess='extrapolate'` in the ASE calculator carries the converged densities of the last steps along with the atoms and extrapolates them to the new geometry (adapting the density projection/extrapolation code contributed by Prof. Vincenzo Barone), for 16-18 % fewer SCF iterations along the same optimization path
 - ✅ **Cross-Platform**: Works on Linux, macOS, and Windows
 
 ## Installation
@@ -747,6 +748,17 @@ It is the faster choice for Skala by a wide margin; keep the subprocess for long
 reads its thread count from the environment when numpy is first imported, so with `run_in_process=True`
 set `OMP_NUM_THREADS` at the top of your script rather than relying on `ncores` alone. See
 [`examples/ex45_ASE_geometry_optimization_with_Skala.py`](examples/ex45_ASE_geometry_optimization_with_Skala.py).
+
+#### Starting densities along an optimization path
+
+Every SCF of an optimization starts from the converged density of the previous step. With
+`density_guess='extrapolate'` the densities of the last five steps are instead carried along with
+the atoms — their occupied natural orbitals re-orthonormalized in the new overlap metric — and
+extrapolated to the new geometry with weights fitted to the geometries, then made N-representable.
+
+```python
+PyFockCalculator(functional="PBE", basis="def2-SVP", density_guess="extrapolate")   # default: 'previous'
+```
 
 #### Grid response
 

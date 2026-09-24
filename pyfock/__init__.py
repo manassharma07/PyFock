@@ -7,6 +7,7 @@ Modules:
 - `Integrals`: 1e/2e integral routines
 - `XC`, `Grids`: Exchange-correlation and grid definitions
 - `Guess`: Initial density-matrix guesses for the SCF (SANO: superposition of atomic natural-orbital densities)
+- `guess_projection`: Starting densities along a geometry path: projection, transfer and extrapolation of converged densities (original code by Prof. Vincenzo Barone)
 - `Utils`, `Graphics`: Helper utilities and visualization
 
 This project benefits from the Python scientific stack: NumPy, SciPy, Opt_Einsum, NumExpr, Joblib, and more.  
@@ -35,6 +36,7 @@ from .DFT_NumGrad import DFT_NumGrad
 from .DFT_Grad import DFT_Grad
 from .HF_atoms import HF_atoms
 from . import Guess
+from . import guess_projection
 from . import Dispersion
 # from .PBC_ring import ring
 
