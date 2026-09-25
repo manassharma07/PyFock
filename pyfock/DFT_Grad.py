@@ -161,6 +161,8 @@ class DFT_Grad:
         # functional: the converged DFT object already holds the loaded model, and the gradient goes
         # through its own driver.
         self.skala = getattr(dft_obj, 'skala', None)
+        # the model's peak memory scales with the points per call; use the SCF's setting
+        self.skala_max_points_per_chunk = int(getattr(dft_obj, 'skala_max_points_per_chunk', 250000))
         if self.grid_response is None:
             self.grid_response = self.skala is not None
         if self.skala is not None and not self.grid_response:
@@ -454,7 +456,8 @@ class DFT_Grad:
             dexc_dbf, explicit_xc_grad = skala_grad(
                 basis, dmat, self.grids, self.skala, ncores=ncores, blocksize=blocksize,
                 list_nonzero_indices=list_nonzero_indices,
-                count_nonzero_indices=count_nonzero_indices, **skala_kwargs,
+                count_nonzero_indices=count_nonzero_indices,
+                max_points_per_chunk=self.skala_max_points_per_chunk, **skala_kwargs,
             )
         elif use_gpu:
             xc_result = Integrals.eval_xc_grad_2_cupy(

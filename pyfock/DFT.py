@@ -424,6 +424,14 @@ class DFT:
         device gives most of the speedup without needing PyFock's full CuPy path. Requires a CUDA build
         of PyTorch; ignored for conventional functionals."""
 
+        self.skala_max_points_per_chunk = 250000
+        """Upper bound on the grid points the Skala model evaluates in one call, in the SCF and in
+        `DFT_Grad`. Peak memory grows linearly with it -- about 26 kB per point on the CPU, autograd graph
+        included (skala-1.1: 9.9 GB of process commit for 250 000 points, 3.2 GB for 50 000) -- while the
+        result does not change: a chunk holds whole atomic grids, so only the float32 summation order
+        inside the model differs (~1e-9 Ha). Lower it when the model runs out of memory, e.g. next to a
+        large `max_memory_ints3c2e` on a machine with little RAM; ignored for conventional functionals."""
+
         self.dispersion = dispersion
         """DFT-D3 dispersion correction (:mod:`pyfock.Dispersion`), added to the total energy after the
         SCF has converged. It is a purely geometric, additive term and never enters the Kohn-Sham matrix.
@@ -2047,6 +2055,7 @@ class DFT:
                             list_nonzero_indices=list_nonzero_indices,
                             count_nonzero_indices=count_nonzero_indices,
                             list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values,
+                            max_points_per_chunk=self.skala_max_points_per_chunk,
                             debug=debug, threads_per_block=threads_per_block)
                         Vxc = cp.asarray(Vxc, dtype=cp.float64)
                     else:
@@ -2056,6 +2065,7 @@ class DFT:
                                                            count_nonzero_indices=count_nonzero_indices,
                                                            list_ao_values=list_ao_values,
                                                            list_ao_grad_values=list_ao_grad_values,
+                                                           max_points_per_chunk=self.skala_max_points_per_chunk,
                                                            debug=debug)
                 elif not self.use_gpu:
                     if XC_algo==1:

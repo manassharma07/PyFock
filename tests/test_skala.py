@@ -135,6 +135,43 @@ def test_chunking_does_not_change_the_result(system, skala):
     assert np.allclose(chunked[1], whole[1], rtol=1e-6, atol=1e-8)
 
 
+def test_dft_chunk_option_reaches_every_model_call(skala, monkeypatch):
+    """``DFT.skala_max_points_per_chunk`` bounds the model calls of the SCF and of DFT_Grad alike.
+
+    The model's peak memory grows with the points per call (~26 kB each on the CPU), which makes this
+    the knob for a machine that runs out of memory; the SCF energy must not move beyond the float32
+    summation order of differently shaped batches (see test_chunking_does_not_change_the_result).
+    """
+    from pyfock.XC import skala_iface
+    seen = []
+    original = skala_iface.SkalaFunctional.exc_and_potential
+
+    def spy(self, *args, max_points_per_chunk=250000, **kwargs):
+        seen.append(max_points_per_chunk)
+        return original(self, *args, max_points_per_chunk=max_points_per_chunk, **kwargs)
+
+    monkeypatch.setattr(skala_iface.SkalaFunctional, 'exc_and_potential', spy)
+
+    mol = Mol(atoms=[list(atom) for atom in H2O])
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+    energies = {}
+    for chunk in (250000, 3000):
+        dft = DFT(mol, basis, auxbasis, xc='skala-1.1', grids=Grids(mol, level=1, verbose=False))
+        dft.conv_crit = 1e-8
+        dft.skala_max_points_per_chunk = chunk
+        seen.clear()
+        with contextlib.redirect_stdout(io.StringIO()):
+            energy, _ = dft.scf()
+            assert dft.converged
+            assert seen and set(seen) == {chunk}, 'the SCF must pass the option to the model'
+            seen.clear()
+            DFT_Grad(dft, verbose=False).calculate()
+        assert seen and set(seen) == {chunk}, 'DFT_Grad must take the option from the DFT object'
+        energies[chunk] = float(energy)
+    assert energies[3000] == pytest.approx(energies[250000], abs=1e-7)
+
+
 def test_blocksize_does_not_change_the_result(system, skala):
     """The grid blocking is an implementation detail of the AO passes, not of the functional."""
     _, basis, grids, dmat = system

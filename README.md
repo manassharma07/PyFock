@@ -394,8 +394,21 @@ Consequences worth knowing:
   grid-translation term); its features are integrals over each atomic grid, so a frozen grid would cost
   ~1e-2 Ha/Bohr rather than the ~1e-4 it costs a meta-GGA.
 - **Dispersion is off by default** — pass `dispersion=True` to include it, see below.
+- **Do not use Skala with ghost atoms on the default grid** (counterpoise corrections). Every atom that
+  owns grid points is part of Skala's functional — its non-local features are anchored at the atoms of
+  the grid — and PyFock gives ghost atoms grid points like any other atom. A ghost atom has no density of
+  its own, which is far outside what the model was trained on, and its potential can bind electrons on
+  the ghost basis functions: for CH4@(H2O)20 in def2-TZVPPD the SCF of the water cage with a ghost CH4
+  inside diverged, its first HOMO-LUMO gap 0.06 eV against 10.2 eV for the complex. Conventional
+  functionals are unaffected. What does work is evaluating each fragment on the grid of its real atoms
+  only, `grids=Grids(real_atoms_mol, level=3)`, so that the ghost atoms contribute basis functions and
+  nothing else.
+- **Memory grows with the grid points per model call**: about 26 kB per point on the CPU, autograd graph
+  included, so the default 250 000 points per call take about 10 GB. Lower
+  `dftObj.skala_max_points_per_chunk` (also used by `DFT_Grad`) on a machine with little memory; only
+  the noise described next changes.
 - **The model carries about 1e-9 Ha of its own numerical noise.** Presenting the network with differently
-  shaped batches (a different `max_points_per_chunk`) shifts the energy at that level. Within one
+  shaped batches (a different `skala_max_points_per_chunk`) shifts the energy at that level. Within one
   calculation the chunking is fixed, so the shift is systematic rather than random and SCF convergence to
   `1e-8` is unaffected — but do not expect two runs with different chunk sizes to agree bit for bit.
 
