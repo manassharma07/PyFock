@@ -401,8 +401,10 @@ Consequences worth knowing:
   the ghost basis functions: for CH4@(H2O)20 in def2-TZVPPD the SCF of the water cage with a ghost CH4
   inside diverged, its first HOMO-LUMO gap 0.06 eV against 10.2 eV for the complex. Conventional
   functionals are unaffected. What does work is evaluating each fragment on the grid of its real atoms
-  only, `grids=Grids(real_atoms_mol, level=3)`, so that the ghost atoms contribute basis functions and
-  nothing else.
+  only, so that the ghost atoms contribute basis functions and nothing else — at grid level 4 or finer,
+  `grids=Grids(real_atoms_mol, level=4)`, since ghost functions in a cavity are then sampled only by the
+  outer shells of their neighbours' grids, and at level 3 that was too coarse for Skala in the (H2O)24
+  cage (a spurious bound ghost state again). Use the same level for the complex.
 - **Memory grows with the grid points per model call**: about 26 kB per point on the CPU, autograd graph
   included, so the default 250 000 points per call take about 10 GB. Lower
   `dftObj.skala_max_points_per_chunk` (also used by `DFT_Grad`) on a machine with little memory; only
