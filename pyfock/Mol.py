@@ -283,7 +283,40 @@ class Mol:
             return True
         else:
             print('Error: Some definitions of atomic symbols/coords were illegal')
-            
+
+
+    def ghost_mask(self):
+        """
+        Mark the ghost atoms of the molecule.
+
+        Returns:
+            numpy.ndarray: Boolean array of length ``natoms``, True for ghost atoms (``Ghost-O``, ``Gh-O``,
+            ``X-O``, ...), which carry basis functions but neither a nucleus nor electrons.
+        """
+        return np.array([str(species).lower() == 'ghost' for species in self.atomicSpecies], dtype=bool)
+
+    def element_numbers(self):
+        """
+        Atomic number of the element at every atomic site.
+
+        `Zcharges` is the charge the electrons see: 0 for a ghost atom, and Z minus the core electrons for
+        an atom carrying an ECP once an ECP basis has been loaded (`Basis.applyECPToMol`). The *element*
+        at a site is something else: a ghost atom is the element whose basis functions it carries
+        (`basisSpecies`, e.g. oxygen for ``Ghost-O``) and an ECP atom is its all-electron element.
+        Properties of the element rather than of the nuclear charge use these numbers: the integration
+        grid of the atom (radial grid, angular pruning, Becke size adjustment; see
+        `pyfock.Grids.grid_charges`) and the D3 dispersion parameters (`pyfock.Dispersion`).
+
+        Returns:
+            numpy.ndarray: Integer array of length ``natoms``. A ghost atom defined without an element
+            (atomic number 0) keeps 0.
+        """
+        numbers = np.array(getattr(self, 'Zcharges_all_electron', self.Zcharges), dtype=np.int64)
+        symbols = [symbol.lower() for symbol in Data.elementSymbols]
+        for i in np.nonzero(self.ghost_mask())[0]:
+            species = str(self.basisSpecies[i]).lower()
+            numbers[i] = symbols.index(species) if species in symbols else 0
+        return numbers
 
     def get_center_of_charge(self, units='angs'):
         """

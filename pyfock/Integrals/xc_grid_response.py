@@ -111,7 +111,7 @@ def weight_response_term(grids, eps):
             "e.g. Grids(mol, level=3).")
 
     atom_coords = np.asarray(grids.mol.coordsBohrs, dtype=np.float64).reshape(-1, 3)
-    a_table = size_adjustment_table(np.asarray(grids.mol.Zcharges, dtype=np.int64),
-                                    getattr(grids, 'size_adjustment', 'treutler'))
+    # the charges the grid was built with (the element, also for ghost and ECP atoms)
+    a_table = size_adjustment_table(grids.charges, getattr(grids, 'size_adjustment', 'treutler'))
     return becke_weight_gradient(grids.coords, grids.atom_idx, atom_coords, a_table,
                                  np.asarray(eps, dtype=np.float64) * grids.atomic_weights)

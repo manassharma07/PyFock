@@ -47,6 +47,20 @@ def test_default_basis_falls_back_to_def2_svp_when_sto3g_is_missing():
     assert mol.nelectrons == 26
 
 
+def test_element_numbers_see_through_ghost_atoms_and_ecps():
+    """``Zcharges`` is the charge the electrons see; ``element_numbers`` is the element at the site."""
+    mol = Mol(atoms=[["O", 0.0, 0.0, 0.0], ["Ghost-H", 0.0, 0.0, 1.0], ["Gh-C", 1.0, 0.0, 0.0]])
+    assert mol.ghost_mask().tolist() == [False, True, True]
+    assert list(mol.Zcharges) == [8, 0, 0]
+    assert mol.element_numbers().tolist() == [8, 1, 6]
+    assert mol.nelectrons == 8
+
+    iodide = Mol(atoms=[["I", 0.0, 0.0, 0.0], ["H", 0.0, 0.0, 1.61]])
+    build_basis(iodide, "def2-SVP")                      # applies the 28-electron ECP of iodine
+    assert list(iodide.Zcharges) == [25, 1]
+    assert iodide.element_numbers().tolist() == [53, 1]
+
+
 def test_molecule_dipole_helpers_are_consistent():
     mol = build_h2o_mol()
     basis = build_basis(mol, "def2-SVP")

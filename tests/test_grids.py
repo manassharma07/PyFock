@@ -264,3 +264,40 @@ def test_becke_weight_gradient_matches_finite_differences():
 
     scale = max(float(np.abs(numeric).max()), 1.0)
     assert np.allclose(analytic, numeric, atol=1e-6 * scale)
+
+
+WATER_DIMER = [["O", -1.551007, 0.114520, 0.0], ["H", -1.934259, 0.988994, 0.0], ["H", -0.599677, 0.040712, 0.0],
+               ["O", 1.350625, -0.111469, 0.0], ["H", 1.680398, -0.373741, -0.758561],
+               ["H", 1.680398, -0.373741, 0.758561]]
+
+
+@pytest.mark.parametrize("scheme", ["treutler", "numgrid"])
+def test_counterpoise_fragments_are_integrated_on_the_grid_of_the_complex(scheme):
+    """A ghost atom gets the grid of its element, so both counterpoise fragments of the water dimer see
+    exactly the points and weights of the complex and the integration error cancels in the interaction
+    energy. With charge 0 every ghost oxygen used to get an H-like radial grid and a 2 A Becke radius."""
+    complex_grid = Grids(Mol(atoms=[list(a) for a in WATER_DIMER]), level=2, ncores=2, verbose=False,
+                         scheme=scheme)
+    for ghosts in ((3, 4, 5), (0, 1, 2)):
+        atoms = [(["Ghost-" + a[0]] + a[1:]) if i in ghosts else list(a) for i, a in enumerate(WATER_DIMER)]
+        grid = Grids(Mol(atoms=atoms), level=2, ncores=2, verbose=False, scheme=scheme)
+        assert grid.charges.tolist() == [8, 1, 1, 8, 1, 1]
+        for name in ("coords", "weights", "atom_idx", "atomic_weights"):
+            ours, reference = getattr(grid, name), getattr(complex_grid, name)
+            assert (ours is None and reference is None) or np.array_equal(ours, reference), name
+        if scheme == "treutler":
+            assert grid.element_points == {"O": (60, 302), "H": (40, 194)}
+
+
+def test_ecp_atoms_are_gridded_as_their_element():
+    """Loading an ECP basis replaces ``Zcharges`` by the effective charge (iodine with a 28-electron ECP
+    reads 25, manganese); the grid must stay iodine's, i.e. that of the molecule before any basis is loaded."""
+    atoms = [["I", 0.0, 0.0, 0.0], ["H", 0.0, 0.0, 1.61]]
+    reference = Grids(Mol(atoms=[list(a) for a in atoms]), level=2, ncores=2, verbose=False)
+    mol = Mol(atoms=[list(a) for a in atoms])
+    Basis(mol, {"all": Basis.load(mol=mol, basis_name="def2-SVP")})
+    assert list(mol.Zcharges) == [25, 1]
+    grid = Grids(mol, level=2, ncores=2, verbose=False)
+    assert grid.charges.tolist() == [53, 1]
+    assert grid.element_points == reference.element_points
+    assert np.array_equal(grid.coords, reference.coords) and np.array_equal(grid.weights, reference.weights)

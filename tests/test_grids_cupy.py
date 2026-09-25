@@ -93,7 +93,9 @@ def test_gpu_grid_matches_the_cpu_grid_with_ghost_atoms():
     mol = Mol(atoms=[['O', 0., 0., 0.], ['H', 0., 0., 1.8], ['Ghost-O', 0., 1.5, 1.0]])
     cpu = Grids(mol, level=2, ncores=2, verbose=False)
     gpu = Grids(mol, level=2, ncores=2, verbose=False, use_gpu=True)
-    assert cpu.element_points == {'O': (60, 302), 'H': (40, 194), 'Ghost': (40, 194)}
+    # the ghost oxygen is gridded as an oxygen (Grids.grid_charges), on both back ends
+    assert cpu.element_points == {'O': (60, 302), 'H': (40, 194)}
+    assert cpu.charges.tolist() == gpu.charges.tolist() == [8, 1, 8]
     _assert_same_grid(cpu, gpu)
 
 

@@ -155,8 +155,29 @@ _PERIOD_LIMITS = np.array([2, 10, 18, 36, 54, 86, 118])
 
 
 def period_index(charge):
-    """Row of the periodic table counted from 0 (H, He -> 0, Li-Ne -> 1, ...); ghost atoms (charge 0) count as period 0."""
+    """Row of the periodic table counted from 0 (H, He -> 0, Li-Ne -> 1, ...); charge 0 counts as period 0."""
     return int((int(charge) > _PERIOD_LIMITS).sum())
+
+
+def grid_charges(mol):
+    """Atomic numbers that select the grid of every atom of ``mol``: the element at the site.
+
+    The grid of an atom -- radial grid, angular pruning and Becke size adjustment -- is a property of the
+    element, not of the nuclear charge the electrons see, so the charges come from ``mol.element_numbers()``
+    rather than ``mol.Zcharges``. The two differ in two cases:
+
+    * a ghost atom (``Ghost-O``: basis functions, Z = 0) gets the grid of its element. A counterpoise
+      calculation on a fragment with ghost partners is then integrated on exactly the grid of the complex
+      (same points, same weights), so the integration error cancels in the interaction energy; with charge 0
+      every ghost oxygen would get an H-like radial grid and a 2 A Becke radius instead;
+    * an atom with an ECP gets the grid of its element rather than that of the element with its effective
+      charge (iodine with a 28-electron ECP would otherwise be gridded as manganese).
+
+    Objects without ``element_numbers`` (duck-typed molecules) fall back to ``Zcharges``.
+    """
+    if hasattr(mol, 'element_numbers'):
+        return np.asarray(mol.element_numbers(), dtype=np.int64)
+    return np.asarray(mol.Zcharges, dtype=np.int64)
 
 
 # Radial precision requested from numgrid's LMG radial grid for each level of the 'compact' preset. The LMG grid
@@ -226,7 +247,9 @@ BRAGG_SLATER_RADII_ANGSTROM = np.array([
     1.75,
 ])
 """Bragg-Slater atomic radii in Angstrom indexed by the nuclear charge (J. C. Slater, J. Chem. Phys. 41, 3199
-(1964); 0.35 A for H and 1.40 A for He as customary in Becke partitioning; 1.75 A beyond Ac; 2 A for ghost atoms)."""
+(1964); 0.35 A for H and 1.40 A for He as customary in Becke partitioning; 1.75 A beyond Ac; 2 A for charge 0,
+which only a ghost atom defined without an element has -- other ghost atoms use their element, see
+:func:`grid_charges`)."""
 
 BRAGG_SLATER_RADII = BRAGG_SLATER_RADII_ANGSTROM / BOHR_IN_ANGSTROM
 """Bragg-Slater atomic radii in Bohr indexed by the nuclear charge."""
@@ -688,7 +711,9 @@ class Grids:
         Parameters
         ----------
         mol : Mol
-            Molecule (atomic coordinates ``mol.coordsBohrs`` and nuclear charges ``mol.Zcharges``).
+            Molecule (atomic coordinates ``mol.coordsBohrs``). Every atom gets the grid of its element,
+            ``mol.element_numbers()`` (see :func:`grid_charges`): ghost atoms that of the element whose basis
+            functions they carry, so a counterpoise fragment is integrated on the grid of the complex.
         basis : Basis or None
             ``scheme='numgrid'`` only: its smallest and largest exponents define the radial extent of the
             grid of every atom; None builds a def2-QZVP basis. Ignored by ``scheme='treutler'``.
@@ -723,7 +748,8 @@ class Grids:
             ``'becke'`` or ``None``.
         points_per_element : dict, optional
             ``scheme='treutler'`` only: ``{element symbol or charge: (n_rad, n_ang)}`` overrides of the number
-            of radial points and of the largest Lebedev grid, e.g. ``{'C': (75, 302)}``.
+            of radial points and of the largest Lebedev grid, e.g. ``{'C': (75, 302)}``. Ghost atoms follow
+            the entry of their element; a ``'Ghost'`` key only reaches ghost atoms defined without one.
         use_gpu : bool, default=False
             ``scheme='treutler'`` only: build the grid on the GPU (:mod:`pyfock.Grids_cupy`) instead of with
             the Numba CPU kernel. The points, the partitioning and the box grouping are all computed on the
@@ -793,7 +819,11 @@ class Grids:
         """Whether the grid was built on the GPU (see the ``use_gpu`` argument)."""
 
         atm_coords = np.ascontiguousarray(np.asarray(mol.coordsBohrs, dtype=np.float64).reshape(-1, 3))
-        charges = np.asarray(mol.Zcharges, dtype=np.int64)
+        charges = grid_charges(mol)
+        self.charges = charges
+        """Atomic numbers that selected every atom's grid and Becke size adjustment (:func:`grid_charges`: the
+        element, also for ghost and ECP atoms). Code that rebuilds the partitioning -- the grid response of the
+        gradients -- must use these, not ``mol.Zcharges``."""
 
         sorted_on_gpu = False
         atomic_weights = None

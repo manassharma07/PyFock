@@ -40,6 +40,29 @@ The Bragg-Slater radii are Slater's table (J. Chem. Phys. 41, 3199 (1964)) with 
 batches of the XC evaluation are spatially compact, and `atom_idx` records the atom of every
 point. `points_per_element={'C': (75, 302)}` overrides the numbers of radial and angular points.
 
+### Ghost atoms and ECP atoms
+
+Every ingredient above -- the radial scaling xi, the numbers of points, the pruning regions and the
+Bragg-Slater radius of the size adjustment -- is chosen by the *element* at the site, which
+`grid_charges(mol)` takes from `Mol.element_numbers()` rather than from `Mol.Zcharges`; `Grids.charges`
+records it, and the grid response of the gradients rebuilds the partitioning from the same numbers.
+The two differ in two cases:
+
+- A **ghost atom** (`Ghost-O`, `Gh-O`, `X-O`: basis functions, no nucleus) is gridded as the element whose
+  basis functions it carries. A counterpoise calculation on a fragment with ghost partners is therefore
+  integrated on exactly the grid of the complex -- the same points and weights, bit for bit -- and the
+  integration error cancels in the interaction energy. (With charge 0, as before, every ghost oxygen got
+  an H-like radial grid and a 2 A Bragg radius that reshaped the Becke cells around it.) Ghost atoms follow
+  the `points_per_element` entry of their element.
+- An **atom with an ECP** is gridded as its element. Loading an ECP basis replaces `Zcharges` by the
+  effective charge (iodine with a 28-electron ECP reads 25), which used to select the grid of the
+  element with that charge -- manganese for iodine, titanium for tin.
+
+The same holds for the DFT-D3 correction (`pyfock.Dispersion`): only real atoms enter, each with the
+atomic number of its element, so a counterpoise fragment gets exactly the dispersion energy of its real
+atoms. The SnCl4 benchmarks below predate this change; any of their grids built after the def2-SVP basis
+(with its ECP on tin) was loaded had tin gridded as titanium.
+
 ### Validation and cost
 
 With these ingredients the grid coincides with the grid PySCF builds at the same level: for water,

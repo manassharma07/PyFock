@@ -86,6 +86,62 @@ def test_bare_geometry_matches_mol(dimer):
     assert Dispersion.d3_energy(geometry, 'pbe') == Dispersion.d3_energy(dimer, 'pbe')
 
 
+METHANE = [['C', 0.0, 0.0, 0.0], ['H', 0.63, 0.63, 0.63], ['H', -0.63, -0.63, 0.63],
+           ['H', -0.63, 0.63, -0.63], ['H', 0.63, -0.63, -0.63]]
+# Ghost atoms at bonding distances. Handed to simple-dftd3 with Z = 0 they carried no C6 of their own but still
+# entered the coordination numbers of the carbon and hydrogens, moving the energy by ~5e-6 Ha.
+CLOSE_GHOSTS = [['Ghost-O', 1.2, 0.0, 0.0], ['Ghost-H', 0.0, 0.0, 1.0], ['Ghost-C', -1.3, 0.2, 0.1]]
+
+
+def test_ghost_atoms_have_no_dispersion():
+    """A counterpoise fragment gets exactly the dispersion of its real atoms, and no gradient on its ghosts."""
+    alone = Mol(atoms=[list(atom) for atom in METHANE])
+    with_ghosts = Mol(atoms=[list(atom) for atom in METHANE + CLOSE_GHOSTS])
+    energy, gradient = Dispersion.d3_energy_and_gradient(with_ghosts, 'b3lyp5')
+    energy_alone, gradient_alone = Dispersion.d3_energy_and_gradient(alone, 'b3lyp5')
+    assert energy == energy_alone
+    assert Dispersion.d3_energy(with_ghosts, 'b3lyp5') == energy_alone
+    assert gradient.shape == (len(METHANE) + len(CLOSE_GHOSTS), 3)
+    assert np.array_equal(gradient[:len(METHANE)], gradient_alone)
+    assert not gradient[len(METHANE):].any()
+    # the bare-geometry entry point marks ghost atoms with atomic number 0
+    numbers = [6, 1, 1, 1, 1, 0, 0, 0]
+    assert Dispersion.d3_energy((numbers, with_ghosts.coordsBohrs), 'b3lyp5') == energy_alone
+    # nothing but ghost atoms: no dispersion, and a zero gradient of the right shape
+    only_ghosts = Mol(atoms=[list(atom) for atom in CLOSE_GHOSTS])
+    assert Dispersion.d3_energy(only_ghosts, 'b3lyp5') == 0.0
+    assert Dispersion.d3_energy_and_gradient(only_ghosts, 'b3lyp5')[1].shape == (len(CLOSE_GHOSTS), 3)
+
+
+def test_ecp_atoms_use_the_parameters_of_their_element():
+    """Once an ECP basis is loaded ``Zcharges`` holds the effective charge; D3 must still see iodine."""
+    from pyfock import Basis
+    mol = Mol(atoms=[['I', 0.0, 0.0, 0.0], ['H', 0.0, 0.0, 1.61]])
+    Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+    assert list(mol.Zcharges) == [25, 1]                    # iodine with a 28-electron ECP
+    iodine = Dispersion.d3_energy(([53, 1], mol.coordsBohrs), 'pbe')
+    assert Dispersion.d3_energy(mol, 'pbe') == iodine
+    assert Dispersion.d3_energy(([25, 1], mol.coordsBohrs), 'pbe') != pytest.approx(iodine, rel=1e-3)
+
+
+def test_scf_on_a_counterpoise_fragment_adds_only_the_fragment_dispersion():
+    """``DFT(dispersion=...)`` on water + ghost water adds the dispersion of the real water alone."""
+    from pyfock import Basis, DFT
+    atoms = ([list(atom) for atom in WATER_DIMER[:3]]
+             + [['Ghost-' + atom[0]] + list(atom[1:]) for atom in WATER_DIMER[3:]])
+    fragment = Mol(atoms=atoms)
+    basis = Basis(fragment, {'all': Basis.load(mol=fragment, basis_name='sto-3g')})
+    auxbasis = Basis(fragment, {'all': Basis.load(mol=fragment, basis_name='def2-universal-jfit')})
+    dft = DFT(fragment, basis, auxbasis, xc='PBE', dispersion='pbe')
+    dft.conv_crit = 1e-8
+    with contextlib.redirect_stdout(io.StringIO()):
+        dft.scf()
+    assert dft.converged
+    monomer = Mol(atoms=[list(atom) for atom in WATER_DIMER[:3]])
+    assert dft.Edisp == Dispersion.d3_energy(monomer, 'pbe')
+    assert dft.grids.charges.tolist() == [8, 1, 1, 8, 1, 1]
+
+
 def test_unknown_damping_is_rejected(dimer):
     with pytest.raises(ValueError, match='Unknown D3 damping'):
         Dispersion.d3_energy(dimer, 'pbe', version='d3-not-a-thing')

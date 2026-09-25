@@ -147,8 +147,8 @@ def eval_xc_grad_skala(basis, dmat, grids, skala, ncores=2, blocksize=5000,
     start = timer()
     if grid_response:
         from pyfock.Grids import becke_weight_gradient, size_adjustment_table
-        a_table = size_adjustment_table(np.asarray(grids.mol.Zcharges, dtype=np.int64),
-                                        getattr(grids, 'size_adjustment', 'treutler'))
+        # the charges the grid was built with (the element, also for ghost and ECP atoms)
+        a_table = size_adjustment_table(grids.charges, getattr(grids, 'size_adjustment', 'treutler'))
         # dE/dw_p * dw_p/dR, with w_p = vol_p * P_A(r_p): the volume element rides along in the
         # cotangent because only the partitioning factor depends on the nuclei.
         atom_grad = atom_grad + becke_weight_gradient(coords, atom_idx, atom_coords, a_table,

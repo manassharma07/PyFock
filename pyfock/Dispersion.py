@@ -5,6 +5,11 @@ coordinates and a set of functional-specific damping parameters, and on nothing 
 the electron density, does not enter the Kohn-Sham matrix and does not change the SCF in any way. That is
 why PyFock evaluates it once, after the SCF has converged, and simply adds it to the total energy.
 
+Only real atoms take part, each with the atomic number of its element: ghost atoms (counterpoise
+calculations) are left out, and an atom with an ECP enters as its element rather than with the effective
+charge ``mol.Zcharges`` holds once an ECP basis is loaded. A counterpoise fragment with ghost partners
+therefore gets exactly the dispersion energy of its real atoms.
+
 The numbers come from `simple-dftd3 <https://github.com/dftd3/simple-dftd3>`_ (``pip install dftd3``),
 through its ``dftd3.interface`` module. Note that the ``dftd3.pyscf`` submodule of the same package needs
 PySCF, but ``dftd3.interface`` does not, so PyFock stays free of that dependency.
@@ -72,19 +77,39 @@ def _damping_param(method, version, atm, param):
     return cls(**param)
 
 
-def _model(mol):
-    """A ``DispersionModel`` for a PyFock :class:`~pyfock.Mol.Mol`, or for a bare geometry.
+def _geometry(mol):
+    """The atoms D3 sees: ``(atomic_numbers, positions_in_bohr, their indices in mol, natoms of mol)``.
 
-    ``mol`` may also be a ``(atomic_numbers, positions_in_bohr)`` pair, which is how callers that do
-    not have a ``Mol`` -- the ASE calculator, for instance -- reach the same code.
+    ``mol`` is a PyFock :class:`~pyfock.Mol.Mol` or a bare ``(atomic_numbers, positions_in_bohr)`` pair,
+    which is how callers that do not have a ``Mol`` -- the ASE calculator, for instance -- reach the same
+    code. Two kinds of atom need care:
+
+    * ghost atoms carry basis functions but no nucleus, so they have no dispersion. They are left out
+      rather than handed to the library with Z = 0, where they would still count towards the coordination
+      numbers of nearby atoms -- shifting those atoms' C6 coefficients -- and receive gradients of their
+      own. In a bare pair, atomic number 0 marks a ghost;
+    * an atom with an ECP enters with the atomic number of its element (``Mol.element_numbers``). Once an
+      ECP basis is loaded ``mol.Zcharges`` holds the effective charge -- iodine with a 28-electron ECP
+      reads 25, manganese -- and D3's parameters belong to the element.
     """
-    from dftd3.interface import DispersionModel
     if hasattr(mol, 'Zcharges'):
-        numbers, positions = mol.Zcharges, mol.coordsBohrs
+        numbers = mol.element_numbers() if hasattr(mol, 'element_numbers') else mol.Zcharges
+        ghost = mol.ghost_mask() if hasattr(mol, 'ghost_mask') else None
+        positions = mol.coordsBohrs
     else:
         numbers, positions = mol
-    numbers = np.asarray(numbers, dtype=np.int64)
+        ghost = None
+    numbers = np.asarray(numbers, dtype=np.int64).reshape(-1)
     positions = np.ascontiguousarray(np.asarray(positions, dtype=np.float64).reshape(-1, 3))
+    if ghost is None:
+        ghost = numbers == 0
+    keep = np.nonzero(~np.asarray(ghost, dtype=bool))[0]
+    return numbers[keep], np.ascontiguousarray(positions[keep]), keep, numbers.shape[0]
+
+
+def _model(numbers, positions):
+    """A ``DispersionModel`` for the atoms :func:`_geometry` selected."""
+    from dftd3.interface import DispersionModel
     return DispersionModel(numbers, positions)
 
 
@@ -93,8 +118,10 @@ def d3_energy(mol, method, version='d3bj', atm=False, param=None):
 
     Parameters
     ----------
-    mol : Mol
-        Molecule; only ``mol.Zcharges`` and ``mol.coordsBohrs`` are used.
+    mol : Mol or tuple
+        Molecule, or an ``(atomic_numbers, positions_in_bohr)`` pair. Ghost atoms are left out and atoms
+        with an ECP enter as their element (see :func:`_geometry`), so the energy of a counterpoise
+        fragment with ghost partners is exactly that of the fragment's real atoms.
     method : str
         Functional name whose D3 parameters to use, e.g. ``'b3lyp5'`` (what Skala 1.1 expects),
         ``'pbe'``, ``'b3lyp'``. Ignored when ``param`` is given.
@@ -113,7 +140,11 @@ def d3_energy(mol, method, version='d3bj', atm=False, param=None):
     float
         Dispersion energy in Hartree (negative).
     """
-    result = _model(mol).get_dispersion(_damping_param(method, version, atm, param), grad=False)
+    damping = _damping_param(method, version, atm, param)
+    numbers, positions, _, _ = _geometry(mol)
+    if numbers.shape[0] == 0:
+        return 0.0      # nothing but ghost atoms
+    result = _model(numbers, positions).get_dispersion(damping, grad=False)
     return float(np.asarray(result['energy']).item())
 
 
@@ -125,11 +156,17 @@ def d3_energy_and_gradient(mol, method, version='d3bj', atm=False, param=None):
     energy : float
         Dispersion energy in Hartree.
     gradient : (natm, 3) ndarray
-        dE_disp/dR in Hartree/Bohr, ready to be added to the SCF forces.
+        dE_disp/dR in Hartree/Bohr, ready to be added to the SCF forces. One row per atom of ``mol``;
+        the rows of ghost atoms are zero.
     """
-    result = _model(mol).get_dispersion(_damping_param(method, version, atm, param), grad=True)
-    return (float(np.asarray(result['energy']).item()),
-            np.ascontiguousarray(np.asarray(result['gradient'], dtype=np.float64)))
+    damping = _damping_param(method, version, atm, param)
+    numbers, positions, keep, natm = _geometry(mol)
+    gradient = np.zeros((natm, 3), dtype=np.float64)
+    if numbers.shape[0] == 0:
+        return 0.0, gradient      # nothing but ghost atoms
+    result = _model(numbers, positions).get_dispersion(damping, grad=True)
+    gradient[keep] = np.asarray(result['gradient'], dtype=np.float64).reshape(-1, 3)
+    return float(np.asarray(result['energy']).item()), gradient
 
 
 def citation():
