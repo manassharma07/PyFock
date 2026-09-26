@@ -395,7 +395,8 @@ class DFT:
         self.mo_energies = None
         """ Molecular orbital energies. Will be computed during SCF. """
         self.Total_energy = None
-        """ Total energy of the system. Will be computed during SCF. """
+        """ Total energy of the system. Will be computed during SCF. Once the SCF has finished it is the
+        energy :meth:`scf` returns, D3 correction (:attr:`Edisp`) included when one is applied. """
         self.J_energy = None
         """ Coulomb energy contribution. Will be computed during SCF. """
         self.XC_energy = None
@@ -434,7 +435,8 @@ class DFT:
 
         self.dispersion = dispersion
         """DFT-D3 dispersion correction (:mod:`pyfock.Dispersion`), added to the total energy after the
-        SCF has converged. It is a purely geometric, additive term and never enters the Kohn-Sham matrix.
+        SCF has converged, and its gradient to the forces of `DFT_Grad`. It is a purely geometric, additive
+        term and never enters the Kohn-Sham matrix.
         ``None``/``False`` (default) leaves it out; ``True`` uses the parametrisation the functional
         itself declares, which currently means Skala (``'b3lyp5'``); a string names the functional whose
         D3 parameters to use, e.g. ``'pbe'`` or ``'b3lyp'``. Needs ``pip install dftd3``."""
@@ -449,6 +451,11 @@ class DFT:
 
         self.Edisp = 0.0
         """Dispersion energy of the last :meth:`scf` call in Hartree, 0 when no correction was applied."""
+
+        self.dispersion_method = None
+        """D3 parametrisation the last :meth:`scf` call applied -- the functional whose damping parameters
+        were used, e.g. ``'b3lyp5'`` for Skala 1.1 -- or None when no correction was applied. Set by the
+        SCF from :attr:`dispersion`; `DFT_Grad` reads it to add the matching gradient."""
 
         self.direct_scf = False 
         """ Only relevant for calculations without DF. If True, the 4c2e integrals are recalculated at every SCF iteration.
@@ -2321,11 +2328,14 @@ class DFT:
         # D3 dispersion is a function of the geometry alone, so it is evaluated once here rather than
         # inside the SCF loop; it cannot affect the converged density (see pyfock.Dispersion).
         self.Edisp = 0.0
+        self.dispersion_method = dispersion_method
         if dispersion_method is not None:
             from . import Dispersion
             self.Edisp = Dispersion.d3_energy(mol, dispersion_method, version=self.dispersion_version,
                                               atm=self.dispersion_atm)
             Etot = Etot + self.Edisp
+            # DFT_Grad and DFT_NumGrad read the energy here, and must see the one returned below
+            self.Total_energy = Etot
             print('\n\n------------------------------------------------------', flush=True)
             print('DFT-D3 dispersion correction', flush=True)
             print('------------------------------------------------------', flush=True)

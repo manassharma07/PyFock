@@ -11,6 +11,7 @@ from threadpoolctl import threadpool_limits
 import pyfock.Integrals as Integrals
 from pyfock import XC
 from pyfock import Data
+from pyfock import Dispersion
 from pyfock.Basis import Basis
 from pyfock.Mol import Mol
 
@@ -60,10 +61,17 @@ class DFT_Grad:
               - 0.5 sum_PQ c_P c_Q d(P|Q)/dR          (DF Coulomb)
               + sum_ij D_ij dV_ecp_ij/dR              (ECP, if present)
               + dExc/dR                               (XC, fixed grid)
+              + dE_disp/dR                            (DFT-D3, if the SCF applied it)
 
     where W is the energy-weighted density matrix and c_P are the density
     fitting coefficients of the converged density. The grid-weight response
     of the XC term is neglected (same approximation as PySCF's default).
+
+    The D3 term is present whenever the SCF added a dispersion correction
+    (``DFT(..., dispersion=...)``, e.g. ``dispersion=True`` for Skala), with
+    the parametrisation it used, so the gradient is that of the corrected
+    energy ``scf()`` returns. D3 depends on the nuclear positions alone, so
+    the term is exact; simple-dftd3 evaluates it on the CPU in either mode.
 
     When effective core potentials (ECPs) are present, ``mol.Zcharges`` already
     holds the reduced (Z - n_core) charges, so the nuclear-repulsion and
@@ -266,8 +274,10 @@ class DFT_Grad:
         Returns
         -------
         dict
-            Dictionary with `energy`, `gradient` (natoms, 3) in Ha/Bohr,
-            `forces` (= -gradient) and per-term `timings`.
+            Dictionary with `energy` (the energy ``scf()`` returned, D3
+            included when applied), `gradient` (natoms, 3) in Ha/Bohr,
+            `forces` (= -gradient), the per-term `gradient_components` and
+            per-term `timings`.
         """
         if not self.use_gpu:
             self._cp_stream = None
@@ -499,7 +509,19 @@ class DFT_Grad:
                 grad_ecp = self._ecp_grad(dmat)
             timings['ecp'] = timer() - start
 
-        gradient = grad_nn + grad_T + grad_V + grad_S + grad_J + grad_xc + grad_ecp
+        # ---------------- DFT-D3 dispersion (if the SCF applied it) ----------------
+        # scf() adds E_disp to the energy it returns, so the gradient must carry dE_disp/dR as well.
+        # Its net force vanishes on its own, so translational invariance would not notice it missing.
+        grad_disp = np.zeros((natoms, 3))
+        dispersion_method = getattr(dft_obj, 'dispersion_method', None)
+        if dispersion_method is not None:
+            start = timer()
+            _, grad_disp = Dispersion.d3_energy_and_gradient(
+                mol, dispersion_method, version=dft_obj.dispersion_version,
+                atm=dft_obj.dispersion_atm)
+            timings['dispersion'] = timer() - start
+
+        gradient = grad_nn + grad_T + grad_V + grad_S + grad_J + grad_xc + grad_ecp + grad_disp
         forces = -gradient
 
         if self.verbose:
@@ -524,6 +546,7 @@ class DFT_Grad:
                 'coulomb_df': grad_J,
                 'xc': grad_xc,
                 'ecp': grad_ecp,
+                'dispersion': grad_disp,
             },
             'timings': timings,
         }

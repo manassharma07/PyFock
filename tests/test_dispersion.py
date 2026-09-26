@@ -167,6 +167,33 @@ def test_scf_total_energy_includes_the_correction(dimer):
     assert energies['pbe'][0] - energies[None][0] == pytest.approx(energies['pbe'][1], abs=1e-9)
 
 
+def test_gradient_includes_the_correction(dimer):
+    """``DFT_Grad`` after ``DFT(dispersion=...)`` is the gradient of the energy ``scf()`` returns.
+
+    D3 never enters the SCF, so switching it on must move the gradient by exactly dE_D3/dR, just as it moves
+    the energy by exactly E_D3. The net force cannot catch the term going missing -- D3's vanishes on its
+    own -- which is how DFT_Grad once left it out while scf() added the energy.
+    """
+    from pyfock import Basis, DFT, DFT_Grad
+    basis = Basis(dimer, {'all': Basis.load(mol=dimer, basis_name='sto-3g')})
+    auxbasis = Basis(dimer, {'all': Basis.load(mol=dimer, basis_name='def2-universal-jfit')})
+
+    results = {}
+    for dispersion in (None, 'pbe'):
+        dft = DFT(dimer, basis, auxbasis, xc='PBE', dispersion=dispersion)
+        dft.conv_crit = 1e-8
+        with contextlib.redirect_stdout(io.StringIO()):
+            energy, _ = dft.scf()
+            assert dft.converged
+            results[dispersion] = DFT_Grad(dft, verbose=False).calculate()
+        assert results[dispersion]['energy'] == pytest.approx(float(energy), abs=1e-12)
+
+    _, d3 = Dispersion.d3_energy_and_gradient(dimer, 'pbe')
+    assert not results[None]['gradient_components']['dispersion'].any()
+    assert np.array_equal(results['pbe']['gradient_components']['dispersion'], d3)
+    assert np.allclose(results['pbe']['gradient'] - results[None]['gradient'], d3, rtol=0, atol=1e-9)
+
+
 def test_ase_calculator_defaults_to_dftd3(dimer):
     """The ASE path uses the same backend and returns forces (eV/Angstrom), not a gradient."""
     pytest.importorskip('ase', reason='the ASE calculator needs ASE')
@@ -183,6 +210,63 @@ def test_ase_calculator_defaults_to_dftd3(dimer):
     assert energy_ev == pytest.approx(energy_au * Data.au2eVFactor, rel=1e-12)
     factor = Data.au2eVFactor / Data.Bohr2AngsFactor
     assert np.allclose(forces_ev, -gradient_au * factor, rtol=1e-12, atol=1e-14)
+
+
+def test_ase_calculator_uses_the_declared_parametrisation(dimer):
+    """With no parametrisation named, the calculator takes the one the functional declares.
+
+    Skala 1.1 declares D3(BJ) with B3LYP5 parameters, which the SCF reads from the checkpoint and reports
+    back, so ``PyFockCalculator(functional='skala-1.1', dispersion=True)`` needs nothing more. A
+    parametrisation named explicitly still takes precedence.
+    """
+    pytest.importorskip('ase', reason='the ASE calculator needs ASE')
+    from ase import Atoms
+    from pyfock.ase_calculator import PyFockCalculator
+
+    atoms = Atoms(symbols=[a[0] for a in WATER_DIMER], positions=[a[1:] for a in WATER_DIMER])
+    factor = Data.au2eVFactor / Data.Bohr2AngsFactor
+    calc = PyFockCalculator(functional='skala-1.1', basis='sto-3g', dispersion=True)
+    energy_ev, forces_ev = calc._compute_dispersion_correction(atoms, compute_forces=True,
+                                                               declared='b3lyp5')
+    energy_au, gradient_au = Dispersion.d3_energy_and_gradient(dimer, 'b3lyp5')
+    assert energy_ev == pytest.approx(energy_au * Data.au2eVFactor, rel=1e-12)
+    assert np.allclose(forces_ev, -gradient_au * factor, rtol=1e-12, atol=1e-14)
+
+    explicit = PyFockCalculator(functional='skala-1.1', basis='sto-3g', dispersion=True,
+                                dispersion_kwargs={'xc': 'pbe'})
+    energy_ev, _ = explicit._compute_dispersion_correction(atoms, compute_forces=False,
+                                                           declared='b3lyp5')
+    assert energy_ev == pytest.approx(Dispersion.d3_energy(dimer, 'pbe') * Data.au2eVFactor, rel=1e-12)
+
+
+def test_ase_calculator_without_a_parametrisation_fails_early():
+    """Only Skala declares its own; for any other functional a missing name must fail before an SCF."""
+    pytest.importorskip('ase', reason='the ASE calculator needs ASE')
+    from pyfock.ase_calculator import PyFockCalculator
+
+    with pytest.raises(ValueError, match='needs the functional whose D3 parameters'):
+        PyFockCalculator(functional='PBE', basis='sto-3g', dispersion=True)
+    PyFockCalculator(functional='PBE', basis='sto-3g', dispersion=True, dispersion_kwargs={'xc': 'pbe'})
+
+
+def test_ase_calculator_translates_the_declared_parametrisation_for_torch_dftd(dimer):
+    """torch-dftd defaults to PBE with zero damping and spells B3LYP 'b3-lyp'.
+
+    The declared parametrisation must still reach it as D3(BJ) with B3LYP parameters, the correction
+    simple-dftd3 gives, rather than falling back to those defaults.
+    """
+    pytest.importorskip('ase', reason='the ASE calculator needs ASE')
+    pytest.importorskip('torch_dftd', reason='the torch-dftd backend is optional')
+    import torch
+    from ase import Atoms, units
+    from pyfock.ase_calculator import PyFockCalculator
+
+    atoms = Atoms(symbols=[a[0] for a in WATER_DIMER], positions=[a[1:] for a in WATER_DIMER])
+    calc = PyFockCalculator(functional='skala-1.1', basis='sto-3g', dispersion=True,
+                            dispersion_kwargs={'backend': 'torch-dftd', 'dtype': torch.float64})
+    energy_ev, _ = calc._compute_dispersion_correction(atoms, compute_forces=False, declared='b3lyp5')
+    # torch-dftd converts with ASE's Hartree, which is 2.3e-6 away from PyFock's Data.au2eVFactor
+    assert energy_ev / units.Hartree == pytest.approx(Dispersion.d3_energy(dimer, 'b3lyp5'), rel=1e-6)
 
 
 def test_ase_calculator_rejects_unknown_backend(dimer):

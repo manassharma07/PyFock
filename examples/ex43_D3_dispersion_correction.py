@@ -48,7 +48,8 @@ print('PBE,   D3(BJ) + ATM      %12.8f' % Dispersion.d3_energy(mol, 'pbe', atm=T
 print('PBE,   explicit params   %12.8f'
       % Dispersion.d3_energy(mol, None, param={'s6': 1.0, 's8': 0.7875, 'a1': 0.4289, 'a2': 4.4407}))
 
-# The nuclear gradient comes back with the energy, ready to be added to the SCF forces.
+# The nuclear gradient comes back with the energy. There is no need to add it to DFT_Grad's forces by
+# hand: after an SCF with `dispersion` (section 2) they already contain it.
 energy, gradient = Dispersion.d3_energy_and_gradient(mol, 'pbe')
 print('\ngradient shape %s, largest component %.3e Ha/Bohr' % (gradient.shape, abs(gradient).max()))
 

@@ -424,7 +424,7 @@ conformer ranking.
 
 D3 depends only on the atomic numbers, the coordinates and those damping parameters — not on the
 density. It never enters the Kohn-Sham matrix and cannot change the SCF, so PyFock evaluates it once
-after convergence and adds it to the total energy:
+after convergence and adds it to the total energy — and `DFT_Grad` adds its gradient to the forces:
 
 ```bash
 pip install dftd3
@@ -434,24 +434,29 @@ pip install dftd3
 dftObj = DFT(mol, basis, auxbasis, xc='skala-1.1', dispersion=True)
 energy, dmat = dftObj.scf()      # dispersion-corrected total energy
 print(dftObj.Edisp)              # the correction on its own, in Hartree
+forces = DFT_Grad(dftObj).calculate()['forces']   # dispersion-corrected too
 ```
 
 `dispersion=True` uses whatever the functional declares. For any other functional, name the
 parametrisation yourself — `dispersion='pbe'`, `dispersion='b3lyp'` — and tune the damping through
 `dftObj.dispersion_version` (default `'d3bj'`) and `dftObj.dispersion_atm` (default `False`).
 [`pyfock.Dispersion`](pyfock/Dispersion.py) also exposes `d3_energy` and `d3_energy_and_gradient`
-directly, the latter giving `dE_disp/dR` for forces. See
+directly, the latter giving `dE_disp/dR` — which `DFT_Grad` forces already contain, so do not add it to
+them a second time. See
 [`examples/ex43_D3_dispersion_correction.py`](examples/ex43_D3_dispersion_correction.py).
 
-The ASE calculator uses the same backend by default:
+The ASE calculator uses the same backend by default, and like `DFT` it takes Skala's parametrisation
+from the checkpoint, so Skala needs no `dispersion_kwargs`; any other functional must name its own:
 
 ```python
+PyFockCalculator(functional='skala-1.1', dispersion=True)   # D3(BJ) with b3lyp5, as Skala declares
 PyFockCalculator(functional='PBE', dispersion=True, dispersion_kwargs={'xc': 'pbe'})
 ```
 
 `torch-dftd` (`pip install pyfock[dispersion-gpu]`) remains available there for GPU runs, where it
 evaluates the correction on the device. Select it with `backend='torch-dftd'`, or implicitly by asking
-for a non-CPU device:
+for a non-CPU device (with Skala, `xc` can be left out here too; it becomes torch-dftd's `'b3-lyp'` with
+BJ damping):
 
 ```python
 dispersion_kwargs={'xc': 'pbe', 'backend': 'torch-dftd', 'device': 'cuda'}
@@ -676,6 +681,9 @@ result = grad.calculate()
 forces = result["forces"]      # (natoms, 3) in Ha/Bohr
 gradient = result["gradient"]  # = -forces
 ```
+
+If the SCF applied a D3 correction (`dispersion=...`), the gradient includes its term, so it is always
+the gradient of the energy `scf()` returned, which is also `result["energy"]`.
 
 #### Forces on the GPU
 

@@ -14,16 +14,17 @@ The numbers come from `simple-dftd3 <https://github.com/dftd3/simple-dftd3>`_ (`
 through its ``dftd3.interface`` module. Note that the ``dftd3.pyscf`` submodule of the same package needs
 PySCF, but ``dftd3.interface`` does not, so PyFock stays free of that dependency.
 
-This module is the core-level dispersion API, used by ``DFT(..., dispersion=...)``. PyFock's ASE
-calculator has a **separate** dispersion path of its own, reached through
-``PyFockCalculator(dispersion=True, dispersion_kwargs=...)``, which is built on ``torch-dftd`` and works
-in ASE's eV/Angstrom units. The two are independent; this one is the reference implementation from the
-Grimme group and is what reproduces the published Skala energies.
+This module is the core-level dispersion API, used by ``DFT(..., dispersion=...)`` for the energy and
+by ``DFT_Grad`` for its gradient. PyFock's ASE calculator applies the correction itself instead, after
+an SCF that has none, through ``PyFockCalculator(dispersion=True, dispersion_kwargs=...)`` in ASE's
+eV/Angstrom units: with this module by default, or with ``torch-dftd`` on a GPU. simple-dftd3 is the
+Grimme group's reference implementation and is what reproduces the published Skala energies.
 
 The main consumer is the Skala neural functional, which is parametrised together with D3(BJ) using the
 B3LYP5 damping parameters and no three-body term -- exactly the defaults of
 ``dftd3.interface.RationalDampingParam``. :func:`pyfock.XC.SkalaFunctional.d3_settings` reports the
-parametrisation the checkpoint declares, and ``DFT(..., dispersion=True)`` picks it up automatically.
+parametrisation the checkpoint declares, and ``DFT(..., dispersion=True)`` and
+``PyFockCalculator(dispersion=True)`` pick it up automatically.
 
 References
 ----------
@@ -156,8 +157,8 @@ def d3_energy_and_gradient(mol, method, version='d3bj', atm=False, param=None):
     energy : float
         Dispersion energy in Hartree.
     gradient : (natm, 3) ndarray
-        dE_disp/dR in Hartree/Bohr, ready to be added to the SCF forces. One row per atom of ``mol``;
-        the rows of ghost atoms are zero.
+        dE_disp/dR in Hartree/Bohr (the forces are minus this). One row per atom of ``mol``; the rows
+        of ghost atoms are zero. ``DFT_Grad`` adds it itself after an SCF with ``dispersion``.
     """
     damping = _damping_param(method, version, atm, param)
     numbers, positions, keep, natm = _geometry(mol)

@@ -234,6 +234,62 @@ def test_gradient_is_translationally_invariant(skala):
     assert np.abs(forces.sum(axis=0)).max() < 1e-8 * max(scale, 1.0)
 
 
+def test_gradient_includes_the_declared_dispersion(skala):
+    """With ``dispersion=True`` the gradient must carry Skala's own D3(BJ)/B3LYP5 term.
+
+    ``scf()`` returns the energy with that correction, so a gradient without it belongs to a different
+    energy -- by ~2e-4 Ha/Bohr on a water dimer, against the finite differences of the corrected energy.
+    The test above cannot see that: D3 is translationally invariant on its own.
+    """
+    pytest.importorskip('dftd3', reason='the D3 correction needs simple-dftd3 (pip install dftd3)')
+    from pyfock import Dispersion
+    mol = Mol(atoms=[list(atom) for atom in H2O])
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-SVP')})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+    dft = DFT(mol, basis, auxbasis, xc='skala-1.1', grids=Grids(mol, level=1, verbose=False),
+              dispersion=True)
+    dft.conv_crit = 1e-8
+    with contextlib.redirect_stdout(io.StringIO()):
+        energy, _ = dft.scf()
+        assert dft.converged
+        result = DFT_Grad(dft, verbose=False).calculate()
+
+    assert dft.dispersion_method == skala.d3_settings() == 'b3lyp5'
+    assert result['energy'] == pytest.approx(float(energy), abs=1e-12)
+    _, d3 = Dispersion.d3_energy_and_gradient(mol, 'b3lyp5')
+    assert np.abs(d3).max() > 1e-7, 'too small a term to tell whether it is included'
+    components = result['gradient_components']
+    assert np.array_equal(components['dispersion'], d3)
+    assert np.allclose(result['gradient'], sum(components.values()), rtol=0, atol=1e-13)
+
+
+@pytest.mark.parametrize('run_in_process', [True, False])
+def test_ase_calculator_applies_the_declared_dispersion(skala, tmp_path, run_in_process):
+    """``PyFockCalculator(functional='skala-1.1', dispersion=True)`` needs no ``dispersion_kwargs``.
+
+    The checkpoint's D3(BJ)/B3LYP5 is read where the SCF loads the model -- a subprocess by default -- and
+    has to come back to the calculator, which adds that correction to the energy and to the forces.
+    """
+    pytest.importorskip('ase', reason='the ASE calculator needs ASE')
+    pytest.importorskip('dftd3', reason='the D3 correction needs simple-dftd3 (pip install dftd3)')
+    from ase import Atoms
+    from pyfock import Dispersion, PyFockCalculator
+
+    atoms = Atoms('OH2', positions=[atom[1:] for atom in H2O])
+    atoms.calc = PyFockCalculator(functional='skala-1.1', basis='def2-SVP', dispersion=True,
+                                  gridsLevel=1, conv_crit=1e-8, run_in_process=run_in_process,
+                                  directory=str(tmp_path / 'calc'))
+    energy, forces = atoms.get_potential_energy(), atoms.get_forces()
+    results = atoms.calc.pyfock_results
+
+    e_d3, g_d3 = Dispersion.d3_energy_and_gradient(Mol(atoms=[list(atom) for atom in H2O]), 'b3lyp5')
+    assert results['dispersion_energy_ev'] == pytest.approx(e_d3 * Data.au2eVFactor, rel=1e-10)
+    assert energy == pytest.approx(results['base_energy_ev'] + results['dispersion_energy_ev'], abs=1e-10)
+    factor = Data.au2eVFactor / Data.Bohr2AngsFactor
+    np.testing.assert_allclose(forces - np.asarray(results['base_forces_ev_ang']), -g_d3 * factor,
+                               rtol=0, atol=1e-10)
+
+
 def test_grid_response_matters(system, skala):
     """Dropping the grid response must visibly change the gradient, and break translational invariance.
 

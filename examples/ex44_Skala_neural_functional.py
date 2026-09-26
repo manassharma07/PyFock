@@ -25,7 +25,7 @@ dftObj.conv_crit = 1e-8
 dftObj.ncores = 4
 
 energy, dmat = dftObj.scf()
-forces = DFT_Grad(dftObj).calculate()['forces']
+forces = DFT_Grad(dftObj).calculate()['forces']   # D3 included, like the energy
 
 print('\nEnergy (Skala + D3) = %.8f Ha' % energy)
 print('forces (Ha/Bohr):')

@@ -20,6 +20,7 @@ import numpy as np
 from ase.calculators.calculator import Calculator, all_changes
 
 from . import guess_projection
+from . import XC
 from .Basis import Basis
 from .DFT import DFT
 from .Data import Data
@@ -114,6 +115,14 @@ class PyFockCalculator(Calculator):
     functionals, on for Skala, where it is mandatory. ``True`` turns it on for any functional, which
     makes the forces exactly translationally invariant (net force ~1e-13 instead of ~1e-4 Ha/Bohr) at
     the cost of one extra pass over the partitioning. It requires the native ('treutler') grids.
+
+    ``dispersion=True`` adds a DFT-D3 correction to the energy and the forces, evaluated here after each
+    SCF; ``dispersion_kwargs`` pick the backend and the parametrisation (see
+    :meth:`_compute_dispersion_correction`). When they name no parametrisation, the functional's own is
+    used, as with ``DFT(..., dispersion=True)``: Skala 1.1 declares D3(BJ) with B3LYP5 parameters, the
+    correction it was fitted with, so ``PyFockCalculator(functional='skala-1.1', dispersion=True)`` is
+    complete. Other functionals declare none and must name one, e.g. ``dispersion_kwargs={'xc': 'pbe'}``.
+    The SCF itself runs without D3, so the correction is never counted twice.
 
     The converged AO density matrix is checkpointed after each successful
     calculation and used for the initial guess of the next compatible ASE
@@ -223,6 +232,16 @@ class PyFockCalculator(Calculator):
         self.parameters["dispersion_kwargs"] = (
             None if dispersion_kwargs is None else dict(dispersion_kwargs)
         )
+        # Fail now rather than after the first SCF: the default backend needs a parametrisation, named
+        # here or declared by the functional -- which only Skala does, in the checkpoint the SCF loads.
+        if dispersion and not XC.is_skala(canonical_options.get("xc")):
+            disp_kwargs = self.parameters["dispersion_kwargs"] or {}
+            if (self._dispersion_backend(disp_kwargs) == "dftd3"
+                    and not self._DISPERSION_NAMES & set(disp_kwargs)):
+                raise ValueError(
+                    "dispersion=True needs the functional whose D3 parameters to use, e.g. "
+                    "dispersion_kwargs={'xc': 'pbe'}. Only Skala declares its own, which is then "
+                    "used automatically.")
         self.parameters["force_mode"] = force_mode
         self.parameters["grid_response"] = grid_response
         self.parameters["force_step_size"] = force_step_size
@@ -355,8 +374,22 @@ class PyFockCalculator(Calculator):
 
     # torch-dftd spells the damping function differently from simple-dftd3.
     _DAMPING_ALIASES = {"bj": "d3bj", "zero": "d3zero", "bjm": "d3bjm", "zerom": "d3zerom"}
+    # ... and some functionals. simple-dftd3 gives 'b3lyp5' (what Skala 1.1 declares) the B3LYP
+    # parameters, which torch-dftd calls 'b3-lyp'; in float64 they agree to 1e-10 Ha on a water dimer.
+    _TORCH_DFTD_XC = {"b3lyp5": "b3-lyp"}
+    # The dispersion_kwargs that name a parametrisation; without any, the functional's own is used.
+    _DISPERSION_NAMES = frozenset(("xc", "method", "param"))
 
-    def _compute_dispersion_correction(self, atoms, compute_forces):
+    @staticmethod
+    def _dispersion_backend(kwargs):
+        """The D3 backend ``dispersion_kwargs`` select: explicitly, or 'torch-dftd' for a non-CPU device."""
+        backend = kwargs.get("backend")
+        if backend is None:
+            device = kwargs.get("device")
+            backend = "dftd3" if device is None or str(device) == "cpu" else "torch-dftd"
+        return backend
+
+    def _compute_dispersion_correction(self, atoms, compute_forces, declared=None):
         """Dispersion energy (eV) and forces (eV/Angstrom) for ``atoms``.
 
         Two backends are available. The default, ``'dftd3'``, is simple-dftd3, the Grimme group's
@@ -365,12 +398,21 @@ class PyFockCalculator(Calculator):
         is worth keeping for GPU runs, where it evaluates the correction on the device alongside a GPU
         SCF. It is selected explicitly with ``backend='torch-dftd'`` or implicitly by asking for a
         non-CPU ``device``.
+
+        ``declared`` is the parametrisation the functional declares, as the SCF reports it -- Skala 1.1
+        declares ``'b3lyp5'``, meaning D3(BJ) with those parameters and no three-body term. It is used
+        when ``dispersion_kwargs`` name none, translated to torch-dftd's names for that backend.
         """
         kwargs = dict(self.parameters.get("dispersion_kwargs") or {})
-        backend = kwargs.pop("backend", None)
-        if backend is None:
-            device = kwargs.get("device")
-            backend = "dftd3" if device is None or str(device) == "cpu" else "torch-dftd"
+        backend = self._dispersion_backend(kwargs)
+        kwargs.pop("backend", None)
+        if declared is not None and not self._DISPERSION_NAMES & set(kwargs):
+            if backend == "torch-dftd":
+                # torch-dftd defaults to PBE with zero damping, which is not what Skala was fitted with
+                kwargs["xc"] = self._TORCH_DFTD_XC.get(declared, declared)
+                kwargs.setdefault("damping", "bj")
+            else:
+                kwargs["xc"] = declared
 
         if backend == "dftd3":
             return self._dispersion_dftd3(atoms, compute_forces, kwargs)
@@ -395,7 +437,8 @@ class PyFockCalculator(Calculator):
                             "version), atm, param, backend.")
         if method is None and param is None:
             raise ValueError("The 'dftd3' dispersion backend needs the functional whose D3 parameters "
-                             "to use, e.g. dispersion_kwargs={'xc': 'pbe'}.")
+                             "to use, e.g. dispersion_kwargs={'xc': 'pbe'}, and this functional does "
+                             "not declare one.")
 
         # Multiply by Angs2BohrFactor rather than dividing by Bohr2AngsFactor: the two constants are
         # not exact reciprocals (they differ in the 12th digit), and Mol uses the former, so this keeps
@@ -597,6 +640,7 @@ result = {{
     "nuclear_repulsion_energy_au": None if getattr(dft_obj, "Nuclear_repulsion_energy", None) is None else float(dft_obj.Nuclear_repulsion_energy),
     "homo_lumo_gap_au": gap_au,
     "homo_lumo_gap_ev": gap_ev,
+    "d3_settings": None if getattr(dft_obj, "skala", None) is None else dft_obj.skala.d3_settings(),
     "density_guess_used": density_guess_used,
     "density_guess_source": density_sources[-1][1] if density_guess_used else None,
     "density_guess_info": density_guess_info,
@@ -706,6 +750,9 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
             "total_energy_ev": float(energy_au * Data.au2eVFactor),
             "homo_lumo_gap_au": gap_au,
             "homo_lumo_gap_ev": None if gap_au is None else gap_au * Data.au2eVFactor,
+            # the D3 parametrisation the functional declares; the model is only loaded here
+            "d3_settings": (None if getattr(dft_obj, "skala", None) is None
+                            else dft_obj.skala.d3_settings()),
         })
         for key, attribute in (("xc_energy_au", "XC_energy"),
                                ("coulomb_energy_au", "J_energy"),
@@ -865,7 +912,7 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
 
         if self.parameters["dispersion"]:
             disp_energy, disp_forces = self._compute_dispersion_correction(
-                self.atoms, have_forces
+                self.atoms, have_forces, declared=summary.get("d3_settings")
             )
             self.results["energy"] += disp_energy
             self.results["free_energy"] = self.results["energy"]
