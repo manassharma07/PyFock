@@ -290,6 +290,40 @@ def test_ase_calculator_applies_the_declared_dispersion(skala, tmp_path, run_in_
                                rtol=0, atol=1e-10)
 
 
+@pytest.mark.parametrize('run_in_process', [True, False])
+def test_ase_calculator_on_the_gpu(skala, tmp_path, run_in_process):
+    """``use_gpu=True`` through the ASE calculator must give the CPU energy, forces and gap.
+
+    A GPU SCF leaves the MO energies and occupations on the device as CuPy arrays. The calculator read
+    them with ``np.asarray``, which CuPy refuses, so every GPU geometry optimization died right after
+    its first SCF -- in the subprocess mode, the default.
+    """
+    cp = pytest.importorskip('cupy')
+    pytest.importorskip('ase', reason='the ASE calculator needs ASE')
+    from numba import cuda
+    try:
+        if not (cuda.is_available() and cp.cuda.runtime.getDeviceCount() > 0):
+            pytest.skip('no CUDA device')
+    except cp.cuda.runtime.CUDARuntimeError:
+        pytest.skip('no CUDA device')
+    from ase import Atoms
+    from pyfock import PyFockCalculator
+
+    results = {}
+    for use_gpu in (False, True):
+        atoms = Atoms('OH2', positions=[atom[1:] for atom in H2O])
+        atoms.calc = PyFockCalculator(functional='skala-1.1', basis='def2-SVP', gridsLevel=1,
+                                      conv_crit=1e-8, use_gpu=use_gpu, run_in_process=run_in_process,
+                                      directory=str(tmp_path / ('gpu' if use_gpu else 'cpu')))
+        results[use_gpu] = (atoms.get_potential_energy(), atoms.get_forces(),
+                            atoms.calc.get_homo_lumo_gap())
+
+    # the device's float64 reductions associate differently: ~1e-7 Ha in the energy
+    assert results[True][0] == pytest.approx(results[False][0], abs=5e-4)
+    np.testing.assert_allclose(results[True][1], results[False][1], rtol=0, atol=1e-3)
+    assert results[True][2] == pytest.approx(results[False][2], abs=1e-3)
+
+
 def test_grid_response_matters(system, skala):
     """Dropping the grid response must visibly change the gradient, and break translational invariance.
 

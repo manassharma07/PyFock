@@ -562,13 +562,20 @@ from pyfock import Mol
 from pyfock import Data
 
 
+def to_host(array):
+    # A use_gpu SCF leaves the MO energies and occupations on the device as CuPy arrays, which
+    # np.asarray refuses; .get() is CuPy's own transfer.
+    getter = getattr(array, "get", None)
+    return np.asarray(getter() if getter is not None else array)
+
+
 def compute_homo_lumo_gap(dft_obj):
     eigvalues = getattr(dft_obj, "mo_energies", None)
     occupations = getattr(dft_obj, "mo_occupations", None)
     if eigvalues is None or occupations is None:
         return None, None
-    eigvalues = np.asarray(eigvalues)
-    occupations = np.asarray(occupations)
+    eigvalues = to_host(eigvalues)
+    occupations = to_host(occupations)
     occupied = np.where(occupations > 1e-8)[0]
     if len(occupied) == 0 or occupied[-1] + 1 >= len(eigvalues):
         return None, None
@@ -697,7 +704,7 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
         the AO values and the integrals are rebuilt either way; those move with the atoms. Nothing is
         kept alive between geometries: the DFT object goes out of scope when this returns.
         """
-        from .DFT_Grad import DFT_Grad
+        from .DFT_Grad import DFT_Grad, _to_host
         from .DFT_NumGrad import DFT_NumGrad
 
         options = self._prepare_runtime_options()
@@ -736,10 +743,11 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
             np.save(os.path.join(workdir, "converged_dmat.npy"), np.asarray(dmat, dtype=np.float64))
 
         gap_au = None
-        energies = getattr(dft_obj, "mo_energies", None)
-        occupations = getattr(dft_obj, "mo_occupations", None)
+        # a use_gpu SCF leaves these on the device
+        energies = _to_host(getattr(dft_obj, "mo_energies", None))
+        occupations = _to_host(getattr(dft_obj, "mo_occupations", None))
         if energies is not None and occupations is not None:
-            occupied = np.where(np.asarray(occupations) > 1e-8)[0]
+            occupied = np.where(occupations > 1e-8)[0]
             if len(occupied) and occupied[-1] + 1 < len(energies):
                 gap_au = float(energies[occupied[-1] + 1] - energies[occupied[-1]])
 
