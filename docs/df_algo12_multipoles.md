@@ -122,9 +122,7 @@ threshold:
 | Cholesterol | 32.4% / 44.5% | +4.6e-10 Ha |
 | Water chain, 5 molecules 5 A apart | 51.7% / - | +4.0e-12 Ha |
 
-Analytical nuclear gradients are unaffected: `DFT_Grad` reads no density-fitting state and
-builds its own three-center derivative integrals, and on the 5-water chain above the gradients
-of the two algorithms agree to 3.1e-13 Ha/Bohr on components of order 2.5e-2.
+Analytical nuclear gradients differentiate the same near/far split, see section 7.
 
 Block by block, `approx_block` against `exact_block` over a random sample of blocks with
 far-field content (`tests/test_df_algo12.py` requires better than 2e-9 on a water chain):
@@ -231,9 +229,126 @@ and can be combined with it.
   hundred atoms; for the molecules above it is not the bottleneck.
 * The two-center metric (`rys_2c2e_symm`, 1.1 s for cholesterol's 2260 auxiliary
   functions) is a fixed cost of both algorithms.
-* Analytical gradients (`DFT_Grad`) use their own three-center derivative integrals and
-  are not affected.
+* The analytical gradient (section 7) treats the branch expansion centres as fixed points.
+  They depend on the geometry, but only through the truncation error of the expansions.
 * The two-center metric is now a large share of the remaining setup cost (2.8 s of tetracontane's
   4.5 s of integral work, against 1.7 s for the whole near-field three-center build). It is a
   per-function Rys kernel that every DF algorithm pays in full, so a shell-blocked version would
   be the next worthwhile target, independently of the far field.
+
+## 7. Analytical gradients
+
+`DFT_Grad` differentiates the DF_algo=12 Coulomb energy itself, with the same near/far split
+(`pyfock/Integrals/df_algo12_grad.py`). This is the default: `DFT_Grad(dft)` uses `DF_algo=12`
+unless the SCF ran with 11 (then 11, the same kernel without the far field), and
+`DFT_Grad(dft, DF_algo=10)` is the previous implementation, which differentiates every significant
+three-center integral and redoes the fitting from a full three-center pass.
+
+The explicit derivative of `E_J = sum_ijP D_ij c_P (ij|P) - 1/2 sum_PQ c_P (P|Q) c_Q` needs
+`sum_ijP D_ij c_P d(ij|P)/dR` besides the two-center term, which is unchanged. The gradient rebuilds
+the SCF's plan without its integral values (`build_grad_plan`). It keeps the same screening, with
+the Schwarz bounds of the projected metric in SAO mode, and the same branches, near/far
+classification, profitability decisions and group moments. Nothing is cached, and
+`low_memory=True` is set, because every group is translated once.
+
+* **Fitting coefficients.** The SCF leaves its loop before diagonalizing again, so its last
+  iteration fitted the converged density itself. That `gamma` is kept on the DFT object
+  (`dft.df_fit`, one vector) and reused. Without it (another DF algorithm, or a density matrix
+  or screening changed after the SCF) the gradient evaluates it with the plan.
+* **Near field.** A shell-pair-blocked Rys derivative kernel, with the same primitive pairs and
+  auxiliary shells as the integral kernel. The derivatives with respect to the bra centre `A` and
+  the auxiliary centre `C` are contracted on the fly with `D_ij c_P`, and `B` follows from
+  translational invariance. One-atom pairs need only the `C` derivative. A block is also skipped
+  when `Q_pair Q_aux max|D| max|c|` is below `threshold_schwarz_grad`.
+* **Far field, auxiliary centres.** Moving an auxiliary shell rigidly changes its moments about
+  its atom through the first-order term of the multipole translation only. Those moments, one
+  order higher, are contracted with the local expansion at the atom of the density's branch
+  moments, built one order higher than the SCF needs.
+* **Far field, density centres.** The derivative with respect to `A` is the interaction of the
+  derivative distribution `(d phi_i / dA) phi_j` with the far-field potential. Its exact moments
+  about the primitive-pair centre (orders up to `l_a + l_b + 1`, from 1D Gaussian moments with
+  `a` raised by one) are contracted with the local expansion of the potential there. The `B`
+  derivative of every (shell pair, branch) entry then follows from translational invariance,
+  with the branch centre moving with the distribution; this needs the branch local expansion to
+  `lmax + 1`.
+
+Both parts are translationally invariant on their own, so the Coulomb forces sum to zero to
+rounding. The only dependence left out is that of the branch centres on the geometry, which enters
+through the truncation error alone.
+
+With `use_gpu=True` the device derivative kernel takes the plan's far-field mask: it skips the same
+primitive pairs, and a device kernel drops the blocks with no near-field pair from the task list.
+The far-field terms are a few translations per group and run on the host.
+
+**Screening is part of the energy.** The gradient differentiates the energy the SCF computed,
+screening included: the plan's block threshold, its primitive-pair cut-off (`exp(-18.42)`) and,
+with `strict_schwarz` (the default), the strict pair cut-off. The SCF leaves the function pairs with
+`(ij|ij) < 1e-13` out of the nuclear attraction matrix as well as out of the Coulomb term, so the
+gradient leaves them out of both derivatives, the nuclear-attraction one included. The previous
+gradient (`DF_algo=10`) differentiated them as if the SCF had kept them. On the 30-water cluster of
+the performance table below they are 58% of all function pairs (the sum of `|D_ij|` over them is
+344). Their nuclear-attraction and Coulomb derivatives reach 1.1e-4 and 8.0e-5 Ha/Bohr and largely
+cancel, to 2.8e-5 Ha/Bohr, which is how far the previous gradient was from the derivative of the
+SCF energy there. With `strict_schwarz=False` the SCF keeps those pairs, and the two gradients then
+agree to 3.5e-6 Ha/Bohr on the same density (the primitive-pair cut-off, which the previous gradient
+did not share either).
+
+Finite differences of the whole SCF energy say the same. For 10 waters (`water_cluster_10`, PBE,
+def2-TZVPD, conv_crit 1e-11, central differences on the fixed grid that the XC gradient without
+grid response differentiates), the components with smooth finite differences give:
+
+| | analytical - finite difference (Ha/Bohr) |
+|---|---|
+| default (`DF_algo=12`, strict pairs out of dV and dJ) | 1.4e-7 at most |
+| previous gradient (`DF_algo=10`) | 5.4e-7 at most |
+| strict pairs out of dJ only (dV kept) | 4.3e-6 at most |
+
+A finite-difference check needs a step-size test here. On some components the energy jumps by
+about 1.6e-8 Ha between the displaced geometries (most likely a basis function crossing its radial
+cut-off at a grid point of the fixed grid), so the finite difference is off by `jump / 2h`: 8e-6,
+1.6e-5 and 3.2e-5 Ha/Bohr at
+steps of 1e-3, 5e-4 and 2.5e-4 bohr, by the same amount for every gradient, and not at all once the
+step no longer crosses the jump.
+
+Accuracy, against the exact contraction `rys_3c2e_grad_contract` with screening off, for a
+realistic density and random fitting coefficients (`tests/test_df_algo12_grad.py`). The last column
+is algorithm 11 with the same screening, i.e. the part of the difference that is the SCF's own
+screening (threshold 1e-9, strict pair cut-off) rather than the far field:
+
+| System | far field int./work | max abs dev., algorithm 12 | same screening, no far field |
+|---|---|---|---|
+| 4 waters 5 A apart, def2-SVP, CAO | 29.7% / 43.6% | 3.4e-10 | 3.5e-10 |
+| same, SAO | 29.7% / 43.6% | 1.8e-10 | 1.8e-10 |
+| same, def2-TZVPD / universal-jkfit, SAO | 27.4% / 37.4% | 5.9e-9 | 5.9e-9 |
+| 10 waters 3.5 A apart, def2-SVP / universal-jkfit, SAO | 67.3% / 72.5% | 5.2e-9 | 5.2e-9 |
+
+The far-field terms themselves reach 0.41 Ha/Bohr on the 10-water chain and add nothing measurable
+to the error. Finite differences of `sum_P c_P gamma_P(R)`, with algorithm-12 plans rebuilt at every
+displaced geometry, agree with the analytical far-field gradient to 7e-9 (the finite-difference
+noise at a 1e-4 A step).
+
+
+Performance (`benchmarks_tests/benchmark_DFT_gradients_DF_algo12.py`). The system is a cluster of
+30 waters carved from a liquid-water simulation (90 atoms), def2-TZVPD / def2-universal-jkfit
+(nao 1920, naux 3990), SAO, PBE. One SCF runs with the DF_algo=12 defaults and a 4 GB near-field
+cap, followed by three gradients of its converged density on 16 threads of a 16-core Intel
+workstation. Every kernel was loaded once on a water molecule beforehand.
+
+| term (s) | `DF_algo=12` (default) | same, fit redone | `DF_algo=10` (previous) |
+|---|---|---|---|
+| Schwarz diagonals, metric, plan | 2.1 | 2.1 | 0.6 |
+| fitting coefficients | 0.35 | 9.8 | 189.2 |
+| 3c2e derivative | 20.3 | 20.2 | 175.0 |
+| 2c2e derivative | 0.2 | 0.2 | 0.2 |
+| **DF Coulomb, total** | **23.0** | **32.3** | **365.0** |
+| XC (PBE, fixed grid) | 36.2 | 35.7 | 35.5 |
+| one-electron terms | 2.5 | 2.5 | 2.9 |
+| **gradient** | **61.7** | **70.6** | **403.4** |
+
+The DF Coulomb terms are 16x faster and the whole gradient 6.5x. The 3c2e derivative is 8.6x faster,
+mostly because of the shell-blocked kernel. The far field (21% of the significant `(ij|P)` and 34% of
+their Rys work) takes a further third off the new kernel's time: with it switched off the same
+contraction takes 29.3 s instead of 19.1 s. The fitting coefficients cost one solve, because the SCF
+already fitted this density; refitted with the plan, where the previous gradient made a full
+three-center pass, they take 9.8 s. The forces differ from the previous gradient's by at most
+2.8e-5 Ha/Bohr, which is the strict-cut-off term discussed above.

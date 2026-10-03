@@ -2325,6 +2325,21 @@ class DFT:
         # A converged SCF leaves the loop through `break`, before `itr` is incremented.
         self.niter = itr if scf_converged else itr-1
 
+        # ... and before diagonalizing again, so the last iteration fitted the converged density
+        # itself. Its gamma_P = sum_ij D_ij (ij|P) is one vector; DFT_Grad reuses it rather than
+        # evaluating the three-center integrals of the same density a second time.
+        self.df_fit = None
+        if isDF and DF_algo in (11, 12) and scf_converged:
+            last_fit = getattr(ints3c2e, 'last_fit', None)
+            if last_fit is not None and last_fit[0] is self.dmat:
+                gamma_fit = last_fit[1]
+                gamma_fit = gamma_fit.get() if hasattr(gamma_fit, 'get') else np.asarray(gamma_fit)
+                self.df_fit = {'DF_algo': DF_algo, 'dmat': self.dmat,
+                               'gamma': np.array(gamma_fit, dtype=np.float64),
+                               'threshold_schwarz': threshold_schwarz, 'strict_schwarz': strict_schwarz,
+                               'sao': bool(self.sao),
+                               'multipole_options': dict(getattr(self, 'multipole_options', None) or {})}
+
         # D3 dispersion is a function of the geometry alone, so it is evaluated once here rather than
         # inside the SCF loop; it cannot affect the converged density (see pyfock.Dispersion).
         self.Edisp = 0.0

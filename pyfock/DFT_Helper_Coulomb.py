@@ -927,6 +927,7 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
             startDF_gamma = timer()
             gamma_alpha = (Integrals.df_algo11_helpers_cupy.gamma_from_plan_cupy(plan, dmat)
                            if use_gpu else Integrals.df_algo11_helpers.gamma_from_plan(plan, dmat))
+            plan.last_fit = (dmat, gamma_alpha)   # see DFT.df_fit
             durationDF_gamma += timer() - startDF_gamma
             startDF_coeff = timer()
             with threadpool_limits(limits=ncores, user_api='blas'):
@@ -951,6 +952,7 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         startDF_gamma = timer()
         gamma_alpha = (Integrals.df_algo12_helpers_cupy.gamma_from_plan_cupy(plan, dmat)
                        if use_gpu else Integrals.df_algo12_helpers.gamma_from_plan(plan, dmat))
+        plan.last_fit = (dmat, gamma_alpha)   # see DFT.df_fit
         durationDF_gamma += timer() - startDF_gamma
         startDF_coeff = timer()
         with threadpool_limits(limits=ncores, user_api='blas'):

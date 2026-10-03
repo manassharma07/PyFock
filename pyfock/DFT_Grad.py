@@ -14,6 +14,8 @@ from pyfock import Data
 from pyfock import Dispersion
 from pyfock.Basis import Basis
 from pyfock.Mol import Mol
+from pyfock.DFT_Helper_Coulomb import _pseudo_cartesian_metric_diagonal
+from pyfock.Integrals.df_algo10_helpers import STRICT_PAIR_CUTOFF
 
 try:
     import cupy as cp
@@ -91,6 +93,21 @@ class DFT_Grad:
     the native PyFock functionals or pylibxc, Skala, and ECPs.
     Laplacian-dependent meta-GGAs are not yet supported.
 
+    The DF Coulomb terms follow the SCF's density-fitting algorithm (``DF_algo``).
+    With the default, 12, the three-center derivative integrals are split exactly
+    as the SCF split the integrals: the near field by a shell-pair-blocked Rys
+    derivative kernel, the far field by differentiating the multipole expansions
+    (:mod:`pyfock.Integrals.df_algo12_grad`), so the gradient is that of the
+    DF_algo=12 energy. The fitting coefficients come from the SCF's last
+    iteration, which fitted the converged density itself, instead of a second
+    three-center pass. The SCF's screening is part of that energy: with
+    ``strict_schwarz`` the function pairs it leaves out of the nuclear
+    attraction and Coulomb matrices are left out of both derivatives.
+    ``DF_algo=11`` is the same without the far field, and ``DF_algo=10`` the
+    previous implementation (every significant derivative integral, including
+    those of the pairs the strict cut-off drops, and the fitting redone from a
+    full three-center pass).
+
     With ``use_gpu=True`` every term above except the ECP one is evaluated on
     the GPU by a device port of the corresponding CPU routine; the results
     agree to round-off (see ``benchmarks_tests/benchmark_DFT_gradients_gpu.py``).
@@ -103,6 +120,11 @@ class DFT_Grad:
     threshold_schwarz_grad : float, optional
         Screening threshold used for the contracted 3c2e derivative
         integrals (includes density/coefficient weighting).
+    DF_algo : {12, 11, 10} or None, optional
+        Algorithm for the DF Coulomb terms (see above). ``None`` (default) gives
+        11 when the SCF ran with ``DF_algo=11`` and 12 otherwise. 12 and 11 screen
+        with the SCF's ``threshold_schwarz``, ``strict_schwarz`` and
+        ``multipole_options``.
     use_gpu : bool, optional
         Evaluate the gradient on the GPU. ``None`` (default) inherits
         ``dft_obj.use_gpu``. The ECP term has no device implementation and
@@ -125,7 +147,7 @@ class DFT_Grad:
 
     def __init__(self, dft_obj, threshold_schwarz_grad=1e-11, ecp_grad_mode='analytical',
                  ecp_series_order=12, ecp_fd_step=1e-3, verbose=True, grid_response=None,
-                 use_gpu=None):
+                 use_gpu=None, DF_algo=None):
         if dft_obj is None:
             raise ValueError('ERROR: A PyFock DFT object is required.')
         if not getattr(dft_obj, 'converged', False):
@@ -151,6 +173,11 @@ class DFT_Grad:
             raise NotImplementedError('Analytical gradients are currently implemented for pure DFT functionals only (no exact exchange).')
         if ecp_grad_mode not in ('analytical', 'fd'):
             raise ValueError("ecp_grad_mode must be 'analytical' or 'fd'.")
+        if DF_algo is None:
+            DF_algo = 11 if getattr(dft_obj, 'DF_algo', 12) == 11 else 12
+        if DF_algo not in (10, 11, 12):
+            raise ValueError('DF_algo must be 12 (multipole-accelerated, default), 11 or 10 for the gradient.')
+        self.DF_algo = int(DF_algo)
 
         self.dft_obj = dft_obj
         self.threshold_schwarz_grad = threshold_schwarz_grad
@@ -193,6 +220,27 @@ class DFT_Grad:
             elif isinstance(xc, str):
                 xc = XC.resolve_functional(xc)
             self.funcid = xc
+
+    def _strict_pairs(self):
+        """Whether the SCF's strict pair cut-off is part of the energy this gradient differentiates.
+
+        It is when the SCF applied it (``strict_schwarz`` with DF algorithm 6, 10, 11 or 12, which
+        screen V and J alike) and the gradient uses its plan (DF_algo 11 or 12)."""
+        dft_obj = self.dft_obj
+        return (self.DF_algo in (11, 12) and bool(getattr(dft_obj, 'strict_schwarz', False))
+                and getattr(dft_obj, 'DF_algo', 12) in (6, 10, 11, 12))
+
+    def _scf_fit_gamma(self):
+        """``gamma`` of the SCF's last iteration, when it fitted this density with the plan used here."""
+        dft_obj = self.dft_obj
+        fit = getattr(dft_obj, 'df_fit', None)
+        if not fit or fit.get('DF_algo') != self.DF_algo or fit.get('dmat') is not dft_obj.dmat:
+            return None
+        same_plan = (fit['threshold_schwarz'] == dft_obj.threshold_schwarz
+                     and fit['strict_schwarz'] == dft_obj.strict_schwarz
+                     and fit['sao'] == bool(dft_obj.sao)
+                     and fit['multipole_options'] == dict(getattr(dft_obj, 'multipole_options', None) or {}))
+        return np.asarray(fit['gamma'], dtype=np.float64) if same_plan else None
 
     def _energy_weighted_dmat(self):
         """Energy-weighted density matrix W in the CAO basis."""
@@ -312,11 +360,21 @@ class DFT_Grad:
         # Schwarz diagonals, shared by the fitting-coefficient, 3c2e-derivative and
         # nuclear-attraction steps. Each device routine would otherwise rebuild them.
         sqrt_ints4c2e_diag = sqrt_diag_ints2c2e = None
-        if use_gpu:
+        if use_gpu or self.DF_algo in (11, 12):
             start = timer()
             sqrt_ints4c2e_diag = np.sqrt(np.abs(Integrals.schwarz_helpers.eri_4c2e_diag(basis)))
-            sqrt_diag_ints2c2e = np.sqrt(np.abs(Integrals.rys_2c2e_diag(auxbasis)))
+            if use_gpu:
+                sqrt_diag_ints2c2e = np.sqrt(np.abs(Integrals.rys_2c2e_diag(auxbasis)))
             timings['schwarz_diagonals'] = timer() - start
+
+        # With strict Schwarz screening the SCF leaves the function pairs with (ij|ij) below the
+        # strict cut-off out of the nuclear attraction matrix as well as out of the Coulomb term, so
+        # the gradient of its energy leaves them out of both derivatives. (DF_algo=10 keeps the
+        # previous behaviour, which differentiates them in both.)
+        strict = self._strict_pairs()
+        dmat_V = dmat
+        if strict:
+            dmat_V = np.where(sqrt_ints4c2e_diag ** 2 < STRICT_PAIR_CUTOFF, 0.0, dmat)
 
         # ---------------- Nuclear repulsion ----------------
         start = timer()
@@ -343,10 +401,11 @@ class DFT_Grad:
         start = timer()
         if use_gpu:
             grad_V = Integrals.rys_nuc_grad_contract_cupy(
-                basis, mol, dmat, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag,
+                basis, mol, dmat_V, sqrt_ints4c2e_diag=sqrt_ints4c2e_diag,
                 cp_stream=self._cp_stream)
         else:
-            grad_V = Integrals.rys_nuc_grad_contract(basis, mol, dmat, ncores=ncores)
+            grad_V = Integrals.rys_nuc_grad_contract(basis, mol, dmat_V, ncores=ncores)
+        dmat_V = None
         timings['nuclear_attraction'] = timer() - start
 
         # ---------------- Overlap (Pulay) ----------------
@@ -365,9 +424,6 @@ class DFT_Grad:
 
         # ---------------- DF Coulomb ----------------
         # gamma_P = sum_ij D_ij (ij|P);  c = (P|Q)^-1 gamma
-        # The 3c2e tensor is only needed transiently for gamma, so on the CPU it is evaluated in
-        # chunks over the auxiliary dimension to bound memory; the device kernel contracts it as it
-        # goes and never forms it.
         start = timer()
         nbf = basis.bfs_nao
         naux = auxbasis.bfs_nao
@@ -376,13 +432,45 @@ class DFT_Grad:
             if dft_obj.sao:
                 # The spherical transform below is host code, and the metric is only naux x naux.
                 ints2c2e = cp.asnumpy(ints2c2e)
+        else:
+            ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
+        ints2c2e_sph = auxbasis.cart2sph_operator_blockwise(ints2c2e) if dft_obj.sao else None
+        timings['df_metric'] = timer() - start
+
+        plan = None
+        if self.DF_algo in (11, 12):
+            # The SCF's plan without its integral values: the same screening (from the Schwarz bounds
+            # of the metric it fitted with, which is the projected one in SAO mode), branches,
+            # near/far classification and group moments.
+            start = timer()
+            if dft_obj.sao:
+                metric_diag = _pseudo_cartesian_metric_diagonal(
+                    auxbasis, ints2c2e_sph, auxbasis.sph2cart_basis()) + 1e-12
+            else:
+                metric_diag = _to_host(ints2c2e.diagonal())
+            plan = Integrals.df_algo12_grad.build_grad_plan(
+                basis, auxbasis, sqrt_ints4c2e_diag, np.sqrt(np.abs(metric_diag)),
+                dft_obj.threshold_schwarz, strict, sao=dft_obj.sao,
+                options=getattr(dft_obj, 'multipole_options', None),
+                far_field=self.DF_algo == 12, ncores=ncores)
+            timings['df_plan'] = timer() - start
+
+        start = timer()
+        gamma = self._scf_fit_gamma()
+        if gamma is not None:
+            pass        # the SCF's last iteration fitted this very density with the same plan
+        elif plan is not None and not use_gpu:
+            gamma = Integrals.df_algo12_helpers.gamma_from_plan(plan, dmat)
+        elif use_gpu:
+            # the device kernel contracts the 3c2e integrals as it goes and never forms them
             gamma = Integrals.rys_3c2e_gamma_contract_cupy(
                 basis, auxbasis, dmat,
                 threshold_schwarz=min(dft_obj.threshold_schwarz, 1e-9),
                 sqrt_ints4c2e_diag=sqrt_ints4c2e_diag,
                 sqrt_diag_ints2c2e=sqrt_diag_ints2c2e, cp_stream=self._cp_stream)
         else:
-            ints2c2e = Integrals.rys_2c2e_symm(auxbasis)
+            # The 3c2e tensor is only needed transiently, so it is evaluated in chunks over the
+            # auxiliary dimension to bound memory.
             max_chunk_bytes = 1e9
             chunk_naux = max(1, min(naux, int(max_chunk_bytes / (nbf * nbf * 8))))
             gamma = np.zeros(naux)
@@ -402,10 +490,10 @@ class DFT_Grad:
                 # spherical auxiliary space. The effective Cartesian
                 # coefficients are c_eff = T^T (T C T^T)^-1 T gamma, and the
                 # usual gradient formula holds since T is geometry
-                # independent.
+                # independent. (A projected gamma, as algorithms 11 and 12
+                # produce it in SAO mode, has the same T gamma.)
                 c2sph_aux = auxbasis.cart2sph_basis()
-                ints2c2e_sph = auxbasis.cart2sph_operator_blockwise(ints2c2e)
-                gamma_sph = c2sph_aux @ gamma
+                gamma_sph = c2sph_aux @ _to_host(gamma)
                 c_sph = scipy.linalg.solve(ints2c2e_sph, gamma_sph, assume_a='pos')
                 df_coeff = c2sph_aux.T @ c_sph
             elif use_gpu:
@@ -413,11 +501,25 @@ class DFT_Grad:
                 df_coeff = cp.asnumpy(cp.linalg.solve(ints2c2e, cp.asarray(gamma)))
             else:
                 df_coeff = scipy.linalg.solve(ints2c2e, gamma, assume_a='pos')
-        ints2c2e = None
+        ints2c2e = ints2c2e_sph = None
         timings['df_coefficients'] = timer() - start
 
         start = timer()
-        if use_gpu:
+        if plan is not None and use_gpu:
+            # near field on the device, with the plan's far-field mask; the far field is a few
+            # translations per group and stays on the host
+            grad_J3c = Integrals.rys_3c2e_grad_contract_cupy(
+                basis, auxbasis, dmat, df_coeff,
+                schwarz=True, threshold_schwarz=self.threshold_schwarz_grad,
+                sqrt_ints4c2e_diag=sqrt_ints4c2e_diag,
+                sqrt_diag_ints2c2e=sqrt_diag_ints2c2e, cp_stream=self._cp_stream,
+                df12_plan=plan)
+            grad_J3c = grad_J3c + Integrals.df_algo12_grad.grad_contract(
+                plan, dmat, df_coeff, threshold_grad=self.threshold_schwarz_grad, near=False)
+        elif plan is not None:
+            grad_J3c = Integrals.df_algo12_grad.grad_contract(
+                plan, dmat, df_coeff, threshold_grad=self.threshold_schwarz_grad)
+        elif use_gpu:
             grad_J3c = Integrals.rys_3c2e_grad_contract_cupy(
                 basis, auxbasis, dmat, df_coeff,
                 schwarz=True, threshold_schwarz=self.threshold_schwarz_grad,
@@ -430,6 +532,7 @@ class DFT_Grad:
                 schwarz=True, threshold_schwarz=self.threshold_schwarz_grad,
                 ncores=ncores,
             )
+        plan = None
         timings['coulomb_3c2e_grad'] = timer() - start
 
         start = timer()

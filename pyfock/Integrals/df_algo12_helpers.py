@@ -1608,6 +1608,7 @@ def _plan_metadata(basis, auxbasis, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, thre
     if sig.size and int(max_roots[sig].max()) > MAX_RYS_ROOTS:
         raise ValueError('DF_algo=12 supports at most %d Rys roots (total angular momentum <= %d).'
                          % (MAX_RYS_ROOTS, 2 * MAX_RYS_ROOTS - 1))
+    plan.cost_nf_pair = cost      # near-field Rys work per pair (load balance of the gradient passes)
     elems_nf = plan.pair_nrows[sig] * plan.pair_ncols[sig]
     plan.n_elements_significant = int((plan.pair_nrows[sig] * ncols_all[sig]).sum())
     plan.n_elements_nf = int(elems_nf.sum())

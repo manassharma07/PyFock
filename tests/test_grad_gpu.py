@@ -53,6 +53,37 @@ def test_3c2e_grad_contract(system):
     np.testing.assert_allclose(gpu, cpu, rtol=0, atol=1e-11 * max(np.abs(cpu).max(), 1.0))
 
 
+@pytest.mark.parametrize('sao', [False, True], ids=['cao', 'sao'])
+def test_3c2e_grad_contract_df_algo12_near_field(sao):
+    """With a DF_algo=12 plan the device kernel is the near field of pyfock.Integrals.df_algo12_grad.
+
+    A chain of four waters 5 A apart, so that a good part of the primitive pairs is far field and the
+    mask, the task filter and the strict pair cut-off are all exercised.
+    """
+    from pyfock.Integrals import df_algo12_grad as grad12
+    from pyfock.Integrals.schwarz_helpers import eri_4c2e_diag
+
+    water = [['O', 0.0, 0.0, 0.117], ['H', 0.0, 0.757, -0.467], ['H', 0.0, -0.757, -0.467]]
+    mol = Mol(atoms=[[s, x + 5.0 * k, y, z] for k in range(4) for s, x, y, z in water])
+    basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name='def2-TZVP')})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=AUX_BASIS)})
+    metric = Integrals.rys_2c2e_symm(auxbasis)
+    if sao:
+        proj = auxbasis.sph2cart_basis() @ auxbasis.cart2sph_basis()
+        metric = proj @ metric @ proj.T + 1e-12 * np.eye(auxbasis.bfs_nao)
+    plan = grad12.build_grad_plan(basis, auxbasis, np.sqrt(np.abs(eri_4c2e_diag(basis))),
+                                  np.sqrt(np.abs(np.diag(metric))), 1e-9, True, sao=sao)
+    assert plan.fraction_far_field > 0.15
+    rng = np.random.default_rng(11)
+    a = rng.standard_normal((basis.bfs_nao, basis.bfs_nao))
+    dmat = np.ascontiguousarray((a + a.T) * 0.05)
+    df_coeff = rng.standard_normal(auxbasis.bfs_nao) * 0.1
+    cpu = grad12.grad_contract(plan, dmat, df_coeff, threshold_grad=0.0, far=False)
+    gpu = Integrals.rys_3c2e_grad_contract_cupy(basis, auxbasis, dmat, df_coeff, threshold_schwarz=0.0,
+                                                df12_plan=plan)
+    np.testing.assert_allclose(gpu, cpu, rtol=0, atol=1e-11 * max(np.abs(cpu).max(), 1.0))
+
+
 def test_2c2e_grad_contract(system):
     _, _, auxbasis, _, df_coeff = system
     cpu = Integrals.rys_2c2e_grad_contract(auxbasis, df_coeff)

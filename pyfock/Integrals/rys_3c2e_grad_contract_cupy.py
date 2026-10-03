@@ -29,6 +29,8 @@ from .rys_helpers_cuda import Recur_3c2e, Roots, DATA_X, DATA_W
 from .rys_3c2e_symm import _pack_basis
 from .cuda_stream import gradient_stream
 from .rys_3c2e_grad_contract import _shell_bounds
+from .df_algo10_helpers import STRICT_PAIR_CUTOFF
+from .df_algo12_helpers_cupy import _pp_branch_dense
 
 __all__ = ['rys_3c2e_grad_contract_cupy']
 
@@ -67,7 +69,7 @@ def _get_kernel(g_rows, g_cols, nroots_max):
                 aux_bfs_coords, aux_bfs_contr_prim_norms, aux_bfs_lmn, aux_bfs_nprim,
                 aux_bfs_coeffs, aux_bfs_prim_norms, aux_bfs_expnts,
                 aux_shell_l, aux_shell_bfs_offset, aux_bfs_nbfshell, aux_bfs_atoms,
-                dmat, df_coeff, DATA_X_, DATA_W_, grad_partial):
+                dmat, df_coeff, DATA_X_, DATA_W_, use_mask, pp_off, pp_branch, ff, grad_partial):
         comb = cuda.const.array_like(_COMB)
 
         itask = cuda.grid(1)
@@ -133,11 +135,16 @@ def _get_kernel(g_rows, g_cols, nroots_max):
 
         pair_factor = 2.0 if ish != jsh else 1.0
         pi = 3.141592653589793
+        pp_base = pp_off[ab_idx] if use_mask else 0
 
         for iprim_a in range(nprim_a):
             alpha = bfs_expnts[bf_a_start, iprim_a]
             two_alpha = 2.0 * alpha
             for iprim_b in range(nprim_b):
+                # DF_algo=12: a primitive pair whose branch is far field for this auxiliary shell is
+                # handled by the multipole expansions (and one the plan drops is in neither)
+                if use_mask and ff[pp_branch[pp_base + iprim_a * nprim_b + iprim_b], ksh]:
+                    continue
                 beta = bfs_expnts[bf_b_start, iprim_b]
                 gamma_p = alpha + beta
                 inv_gamma_p = 1.0 / gamma_p
@@ -289,11 +296,17 @@ def _get_kernel(g_rows, g_cols, nroots_max):
 
 def rys_3c2e_grad_contract_cupy(basis, auxbasis, dmat, df_coeff, schwarz=True,
                                 threshold_schwarz=1e-11, sqrt_ints4c2e_diag=None,
-                                sqrt_diag_ints2c2e=None, cp_stream=None):
+                                sqrt_diag_ints2c2e=None, cp_stream=None, df12_plan=None):
     """GPU counterpart of :func:`rys_3c2e_grad_contract`; see it for the definition.
 
     ``sqrt_ints4c2e_diag`` / ``sqrt_diag_ints2c2e`` let the caller pass in Schwarz diagonals it has
     already built, since the same two arrays are needed by the fitting-coefficient step.
+
+    ``df12_plan`` (from :func:`pyfock.Integrals.df_algo12_grad.build_grad_plan`) restricts the
+    contraction to the near field of algorithm 12: the plan's significant (shell pair, auxiliary
+    shell) blocks, without the primitive pairs that are far field for the auxiliary shell, and with
+    the plan's strict pair cut-off. The far field is then
+    ``df_algo12_grad.grad_contract(plan, ..., near=False)``.
 
     Returns a NumPy ``(natoms, 3)`` array -- the gradient is natoms*3 numbers, so there is nothing to
     gain by leaving it on the device.
@@ -324,6 +337,9 @@ def rys_3c2e_grad_contract_cupy(basis, auxbasis, dmat, df_coeff, schwarz=True,
 
     dmat = np.ascontiguousarray(dmat, dtype=np.float64)
     df_coeff = np.ascontiguousarray(df_coeff, dtype=np.float64)
+    if df12_plan is not None and df12_plan.strict_schwarz:
+        # the function pairs the plan's strict cut-off drops from every contraction
+        dmat = np.where(df12_plan.sqrt_ints4c2e_diag ** 2 < STRICT_PAIR_CUTOFF, 0.0, dmat)
 
     ab_shell_a = np.empty(nshells * (nshells + 1) // 2, dtype=np.int32)
     ab_shell_b = np.empty_like(ab_shell_a)
@@ -358,6 +374,27 @@ def rys_3c2e_grad_contract_cupy(basis, auxbasis, dmat, df_coeff, schwarz=True,
     else:
         nb_stream = cuda.external_stream(cp_stream.ptr)
 
+    mask = None
+    if df12_plan is not None:
+        plan = df12_plan
+        if plan.pair_I.shape[0] != ab_shell_a.shape[0]:
+            raise ValueError('df12_plan was built for a different basis')
+        # Branch of every primitive pair at a dense index, with the plan's dropped pairs on a row of
+        # the mask that is far field everywhere: the layout of the DF_algo=12 CUDA driver.
+        nprim_pairs = np.zeros(plan.pair_I.shape[0], dtype=np.int64)
+        nprim_pairs[plan.sig] = (plan.bfs_nprim[plan.shell_off[plan.pair_I[plan.sig]]]
+                                 * plan.bfs_nprim[plan.shell_off[plan.pair_J[plan.sig]]])
+        pp_off = np.zeros(plan.pair_I.shape[0] + 1, dtype=np.int64)
+        pp_off[1:] = np.cumsum(nprim_pairs)
+        pp_branch = _pp_branch_dense(plan.sig, plan.pair_I, plan.pair_J, plan.shell_off,
+                                     plan.bfs_nprim, plan.bfs_expnts, plan.bfs_coords, plan.pp_group,
+                                     plan.grp_branch_eff, pp_off, plan.ff_eff.shape[0])
+        if pp_branch.size == 0:
+            pp_branch = np.zeros(1, dtype=np.int32)
+        ff_mask = np.ascontiguousarray(
+            np.vstack([plan.ff_eff, np.ones((1, plan.ff_eff.shape[1]), dtype=np.bool_)]))
+        mask = (pp_off, pp_branch, ff_mask, plan.Q_pair, plan.Q_aux, plan.threshold)
+
     with cp_stream:
         d = {name: cp.asarray(value) for name, value in (
             ('ab_shell_a', ab_shell_a), ('ab_shell_b', ab_shell_b),
@@ -376,13 +413,20 @@ def rys_3c2e_grad_contract_cupy(basis, auxbasis, dmat, df_coeff, schwarz=True,
             ('dmat', dmat), ('df_coeff', df_coeff),
             ('DATA_X', DATA_X), ('DATA_W', DATA_W))}
         grad_partial = cp.zeros((_NBINS, natoms, 3), dtype=cp.float64)
+        if mask is not None:
+            mask_d = tuple(cp.asarray(v) for v in mask[:5]) + (float(mask[5]),)
+        else:
+            mask_d = (cp.zeros(1, dtype=cp.int64), cp.zeros(1, dtype=cp.int32),
+                      cp.zeros((1, 1), dtype=cp.bool_))
 
         kernel = _get_kernel(g_rows, g_cols, nroots_max)
         threads = 64
         for task_list in _task_batches(pair_bound, aux_bound, threshold_schwarz,
                                        ab_shell_a, ab_shell_b, bfs_atoms, aux_bfs_atoms,
                                        shell_l, aux_shell_l, shell_bfs_offset,
-                                       aux_shell_bfs_offset, nshells_aux):
+                                       aux_shell_bfs_offset, nshells_aux,
+                                       mask=mask_d if mask is not None else None,
+                                       nb_stream=nb_stream):
             blocks = (task_list.shape[0] + threads - 1) // threads
             kernel[blocks, threads, nb_stream](
                 task_list, nshells_aux, d['ab_shell_a'], d['ab_shell_b'],
@@ -393,10 +437,29 @@ def rys_3c2e_grad_contract_cupy(basis, auxbasis, dmat, df_coeff, schwarz=True,
                 d['aux_bfs_nprim'], d['aux_bfs_coeffs'], d['aux_bfs_prim_norms'],
                 d['aux_bfs_expnts'], d['aux_shell_l'], d['aux_shell_bfs_offset'],
                 d['aux_bfs_nbfshell'], d['aux_bfs_atoms'],
-                d['dmat'], d['df_coeff'], d['DATA_X'], d['DATA_W'], grad_partial)
+                d['dmat'], d['df_coeff'], d['DATA_X'], d['DATA_W'],
+                mask is not None, mask_d[0], mask_d[1], mask_d[2], grad_partial)
         grad = cp.asnumpy(grad_partial.sum(axis=0))
     cp_stream.synchronize()
     return grad
+
+
+@cuda.jit(cache=False)
+def _near_field_tasks(flat, lo, nshells_aux, pp_off, pp_branch, ff, q_pair, q_aux, threshold, near):
+    """``near[i] = 1`` when chunk task ``flat[i]`` is a significant DF_algo=12 block with a near-field primitive pair."""
+    i = cuda.grid(1)
+    if i >= flat.shape[0]:
+        return
+    t = flat[i]
+    ab = lo + t // nshells_aux
+    k = t - (t // nshells_aux) * nshells_aux
+    near[i] = 0
+    if q_pair[ab] * q_aux[k] <= threshold:
+        return
+    for q in range(pp_off[ab], pp_off[ab + 1]):
+        if not ff[pp_branch[q], k]:
+            near[i] = 1
+            return
 
 
 # Upper bound on the flattened (shell pair, aux shell) task table materialised at once, in tasks.
@@ -406,14 +469,16 @@ _TASK_CHUNK = 32 * 1024 * 1024
 
 def _task_batches(pair_bound, aux_bound, threshold, ab_shell_a, ab_shell_b,
                   bfs_atoms, aux_bfs_atoms, shell_l, aux_shell_l,
-                  shell_bfs_offset, aux_shell_bfs_offset, nshells_aux):
+                  shell_bfs_offset, aux_shell_bfs_offset, nshells_aux, mask=None, nb_stream=None):
     """Yield device arrays of surviving (ab_idx * nshells_aux + ksh) task ids, grouped by shape.
 
     Dropping the screened-out and identically-zero triplets up front means the kernel launches no
     thread that returns immediately, and sorting what is left by the angular momentum triple keeps
     each warp on shells of the same size: threads in a warp then agree on the root count, the
     recursion orders and the shell-block loop bounds, which is where the divergence would otherwise
-    be. The table is chunked over shell pairs so its size never depends on the molecule.
+    be. The table is chunked over shell pairs so its size never depends on the molecule. With a
+    DF_algo=12 ``mask`` (device ``pp_off, pp_branch, ff, Q_pair, Q_aux`` and the plan threshold)
+    only the plan's significant blocks with at least one near-field primitive pair are kept.
     """
     n_ab = pair_bound.shape[0]
     aux_bound_d = cp.asarray(aux_bound)
@@ -434,6 +499,11 @@ def _task_batches(pair_bound, aux_bound, threshold, ab_shell_a, ab_shell_b,
         keep = (pair_bound_d[lo:hi, None] * aux_bound_d[None, :] >= threshold)
         keep &= atom_ab[lo:hi, None] != atom_c[None, :]
         flat = cp.flatnonzero(keep.ravel())
+        if flat.size and mask is not None:
+            near = cp.zeros(flat.size, dtype=cp.int8)
+            _near_field_tasks[(flat.size + 127) // 128, 128, nb_stream](
+                flat, lo, nshells_aux, mask[0], mask[1], mask[2], mask[3], mask[4], mask[5], near)
+            flat = flat[near.astype(cp.bool_)]
         if flat.size == 0:
             continue
         key = lab_key[lo + flat // nshells_aux] + lc_key[flat % nshells_aux]
