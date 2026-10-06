@@ -1,0 +1,8 @@
+[1/2] C:\Users\Manas\AppData\Local\Programs\Python\Python310\python.exe D:\pyfock\benchmarks_tests\benchmark_RI_K.py --single Decane_C10H22.xyz --ncores 8 --xc B3LYP -> D:\pyfock\benchmarks_tests\RI_K_def2-SVP\warmup_b3lyp_decane_before_Decane_C10H22.log
+    done in 221.8 s: iterations=8, K_total=1.86, scf_total=218.54, energy=-394.0529678701219
+[2/2] C:\Users\Manas\AppData\Local\Programs\Python\Python310\python.exe D:\pyfock\benchmarks_tests\benchmark_RI_K.py --single Decane_C10H22.xyz --ncores 8 --xc B3LYP -> D:\pyfock\benchmarks_tests\RI_K_def2-SVP\b3lyp_decane_before_Decane_C10H22.log
+    done in 12.5 s: iterations=8, K_total=1.09, scf_total=10.1, energy=-394.0529678701204
+
+| molecule | atoms | nao(cart) | naux(fit) | pair rows | iters | 3c2e build [s] | orthonormalize rows [s] | K per iter [s] | K total [s] | J per iter [s] | SCF total [s] | energy [Ha] |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Decane_C10H22.xyz | 32 | 260 | 1146 | 20144 | 8 | 0.43 | 0.29 | 0.14 | 1.09 | 0.03 | 10.10 | -394.0530 |

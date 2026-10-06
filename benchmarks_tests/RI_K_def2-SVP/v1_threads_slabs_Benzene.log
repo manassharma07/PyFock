@@ -1,0 +1,452 @@
+BENCH molecule Benzene.xyz natoms 12 nao_cart 120 naux_cart 654 nelec 42 ncores 8 xc HF
+RI exact exchange (HF and hybrid functionals) needs the complete three-center blocks: using DF_algo=11 instead of the default DF_algo=12.
+
+======================================================================
+PyFock Python Program for Quantum Chemistry Simulations
+                                        by Manas Sharma
+======================================================================
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m[38;5;45m█[0m  [38;5;51m█[0m[38;5;51m█[0m    [38;5;87m█[0m[38;5;87m█[0m [38;5;123m█[0m[38;5;123m█[0m[38;5;123m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m[38;5;159m█[0m  [38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m   [38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m   [38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m█[0m[38;5;45m█[0m [38;5;45m░[0m[38;5;45m█[0m[38;5;51m█[0m  [38;5;51m█[0m[38;5;51m█[0m[38;5;87m░[0m [38;5;87m█[0m[38;5;87m█[0m[38;5;87m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m[38;5;123m░[0m [38;5;159m█[0m[38;5;159m█[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;159m░[0m[38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;219m░[0m [38;5;219m█[0m[38;5;219m█[0m  [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m 
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;39m█[0m[38;5;45m█[0m   [38;5;45m░[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m█[0m[38;5;51m░[0m  [38;5;87m█[0m[38;5;87m█[0m[38;5;87m█[0m[38;5;123m█[0m[38;5;123m█[0m   [38;5;159m█[0m[38;5;159m█[0m    [38;5;195m█[0m[38;5;195m█[0m [38;5;195m█[0m[38;5;225m█[0m      [38;5;219m█[0m[38;5;219m█[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m  
+[38;5;39m█[0m[38;5;39m█[0m[38;5;39m░[0m[38;5;39m░[0m[38;5;45m░[0m[38;5;45m░[0m    [38;5;51m░[0m[38;5;51m█[0m[38;5;87m█[0m[38;5;87m░[0m   [38;5;123m█[0m[38;5;123m█[0m[38;5;123m░[0m[38;5;159m░[0m[38;5;159m░[0m   [38;5;195m█[0m[38;5;195m█[0m    [38;5;225m█[0m[38;5;219m█[0m [38;5;219m█[0m[38;5;219m█[0m      [38;5;213m█[0m[38;5;213m█[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m 
+[38;5;39m█[0m[38;5;39m█[0m         [38;5;51m█[0m[38;5;87m█[0m    [38;5;123m█[0m[38;5;123m█[0m      [38;5;195m░[0m[38;5;195m█[0m[38;5;195m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;225m█[0m[38;5;219m░[0m [38;5;219m░[0m[38;5;219m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m[38;5;213m█[0m [38;5;213m█[0m[38;5;213m█[0m  [38;5;213m░[0m[38;5;213m█[0m[38;5;213m█[0m
+[38;5;39m░[0m[38;5;39m░[0m         [38;5;51m░[0m[38;5;87m░[0m    [38;5;123m░[0m[38;5;123m░[0m       [38;5;195m░[0m[38;5;195m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m[38;5;225m░[0m   [38;5;219m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m[38;5;213m░[0m [38;5;213m░[0m[38;5;213m░[0m   [38;5;213m░[0m[38;5;213m░[0m
+
+======================================================================
+
+Version:  0.2.4
+Citation: M. Sharma and M. Sierka, PyFock: A Just-In-Time Compiled 
+Gaussian Basis DFT Python Code for CPU and GPU Architectures
+
+======================================================================
+
+📧 Contact Information:
+   Developer: Dr. Manas Sharma (PhD Physics)
+   Email: manas.sharma@uni-jena.de
+   Website: https://manas.bragitoff.com/
+
+📚 Resources:
+   Documentation: https://pyfock-docs.bragitoff.com
+   Official Website: https://pyfock.bragitoff.com/
+   GitHub Repo: https://github.com/manassharma07/pyfock
+   Web GUI: https://pyfock-gui.bragitoff.com/
+
+======================================================================
+
+
+
+ Time to get inspired by a great quantum chemist :)
+
+
+======================================================================
+ ____  _                  
+|  _ \(_)_ __ __ _  ___   
+| | | | | '__/ _` |/ __|  
+| |_| | | | | (_| | (__   
+|____/|_|_|  \__,_|\___|  
+======================================================================
+
+   
+             ..,.,,.,,,,,,......         ,-
+          ..,,::::::,,,,,::;:,,,:,       ,-
+         .,:::::,,,....,,,,::,.,::,.     ,-
+       ,:;::,:;:,::,,,,,,,,,..,:-:;;     .-
+     .,:;::;:,,,::;:,,,;,,:,..,:;;::;    .+
+    :,:::::;---::;-+::::+::;..,:--::;,   .%
+   ,::::::::;;,,...;-;:;;+;:..;::.,--:.. .?
+   ,:::::::,.       .,,::::,..,.   .;;, .,*
+   :::::;;,                          :+, ,+
+   ::::-;                             ,-,:*
+   ;;:;-.                              :--?
+   ;;:;:                                ;+?
+   ::--,                                .+*
+   ;-+:.                                 -?
+   :;:,                                  ;*
+   :;::,.                                -*
+   ;;;;;,      .,;;:-;:,.           .,,, ;*
+   ::::;       .. .:-??*?;.     .;+**;,, ,*
+   --;;-        .:-+++--;;,    ,-**+;;: .;*
+   .,;:-.      .,,;??;,;,,.   .++;*%*:;..:+
+   . ,;;.          .. ...      ,,.,,.   ,,+
+   :;                ..        ....     ,,-
+   ..                           ,       ,,-
+                                 .      ,.-
+                        .        .      ..-
+   .                    .,:-;:,:::.    ...+
+   .,;:,                 ,::,,;-;.     , ,+
+    .:.:             .,,,;-;-++--::.   , ,-
+   ,.:  ,            :;:,,::,,,,,,::  ,. ,-
+   . ,  .,           ,:::::::::,,,.   ,  ,-
+    .:,  ,:.              ..,,,,.    ,.  ,-
+     ,..  .:,.            ,;;;;,    ..   ,-
+     : ,    ,,,.                   ,.    ,-
+     ,. .    ......               ,....  ,-
+     .,  ,.   ....::,.       .  .,.   ..,:-
+      .,   .  .......,:::::,::::,        ,-
+       ,    ..  ..........:,,            ,+
+   
+   
+
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║       God used beautiful mathematics in creating the world.          ║
+   ╠══════════════════════════════════════════════════════════════════════╣
+   ║                                                            ~ dirac   ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+
+
+Number of atoms:  12
+
+
+Number of basis functions or Cartesian atomic orbitals (6d, 10f, 15g and so on):  120
+
+
+Number of auxiliary basis functions (in Cartesian atomic orbital basis):  654
+
+======================================================================
+
+
+============= System Information =============
+Operating System: Windows 10
+System Type: 64bit
+CPU Model: Intel64 Family 6 Model 151 Stepping 2, GenuineIntel
+Number of Cores: 16
+Number of Threads: 24
+Memory (GB): 31.75
+
+======================================================================
+
+Running DFT using 8 threads for Numba.
+
+
+
+
+Spherical Atomic Orbitals (5d, 7f, 10g...) are being used!
+
+
+
+
+Number of Spherical atomic orbitals (5d, 7f, 10g and so on):  114
+
+Calculating one electron integrals...
+
+
+Core H size in GB  0.0001
+done!
+Time taken 0.21 seconds.
+
+
+Initial guess: SANO (superposition of atomic natural-orbital densities)
+  Spherically averaged atomic densities from the ANO-RCC-MB natural orbitals for C, H, projected onto the calculation basis and renormalized.
+  Electrons in the guess density: 42.0000 of 42 (the calculation basis represents 99.96% of the atomic natural orbitals)
+  Time taken: 0.053 seconds.
+  References for the SANO initial guess (please cite):
+   [1] J. Almlöf, K. Faegri Jr., K. Korsell, "Principles for a direct SCF approach to LCAO-MO ab-initio calculations", J. Comput. Chem. 3, 385 (1982). doi:10.1002/jcc.540030314
+   [2] J. H. Van Lenthe, R. Zwaans, H. J. J. Van Dam, M. F. Guest, "Starting SCF calculations by superposition of atomic densities", J. Comput. Chem. 27, 926 (2006). doi:10.1002/jcc.20393
+   [3] P.-O. Widmark, P.-Å. Malmqvist, B. O. Roos, "Density matrix averaged atomic natural orbital (ANO) basis sets for correlated molecular wave functions", Theor. Chim. Acta 77, 291 (1990). doi:10.1007/BF01120130
+   [4] B. O. Roos, R. Lindh, P.-Å. Malmqvist, V. Veryazov, P.-O. Widmark, "Main group atoms and dimers studied with a new relativistic ANO basis set", J. Phys. Chem. A 108, 2851 (2004). doi:10.1021/jp031064+
+
+
+
+User requested to use Rys Quadrature Algorithm for the evaluation of ERIs
+Stricter version of Schwarz screening:  False
+
+Calculating three centered two electron and two-centered two-electron integrals...
+
+
+Time taken for two-centered two-electron integrals 0.06 seconds.
+
+
+
+Performing Schwarz screening (shell-blocked DF_algo=11)...
+Threshold  1e-09
+Time taken to evaluate the "diagonal" of 4c2e ERI tensor:  0.02
+Total time taken for Schwarz screening 0.02 seconds.
+
+DF_algo=11: 1416 of 1485 shell pairs significant, 4542030 block elements (0.036 GB); cached 1416 pairs = 100.0% of the elements (0.036 GB), the rest is recomputed in every SCF iteration
+Time taken for the shell-blocked three-center integrals:  0.1
+RI-HF (DF_algo=11): 6945 function pairs x 558 spherical fit functions, orthonormalized rows 0.031 GB, partner rows stored (0.030 GB)
+Time taken to orthonormalize the three-center rows for RI-HF:  0.06
+Two Center Two electron ERI size in GB  0.002490912
+Three Center Two electron ERI (orthonormalized RI-HF rows) size in GB  0.06146928
+Three-centered two electron evaluation done!
+Time taken for Cholesky factorization of two-centered two-electron integrals 0.0 seconds.
+
+Time taken for Coulomb term related calculations (integrals, screening, prelims..) with the density fitting approximation  0.27 seconds.
+
+
+
+
+------Iteration 1--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -944.5372118303817
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   232.3860336610215
+Coulomb Energy                   310.0943481272021
+Exchange Energy                  -34.0934080340477
+--------------------------------------------------
+Total Energy                    -232.1819649585839
+--------------------------------------------------
+
+
+
+Energy difference :  232.18196495858393
+
+
+HOMO-LUMO gap: 0.2924772916501327 au
+HOMO-LUMO gap: 7.959 eV
+
+
+Time taken for the previous iteration: 0.07 seconds 
+
+
+
+Density matrix difference norm:  3.839848906877808 
+
+
+
+
+------Iteration 2--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -942.2539591666533
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   229.3911476794403
+Coulomb Energy                   311.4568999296436
+Exchange Energy                  -33.0329698974390
+--------------------------------------------------
+Total Energy                    -230.4706083373866
+--------------------------------------------------
+
+
+
+Energy difference :  1.7113566211973534
+
+
+HOMO-LUMO gap: 0.4737184432452294 au
+HOMO-LUMO gap: 12.891 eV
+
+
+Time taken for the previous iteration: 0.04 seconds 
+
+
+
+Density matrix difference norm:  0.9005646772382451 
+
+
+
+
+------Iteration 3--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -943.9062892425412
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   229.6699206471177
+Coulomb Energy                   312.9363258956240
+Exchange Energy                  -33.1995505343700
+--------------------------------------------------
+Total Energy                    -230.5313201165475
+--------------------------------------------------
+
+
+
+Energy difference :  0.06071177916095394
+
+
+HOMO-LUMO gap: 0.47185368279713896 au
+HOMO-LUMO gap: 12.840 eV
+
+
+Time taken for the previous iteration: 0.04 seconds 
+
+
+
+Density matrix difference norm:  0.3192648350933214 
+
+
+
+
+------Iteration 4--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -943.0472826966231
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   229.2971722932942
+Coulomb Energy                   312.4287882102764
+Exchange Energy                  -33.1825666644631
+--------------------------------------------------
+Total Energy                    -230.5356157398938
+--------------------------------------------------
+
+
+
+Energy difference :  0.004295623346251887
+
+
+HOMO-LUMO gap: 0.47293282376826495 au
+HOMO-LUMO gap: 12.869 eV
+
+
+Time taken for the previous iteration: 0.03 seconds 
+
+
+
+Density matrix difference norm:  0.04209482821188925 
+
+
+
+
+------Iteration 5--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -943.3487534025127
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   229.3780480763631
+Coulomb Energy                   312.6640822719353
+Exchange Energy                  -33.1975321710989
+--------------------------------------------------
+Total Energy                    -230.5358821076912
+--------------------------------------------------
+
+
+
+Energy difference :  0.0002663677973657741
+
+
+HOMO-LUMO gap: 0.4726901428448441 au
+HOMO-LUMO gap: 12.863 eV
+
+
+Time taken for the previous iteration: 0.04 seconds 
+
+
+
+Density matrix difference norm:  0.007996812148557427 
+
+
+
+
+------Iteration 6--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -943.3301615995463
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   229.3716956547602
+Coulomb Energy                   312.6514070382935
+Exchange Energy                  -33.1971028488839
+--------------------------------------------------
+Total Energy                    -230.5358886377545
+--------------------------------------------------
+
+
+
+Energy difference :  6.530063359377891e-06
+
+
+HOMO-LUMO gap: 0.4726366618972525 au
+HOMO-LUMO gap: 12.861 eV
+
+
+Time taken for the previous iteration: 0.03 seconds 
+
+
+
+Density matrix difference norm:  0.0013907214345563266 
+
+
+
+
+------Iteration 7--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -943.3268755259223
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   229.3703066878631
+Coulomb Energy                   312.6493274690069
+Exchange Energy                  -33.1969207244479
+--------------------------------------------------
+Total Energy                    -230.5358889758784
+--------------------------------------------------
+
+
+
+Energy difference :  3.381238400379516e-07
+
+
+HOMO-LUMO gap: 0.47262562996614277 au
+HOMO-LUMO gap: 12.861 eV
+
+
+Time taken for the previous iteration: 0.03 seconds 
+
+
+
+Density matrix difference norm:  0.00028224070156983354 
+
+
+
+
+------Iteration 8--------
+
+
+Energies (in Hartrees)
+
+Electron-Nuclear Energy         -943.3272248129497
+Nuclear repulsion Energy         203.9682731176220
+Kinetic Energy                   229.3704076419859
+Coulomb Energy                   312.6495964922577
+Exchange Energy                  -33.1969414230139
+--------------------------------------------------
+Total Energy                    -230.5358889840981
+--------------------------------------------------
+
+
+
+Energy difference :  8.219700475819991e-09
+
+SCF Converged after 8 iterations!
+
+-------------------------------------
+Total Energy =  -230.53588898409805
+-------------------------------------
+
+
+
+Time taken : 0.89 seconds.
+
+
+
+-------------------------------------------------------------
+Profiling (Wall times in seconds)
+-------------------------------------------------------------
+Preprocessing                           0
+Density Fitting                         0.03
+    DF (gamma)                          0.01
+    DF (coeff)                          0
+    DF (Jtri)                           0.01
+    DF (Cholesky)                       0.0
+Exchange matrix (RI-K)                  0.09
+DIIS                                    0.05
+KS matrix diagonalization               0.11
+One electron Integrals (S, T, Vnuc)     0.21
+Coulomb Integrals (2c2e + 3c2e)         0.27
+Grids construction                      0
+Exchange-Correlation Term               0
+Misc.                                   0.15
+Complete SCF                            0.89
+BENCH wall_scf 0.889 energy -230.53588898409805 converged True

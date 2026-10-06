@@ -15,7 +15,14 @@ pseudo-Cartesian shells are contracted with the Cartesian-to-spherical matrices
 while the rows are filled and the metric is the spherical one, so no ``1e-12``
 regularization is needed and the aux dimension is the spherical count.
 
-Per SCF iteration (plain numpy/scipy BLAS; Numba only for gathers and scatters):
+Row order.  The rows are sorted by ``(i, j)``, so the rows of one function ``i``
+(its *own* rows, partners ``j <= i``) form one contiguous block of ``B`` that BLAS
+can read in place.  The rows in which ``i`` is the smaller index (``(k, i)``,
+``k > i``; its *partner* rows) are scattered over the blocks of the ``k``; they are
+either copied once into a second, partner-ordered array ``P`` (one extra copy of
+``B``, used when memory allows) or gathered on the fly in every iteration.
+
+Per SCF iteration (plain numpy BLAS; Numba only for gathers and scatters):
 
 * Coulomb: ``gamma_Q = sum_r w_r D_r B[r, Q]`` (``w = 1`` for ``i == j``, else ``2``),
   ``J_r = sum_Q B[r, Q] gamma_Q`` (no metric solve: the rows are orthonormalized),
@@ -23,18 +30,27 @@ Per SCF iteration (plain numpy/scipy BLAS; Numba only for gathers and scatters):
   ``gamma -> Cholesky solve -> J`` path up to rounding.
 * Exchange with the occupied density factor ``D = F F^T`` (``nocc`` columns):
   ``K_ij = sum_{Q,o} X[i, Q, o] X[j, Q, o]``, ``X[i, Q, o] = sum_k B[(ik), Q] F[k, o]``.
-  The auxiliary index is processed in blocks.  For each block and each orbital
-  shell ``I`` the stored rows involving a function of ``I`` are gathered into a
-  dense slab ``U[partner, i in I, Q in block]`` whose ``partner`` axis runs over the
-  functions that form a stored pair with the shell.  The half-transform is then one
-  DGEMM per (shell, block), ``U^T @ F[partners]``, with the pair sparsity built in,
-  and the block is finished with ``K += X X^T`` (numpy uses dsyrk for ``X @ X.T``).
+  The auxiliary index is processed in blocks.  Within a block the half transform is
+  one DGEMM per function ``i`` over its own rows (a contiguous row range of ``B``)
+  plus one over its partner rows (``P`` or a gathered slab), ``U^T @ F[partners]``,
+  with the pair sparsity built in.  The functions are distributed dynamically over
+  ``numba.get_num_threads()`` Python threads that call single-threaded BLAS: the
+  many medium-sized DGEMMs thread far better this way than through the BLAS
+  library's own threading, and the memory-bound gathers overlap with them.  The
+  block is finished with ``K += X X^T`` split over the same threads along the
+  contracted ``(Q, o)`` axis (every thread computes one partial ``K`` by ``dsyrk``,
+  then the partials are summed).
 
 Memory: ``B`` holds every active pair (``nrows * naux * 8`` bytes, comparable to
-the algorithm-11 blocks it replaces); the per-block work buffers are bounded by
+the algorithm-11 blocks it replaces) and ``P``, when stored, the same again minus
+the diagonal rows; the per-block work buffers are bounded by
 ``DFAlgo11Exchange.block_memory_bytes`` (512 MB default).
 """
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
+import numba
 from numba import njit, prange
 import scipy.linalg
 
@@ -52,29 +68,47 @@ class DFAlgo11Exchange:
     nao, naux, nrows : int
         Orbital functions, fit functions (Cartesian aux for CAO, spherical for SAO),
         stored function pairs.
-    B : (nrows, naux) ndarray
+    B : (nrows, naux) ndarray    rows sorted by ``(row_mu, row_nu)``
     row_mu, row_nu : (nrows,) int64   function indices of each row, ``mu >= nu``
+    own_ptr : (nao + 1,) int64   rows ``own_ptr[i]:own_ptr[i+1]`` are the own rows of ``i``
+    partner_ptr, partner_row, partner_idx : int64 arrays
+        CSR over ``i`` of its partner rows (row index into ``B`` and the partner ``k > i``).
+    P : (n_partner_rows, naux) ndarray or None
+        The partner rows copied in partner order (``P[partner_ptr[i]:partner_ptr[i+1]]``
+        belongs to ``i``); ``None`` when they are gathered on the fly.
     memory_gb : float
     block_memory_bytes : int          budget for the per-aux-block work buffers
+    store_partner_slabs : bool or None
+        Class-level default for :func:`build_exchange`: ``None`` decides from the
+        available memory, ``True``/``False`` force the choice.
     """
     block_memory_bytes = 512 * 1024 * 1024
+    store_partner_slabs = None
 
     def __init__(self):
         self.B = None
+        self.P = None
 
     @property
     def memory_gb(self):
-        return 0.0 if self.B is None else self.B.nbytes / 1e9
+        total = 0.0 if self.B is None else self.B.nbytes
+        if self.P is not None:
+            total += self.P.nbytes
+        return total / 1e9
 
     def summary(self):
+        extra = (', partner rows stored (%.3f GB)' % (self.P.nbytes / 1e9) if self.P is not None
+                 else ', partner rows gathered per iteration')
         return ('RI-HF (DF_algo=11): %d function pairs x %d %s fit functions, orthonormalized rows %.3f GB'
-                % (self.nrows, self.naux, self.fit_space, self.memory_gb))
+                % (self.nrows, self.naux, self.fit_space, 0.0 if self.B is None else self.B.nbytes / 1e9) + extra)
 
-    def aux_block_size(self, nocc, block_memory_bytes=None):
-        """Auxiliary functions per block so that the largest slab and the half-transformed block fit the budget."""
+    def aux_block_size(self, nocc, block_memory_bytes=None, nthreads=None):
+        """Auxiliary functions per block so that the half-transformed block and the per-thread buffers fit the budget."""
         budget = self.block_memory_bytes if block_memory_bytes is None else int(block_memory_bytes)
-        max_cells = int(np.diff(self.u_off).max()) if self.nshells else 1
-        per_col = 8 * (max_cells + self.nao * max(int(nocc), 1))
+        nthreads = max(1, int(numba.get_num_threads() if nthreads is None else nthreads))
+        nocc = max(int(nocc), 1)
+        gather = 0 if self.P is not None else int(self.max_partner_rows)
+        per_col = 8 * (self.nao * nocc + nthreads * (nocc + gather))
         return int(max(1, min(self.naux, budget // max(per_col, 1))))
 
 
@@ -107,10 +141,35 @@ def _count_active_rows(work, pair_I, pair_J, shell_off, shell_nbf, sqrt4, strict
 
 
 @njit(parallel=True, cache=True, nogil=True, boundscheck=False)
-def _fill_rows(work, row_start, pair_I, pair_J, pair_offset, pair_nrows, pair_ncols, values,
+def _active_pairs(work, row_start, pair_I, pair_J, shell_off, shell_nbf, sqrt4, strict, mu, nu):
+    """Function indices ``(i >= j)`` of every active row, in work-item order."""
+    for w in prange(work.shape[0]):
+        p = work[w]
+        I = pair_I[p]
+        J = pair_J[p]
+        a0 = shell_off[I]
+        b0 = shell_off[J]
+        nA = shell_nbf[I]
+        nB = shell_nbf[J]
+        diag = I == J
+        r = row_start[w]
+        for ia in range(nA):
+            ibmax = ia + 1 if diag else nB
+            for ib in range(ibmax):
+                if strict:
+                    s = sqrt4[a0 + ia, b0 + ib]
+                    if s * s < STRICT_PAIR_CUTOFF:
+                        continue
+                mu[r] = a0 + ia
+                nu[r] = b0 + ib
+                r += 1
+
+
+@njit(parallel=True, cache=True, nogil=True, boundscheck=False)
+def _fill_rows(work, pair_I, pair_J, pair_offset, pair_nrows, pair_ncols, values,
                shell_off, shell_nbf, sqrt4, strict, Q_pair, Q_aux, aux_off, aux_nbf, threshold,
-               sao, c2s_flat, c2s_off, sph_off, aux_nsph, R, row_mu, row_nu):
-    """Expand the block columns of every active row into the (pre-zeroed) fit-space rows of ``R``."""
+               sao, c2s_flat, c2s_off, sph_off, aux_nsph, row_of, R):
+    """Expand the block columns of every active row ``(i, j)`` into row ``row_of[i, j]`` of the (pre-zeroed) ``R``."""
     nsh_aux = aux_off.shape[0]
     for w in prange(work.shape[0]):
         p = work[w]
@@ -126,7 +185,6 @@ def _fill_rows(work, row_start, pair_I, pair_J, pair_offset, pair_nrows, pair_nc
         o = pair_offset[p]
         rows = values[o:o + nr * nc].reshape((nr, nc))
         Qp = Q_pair[p]
-        r = row_start[w]
         for ia in range(nA):
             ibmax = ia + 1 if diag else nB
             for ib in range(ibmax):
@@ -137,8 +195,7 @@ def _fill_rows(work, row_start, pair_I, pair_J, pair_offset, pair_nrows, pair_nc
                     if s * s < STRICT_PAIR_CUTOFF:
                         continue
                 rloc = (ia * (ia + 1)) // 2 + ib if diag else ia * nB + ib
-                row_mu[r] = i
-                row_nu[r] = j
+                r = row_of[i, j]
                 col = 0
                 for K in range(nsh_aux):
                     if Qp * Q_aux[K] > threshold:
@@ -157,7 +214,6 @@ def _fill_rows(work, row_start, pair_I, pair_J, pair_offset, pair_nrows, pair_nc
                             for c in range(nC):
                                 R[r, k0 + c] = rows[rloc, col + c]
                         col += nC
-                r += 1
 
 
 @njit(parallel=True, cache=True, nogil=True, boundscheck=False)
@@ -183,14 +239,17 @@ def _scatter_symmetric(jrows, row_mu, row_nu, nao):
 
 
 @njit(parallel=True, cache=True, nogil=True, boundscheck=False)
-def _gather_shell(B, Q0, nb, slab_row, slab_cell, s, e, ncell, U):
-    """Slab of one shell for the aux block ``[Q0, Q0 + nb)``: ``U[cell, q] = B[row, Q0 + q]``, zero elsewhere."""
-    for t in prange(ncell * nb):
-        U[t] = 0.0
-    for k in prange(s, e):
-        dst = slab_cell[k] * nb
-        r = slab_row[k]
-        U[dst:dst + nb] = B[r, Q0:Q0 + nb]
+def _copy_rows(B, rows, out):
+    """``out[k, :] = B[rows[k], :]`` (the stored partner rows)."""
+    for k in prange(rows.shape[0]):
+        out[k, :] = B[rows[k], :]
+
+
+@njit(cache=True, nogil=True, boundscheck=False)
+def _gather_rows(B, Q0, nb, rows, k0, k1, U):
+    """``U[k - k0, :] = B[rows[k], Q0:Q0 + nb]`` for ``k0 <= k < k1`` (serial: called from worker threads)."""
+    for k in range(k0, k1):
+        U[k - k0, :] = B[rows[k], Q0:Q0 + nb]
 
 
 # ----------------------------------------------------------------------------
@@ -213,43 +272,41 @@ def _cart2sph_tables(auxbasis):
     return c2s_flat, c2s_off[:-1], sph_off[:-1], aux_nsph, int(sph_off[-1])
 
 
-def _slab_structures(ex, row_mu, row_nu):
+def _partner_structures(ex, store_partner_slabs):
     """
-    For every orbital shell: the stored rows that involve one of its functions
-    (CSR over shells), each mapped to a *cell* ``(partner, own function)`` of the
-    shell's slab; the sorted partner functions per shell; and the slab offsets.
-    Every row appears in the slab of ``mu`` and, if ``nu != mu``, in that of ``nu``.
+    CSR of the own rows (by ``row_mu``, already contiguous in the sorted row order) and of the
+    partner rows (rows ``(k, i)`` with ``k > i`` listed under ``i``, sorted by ``k``); the
+    partner rows are copied into ``ex.P`` when requested (``None``: when they fit comfortably
+    into the available memory).
     """
-    nsh = ex.nshells
     nao = ex.nao
-    shell_of = np.repeat(np.arange(nsh, dtype=np.int64), ex.shell_nbf)
-    I_of = shell_of[row_mu]
-    J_of = shell_of[row_nu]
-    off = row_mu != row_nu
-    shell = np.concatenate([I_of, J_of[off]])
-    rows = np.concatenate([np.arange(row_mu.shape[0], dtype=np.int64), np.nonzero(off)[0].astype(np.int64)])
-    own = np.concatenate([row_mu - ex.shell_off[I_of], (row_nu - ex.shell_off[J_of])[off]])
-    partner = np.concatenate([row_nu, row_mu[off]])
-    order = np.argsort(shell, kind='stable')
-    shell, rows, own, partner = shell[order], rows[order], own[order], partner[order]
-    slab_off = np.zeros(nsh + 1, dtype=np.int64)
-    slab_off[1:] = np.cumsum(np.bincount(shell, minlength=nsh))
-    keys = shell * nao + partner
-    uniq, inverse = np.unique(keys, return_inverse=True)
-    partner_off = np.zeros(nsh + 1, dtype=np.int64)
-    partner_off[1:] = np.cumsum(np.bincount(uniq // nao, minlength=nsh))
-    partner_loc = inverse.ravel() - partner_off[shell]
-    ex.slab_off = slab_off
-    ex.slab_row = np.ascontiguousarray(rows, dtype=np.int64)
-    ex.slab_cell = np.ascontiguousarray(partner_loc * ex.shell_nbf[shell] + own, dtype=np.int64)
-    ex.partner_off = partner_off
-    ex.partner_idx = np.ascontiguousarray(uniq % nao, dtype=np.int64)
-    u_off = np.zeros(nsh + 1, dtype=np.int64)
-    u_off[1:] = np.cumsum(np.diff(partner_off) * ex.shell_nbf)
-    ex.u_off = u_off
+    row_mu, row_nu = ex.row_mu, ex.row_nu
+    ex.own_ptr = np.searchsorted(row_mu, np.arange(nao + 1, dtype=np.int64)).astype(np.int64)
+    off = np.nonzero(row_mu != row_nu)[0].astype(np.int64)
+    order = np.lexsort((row_mu[off], row_nu[off]))
+    prow = np.ascontiguousarray(off[order], dtype=np.int64)
+    ex.partner_row = prow
+    ex.partner_idx = np.ascontiguousarray(row_mu[prow], dtype=np.int64)
+    ex.partner_ptr = np.searchsorted(row_nu[prow], np.arange(nao + 1, dtype=np.int64)).astype(np.int64)
+    counts = np.diff(ex.partner_ptr)
+    ex.max_partner_rows = int(counts.max()) if counts.size else 0
+    need = prow.shape[0] * ex.naux * 8
+    store = store_partner_slabs
+    if store is None:
+        try:
+            import psutil
+            available = psutil.virtual_memory().available
+        except Exception:
+            available = None
+        # B is already allocated; keep the copy well below what is left for the work buffers
+        store = available is not None and need < 0.35 * available
+    ex.P = None
+    if store and prow.shape[0]:
+        ex.P = np.empty((prow.shape[0], ex.naux))
+        _copy_rows(ex.B, prow, ex.P)
 
 
-def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values=False):
+def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values=False, store_partner_slabs=None):
     """
     Convert a fully cached :class:`~pyfock.Integrals.df_algo11_helpers.DFAlgo11Plan`
     into orthonormalized fit-space rows for RI-HF.
@@ -265,6 +322,10 @@ def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values
     release_plan_values : bool
         Set ``plan.values = None`` as soon as the rows are copied (the plan can then
         no longer serve ``gamma_from_plan`` / ``J_from_plan``); bounds the peak memory.
+    store_partner_slabs : bool or None
+        Keep a partner-ordered copy of the off-diagonal rows for the exchange build
+        (see the module docstring).  ``None`` uses ``DFAlgo11Exchange.store_partner_slabs``
+        (by default decided from the available memory).
 
     Returns
     -------
@@ -316,14 +377,24 @@ def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values
         raise MemoryError('RI-HF with DF_algo=11 needs %.2f GB for the orthonormalized three-center rows '
                           'but only %.2f GB are available.' % (need / 1e9, available / 1e9))
 
-    R = np.zeros((nrows, naux), dtype=np.float64)
-    row_mu = np.zeros(nrows, dtype=np.int64)
-    row_nu = np.zeros(nrows, dtype=np.int64)
+    # rows sorted by (i, j): the own rows of every function are contiguous
+    mu = np.zeros(nrows, dtype=np.int64)
+    nu = np.zeros(nrows, dtype=np.int64)
     if nrows:
-        _fill_rows(work, row_start[:-1], plan.pair_I, plan.pair_J, plan.pair_offset, plan.pair_nrows, plan.pair_ncols,
+        _active_pairs(work, row_start[:-1], plan.pair_I, plan.pair_J, ex.shell_off, ex.shell_nbf,
+                      plan.sqrt_ints4c2e_diag, plan.strict_schwarz, mu, nu)
+    order = np.lexsort((nu, mu))
+    row_mu = np.ascontiguousarray(mu[order])
+    row_nu = np.ascontiguousarray(nu[order])
+    row_of = np.full((ex.nao, ex.nao), -1, dtype=np.int64)
+    row_of[row_mu, row_nu] = np.arange(nrows, dtype=np.int64)
+
+    R = np.zeros((nrows, naux), dtype=np.float64)
+    if nrows:
+        _fill_rows(work, plan.pair_I, plan.pair_J, plan.pair_offset, plan.pair_nrows, plan.pair_ncols,
                    plan.values, ex.shell_off, ex.shell_nbf, plan.sqrt_ints4c2e_diag, plan.strict_schwarz,
                    plan.Q_pair, plan.Q_aux, plan.aux_off, plan.aux_nbf, plan.threshold,
-                   ex.sao, c2s_flat, c2s_off, sph_off, aux_nsph, R, row_mu, row_nu)
+                   ex.sao, c2s_flat, c2s_off, sph_off, aux_nsph, row_of, R)
     if release_plan_values:
         plan.values = None
 
@@ -343,7 +414,9 @@ def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values
     ex.B = R
     ex.row_mu = row_mu
     ex.row_nu = row_nu
-    _slab_structures(ex, row_mu, row_nu)
+    if store_partner_slabs is None:
+        store_partner_slabs = DFAlgo11Exchange.store_partner_slabs
+    _partner_structures(ex, store_partner_slabs)
     return ex
 
 
@@ -366,6 +439,26 @@ def J_from_exchange(ex, gamma):
     return _scatter_symmetric(ex.B @ gamma, ex.row_mu, ex.row_nu, ex.nao)
 
 
+_BLAS_CONTROLLER = None
+_POOLS = {}
+
+
+def _blas_threads(n):
+    """Context manager limiting the BLAS libraries to ``n`` threads (the controller is scanned once)."""
+    global _BLAS_CONTROLLER
+    if _BLAS_CONTROLLER is None:
+        from threadpoolctl import ThreadpoolController
+        _BLAS_CONTROLLER = ThreadpoolController()
+    return _BLAS_CONTROLLER.limit(limits=n, user_api='blas')
+
+
+def _pool(nthreads):
+    pool = _POOLS.get(nthreads)
+    if pool is None:
+        pool = _POOLS[nthreads] = ThreadPoolExecutor(max_workers=nthreads, thread_name_prefix='pyfock-rik')
+    return pool
+
+
 def K_from_exchange(ex, factor, block_memory_bytes=None):
     """
     Exchange matrix ``K_ij = sum_kl D_kl (ik|jl)`` in the RI approximation for
@@ -376,30 +469,72 @@ def K_from_exchange(ex, factor, block_memory_bytes=None):
     if factor.ndim != 2 or factor.shape[0] != nao:
         raise ValueError('factor must have shape (nao, nocc)')
     nocc = factor.shape[1]
-    K = np.zeros((nao, nao))
     if nocc == 0 or ex.nrows == 0:
-        return K
+        return np.zeros((nao, nao))
     naux = ex.naux
-    bq = ex.aux_block_size(nocc, block_memory_bytes)
-    ncells = np.diff(ex.u_off)
-    npart = np.diff(ex.partner_off)
-    U_buf = np.empty(int(ncells.max()) * bq)
+    nthreads = max(1, int(numba.get_num_threads()))
+    bq = ex.aux_block_size(nocc, block_memory_bytes, nthreads)
+    B, P = ex.B, ex.P
+    own_ptr, pptr, prow, pidx, row_nu = ex.own_ptr, ex.partner_ptr, ex.partner_row, ex.partner_idx, ex.row_nu
+    n_own = np.diff(own_ptr)
+    n_par = np.diff(pptr)
+    # density-factor rows of the partners of every function (small gathers, once per build)
+    F_own = [factor[row_nu[own_ptr[i]:own_ptr[i + 1]]] for i in range(nao)]
+    F_par = [factor[pidx[pptr[i]:pptr[i + 1]]] for i in range(nao)]
+    order = np.argsort(-(n_own + n_par), kind='stable')   # heaviest functions first
     X_flat = np.empty(nao * bq * nocc)
-    F_of = {I: np.ascontiguousarray(factor[ex.partner_idx[ex.partner_off[I]:ex.partner_off[I + 1]]])
-            for I in range(ex.nshells) if npart[I] > 0}
-    for Q0 in range(0, naux, bq):
-        nb = min(bq, naux - Q0)
-        X = X_flat[:nao * nb * nocc].reshape(nao, nb, nocc)
-        for I in range(ex.nshells):
-            a0 = ex.shell_off[I]
-            nA = ex.shell_nbf[I]
-            if npart[I] == 0:
-                X[a0:a0 + nA] = 0.0
-                continue
-            # gather the slab of this shell and transform it while it is still in cache
-            U = U_buf[:ncells[I] * nb]
-            _gather_shell(ex.B, Q0, nb, ex.slab_row, ex.slab_cell, ex.slab_off[I], ex.slab_off[I + 1], ncells[I], U)
-            np.matmul(U.reshape(npart[I], nA * nb).T, F_of[I], out=X[a0:a0 + nA].reshape(nA * nb, nocc))
-        Xr = X.reshape(nao, nb * nocc)
-        K += Xr @ Xr.T
+    Kparts = np.zeros((nthreads, nao, nao))
+    local = threading.local()
+    gather_cells = 0 if P is not None else ex.max_partner_rows
+
+    def buffers():
+        buf = getattr(local, 'buf', None)
+        if buf is None:
+            buf = local.buf = (np.empty(bq * nocc), np.empty(gather_cells * bq))
+        return buf
+
+    pool = _pool(nthreads) if nthreads > 1 else None
+
+    def run(fn, items):
+        if pool is None:
+            for it in items:
+                fn(it)
+        else:
+            list(pool.map(fn, items))
+
+    with _blas_threads(1):
+        for Q0 in range(0, naux, bq):
+            nb = min(bq, naux - Q0)
+            X = X_flat[:nao * nb * nocc].reshape(nao, nb, nocc)
+
+            def half_transform(i, Q0=Q0, nb=nb, X=X):
+                Xi = X[i]
+                r0, r1 = own_ptr[i], own_ptr[i + 1]
+                if r1 > r0:
+                    np.matmul(B[r0:r1, Q0:Q0 + nb].T, F_own[i], out=Xi)
+                else:
+                    Xi[...] = 0.0
+                p0, p1 = pptr[i], pptr[i + 1]
+                if p1 > p0:
+                    tmp, gbuf = buffers()
+                    if P is not None:
+                        U = P[p0:p1, Q0:Q0 + nb]
+                    else:
+                        U = gbuf[:(p1 - p0) * nb].reshape(p1 - p0, nb)
+                        _gather_rows(B, Q0, nb, prow, p0, p1, U)
+                    t = tmp[:nb * nocc].reshape(nb, nocc)
+                    np.matmul(U.T, F_par[i], out=t)
+                    Xi += t
+
+            run(half_transform, order)
+            Xr = X.reshape(nao, nb * nocc)
+            bounds = np.linspace(0, nb * nocc, nthreads + 1).astype(np.int64)
+
+            def rank_update(t, Xr=Xr, bounds=bounds):
+                if bounds[t + 1] > bounds[t]:
+                    Xc = Xr[:, bounds[t]:bounds[t + 1]]
+                    Kparts[t] += Xc @ Xc.T   # numpy dispatches A @ A.T to dsyrk
+
+            run(rank_update, range(nthreads))
+    K = Kparts.sum(axis=0)
     return 0.5 * (K + K.T)

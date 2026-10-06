@@ -1,0 +1,142 @@
+....                                                                     [100%]
+4 passed in 6.63s
+FF                                                                       [100%]
+================================== FAILURES ===================================
+_____________ test_short_regression[ch4_b3lyp_sao_svp_df_algo_11] _____________
+
+case = RegressionCase(directory=WindowsPath('D:/pyfock/tests/short/ch4_b3lyp_sao_svp_df_algo_11'), suite='short', metadata={'...3LYP', 'xc_ids': [402], 'ao_basis': 'SAO', 'xc_algo': 2, 'device': 'cpu', 'use_pyscf_grids': True, 'use_libxc': False})
+tmp_path = WindowsPath('C:/Users/Manas/AppData/Local/Temp/pytest-of-Manas/pytest-35/test_short_regression_ch4_b3ly0')
+pytestconfig = <_pytest.config.Config object at 0x000001E517E25360>
+
+    @pytest.mark.regression
+    @pytest.mark.parametrize("case", SHORT_CASES, ids=lambda case: case.directory.name)
+    def test_short_regression(case, tmp_path, pytestconfig):
+>       _run_and_check(case, tmp_path, pytestconfig)
+
+tests\test_regression.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_regression.py:25: in _run_and_check
+    run_case(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+case = RegressionCase(directory=WindowsPath('D:/pyfock/tests/short/ch4_b3lyp_sao_svp_df_algo_11'), suite='short', metadata={'...3LYP', 'xc_ids': [402], 'ao_basis': 'SAO', 'xc_algo': 2, 'device': 'cpu', 'use_pyscf_grids': True, 'use_libxc': False})
+with_pyscf = False, ncores_override = None
+output_path = WindowsPath('C:/Users/Manas/AppData/Local/Temp/pytest-of-Manas/pytest-35/test_short_regression_ch4_b3ly0/output.test.txt')
+report_path = WindowsPath('C:/Users/Manas/AppData/Local/Temp/pytest-of-Manas/pytest-35/test_short_regression_ch4_b3ly0/test.report.txt')
+update_reference = False
+
+    def run_case(
+        case: RegressionCase,
+        with_pyscf: bool = False,
+        ncores_override: Optional[int] = None,
+        output_path: Optional[Path] = None,
+        report_path: Optional[Path] = None,
+        update_reference: bool = False,
+    ) -> Path:
+        command = [sys.executable, str(case.test_path)]
+        if with_pyscf:
+            command.append("--with-pyscf")
+        if ncores_override is not None:
+            command.extend(("--ncores", str(ncores_override)))
+        if output_path is not None:
+            command.extend(("--output", str(Path(output_path).resolve())))
+        if report_path is not None:
+            command.extend(("--report", str(Path(report_path).resolve())))
+        if update_reference:
+            command.append("--update-reference")
+    
+        completed = subprocess.run(
+            command,
+            cwd=str(case.directory),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        final_report = Path(report_path or case.report_path)
+        if completed.returncode != 0:
+            details = completed.stdout.strip()
+            if final_report.is_file():
+                details = final_report.read_text(encoding="utf-8", errors="replace")
+>           raise RuntimeError(
+                "{} failed with status {}\n{}".format(
+                    case.identifier, completed.returncode, details
+                )
+            )
+E           RuntimeError: short/ch4_b3lyp_sao_svp_df_algo_11 failed with status 1
+E           TEST: CH4 / B3LYP (native hybrid) / SAO / XC_algo 2 / DF_algo 11 / def2-SVP
+E           COMMAND FAILED WITH STATUS 1
+E           See C:\Users\Manas\AppData\Local\Temp\pytest-of-Manas\pytest-35\test_short_regression_ch4_b3ly0\output.test.txt
+
+tests\regression.py:176: RuntimeError
+_____________ test_short_regression[ch4_pbe0_cao_svp_df_algo_11] ______________
+
+case = RegressionCase(directory=WindowsPath('D:/pyfock/tests/short/ch4_pbe0_cao_svp_df_algo_11'), suite='short', metadata={'n...PBE0', 'xc_ids': [406], 'ao_basis': 'CAO', 'xc_algo': 2, 'device': 'cpu', 'use_pyscf_grids': True, 'use_libxc': False})
+tmp_path = WindowsPath('C:/Users/Manas/AppData/Local/Temp/pytest-of-Manas/pytest-35/test_short_regression_ch4_pbe00')
+pytestconfig = <_pytest.config.Config object at 0x000001E517E25360>
+
+    @pytest.mark.regression
+    @pytest.mark.parametrize("case", SHORT_CASES, ids=lambda case: case.directory.name)
+    def test_short_regression(case, tmp_path, pytestconfig):
+>       _run_and_check(case, tmp_path, pytestconfig)
+
+tests\test_regression.py:37: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_regression.py:25: in _run_and_check
+    run_case(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+case = RegressionCase(directory=WindowsPath('D:/pyfock/tests/short/ch4_pbe0_cao_svp_df_algo_11'), suite='short', metadata={'n...PBE0', 'xc_ids': [406], 'ao_basis': 'CAO', 'xc_algo': 2, 'device': 'cpu', 'use_pyscf_grids': True, 'use_libxc': False})
+with_pyscf = False, ncores_override = None
+output_path = WindowsPath('C:/Users/Manas/AppData/Local/Temp/pytest-of-Manas/pytest-35/test_short_regression_ch4_pbe00/output.test.txt')
+report_path = WindowsPath('C:/Users/Manas/AppData/Local/Temp/pytest-of-Manas/pytest-35/test_short_regression_ch4_pbe00/test.report.txt')
+update_reference = False
+
+    def run_case(
+        case: RegressionCase,
+        with_pyscf: bool = False,
+        ncores_override: Optional[int] = None,
+        output_path: Optional[Path] = None,
+        report_path: Optional[Path] = None,
+        update_reference: bool = False,
+    ) -> Path:
+        command = [sys.executable, str(case.test_path)]
+        if with_pyscf:
+            command.append("--with-pyscf")
+        if ncores_override is not None:
+            command.extend(("--ncores", str(ncores_override)))
+        if output_path is not None:
+            command.extend(("--output", str(Path(output_path).resolve())))
+        if report_path is not None:
+            command.extend(("--report", str(Path(report_path).resolve())))
+        if update_reference:
+            command.append("--update-reference")
+    
+        completed = subprocess.run(
+            command,
+            cwd=str(case.directory),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        final_report = Path(report_path or case.report_path)
+        if completed.returncode != 0:
+            details = completed.stdout.strip()
+            if final_report.is_file():
+                details = final_report.read_text(encoding="utf-8", errors="replace")
+>           raise RuntimeError(
+                "{} failed with status {}\n{}".format(
+                    case.identifier, completed.returncode, details
+                )
+            )
+E           RuntimeError: short/ch4_pbe0_cao_svp_df_algo_11 failed with status 1
+E           TEST: CH4 / PBE0 (native hybrid) / CAO / XC_algo 2 / DF_algo 11 / def2-SVP
+E           COMMAND FAILED WITH STATUS 1
+E           See C:\Users\Manas\AppData\Local\Temp\pytest-of-Manas\pytest-35\test_short_regression_ch4_pbe00\output.test.txt
+
+tests\regression.py:176: RuntimeError
+=========================== short test summary info ===========================
+FAILED tests/test_regression.py::test_short_regression[ch4_b3lyp_sao_svp_df_algo_11]
+FAILED tests/test_regression.py::test_short_regression[ch4_pbe0_cao_svp_df_algo_11]
+2 failed, 31 deselected in 3.55s

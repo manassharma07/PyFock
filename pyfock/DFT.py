@@ -334,7 +334,11 @@ class DFT:
         a lot of memory as the complete 3c2e tensor is stored in memory.
         RI-HF (xc='HF') works with DF_algo=1, 2, 3 and 11 (CPU). With 11 the screened blocks are
         orthonormalized in the fit metric once after the integral build (true spherical fit space
-        in SAO mode) and both J and the exchange matrix K are contracted from these rows."""
+        in SAO mode) and both J and the exchange matrix K are contracted from these rows. The
+        exchange contraction runs one DGEMM per basis function on ``ncores`` threads with
+        single-threaded BLAS and keeps a partner-ordered copy of the rows when memory allows
+        (``Integrals.df_algo11_exchange.DFAlgo11Exchange.store_partner_slabs``); see
+        docs/ri_k_exchange.md for the design, the benchmark and the DF_algo=12 plan."""
 
         self.max_memory_ints3c2e = None
         """ Memory budget in GB for the screened three-center integrals when DF_algo=11 or 12
