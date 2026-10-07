@@ -1,11 +1,12 @@
 """
-RI-K (exact exchange) timing benchmark on the CPU.
+RI-K (exact exchange) timing benchmark on the CPU or the GPU.
 
 HF / def2-SVP / def2-universal-jkfit, SAO orbital and fit space, density fitting for
 J and K (DF_algo=11, the RI-K path), one subprocess per molecule so that every run
 starts from a clean process (Numba kernels are cached on disk after the warm-up run).
 
 Driver:   python benchmark_RI_K.py --ncores 8 --tag baseline [--warmup] [--molecules A.xyz B.xyz]
+GPU:      python benchmark_RI_K.py --gpu --tag gpu [--no-dynamic-precision] (set CUPY_ACCELERATORS= on Windows)
 Single:   python benchmark_RI_K.py --single Decane_C10H22.xyz --ncores 8
 
 The driver writes <outdir>/<tag>_<molecule>.log (complete output of the run) and
@@ -31,13 +32,15 @@ def set_threads(ncores):
         os.environ[var] = str(ncores)
 
 
-def setup(xyz, ncores, xc='HF', df_algo=None, conv_crit=1e-7):
+def setup(xyz, ncores, xc='HF', df_algo=None, conv_crit=1e-7, use_gpu=False, dynamic_precision=None):
     """Mol/Basis/DFT objects of one benchmark run (shared with the profiling scripts)."""
     from pyfock import Basis, DFT, Mol
     mol = Mol(coordfile=xyz if os.path.isabs(xyz) else os.path.join(HERE, xyz))
     basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=BASIS)})
     aux = Basis(mol, {'all': Basis.load(mol=mol, basis_name=AUXBASIS)})
-    dft = DFT(mol, basis, aux, xc=xc, conv_crit=conv_crit, ncores=ncores, use_gpu=False)
+    dft = DFT(mol, basis, aux, xc=xc, conv_crit=conv_crit, ncores=ncores, use_gpu=use_gpu)
+    if dynamic_precision is not None:
+        dft.dynamic_precision = dynamic_precision
     dft.sao = True
     dft.max_itr = 50
     dft.threshold_schwarz = 1e-9
@@ -49,16 +52,17 @@ def setup(xyz, ncores, xc='HF', df_algo=None, conv_crit=1e-7):
     return mol, basis, aux, dft
 
 
-def run_single(xyz, ncores, xc, df_algo):
+def run_single(xyz, ncores, xc, df_algo, use_gpu=False, dynamic_precision=None):
     set_threads(ncores)
-    mol, basis, aux, dft = setup(xyz, ncores, xc=xc, df_algo=df_algo)
+    mol, basis, aux, dft = setup(xyz, ncores, xc=xc, df_algo=df_algo, use_gpu=use_gpu, dynamic_precision=dynamic_precision)
     import pyfock
     print('BENCH molecule %s natoms %d nao_cart %d naux_cart %d nelec %d ncores %d xc %s'
           % (os.path.basename(xyz), mol.natoms, basis.bfs_nao, aux.bfs_nao, mol.nelectrons, ncores, xc), flush=True)
+    print('BENCH device %s dynamic_precision %s' % ('gpu' if use_gpu else 'cpu', dft.dynamic_precision if use_gpu else False), flush=True)
     print('BENCH code %s' % os.path.dirname(os.path.dirname(pyfock.__file__)), flush=True)
     t0 = timer()
     energy, dmat = dft.scf()
-    print('BENCH wall_scf %.3f energy %r converged %s' % (timer() - t0, energy, dft.converged), flush=True)
+    print('BENCH wall_scf %.3f energy %r converged %s' % (timer() - t0, float(energy), dft.converged), flush=True)
 
 
 PROFILE_KEYS = {
@@ -95,9 +99,15 @@ def parse_log(text):
     m = re.search(r'SCF Converged after (\d+) iterations', text)
     if m:
         out['iterations'] = int(m.group(1))
-    m = re.search(r'RI-HF \(DF_algo=\d+\): (\d+) function pairs x (\d+) (\w+) fit functions, orthonormalized rows ([\d.]+) GB', text)
+    m = re.search(r'RI-HF \(DF_algo=\d+(?:, GPU)?\): (\d+) function pairs x (\d+) (\w+) fit functions, orthonormalized rows ([\d.]+) GB', text)
     if m:
         out.update(nrows=int(m.group(1)), naux_fit=int(m.group(2)), fit_space=m.group(3), rows_gb=float(m.group(4)))
+    m = re.search(r'BENCH device (\w+) dynamic_precision (\w+)', text)
+    if m:
+        out.update(device=m.group(1), dynamic_precision=m.group(2) == 'True')
+    m = re.search(r'Switching to double precision for .* after (\d+) iterations', text)
+    if m:
+        out['fp32_iterations'] = int(m.group(1))
     m = re.search(r'Time taken to orthonormalize the three-center rows for RI-HF:\s+([\d.]+)', text)
     if m:
         out['build_exchange'] = float(m.group(1))
@@ -158,6 +168,10 @@ def run_driver(args):
                '--xc', args.xc]
         if args.df_algo is not None:
             cmd += ['--df-algo', str(args.df_algo)]
+        if args.gpu:
+            cmd += ['--gpu']
+        if args.no_dynamic_precision:
+            cmd += ['--no-dynamic-precision']
         print('[%d/%d] %s -> %s' % (k + 1, len(mols), ' '.join(cmd), log), flush=True)
         t0 = timer()
         with open(log, 'w', encoding='utf-8') as fh:
@@ -177,8 +191,10 @@ def run_driver(args):
         json.dump(results, fh, indent=1)
     table = markdown_table(results)
     with open(os.path.join(outdir, args.tag + '.md'), 'w') as fh:
-        fh.write('# RI-K benchmark `%s`: xc=%s, %s/%s, SAO, ncores=%d\n\n%s\n'
-                 % (args.tag, args.xc, BASIS, AUXBASIS, args.ncores, table))
+        fh.write('# RI-K benchmark `%s`: xc=%s, %s/%s, SAO, ncores=%d, %s\n\n%s\n'
+                 % (args.tag, args.xc, BASIS, AUXBASIS, args.ncores,
+                    ('GPU' + (' (double precision only)' if args.no_dynamic_precision else ' (dynamic precision)')) if args.gpu else 'CPU',
+                    table))
     print('\n' + table, flush=True)
 
 
@@ -192,9 +208,13 @@ def main():
     ap.add_argument('--tag', default='baseline')
     ap.add_argument('--outdir', default='RI_K_def2-SVP')
     ap.add_argument('--warmup', action='store_true', help='run the first molecule twice and discard the first run')
+    ap.add_argument('--gpu', action='store_true', help='run the SCF on the GPU (RI-K through Integrals.df_algo11_exchange_cupy)')
+    ap.add_argument('--no-dynamic-precision', action='store_true',
+                    help='GPU: contract the exchange (and the XC term) in double precision from the first iteration')
     args = ap.parse_args()
     if args.single:
-        run_single(args.single, args.ncores, args.xc, args.df_algo)
+        run_single(args.single, args.ncores, args.xc, args.df_algo, use_gpu=args.gpu,
+                   dynamic_precision=(False if args.no_dynamic_precision else None))
     else:
         run_driver(args)
 

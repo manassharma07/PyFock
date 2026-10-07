@@ -84,10 +84,17 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
         else:
             ints2c2e = Integrals.rys_2c2e_symm_cupy(auxbasis)
             if dftObj.sao:
-                ints2c2e = cp.dot(c2sph_mat_aux_cp, np.dot(ints2c2e, c2sph_mat_aux_cp.T)) # CAO --> SAO
-                ints2c2e = cp.dot(sph2c_mat_pseudo_aux_cp, np.dot(ints2c2e, sph2c_mat_pseudo_aux_cp.T))
+                ints2c2e_sph = cp.dot(c2sph_mat_aux_cp, cp.dot(ints2c2e, c2sph_mat_aux_cp.T)) # CAO --> SAO
                 eps = 1e-12
-                ints2c2e += eps * cp.eye(ints2c2e.shape[0])
+                if rihf and DF_algo == 11:
+                    # RI-HF fits in the spherical space on the GPU as well (Integrals.df_algo11_exchange_cupy);
+                    # of the pseudo-Cartesian metric only the diagonal (Schwarz bounds of the plan) is needed.
+                    diag_pseudo_cart = _pseudo_cartesian_metric_diagonal(auxbasis, cp.asnumpy(ints2c2e_sph), sph2c_mat_pseudo_aux) + eps
+                    ints2c2e = ints2c2e_sph
+                else:
+                    # Convert back to CAO so that now we lose the extra information that the CAO basis had
+                    ints2c2e = cp.dot(sph2c_mat_pseudo_aux_cp, cp.dot(ints2c2e_sph, sph2c_mat_pseudo_aux_cp.T))
+                    ints2c2e += eps * cp.eye(ints2c2e.shape[0])
         duration2c2e = timer() - start2c2e
         print('Time taken for two-centered two-electron integrals '+str(round(duration2c2e, 2))+' seconds.\n', flush=True)
         if DF_algo==4: #Triangular version
@@ -575,14 +582,17 @@ def density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, dftObj, T,
             print(ints3c2e.summary(), flush=True)
             print('Time taken for the shell-blocked three-center integrals: ', round(timer() - start_plan, 2), flush=True)
             if rihf:
-                # RI-HF: orthonormalize the stored rows in the fit metric once (Integrals.df_algo11_exchange);
-                # J and K are then built from these rows and the raw blocks are released.
-                if use_gpu:
-                    raise NotImplementedError('RI-HF with DF_algo=11 is implemented for the CPU only.')
+                # RI-HF: orthonormalize the stored rows in the fit metric once (Integrals.df_algo11_exchange on
+                # the CPU, Integrals.df_algo11_exchange_cupy on the GPU); J and K are then built from these rows
+                # and the raw blocks are released.
                 start_exchange = timer()
                 metric_fit = ints2c2e_sph if dftObj.sao else ints2c2e
-                ints3c2e.exchange = Integrals.df_algo11_exchange.build_exchange(ints3c2e, basis, auxbasis, metric_fit,
-                                                                                  sao=dftObj.sao, release_plan_values=True)
+                if use_gpu:
+                    ints3c2e.exchange = Integrals.df_algo11_exchange_cupy.build_exchange_cupy(ints3c2e, basis, auxbasis, metric_fit,
+                                                                                                sao=dftObj.sao, release_plan_values=True)
+                else:
+                    ints3c2e.exchange = Integrals.df_algo11_exchange.build_exchange(ints3c2e, basis, auxbasis, metric_fit,
+                                                                                      sao=dftObj.sao, release_plan_values=True)
                 print(ints3c2e.exchange.summary(), flush=True)
                 print('Time taken to orthonormalize the three-center rows for RI-HF: ', round(timer() - start_exchange, 2), flush=True)
             if strict_schwarz:
@@ -915,13 +925,21 @@ def Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_c
         if exchange is not None:
             # RI-HF: the stored rows are orthonormalized in the fit metric, so the fit
             # coefficients are gamma itself (no solve) and gamma.gamma is the DF energy term.
+            # The rows live where they were built: on the device (CuPy in, CuPy out) or on the host.
+            on_gpu = isinstance(exchange, Integrals.df_algo11_exchange_cupy.DFAlgo11ExchangeGPU)
             startDF_gamma = timer()
-            gamma_alpha = Integrals.df_algo11_exchange.gamma_from_exchange(exchange, dmat)
+            if on_gpu:
+                gamma_alpha = Integrals.df_algo11_exchange_cupy.gamma_from_exchange_cupy(exchange, dmat)
+            else:
+                gamma_alpha = Integrals.df_algo11_exchange.gamma_from_exchange(exchange, dmat)
             durationDF_gamma += timer() - startDF_gamma
             df_coeff = gamma_alpha
-            Ecoul_temp = np.dot(gamma_alpha, gamma_alpha)
+            Ecoul_temp = cp.dot(gamma_alpha, gamma_alpha) if on_gpu else np.dot(gamma_alpha, gamma_alpha)
             startDF_Jtri = timer()
-            J = Integrals.df_algo11_exchange.J_from_exchange(exchange, gamma_alpha)
+            if on_gpu:
+                J = Integrals.df_algo11_exchange_cupy.J_from_exchange_cupy(exchange, gamma_alpha)
+            else:
+                J = Integrals.df_algo11_exchange.J_from_exchange(exchange, gamma_alpha)
             durationDF_Jtri += timer() - startDF_Jtri
         else:
             startDF_gamma = timer()
@@ -1025,7 +1043,21 @@ def _density_matrix_factor(dmat, tol=1e-10):
     return vec[:, keep] * np.sqrt(occ[keep])
 
 
-def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=None):
+def _density_matrix_factor_cupy(dmat, tol=1e-10):
+    """CuPy version of :func:`_density_matrix_factor` (the eigendecomposition runs on the device)."""
+    dmat_sym = cp.asarray(dmat, dtype=cp.float64)
+    dmat_sym = (dmat_sym + dmat_sym.T) * 0.5
+    occ, vec = cp.linalg.eigh(dmat_sym)
+    max_occ = float(occ.max()) if occ.size else 0.0
+    if max_occ <= 0.0:
+        return cp.zeros((dmat_sym.shape[0], 0), dtype=cp.float64)
+    keep = occ > max(tol, tol * max_occ)
+    if not bool(keep.any()):
+        return cp.zeros((dmat_sym.shape[0], 0), dtype=cp.float64)
+    return vec[:, keep] * cp.sqrt(occ[keep])
+
+
+def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=None, dtype=None):
     """
     Build the RI Hartree-Fock exchange matrix for full-tensor DF algorithms.
 
@@ -1033,10 +1065,22 @@ def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e,
     DF_algo=2 stores the orthonormalized three-center tensor Q_Pij.
     DF_algo=3 stores only (ij|P), so it solves against the DF metric here.
     DF_algo=11 uses the screened, metric-orthonormalized shell-pair rows of
-    Integrals.df_algo11_exchange (built in density_fitting_prelims_for_DFT_development).
+    Integrals.df_algo11_exchange (built in density_fitting_prelims_for_DFT_development);
+    when they were built on the GPU (Integrals.df_algo11_exchange_cupy) ``dmat`` and
+    ``dmat_factor`` may be CuPy arrays, everything stays on the device and ``K`` is a CuPy
+    array. ``dtype`` (float32/float64, GPU only) is the precision of the exchange
+    contraction; ``K`` is float64 either way.
     ``dmat_factor`` (nao, nocc) with ``dmat = dmat_factor @ dmat_factor.T`` (e.g. the
     occupied MO coefficients scaled by sqrt(occupation)) skips the eigendecomposition of dmat.
     """
+    if DF_algo==11:
+        exchange = getattr(ints3c2e, 'exchange', None)
+        if exchange is None:
+            raise ValueError('RI-HF with DF_algo=11 needs the orthonormalized rows built by density_fitting_prelims_for_DFT_development (xc must be \'HF\' when the integrals are built).')
+        if isinstance(exchange, Integrals.df_algo11_exchange_cupy.DFAlgo11ExchangeGPU):
+            if dmat_factor is None:
+                dmat_factor = _density_matrix_factor_cupy(dmat)
+            return Integrals.df_algo11_exchange_cupy.K_from_exchange_cupy(exchange, dmat_factor, dtype=dtype)
     if dmat_factor is None:
         dmat_factor = _density_matrix_factor(dmat)
     if dmat_factor.shape[1] == 0:
@@ -1063,8 +1107,5 @@ def Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e,
         right = contract('klP,ko->Plo', ints3c2e, dmat_factor, optimize=True)
         return contract('Pjo,Plo->jl', left, right, optimize=True)
     if DF_algo==11:
-        exchange = getattr(ints3c2e, 'exchange', None)
-        if exchange is None:
-            raise ValueError('RI-HF with DF_algo=11 needs the orthonormalized rows built by density_fitting_prelims_for_DFT_development (xc must be \'HF\' when the integrals are built).')
         return Integrals.df_algo11_exchange.K_from_exchange(exchange, dmat_factor)
     raise ValueError('RI-HF exchange is currently implemented only for DF_algo=1, 2, 3, or 11.')

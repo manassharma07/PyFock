@@ -21,6 +21,9 @@ except Exception as e:
         return decorator
 import numba
 from numba import cuda
+from .eval_xc_2 import _xc_functionals
+
+
 def eval_xc_3_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize=10240, debug=False, list_nonzero_indices=None, \
                    count_nonzero_indices=None, list_ao_values=None, list_ao_grad_values=None, use_libxc=True, nstreams=1, ngpus=1,\
                     freemem=True, threads_per_block=None, type=cp.float64, streams=None, nb_streams=None, bfs_data_as_np_arrays=None):
@@ -107,24 +110,17 @@ def eval_xc_3_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize
         # bf_values = Integrals.bf_val_helpers.eval_bfs(bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coord)
         bfs_data_as_np_arrays = [bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff]
 
-    xc_family_dict = {1:'LDA',2:'GGA',4:'MGGA'} 
-    if use_libxc:
-        import pylibxc
-        # Create a LibXC object  
-        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-        x_family_code = funcx.get_family()
-        c_family_code = funcc.get_family()
-    else:
-        x_family_code = XC.get_family(funcid[0])
-        c_family_code = XC.get_family(funcid[1])
-        funcx = None
-        funcc = None
+    # The functionals as a list of ('libxc', LibXCFunctional, family) / ('native', LibXC ID, family)
+    # entries whose contributions are summed: one entry per ID, i.e. an [exchange, correlation] pair
+    # or a single xc functional such as the semilocal part of a global hybrid (B3LYP = [402]; the
+    # exact-exchange fraction is added through the RI-K matrix in the SCF).  `xc_family` is the
+    # highest semilocal family (1 LDA, 2 GGA, 4 mGGA): whether AO gradients and tau are needed.
+    funcs, xc_family = _xc_functionals(funcid, use_libxc)
 
     my_expr = contract_expression('ij,mi,mj->m', (150, 150), (blocksize, 150), (blocksize, 150))
     my_expr_grad1 = None
     my_expr_grad2 = None
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         my_expr_grad1 = contract_expression('ij,kmi,mj->km', (150, 150), (3, blocksize, 150), (blocksize, 150))
         my_expr_grad2 = contract_expression('ij,mi,kmj->km', (150, 150), (blocksize, 150), (3, blocksize, 150))
     contr_expr = [my_expr, my_expr_grad1, my_expr_grad2]
@@ -166,17 +162,17 @@ def eval_xc_3_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize
 
     if list_nonzero_indices is not None:
         if list_ao_values is not None:
-            if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
-                output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmats_list[iblock], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
+            if xc_family == 1:
+                output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmats_list[iblock], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], funcs=funcs, xc_family=xc_family, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
                     thread_y=thread_y, threads_per_block=threads_per_block, type=type, use_libxc=use_libxc, expressions=contr_expr, device=iblock%ngpus) for iblock in range(nblocks+1))
             else: #GGA
-                output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmats_list[iblock], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], list_ao_grad_values[iblock], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
+                output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmats_list[iblock], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_ao_values[iblock], list_ao_grad_values[iblock], funcs=funcs, xc_family=xc_family, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
                     thread_y=thread_y, threads_per_block=threads_per_block, type=type, use_libxc=use_libxc, expressions=contr_expr, device=iblock%ngpus) for iblock in range(nblocks+1))
         else:
-            output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmats_list[iblock], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
+            output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmats_list[iblock], funcid, bfs_data_as_np_arrays, list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], funcs=funcs, xc_family=xc_family, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
                     thread_y=thread_y, threads_per_block=threads_per_block, type=type, use_libxc=use_libxc, expressions=contr_expr, device=iblock%ngpus) for iblock in range(nblocks+1))
     else:
-        output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat_cp, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, funcx=funcx, funcc=funcc, x_family_code=x_family_code, c_family_code=c_family_code, xc_family_dict=xc_family_dict, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
+        output = Parallel(n_jobs=ngpus, backend='threading', require='sharedmem')(delayed(block_dens_func)(weights_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], coords_cp[iblock*blocksize : min(iblock*blocksize+blocksize,ngrids)], dmat_cp, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, funcs=funcs, xc_family=xc_family, debug=debug, stream=streams[iblock%ngpus], nb_stream=nb_streams[iblock%ngpus], thread_x=thread_x, 
                     thread_y=thread_y, threads_per_block=threads_per_block, type=type, use_libxc=use_libxc, expressions=contr_expr, device=iblock%ngpus) for iblock in range(nblocks+1))
         
     for istream in range(ngpus):
@@ -222,9 +218,6 @@ def eval_xc_3_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize
 
     cp.cuda.Stream.null.synchronize()
 
-    if use_libxc:
-        efunc = efunc[0]
-
     if freemem:
         for istream in range(ngpus):
             cp.cuda.Device(istream).use()
@@ -236,8 +229,8 @@ def eval_xc_3_cupy(basis, dmat, weights, coords, funcid=[1,7], spin=0, blocksize
     return efunc, v
 
 
-def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, ao_grad_values=None, funcx=None, 
-                    funcc=None, x_family_code=None, c_family_code=None, xc_family_dict=None, debug=False, stream=None, nb_stream=None, thread_x=None, 
+def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_arrays, non_zero_indices=None, ao_values=None, ao_grad_values=None, funcs=None,
+                    xc_family=None, debug=False, stream=None, nb_stream=None, thread_x=None,
                     thread_y=None, threads_per_block=None, type=None, use_libxc=True, expressions=None, device=None):
     ### Use threadpoolctl https://github.com/numpy/numpy/issues/11826
     # to set the number of threads to 1
@@ -262,10 +255,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     durationRho = 0.0
     durationAO = 0.0
 
-    if funcx is None:
-        if use_libxc:
-            funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-            funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
+    if funcs is None:
+        funcs, xc_family = _xc_functionals(funcid, use_libxc)
 
     
     bfs_coords = cp.asarray(bfs_data_as_np_arrays[0])
@@ -293,7 +284,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         startAO = timer()
     # AO and Grad values
     # LDA
-    if xc_family_dict[x_family_code]=='LDA' and xc_family_dict[c_family_code]=='LDA':
+    if xc_family == 1:
         if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
             ao_value_block = ao_values
         else:
@@ -307,7 +298,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
                 ao_value_block = Integrals.bf_val_helpers.eval_bfs_internal(bfs_coords, bfs_contr_prim_norms, bfs_nprim, bfs_lmn, bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_radius_cutoff, coords_block)
     # GGA/MGGA (# If either x or c functional is of GGA/MGGA type we need ao_grad_values)
     # If either x or c functional is of GGA/MGGA type we need ao_grad_values
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         if ao_values is not None: # If ao_values are calculated once and saved, then they can be provided to avoid recalculation
             ao_value_block, ao_values_grad_block = ao_values, ao_grad_values
         else:
@@ -329,7 +320,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     #  
     # Convert to cupy array
     ao_value_block = cp.asarray(ao_value_block, dtype=type)
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         ao_values_grad_block = cp.asarray(ao_values_grad_block, dtype=type)
 
     if debug:
@@ -348,7 +339,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
 
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values too
     tau_block = None
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         # rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = ( contract('ij,kmi,mj->km',dmat,ao_values_grad_block,ao_value_block, backend='cupy')+\
         #                     contract('ij,mi,kmj->km',dmat,ao_value_block,ao_values_grad_block, backend='cupy') )[:]
         # rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = expressions[1](dmat,ao_values_grad_block,ao_value_block, backend='cupy') \
@@ -358,7 +349,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
         # rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('jm,kmj->km', Fjm, ao_values_grad_block, backend='cupy')[:] 
         rho_grad_block_x, rho_grad_block_y, rho_grad_block_z  = 2*contract('mj,kmj->km', Fmj, ao_values_grad_block, backend='cupy')[:] 
         sigma_block = calc_sigma(rho_grad_block_x, rho_grad_block_y, rho_grad_block_z)
-        if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
+        if xc_family == 4:
             tau_block = 0.5*contract('ij,kmi,kmj->m', dmat, ao_values_grad_block, ao_values_grad_block, backend='cupy')
         if use_libxc:
             sigma_block = cp.asnumpy(sigma_block)
@@ -371,91 +362,55 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
 
 
     
-    #LibXC stuff
+    # Energy density and the derivatives with respect to rho, sigma and tau, summed over the functionals
+    if debug:
+        startLibxc = timer()
+    e = 0.0
+    vrho = 0.0
+    vsigma = 0.0
+    vtau = 0.0
     if use_libxc:
-        # Exchange
-        if debug:
-            startLibxc = timer()
-        # Input dictionary for libxc
-        inp = {}
-        # Input dictionary needs density values at grid points
-        inp['rho'] = cp.asnumpy(rho_block)
-        if xc_family_dict[x_family_code]!='LDA':
-            # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
-            inp['sigma'] = sigma_block
-        if xc_family_dict[x_family_code]=='MGGA':
-            inp['tau'] = tau_block
-        # Calculate the necessary quantities using LibXC
-        retx = funcx.compute(inp)
-        # durationLibxc = durationLibxc + timer() - startLibxc
-        # print('Duration for LibXC computations at grid points: ',durationLibxc)
-
-        # Correlation
-        # startLibxc = timer()
-        # Input dictionary for libxc
-        inp = {}
-        # Input dictionary needs density values at grid points
-        inp['rho'] = cp.asnumpy(rho_block)
-        if xc_family_dict[c_family_code]!='LDA':
-            # Input dictionary needs sigma (\nabla \rho \cdot \nabla \rho) values at grid points
-            inp['sigma'] = sigma_block
-        if xc_family_dict[c_family_code]=='MGGA':
-            inp['tau'] = tau_block
-        # Calculate the necessary quantities using LibXC
-        retc = funcc.compute(inp)
-        if debug:
-            cp.cuda.Stream.null.synchronize()
-            durationLibxc = durationLibxc + timer() - startLibxc
-        # print('Duration for LibXC computations at grid points: ',durationLibxc)
+        # pylibxc evaluates on the host; sigma_block/tau_block were brought to the host above
+        rho_host = cp.asnumpy(rho_block)
+        for _, fn, fam in funcs:
+            inp = {'rho': rho_host}
+            if fam != 1:
+                inp['sigma'] = sigma_block
+            if fam == 4:
+                inp['tau'] = tau_block
+            ret = fn.compute(inp)
+            e = e + cp.asarray(ret['zk'][:, 0])
+            vrho = vrho + cp.asarray(ret['vrho'][:, 0])
+            if fam != 1:
+                vsigma = vsigma + cp.asarray(ret['vsigma'][:, 0])
+            if fam == 4:
+                vtau = vtau + cp.asarray(ret['vtau'][:, 0])
     else:
-        # Exchange
-        if debug:
-            startLibxc = timer()
-        # Calculate the necessary quantities using own implementation
-        # retx = lda_x(rho_block)
-        # retx = gga_x_b88(rho_block, sigma_block)
-        if xc_family_dict[x_family_code]=='LDA':
-            retx = XC.func_compute(funcid[0], rho_block, use_gpu=True)
-        elif xc_family_dict[x_family_code]=='GGA':
-            retx = XC.func_compute(funcid[0], rho_block, sigma_block, use_gpu=True)
-            # print(retx[0])
-            # print(retx[1])
-            # print(retx[2])
-        else:
-            retx = XC.func_compute(funcid[0], rho_block, sigma_block, tau=tau_block, use_gpu=True)
-
-        # Correlation
-        # Calculate the necessary quantities using own implementation
-        # retc = lda_c_vwn(rho_block)
-        # retc = gga_c_lyp(rho_block, sigma_block)
-        if xc_family_dict[c_family_code]=='LDA':
-            retc = XC.func_compute(funcid[1], rho_block, use_gpu=True)
-        elif xc_family_dict[c_family_code]=='GGA':
-            retc = XC.func_compute(funcid[1], rho_block, sigma_block, use_gpu=True)
-        else:
-            retc = XC.func_compute(funcid[1], rho_block, sigma_block, tau=tau_block, use_gpu=True)
-        if debug:
-            stream.synchronize()
-            cp.cuda.Stream.null.synchronize()
-            durationLibxc = durationLibxc + timer() - startLibxc
+        for _, fid, fam in funcs:
+            if fam == 1:
+                ret = XC.func_compute(fid, rho_block, use_gpu=True)
+            elif fam == 2:
+                ret = XC.func_compute(fid, rho_block, sigma_block, use_gpu=True)
+            else:
+                ret = XC.func_compute(fid, rho_block, sigma_block, tau=tau_block, use_gpu=True)
+            e = e + ret[0]
+            vrho = vrho + ret[1]
+            if fam != 1:
+                vsigma = vsigma + ret[2]
+            if fam == 4:
+                vtau = vtau + ret[3]
+    if debug:
+        stream.synchronize()
+        cp.cuda.Stream.null.synchronize()
+        durationLibxc = durationLibxc + timer() - startLibxc
 
     if debug:
         startE = timer()
     #ENERGY-----------
-    if use_libxc:
-        e = retx['zk'] + retc['zk'] # Functional values at grid points
-    else:
-        e = retx[0] + retc[0]
-    # Testing CrysX's own implmentation
-    #e = densfuncs.lda_x(rho)
-
     # Calculate the total energy 
     # Multiply the density at grid points by weights
     den = rho_block*weights_block #elementwise multiply
-    if use_libxc:
-        efunc = cp.dot(den, cp.asarray(e)) #Multiply with functional values at grid points and sum
-    else:
-        efunc = cp.dot(den, e) #Multiply with functional values at grid points and sum
+    efunc = cp.dot(den, e) #Multiply with functional values at grid points and sum
     nelec = cp.sum(den)
     if debug:
         stream.synchronize()
@@ -463,54 +418,16 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     # print('Duration for calculation of total density functional energy: ',durationE)
 
     #POTENTIAL----------
-    # The derivative of functional wrt density is vrho
-    if use_libxc:
-        vrho = retx['vrho'] + retc['vrho']
-    else:
-        vrho = retx[1] + retc[1]
-    vsigma = 0
-    vtau = 0
-    # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-    if xc_family_dict[x_family_code]!='LDA':
-        # The derivative of functional wrt grad \rho square.
-        if use_libxc:
-            vsigma += retx['vsigma']
-        else:
-            vsigma += retx[2]
-    if xc_family_dict[x_family_code]=='MGGA':
-        if use_libxc:
-            vtau += retx['vtau']
-        else:
-            vtau += retx[3]
-        
-    if xc_family_dict[c_family_code]!='LDA':
-        # The derivative of functional wrt grad \rho square.
-        if use_libxc:
-            vsigma += retc['vsigma']
-        else:
-            vsigma += retc[2]
-    if xc_family_dict[c_family_code]=='MGGA':
-        if use_libxc:
-            vtau += retc['vtau']
-        else:
-            vtau += retc[3]
-    
-    # F = np.multiply(weights_block,vrho[:,0]) #This is fast enough.
-    if use_libxc:
-        v_rho_temp = cp.asarray(vrho[:,0])
-    else:
-        v_rho_temp = vrho
+    # vrho, vsigma and vtau are the derivatives of the (summed) functional wrt rho, sigma and tau
+    v_rho_temp = vrho
 
     if debug:
         startF = timer()
     # F = weights_block*v_rho_temp
     # F = calc_F(weights_block, v_rho_temp)
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
-        if use_libxc:
-            Ftemp = 2*weights_block*cp.asarray(vsigma[:,0])
-        else:
-            Ftemp = 2*weights_block*vsigma
+    if xc_family != 1:
+        Ftemp = 2*weights_block*vsigma
             # Ftemp = 2*cp.multiply(weights_block, vsigma)
             # Ftemp = 2*elementwise_multiply(weights_block, vsigma)
         # Fx = Ftemp*rho_grad_block_x
@@ -526,7 +443,7 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     z = calc_z(weights_block, v_rho_temp, ao_value_block.T)
     # z = 0.5*np.einsum('m,mi->mi',F,ao_value_block)
     # If either x or c functional is of GGA/MGGA type we need rho_grad_values
-    if xc_family_dict[x_family_code]!='LDA' or xc_family_dict[c_family_code]!='LDA':
+    if xc_family != 1:
         # z += calc_z_gga(Fx, Fy, Fz, ao_values_grad_block[0].T, ao_values_grad_block[1].T, ao_values_grad_block[2].T)
         z += Ftemp*(rho_grad_block_x*ao_values_grad_block[0].T + rho_grad_block_y*ao_values_grad_block[1].T + rho_grad_block_z*ao_values_grad_block[2].T)
     if debug:
@@ -546,8 +463,8 @@ def block_dens_func(weights_block, coords_block, dmat, funcid, bfs_data_as_np_ar
     # v_temp = z @ ao_value_block  # The fastest uptil now
     v_temp = cp.matmul(z, ao_value_block)  
     v = v_temp + v_temp.T
-    if xc_family_dict[x_family_code]=='MGGA' or xc_family_dict[c_family_code]=='MGGA':
-        vtau_weights = 0.5*weights_block*cp.asarray(vtau[:,0] if use_libxc else vtau)
+    if xc_family == 4:
+        vtau_weights = 0.5*weights_block*vtau
         v += contract('m,kmi,kmj->ij', vtau_weights, ao_values_grad_block, ao_values_grad_block, backend='cupy')
     if debug:
         durationV = durationV + timer() - startV

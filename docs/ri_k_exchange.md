@@ -1,14 +1,19 @@
-# RI-K (exact exchange): implementation, benchmark, acceleration, and the DF_algo=12 plan
+# RI-K (exact exchange): implementation, benchmark, acceleration, the GPU path, and the DF_algo=12 plan
 
-RI exact exchange (`xc='HF'` and global hybrids such as B3LYP/PBE0) is built on the CPU from
-the shell-blocked three-center integrals of `DF_algo=11`. This note walks through the
-implementation, records the def2-SVP benchmark of 2026-10-05, documents the acceleration that
-was implemented on that day (2.2x on the exchange matrix, identical energies), analyses what a
+RI exact exchange (`xc='HF'` and global hybrids such as B3LYP/PBE0) is built from the
+shell-blocked three-center integrals of `DF_algo=11`, on the CPU (sections 1-3) and, since
+2026-10-07, on the GPU (section 7: the rows stay on the device, the contraction is cuBLAS
+throughout, and the early SCF iterations run it in single precision). This note walks through the
+implementation, records the def2-SVP benchmarks of 2026-10-05 (CPU) and 2026-10-07 (GPU),
+documents the CPU acceleration (2.2x on the exchange matrix, identical energies), analyses what a
 `DF_algo=12` (multipole) RI-K can and cannot buy, and ranks the remaining options.
 
-Code: `pyfock/Integrals/df_algo11_exchange.py` (rows, J, K), `pyfock/DFT_Helper_Coulomb.py`
+Code: `pyfock/Integrals/df_algo11_exchange.py` (CPU rows, J, K),
+`pyfock/Integrals/df_algo11_exchange_cupy.py` (the same on the GPU), `pyfock/DFT_Helper_Coulomb.py`
 (`density_fitting_prelims_for_DFT_development`, `Jmat_from_density_fitting`,
-`Kmat_from_density_fitting`), `pyfock/DFT.py` (`exx_coef`, density factor, fallback 12 -> 11).
+`Kmat_from_density_fitting`), `pyfock/DFT.py` (`exx_coef`, density factor, fallback 12 -> 11,
+dynamic precision), `pyfock/Integrals/eval_xc_3_cupy.py` (GPU XC driver over a list of
+functionals, so that the semilocal part of a hybrid is evaluated on the device).
 Benchmark scripts: `benchmarks_tests/benchmark_RI_K.py` (SCF driver, one subprocess per
 molecule), `benchmarks_tests/profile_RI_K.py` (library-level timing of the exchange build),
 `benchmarks_tests/farfield_share_jkfit.py` (DF_algo=12 far-field shares with the JK basis),
@@ -19,7 +24,7 @@ molecule), `benchmarks_tests/profile_RI_K.py` (library-level timing of the excha
 **Setup (`DFT.scf`).** `exx_coef` is 1 for HF and the hybrid coefficient otherwise. With
 `DF_algo=12` selected (the default) and `exx_coef > 0` the run switches to `DF_algo=11`,
 because exchange needs the complete `(ij|P)` blocks that the far field of 12 replaces by
-expansions. RI-K is CPU only and needs `XC_algo=2` for hybrids.
+expansions. Hybrids need `XC_algo=2` on the CPU and `XC_algo=3` on the GPU (the defaults).
 
 **Build (`density_fitting_prelims_for_DFT_development`).** The DF_algo=11 plan evaluates every
 Schwarz-significant shell pair block `(ij|P)` with the Rys kernel (`max_memory_ints3c2e` is
@@ -242,15 +247,15 @@ reused unchanged):
 
 ## 5. Further acceleration, ranked by expected gain per effort
 
-1. **GPU RI-K (cuBLAS).** The dense rows fit the 12 GB card for every molecule here
-   (0.8-1.6 GB for icosane). The half transform and the rank update are 80 GFlop of fp64
-   DGEMM/SYRK per iteration, i.e. ~0.03-0.06 s on the RTX 5070 against 0.38 s on 8 CPU threads;
-   the `dtrsm` of the build runs on the GPU too. The DF_algo=11 CUDA plan
-   (`df_algo11_helpers_cupy`) already provides the blocks; needed are a CuPy `build_exchange`
-   (row fill with the SAO contraction, `cupyx.scipy.linalg.solve_triangular`), the per-function
-   DGEMMs as batched `cublasDgemmStridedBatched`-style calls or a single gather + GEMM per aux
-   block, and a `K_from_exchange_cupy`. `DFT` currently exits for RI-K on the GPU.
-   Expected: exchange 6-10x faster than the new CPU code; largest practical win.
+1. **GPU RI-K (cuBLAS).** Implemented on 2026-10-07, see section 7. (Before: `DFT.scf` exited
+   for exact exchange with `use_gpu=True` and for any hybrid on the GPU, the GPU XC driver
+   evaluated exactly one exchange and one correlation functional, and the prelims raised for
+   RI-HF with the CUDA plan.) Measured fp64 rates on the RTX 5070 used here: 472 GFlop/s
+   (`cupy`, 4096^3 GEMM) against 23.7 TFlop/s in fp32, the usual 1/50 consumer ratio, while the
+   CPU reaches 274-320 GFlop/s on 8 threads - which is why the GPU path contracts the exchange
+   in single precision until the energy change is small (section 7.3). On data-centre GPUs with
+   full-rate fp64 (A100 19.5 TFlop/s, H100 ~60 TFlop/s) the same work is 0.01-0.02 s per
+   iteration in double precision and the exchange becomes negligible.
 2. **LK-type sparsity (Aquilante, Pedersen, Lindh, JCP 126, 194106 (2007)).** Replace the
    canonical density factor by a pivoted Cholesky factor of `D` (localised "Cholesky orbitals",
    `dpstrf`, one `nao^3` call) and truncate its tails at a threshold; then `X[i, Q, o]` is
@@ -284,11 +289,135 @@ reused unchanged):
 ```bash
 cd benchmarks_tests
 PYTHONUTF8=1 CUPY_ACCELERATORS= python benchmark_RI_K.py --ncores 8 --tag baseline --warmup
+PYTHONUTF8=1 CUPY_ACCELERATORS= python benchmark_RI_K.py --gpu --tag gpu_dynamic --warmup
+PYTHONUTF8=1 CUPY_ACCELERATORS= python benchmark_RI_K.py --gpu --no-dynamic-precision --tag gpu_fp64
 PYTHONUTF8=1 CUPY_ACCELERATORS= python profile_RI_K.py --xyz Icosane_C20H42.xyz --ncores 8
 PYTHONUTF8=1 CUPY_ACCELERATORS= python farfield_share_jkfit.py
-PYTHONUTF8=1 CUPY_ACCELERATORS= python -m pytest tests/test_df_algo11_exchange.py tests/test_rihf_algo11_scf.py -q
+PYTHONUTF8=1 CUPY_ACCELERATORS= python -m pytest tests/test_df_algo11_exchange.py tests/test_rihf_algo11_scf.py tests/test_rik_gpu.py -q
 ```
 
 `benchmark_RI_K.py` runs every molecule in its own subprocess, parses the SCF profile block
 and writes `<tag>.json`/`<tag>.md` next to the logs; `comparison.md` in the same directory
-holds the before/after table of section 3.
+holds the before/after table of section 3 and `gpu_comparison.md` the CPU/GPU table of
+section 7.
+
+## 7. RI-K on the GPU (implemented 2026-10-07)
+
+`use_gpu=True` with `xc='HF'` or a global hybrid now runs the whole SCF on the device:
+`pyfock/Integrals/df_algo11_exchange_cupy.py` is the device counterpart of the CPU module and
+is validated against it by `tests/test_rik_gpu.py` (rows, K, J and gamma in CAO and SAO mode,
+in double and single precision and for several auxiliary block sizes; HF, B3LYP and PBE0 SCF
+energies on the GPU against the CPU RI-K path, 2e-7 Ha; the dynamic-precision run against the
+double-precision run, 1e-8 Ha).
+
+### 7.1 Build
+
+The DF_algo=11 CUDA plan (`df_algo11_helpers_cupy.build_plan_cupy`, `max_memory_ints3c2e`
+ignored as on the CPU) leaves the screened `(ij|P)` blocks on the device. One warp per active
+function pair (strict Schwarz cut-off applied per pair, rows sorted by `(i, j)`) expands its
+block row into the dense row matrix `R`, in SAO mode contracting the pseudo-Cartesian columns
+of every auxiliary shell with its Cartesian-to-spherical matrix, so the fit space is the true
+spherical auxiliary basis and the spherical metric needs no regularisation (the prelims keep
+the spherical 2c2e matrix for this and use only the pseudo-Cartesian diagonal for the Schwarz
+bounds). The plan's blocks are released as soon as `R` is filled. The metric is factored with
+cuSOLVER (`cupy.linalg.cholesky`) and `B = R L^-T` is one in-place cuBLAS `dtrsm` on `R`'s
+memory (the C-ordered `R` is `R^T` in column-major terms, the C-ordered lower `L` is the upper
+`L^T`; solve `(L^T)^T Y = R^T`), so no second copy of the rows is ever made. `B` is the only
+three-center storage; the device needs `nrows x naux x 8` bytes for it plus the plan's blocks
+during the fill (icosane/def2-SVP/jkfit: 0.82 GB for `B`). A clear `MemoryError` is raised
+when `B` does not fit the free device memory.
+
+### 7.2 Per iteration
+
+Everything is cuBLAS; nothing moves between host and device.
+
+* Coulomb: `gamma = d . B` and `J_r = B gamma` are two GEMVs over the rows (`d_r = D_ij` on the
+  diagonal, `D_ij + D_ji` otherwise), `J` is scattered symmetrically with fancy indexing, and
+  `gamma . gamma` is the DF Coulomb energy term - exactly the CPU algorithm.
+* Exchange: the density factor `F` (occupied MO coefficients times `sqrt(occupation)`, formed
+  on the device after each diagonalisation) gives `X[i, o, Q] = sum_k B[(ik), Q] F[k, o]` and
+  `K = sum_{o,Q} X X^T`. The rows that feed function `i` (own rows `(i, k <= i)` and partner
+  rows `(k > i, i)`) are listed once at build time; the functions are sorted by that count
+  (heaviest first) and cut into *bins* in which every count is at least 80 % of the bin's
+  maximum. Per auxiliary block of `nb` functions and per bin, one coalesced kernel gathers
+  the rows into a zero-padded slab `U[i, k, Q]` (the same kernel converts to fp32 when asked;
+  `B` is read exactly twice per iteration), one strided-batched GEMM
+  `X[bin] = F_pad[bin] @ U[bin]` does the half transform with the pair sparsity built in and
+  at most 25 % padding, and after all bins one `syrk` adds `X X^T` of the block to `K`. `nb`
+  is chosen so that `U` and `X` fit `DFAlgo11ExchangeGPU.block_memory_bytes` (default: a
+  quarter of the free device memory, at most 2 GB; icosane needs one block). Flop count as on
+  the CPU (`4 nrows naux nocc` + `nao^2 naux nocc`, 80 GFlop per icosane iteration) plus the
+  padding.
+
+### 7.3 Dynamic precision
+
+Under `DFT.dynamic_precision` (the default for GPU runs, already used for the XC term) the
+exchange contraction runs in single precision - fp32 slabs, `sgemmStridedBatched`, an `sgemm`
+rank update (`ssyrk` from 1024 functions on), `K` cast back to float64 - until the relative energy change between two iterations falls
+below 5e-7, and in double precision from there on; `B` is always stored in double precision.
+The converged energy is therefore a double-precision one (`test_rik_gpu.py`: within 1e-8 Ha of
+the fp64-only run on H2O; see the table below for the benchmark molecules), while the early
+iterations cost a small fraction of an fp64 iteration on consumer GPUs with their 1/32-1/64
+fp64 rate. `dynamic_precision=False` runs everything in double precision from the first
+iteration.
+
+### 7.4 Benchmark
+
+Same settings as section 2 (HF / def2-SVP / def2-universal-jkfit, SAO orbital and fit space,
+Schwarz 1e-9, `conv_crit=1e-7`, SANO guess, 8 CPU threads for the host-side work), GeForce RTX
+5070 (12 GB; 472 GFlop/s in fp64, 23.7 TFlop/s in fp32 on a 4096^3 GEMM), one fresh process per
+molecule with warm Numba/CuPy caches (`gpu_dynamic.json`, `gpu_fp64.json`, logs
+`gpu_*_<molecule>.log`; `gpu_comparison.md` holds this table). The CPU column is section 3
+(`v1_threads_slabs`, 8 threads). "dyn" = dynamic precision (fp32 exchange until the switch, the
+default), "fp64" = `dynamic_precision=False`. The converged energies of all three runs agree to
+3e-9 Ha on every molecule (icosane: -781.279228271 CPU, -781.279228269 fp64 and dyn), and the
+dynamic run needs exactly as many iterations as the fp64 and CPU runs.
+
+| molecule | iters CPU / fp64 / dyn (fp32 iters) | K per iter [s] CPU / fp64 / dyn | K total [s] CPU / fp64 / dyn | 3c2e + rows [s] CPU / GPU | SCF total [s] CPU / fp64 / dyn |
+|---|---|---|---|---|---|
+| Benzene | 8 / 8 / 8 (6) | 0.011 / 0.010 / 0.013 | 0.09 / 0.08 / 0.10 | 0.16 / 0.24 | 0.89 / 1.11 / 1.10 |
+| Serotonin | 10 / 10 / 10 (6) | 0.062 / 0.053 / 0.030 | 0.62 / 0.53 / 0.30 | 0.61 / 0.47 | 2.43 / 2.12 / 1.82 |
+| Caffeine | 12 / 12 / 12 (7) | 0.068 / 0.085 / 0.043 | 0.82 / 1.02 / 0.52 | 0.67 / 0.49 | 2.84 / 2.68 / 2.15 |
+| Decane | 8 / 8 / 8 (6) | 0.055 / 0.069 / 0.031 | 0.44 / 0.55 / 0.25 | 0.50 / 0.44 | 1.95 / 2.00 / 1.63 |
+| Icosane | 8 / 8 / 8 (6) | 0.379 / 0.298 / 0.094 | 3.03 / 2.38 / 0.75 | 2.20 / 1.47 | 8.07 / 5.58 / 3.83 |
+
+Reading the table:
+
+* **Double precision only.** On this card the fp64 contraction of icosane takes 0.30 s per
+  iteration against 0.38 s on 8 CPU threads (1.3x); the small molecules are launch- and
+  overhead-bound (benzene: 10 ms either way). The whole icosane SCF is 5.6 s against 8.1 s,
+  because the three-center build (1.09 -> 0.75 s), the orthonormalisation (1.11 -> 0.79 s) and
+  the diagonalisation also run on the device. A component profile of the icosane fp64
+  contraction (`cp.cuda.Device().synchronize()` between the steps; the integral routines
+  leave their own stream current, so a stream-level synchronisation measures nothing): slab
+  gathers 0.017 s, batched GEMMs 0.100 s (36 GFlop padded, 365 GFlop/s = 78 % of the card's
+  471 GFlop/s), `dsyrk` 0.152 s (47 GFlop, 312 GFlop/s), 0.26 s in all - the implementation is
+  at this card's fp64 floor; the remaining lever is the algorithm (section 5) or a GPU with a
+  real fp64 rate. In fp32 the same build takes 0.016 s (gather 0.005 s, GEMMs 0.005 s at 8
+  TFlop/s, GEMM rank update; cuBLAS's `ssyrk` would take 0.024-0.043 s alone, so below 1024
+  functions the fp32 rank update is an `sgemm`).
+* **Dynamic precision.** The fp32 iterations of icosane take 0.06-0.08 s in total (exchange
+  0.016 s, 18x cheaper than in fp64; the rest is diagonalisation, DIIS and the Python-level
+  overhead of an iteration) against 0.32 s for an fp64 GPU iteration and 0.50 s on the CPU.
+  The switch to double precision (relative energy change below 5e-7, reached after 6 of the 8
+  iterations here) moves the energy by a few mHa, after which the fp64 iterations converge as
+  the fp64-only run does; the exchange time drops from 2.38 s to 0.75 s (4x over the CPU)
+  and the SCF from 8.1 s to 3.8 s. (An earlier variant of the fp32 rank update with `ssyrk`
+  rounded differently and took two extra iterations on icosane: the iteration at which the
+  switch fires is sensitive to fp32 rounding, the converged energy is not.) The threshold is
+  shared with the XC term.
+* **Hybrid functionals.** B3LYP/def2-SVP decane with the default grids (CPU reference:
+  `b3lyp_decane_after`, section 3; GPU: `gpu_b3lyp_decane`, dynamic precision, 5 fp32
+  iterations): SCF 8.97 s -> 3.29 s with 8 iterations on both sides and the same energy to
+  1e-9 Ha (-394.052967870). The semilocal XC term, which dominates a CPU hybrid run, drops
+  from 5.86 s to 1.33 s on the device, the exchange from 0.53 s to 0.31 s; a GPU iteration
+  takes 0.12 s in the fp32 phase and 0.26-0.31 s in fp64, against 0.86 s on the CPU. This is
+  the practical point of the GPU path on consumer cards: hybrids run where the XC term already
+  is, instead of being refused.
+* **What to expect elsewhere.** The host-side parts of an iteration are now comparable to the
+  exchange itself on this card (icosane: 0.3 s of diagonalisation and 0.4 s of miscellaneous
+  per 8 iterations). On a data-centre GPU with full-rate fp64 (A100 19.5 TFlop/s, H100 ~60
+  TFlop/s) the fp64 contraction of an icosane iteration is 0.01-0.02 s, dynamic precision
+  becomes irrelevant for the exchange, and the build (one `dtrsm` of `naux^2 nrows` flops,
+  230 GFlop for icosane) is a few tens of milliseconds.
+

@@ -88,7 +88,9 @@ class DFT:
         an ``[exchange, correlation]`` pair of LibXC IDs; or a single LibXC xc-functional ID such as
         ``[402]`` (B3LYP). Global hybrids (native 402/475/406, or any LibXC global hybrid with
         ``use_libxc=True``) add their exact-exchange fraction through the density-fitted exchange
-        matrix (DF_algo 1, 2, 3 or 11; CPU, XC_algo=2). Range-separated hybrids are not supported.
+        matrix (RI-K: DF_algo 1, 2, 3 or 11 on the CPU with XC_algo=2; DF_algo 11 on the GPU with
+        XC_algo=3, the defaults; the default DF_algo=12 falls back to 11). Range-separated hybrids
+        are not supported.
 
     grids : object, optional
         Precomputed numerical integration grids (a PyFock `Grids` object or any object with `coords` and
@@ -143,7 +145,7 @@ class DFT:
         shell-blocked algorithm with multipole expansions for the far-field three-center integrals
         (pure functionals; see ``multipole_options``); 11 is the same near-field algorithm without
         the far field and is selected automatically for RI exact exchange (``xc='HF'`` and hybrid
-        functionals, CPU), which needs the complete three-center blocks; 10 is the former default.
+        functionals, CPU and GPU), which needs the complete three-center blocks; 10 is the former default.
         Both 11 and 12 honour ``max_memory_ints3c2e``.
 
     multipole_options : dict
@@ -332,13 +334,17 @@ class DFT:
         DF_algo=10: the former default (per-function evaluation, sparse triangular storage); it is
         selectable on both CPU and GPU. Alternatives 1 and 2 are only for reference and take up
         a lot of memory as the complete 3c2e tensor is stored in memory.
-        RI-HF (xc='HF') works with DF_algo=1, 2, 3 and 11 (CPU). With 11 the screened blocks are
-        orthonormalized in the fit metric once after the integral build (true spherical fit space
-        in SAO mode) and both J and the exchange matrix K are contracted from these rows. The
-        exchange contraction runs one DGEMM per basis function on ``ncores`` threads with
-        single-threaded BLAS and keeps a partner-ordered copy of the rows when memory allows
-        (``Integrals.df_algo11_exchange.DFAlgo11Exchange.store_partner_slabs``); see
-        docs/ri_k_exchange.md for the design, the benchmark and the DF_algo=12 plan."""
+        RI-HF (xc='HF') and hybrid functionals work with DF_algo=1, 2, 3 and 11 on the CPU and with
+        DF_algo=11 on the GPU. With 11 the screened blocks are orthonormalized in the fit metric once
+        after the integral build (true spherical fit space in SAO mode) and both J and the exchange
+        matrix K are contracted from these rows. On the CPU the exchange contraction runs one DGEMM
+        per basis function on ``ncores`` threads with single-threaded BLAS and keeps a
+        partner-ordered copy of the rows when memory allows
+        (``Integrals.df_algo11_exchange.DFAlgo11Exchange.store_partner_slabs``). On the GPU the rows
+        stay on the device and the contraction is cuBLAS throughout (gathered, zero-padded slabs ->
+        strided-batched GEMMs -> syrk; ``Integrals.df_algo11_exchange_cupy``), in single precision
+        for the early iterations when ``dynamic_precision`` is on. See docs/ri_k_exchange.md for the
+        design, the benchmarks and the DF_algo=12 plan."""
 
         self.max_memory_ints3c2e = None
         """ Memory budget in GB for the screened three-center integrals when DF_algo=11 or 12
@@ -500,14 +506,15 @@ class DFT:
         
         self.threads_x = int(self.max_threads_per_block/16)
         self.threads_y = int(self.max_threads_per_block/64)
-        self.dynamic_precision = bool(use_gpu) # Only for the XC term
-        """ Whether to use dynamic precision switching for the XC term: the XC term is evaluated in single
-        precision until the relative energy change between two iterations falls below 5e-7 and in double
-        precision from there on, so the converged energy is a double-precision one (cholesterol/def2-SVP/PBE:
-        within 1e-12 Ha of a pure double-precision run, same number of iterations, 1.5x faster).
-        Default: True for GPU runs, and it only applies to them (XC_algo 1 and 3). `scf` turns it off for
-        meta-GGA functionals, whose tau single precision does not resolve well enough (about twice as many
-        iterations, and slower than double precision). """
+        self.dynamic_precision = bool(use_gpu) # Only for the XC term and the RI-K exchange matrix on the GPU
+        """ Whether to use dynamic precision switching for the XC term and, for HF and hybrid functionals, the
+        RI-K exchange matrix: both are evaluated in single precision until the relative energy change between two
+        iterations falls below 5e-7 and in double precision from there on, so the converged energy is a
+        double-precision one (cholesterol/def2-SVP/PBE: within 1e-12 Ha of a pure double-precision run, same
+        number of iterations, 1.5x faster; the three-center rows of the exchange are always stored in double
+        precision and only the per-iteration contraction changes precision). Default: True for GPU runs, and it
+        only applies to them (XC_algo 1 and 3). `scf` turns it off for meta-GGA functionals, whose tau single
+        precision does not resolve well enough (about twice as many iterations, and slower than double precision). """
         self.keep_ints3c2e_in_gpu = True
         """ Whether to keep the 3c2e integrals in GPU memory or not. 
         Recommended to keep in GPU memory to avoid CPU-GPU transfers at each iteration."""
@@ -1338,16 +1345,19 @@ class DFT:
             print('ERROR: RI exact exchange (HF and hybrid functionals) is currently implemented only for DF_algo=1, 2, 3, or 11!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             exit()
-        if exx_coef > 0 and isDF and self.use_gpu:
+        if exx_coef > 0 and isDF and self.use_gpu and DF_algo != 11:
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('ERROR: RI exact exchange (HF and hybrid functionals) with density fitting is currently implemented only for CPU!')
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            exit()
-        if xc != 'HF' and skala is None and (exx_coef > 0 or len(xc) == 1) and (self.use_gpu or XC_algo not in (None, 2)):
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('ERROR: Hybrid functionals (and single xc functional IDs) are currently supported only with XC_algo=2 on the CPU!')
+            print('ERROR: RI exact exchange (HF and hybrid functionals) on the GPU is implemented for DF_algo=11 (and the default 12, which falls back to 11) only!')
             print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             exit()
+        if xc != 'HF' and skala is None and (exx_coef > 0 or len(xc) == 1):
+            # The semilocal part of a hybrid (or any single xc functional ID) is a sum of components:
+            # supported by the functional-list drivers eval_xc_2 (CPU) and eval_xc_3_cupy (GPU).
+            if (XC_algo not in (None, 3)) if self.use_gpu else (XC_algo not in (None, 2)):
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                print('ERROR: Hybrid functionals (and single xc functional IDs) are currently supported only with XC_algo=2 on the CPU and XC_algo=3 on the GPU!')
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                exit()
 
 
         print_pyfock_logo()
@@ -1398,9 +1408,13 @@ class DFT:
                     print('\n\nDynamic precision is not used for meta-GGA functionals: single precision resolves')
                     print('tau too poorly and the SCF then needs about twice as many iterations.', flush=True)
                     dynamic_precision = False
+                # What the precision switch applies to: the XC term and, for HF and hybrids, the RI-K exchange
+                # contraction (Integrals.df_algo11_exchange_cupy; the stored rows stay in double precision).
+                dyn_terms = ('the XC term' if exx_coef == 0 else
+                             ('the RI-K exchange matrix' if xc == 'HF' else 'the XC term and the RI-K exchange matrix'))
                 if dynamic_precision:
                     print('\n\nWill use dynamic precision (the default for GPU runs; set dynamic_precision=False to disable).')
-                    print('This means that the XC term will be evaluated in single precision until the ')
+                    print('This means that ' + dyn_terms + ' will be evaluated in single precision until the ')
                     print('relative energy difference b/w successive iterations is less than 5.0E-7,')
                     print('and in double precision from there on, so the converged energy is a double precision one.')
                     precision_XC = cp.float32
@@ -2006,7 +2020,8 @@ class DFT:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
                     if exx_coef > 0:
                         startK = timer()
-                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=dmat_factor)
+                        K = Kmat_from_density_fitting(dmat_cp if self.use_gpu else dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e,
+                                                      dmat_factor=dmat_factor, dtype=(precision_XC if self.use_gpu else None))
                         durationK += timer() - startK
 
 
@@ -2044,7 +2059,8 @@ class DFT:
                     J, durationDF, durationDF_coeff, durationDF_gamma, durationDF_Jtri, Ecoul_temp = Jmat_from_density_fitting(dmat, DF_algo, cholesky, cho_decomp_ints2c2e, df_coeff0, Qpq, ints3c2e, ints2c2e, indices_dmat_tri, indices_dmat_tri_2, indicesA, indicesB, indicesC, offsets_3c2e, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, threshold_schwarz, strict_schwarz, basis, auxbasis, self.use_gpu, self.keep_ints3c2e_in_gpu, durationDF_gamma, ncores, durationDF_coeff, durationDF_Jtri, durationDF)
                     if exx_coef > 0:
                         startK = timer()
-                        K = Kmat_from_density_fitting(dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e, dmat_factor=dmat_factor)
+                        K = Kmat_from_density_fitting(dmat_cp if self.use_gpu else dmat, DF_algo, df_coeff0, Qpq, ints3c2e, ints2c2e,
+                                                      dmat_factor=dmat_factor, dtype=(precision_XC if self.use_gpu else None))
                         durationK += timer() - startK
                 # J += J_diff
             if self.use_gpu:
@@ -2130,6 +2146,8 @@ class DFT:
                     Eecp = contract('ij,ji->', dmat_cp, V_ecp)
                 Ekin = contract('ij,ji->', dmat_cp, T)
                 Ecoul = contract('ij,ji->', dmat_cp, J)*0.5
+                if exx_coef > 0:
+                    Eexchange = -exx_coef*contract('ij,ji->', dmat_cp, K)*0.25
             else:
                 with threadpool_limits(limits=ncores, user_api='blas'):
                     # print('Energy contractions', controller.info())
@@ -2192,7 +2210,7 @@ class DFT:
                 if precision_XC is cp.float32:
                     if abs(Etot_new-Etot)/abs(Etot_new)<5e-7:
                         precision_XC = cp.float64
-                        print('\nSwitching to double precision for XC evaluation after '+str(itr) +' iterations!', flush=True)
+                        print('\nSwitching to double precision for ' + dyn_terms + ' after '+str(itr) +' iterations!', flush=True)
 
             # Check convergence criteria
             if abs(Etot_new-Etot)<conv_crit:
@@ -2267,6 +2285,12 @@ class DFT:
                     dmat = cp.asnumpy(dmat)
                     streams[0].synchronize()
                     cp.cuda.Stream.null.synchronize()
+                    if exx_coef > 0 and isDF:
+                        # Low-rank factor of the new density (dmat = factor @ factor.T, CAO basis) for the RI-K exchange
+                        occ_idx = mo_occ > 0
+                        dmat_factor = eigvectors[:, occ_idx] * cp.sqrt(mo_occ[occ_idx])
+                        if self.sao:
+                            dmat_factor = c2sph_mat_cp.T @ dmat_factor #SAO --> CAO
                     if self.sao:
                         dmat_cp = c2sph_mat_cp.T @ dmat_cp @ c2sph_mat_cp # Convert from SAO to CAO (SAO --> CAO)
                         dmat = basis.sph2cart_dmat_blockwise(dmat) #SAO --> CAO
