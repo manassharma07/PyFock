@@ -14,6 +14,7 @@ import platform
 ncores = 4
 os.environ['OMP_NUM_THREADS'] = str(ncores)
 os.environ["OPENBLAS_NUM_THREADS"] = str(ncores) # export OPENBLAS_NUM_THREADS=4 
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 os.environ["MKL_NUM_THREADS"] = str(ncores) # export MKL_NUM_THREADS=4
 os.environ["VECLIB_MAXIMUM_THREADS"] = str(ncores) # export VECLIB_MAXIMUM_THREADS=4
 os.environ["NUMEXPR_NUM_THREADS"] = str(ncores) # export NUMEXPR_NUM_THREADS=4

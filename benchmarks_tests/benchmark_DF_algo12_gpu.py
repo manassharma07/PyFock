@@ -42,6 +42,7 @@ def worker(args):
                  'NUMEXPR_NUM_THREADS', 'NUMBA_NUM_THREADS'):
         if args.ncores:
             os.environ[name] = str(args.ncores)
+    os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
     sys.path.insert(0, str(ROOT))
     import numpy as np
     from pyfock import Basis, Integrals, Mol

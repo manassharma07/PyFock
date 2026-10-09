@@ -6,6 +6,7 @@
 # Ag and Cd). Usage:
 #     python3 benchmark_DFT_ECP_gradients.py [AgCl.xyz|Cd_dimer.xyz] [skip_numerical]
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import sys
 import numpy as np
 from timeit import default_timer as timer

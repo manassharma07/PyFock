@@ -1,6 +1,7 @@
 # Quick finite-difference validation of the contracted DF gradient kernels
 # (3c2e and 2c2e) and the AO value/grad/hess evaluator.
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import numpy as np
 
 ncores = 4

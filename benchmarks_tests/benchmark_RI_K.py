@@ -30,6 +30,7 @@ def set_threads(ncores):
     for var in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                 'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS'):
         os.environ[var] = str(ncores)
+    os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 
 
 def setup(xyz, ncores, xc='HF', df_algo=None, conv_crit=1e-7, use_gpu=False, dynamic_precision=None):

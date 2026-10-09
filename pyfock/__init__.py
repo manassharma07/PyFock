@@ -19,6 +19,15 @@ Author: Manas Sharma
 For usage examples, demos, and API documentation, refer to the online documentation or example notebooks.  
 """
 
+import os
+
+# OpenBLAS worker threads busy-wait after every BLAS call before they go to sleep, and while
+# they spin they compete with the Numba kernels that run next (e.g. the J/K build after the SCF
+# diagonalization: up to ~50% slower). Let them sleep right away instead. OpenBLAS reads this
+# when it is loaded, so it only takes effect if NumPy/SciPy are imported after PyFock; set it
+# in the environment otherwise.
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")
+
 __version__ = "0.2.4"
 __author__ = 'Manas Sharma'
 __credits__ = 'Phys Whiz (bragitoff.com)'

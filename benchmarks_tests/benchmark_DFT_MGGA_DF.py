@@ -8,6 +8,7 @@
 ####### export NUMBA_CUDA_DRIVER="/usr/lib/wsl/lib/libcuda.so.1"
 
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import platform
 import psutil
 import numba

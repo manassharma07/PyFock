@@ -37,6 +37,7 @@ def main():
     args = parser.parse_args()
     os.environ['OMP_NUM_THREADS'] = '1'
     os.environ['OPENBLAS_NUM_THREADS'] = '1'
+    os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
     os.environ['MKL_NUM_THREADS'] = '1'
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     import numpy as np

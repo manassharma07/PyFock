@@ -1,6 +1,7 @@
 # Verify that DFT_Grad gives identical forces regardless of the DF algorithm
 # used during the SCF (it only consumes D, the MOs and the grids).
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import numpy as np
 
 ncores = 4

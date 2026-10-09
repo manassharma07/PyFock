@@ -26,6 +26,7 @@ args = parser.parse_args()
 
 for var in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS', 'NUMEXPR_NUM_THREADS'):
     os.environ[var] = str(args.ncores)
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 
 import numpy as np
 from pyfock import Basis, DFT, Mol

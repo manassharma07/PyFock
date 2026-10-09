@@ -1,6 +1,7 @@
 # Compare PyFock analytical gradient components against PySCF's gradient
 # decomposition term by term: hcore (T+V), Pulay, XC, DF-Coulomb.
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import numpy as np
 
 ncores = 4

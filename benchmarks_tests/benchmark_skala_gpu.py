@@ -25,6 +25,7 @@ if section not in ('single', 'opt'):
 ncores = int(os.environ.get('PYFOCK_NCORES', 4))
 for variable in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS', 'NUMEXPR_NUM_THREADS'):
     os.environ.setdefault(variable, str(ncores))
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 
 import numpy as np
 import torch

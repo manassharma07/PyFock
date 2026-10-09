@@ -1,6 +1,7 @@
 # Check that PyFock analytical forces converge to PySCF forces as SCF
 # convergence is tightened (isolates convergence noise from real errors).
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import sys
 import numpy as np
 from timeit import default_timer as timer

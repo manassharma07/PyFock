@@ -44,6 +44,7 @@ def main():
     args = ap.parse_args()
     for name in ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'NUMBA_NUM_THREADS'):
         os.environ[name] = str(args.ncores)
+    os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 
     import numpy as np
     from pyfock import Basis, DFT, DFT_Grad, Mol

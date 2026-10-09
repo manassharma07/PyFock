@@ -4,6 +4,7 @@
 #     G[A,d] = sum_ij D_ij dV_ecp_ij/dR_{A,d}
 # compared to FD of sum_ij D_ij V_ecp_ij(R).
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import sys
 import numpy as np
 

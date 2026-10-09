@@ -10,6 +10,7 @@
 #     nuc_mat_grad_r_symm_cupy       vs  nuc_mat_grad_r_symm
 # and also checks the atom-mapped overlap/kinetic gradients.
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import numpy as np
 
 ncores = 4

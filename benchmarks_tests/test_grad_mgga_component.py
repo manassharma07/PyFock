@@ -3,6 +3,7 @@
 # dexc_dbf  against the finite difference of Exc (eval_xc_2) for a meta-GGA
 # functional, using both the native PyFock functionals and pylibxc.
 import os
+os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")  # idle OpenBLAS threads sleep instead of spinning (read when numpy loads)
 import sys
 import numpy as np
 
