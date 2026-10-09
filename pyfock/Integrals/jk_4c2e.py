@@ -1,8 +1,15 @@
 """
-Coulomb (J) and exchange (K) matrices from four-center two-electron integrals evaluated
-over shell quartets by Rys quadrature, for calculations without density fitting.
+Coulomb (J) and exchange (K) matrices from four-center two-electron integrals evaluated over
+shell quartets, for calculations without density fitting.
 
-One kernel, three ways of using it:
+The integrals come from one of two schemes, chosen when the plan is built (:func:`build_plan`):
+
+* ``'rys'``: Rys quadrature;
+* ``'os'``: the Obara-Saika vertical recurrences.
+
+Everything else is shared: the shell pairs and their screening, the horizontal transfers, the
+storage of the integrals and their contraction with the density matrix. A plan is used in one of
+three ways:
 
 * **direct** (:func:`direct_jk`): the integrals are evaluated in every SCF iteration and
   contracted on the fly with the density matrix (or with its change since the previous
@@ -11,26 +18,42 @@ One kernel, three ways of using it:
   blocks that pass the Schwarz test are evaluated once and kept in memory;
 * **stored, complete** (``dense=True``): every unique shell-quartet block is kept.
 
-Kernel
-------
+Shell pairs and quartets
+------------------------
 Shell pairs are formed once, the shell with the higher angular momentum first, together
 with the primitive pairs that survive the Gaussian-product cut-off, and they are sorted by
 their Schwarz factor ``Q = sqrt(max |(ab|ab)|)`` in decreasing order. A shell quartet
 ``(XY|ZW)`` is a bra pair ``i`` and a ket pair ``j >= i`` (8-fold permutational symmetry).
-
-For every primitive quartet the Rys roots and weights are computed once and the recurrence
-coefficients of every (primitive quartet, root) *lane* are stored; batches of up to
-``MAXK`` lanes then run the two-dimensional recurrences (built on ``X`` for the bra and on
-``Z`` for the ket) as loops over lanes that the compiler vectorizes, and accumulate the
-contracted integrals ``(e0|f0)`` (all Cartesian ``e`` with ``l_X <= |e| <= l_X + l_Y``, all
-``f`` with ``l_Z <= |f| <= l_Z + l_W``) from products of the three directions. The
-contraction coefficients and the weight enter the starting value of the z direction. The
-horizontal transfers to ``Y`` and ``W`` are applied once per shell quartet, after the
-primitive sum, in closed (binomial) form.
+Both schemes accumulate the contracted integrals ``(e0|f0)`` (all Cartesian ``e`` with
+``l_X <= |e| <= l_X + l_Y`` on ``X``, all ``f`` with ``l_Z <= |f| <= l_Z + l_W`` on ``Z``) over
+the primitive quartets; the horizontal transfers to ``Y`` and ``W`` are then applied once per
+shell quartet in closed (binomial) form. The primitive quartets are processed in batches of
+*lanes*, and the recurrences run as loops over lanes, which the compiler vectorizes; the
+contraction coefficients enter the starting values of the recurrences.
 
 Within a shell pair the primitive pairs are sorted by their own Schwarz factor, and a
 primitive quartet is skipped when the product of the two factors (times the density factor
 of the screening below) is below ``PRIM_FACTOR`` times the threshold.
+
+Rys quadrature
+--------------
+For every primitive quartet the Rys roots and weights are computed once and the recurrence
+coefficients of every (primitive quartet, root) lane are stored; batches of up to ``MAXK``
+lanes run the two-dimensional recurrences per Cartesian direction (built on ``X`` for the bra
+and on ``Z`` for the ket), and ``(e0|f0)`` is the sum over lanes of products of the three
+directions.
+
+Obara-Saika
+-----------
+One lane per primitive quartet. The Boys function values ``F_m(T)``, ``m <= L`` (``L`` the total
+angular momentum of the quartet), come from a table on a grid of spacing ``BOYS_DT``: a Taylor
+expansion around the nearest grid point for ``F_L`` and downward recursion for the lower orders
+(the asymptotic form beyond ``BOYS_TMAX``). The vertical recurrences then build ``[e0|00]^(m)`` on
+``X`` and ``[e0|f0]^(m)`` on ``Z``, including the term that couples bra and ket, and
+``(e0|f0) = [e0|f0]^(0)``; at every ket level only the orders ``m`` and bra triples that the final
+integrals depend on are built, and every triple is built along its smallest nonzero exponent. The
+number of lanes per batch is limited by the size of the intermediate array (``OS_WORK`` doubles
+per thread).
 
 Contraction
 -----------
@@ -75,7 +98,7 @@ from .df_algo10_helpers import pack_basis_arrays
 from .df_algo11_helpers import _lpt_bins
 from .rys_helpers import Roots
 
-__all__ = ['Rys4c2ePlan', 'build_plan', 'direct_jk', 'store_size_gb', 'store_integrals', 'stored_jk']
+__all__ = ['Plan4c2e', 'SCHEMES', 'build_plan', 'direct_jk', 'store_size_gb', 'store_integrals', 'stored_jk']
 
 TWO_PI_52 = 2.0 * np.pi ** 2.5
 SQRT_PI_HALF = 0.5 * math.sqrt(math.pi)
@@ -83,22 +106,35 @@ SQRT_PI_HALF = 0.5 * math.sqrt(math.pi)
 EXP_CUTOFF = 40.0
 # Largest number of Rys roots provided by rys_helpers.Roots.
 MAX_ROOTS = 10
-# Lanes (primitive quartets x roots) evaluated together by the vectorized recurrences.
+# Lanes (primitive quartets x roots) evaluated together by the Rys recurrences.
 MAXK = 256
+# Lanes (primitive quartets) evaluated together by the Obara-Saika recurrences, and the size in
+# doubles of their intermediate array per thread (at least one lane always fits).
+MAXK_OS = 128
+OS_WORK = 1 << 19
+# Boys function table of the Obara-Saika scheme: F_m on the grid T = 0, BOYS_DT, ..., BOYS_TMAX, evaluated by a
+# Taylor expansion of BOYS_TAYLOR + 1 terms around the nearest grid point (asymptotic form beyond BOYS_TMAX).
+BOYS_DT = 0.05
+BOYS_TMAX = 120.0
+BOYS_TAYLOR = 6
 # Primitive quartets whose primitive Schwarz bound is below PRIM_FACTOR x the block threshold are skipped.
 PRIM_FACTOR = 1e-2
+# Integral schemes.
+SCHEMES = {'rys': 0, 'os': 1}
 
 
 # ----------------------------------------------------------------------------
 # Plan
 # ----------------------------------------------------------------------------
-class Rys4c2ePlan:
+class Plan4c2e:
     """
     Shell-pair data shared by all passes; created by :func:`build_plan`.
 
     Attributes of general interest
     ------------------------------
     nao : int
+    scheme : str
+        ``'rys'`` or ``'os'``.
     npairs : int
         Shell pairs kept (sorted by decreasing Schwarz factor ``Q``).
     threshold : float
@@ -178,11 +214,15 @@ def _shell_pairs(sh_l, sh_nprim, sh_exp, sh_coef, sh_cen, exp_cutoff):
 
 
 # ----------------------------------------------------------------------------
-# Shell-quartet kernel
+# Tables and scratch arrays
 # ----------------------------------------------------------------------------
 @njit(cache=True, nogil=True)
 def _cart_tables(lt):
-    """Cartesian triples for L = 0..lt (internal order), the offset of every L and a lookup table."""
+    """
+    Cartesian triples for L = 0..lt (internal order), the offset of every L, a lookup table, the
+    index of every triple lowered by one in each direction (-1 if impossible) and the direction
+    in which the Obara-Saika recurrences build every triple.
+    """
     n = (lt + 1) * (lt + 2) * (lt + 3) // 6
     xyz = np.empty((n, 3), dtype=np.int64)
     off = np.zeros(lt + 2, dtype=np.int64)
@@ -199,26 +239,26 @@ def _cart_tables(lt):
                 idx3[x, y, z] = g
                 g += 1
     off[lt + 1] = g
-    return xyz, off, idx3
-
-
-@njit(cache=True, nogil=True)
-def _work_arrays(lmax):
-    """Scratch arrays of one thread for shells up to angular momentum ``lmax``."""
-    lt = 2 * lmax
-    ncart = (lmax + 1) * (lmax + 2) // 2
-    ne = (lt + 1) * (lt + 2) * (lt + 3) // 6
-    roots = np.zeros(MAX_ROOTS, dtype=np.float64)
-    weights = np.zeros(MAX_ROOTS, dtype=np.float64)
-    ln = np.zeros((10, MAXK), dtype=np.float64)
-    gx = np.zeros((lt + 1) * (lt + 1) * MAXK, dtype=np.float64)
-    gy = np.zeros((lt + 1) * (lt + 1) * MAXK, dtype=np.float64)
-    gz = np.zeros((lt + 1) * (lt + 1) * MAXK, dtype=np.float64)
-    E = np.zeros(ne * ne, dtype=np.float64)
-    F1 = np.zeros(ne * ncart * ncart, dtype=np.float64)
-    blk = np.zeros(ncart ** 4, dtype=np.float64)
-    pw = np.ones((2, 3, lmax + 1), dtype=np.float64)
-    return roots, weights, ln, gx, gy, gz, E, F1, blk, pw
+    dec = -np.ones((n, 3), dtype=np.int64)
+    dirn = np.zeros(n, dtype=np.int64)
+    for g in range(n):
+        x = xyz[g, 0]
+        y = xyz[g, 1]
+        z = xyz[g, 2]
+        if x > 0:
+            dec[g, 0] = idx3[x - 1, y, z]
+        if y > 0:
+            dec[g, 1] = idx3[x, y - 1, z]
+        if z > 0:
+            dec[g, 2] = idx3[x, y, z - 1]
+        # Build every triple along its smallest nonzero exponent: the recurrence term of the
+        # triple lowered twice in that direction is then absent whenever that exponent is 1.
+        best = 0
+        for d in range(3):
+            if xyz[g, d] > 0 and (xyz[g, best] == 0 or xyz[g, d] < xyz[g, best]):
+                best = d
+        dirn[g] = best
+    return xyz, off, idx3, dec, dirn
 
 
 @njit(cache=True, nogil=True)
@@ -231,6 +271,81 @@ def _binomials(n):
     return b
 
 
+def _boys_table(mmax):
+    """
+    ``F_m(T_i)`` for ``m = 0..mmax + BOYS_TAYLOR`` on the grid ``T_i = i BOYS_DT``: the highest order
+    from its series ``e^{-T} sum_k (2T)^k / ((2m+1)(2m+3)...(2m+2k+1))``, the others by downward recursion.
+    """
+    T = np.arange(int(round(BOYS_TMAX / BOYS_DT)) + 1) * BOYS_DT
+    mtop = mmax + BOYS_TAYLOR
+    tab = np.empty((mtop + 1, T.size))
+    term = np.full(T.size, 1.0 / (2 * mtop + 1))
+    total = term.copy()
+    for k in range(1, int(2 * BOYS_TMAX) + 200):
+        term = term * (2.0 * T) / (2 * mtop + 2 * k + 1)
+        total += term
+        if term.max() < 1e-17 * total.min():
+            break
+    eT = np.exp(-T)
+    tab[mtop] = eT * total
+    for m in range(mtop, 0, -1):
+        tab[m - 1] = (2.0 * T * tab[m] + eT) / (2 * m - 1)
+    return tab
+
+
+@njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
+def _boys_values(nm, T, pref, tab, fm, col):
+    """``fm[m, col] = pref F_m(T)`` for ``m = 0..nm-1``."""
+    mt = nm - 1
+    if T < BOYS_TMAX - BOYS_DT:
+        i = int(T / BOYS_DT + 0.5)
+        d = i * BOYS_DT - T
+        f = tab[mt + BOYS_TAYLOR, i]
+        for k in range(BOYS_TAYLOR - 1, -1, -1):
+            f = tab[mt + k, i] + d * f / (k + 1)
+        e = math.exp(-T)
+        fm[mt, col] = pref * f
+        for m in range(mt, 0, -1):
+            f = (2.0 * T * f + e) / (2 * m - 1)
+            fm[m - 1, col] = pref * f
+    else:
+        f = 0.5 * math.sqrt(math.pi / T)
+        fm[0, col] = pref * f
+        for m in range(1, nm):
+            f *= (2 * m - 1) / (2.0 * T)
+            fm[m, col] = pref * f
+
+
+@njit(cache=True, nogil=True)
+def _work_arrays(lmax, scheme):
+    """
+    Scratch arrays of one thread for shells up to angular momentum ``lmax``. Every entry is written
+    before it is read, so they are not initialized.
+    """
+    lt = 2 * lmax
+    ncart = (lmax + 1) * (lmax + 2) // 2
+    ne = (lt + 1) * (lt + 2) * (lt + 3) // 6
+    roots = np.zeros(MAX_ROOTS, dtype=np.float64)
+    weights = np.zeros(MAX_ROOTS, dtype=np.float64)
+    if scheme == 0:
+        ln = np.empty((10, MAXK), dtype=np.float64)
+        g2 = np.empty((3, (lt + 1) * (lt + 1) * MAXK), dtype=np.float64)
+        lo = np.empty((17, 1), dtype=np.float64)
+        fm = np.empty((1, 1), dtype=np.float64)
+        V = np.empty(1, dtype=np.float64)
+    else:
+        ln = np.empty((10, 1), dtype=np.float64)
+        g2 = np.empty((3, 1), dtype=np.float64)
+        lo = np.empty((17, MAXK_OS), dtype=np.float64)
+        fm = np.empty((2 * lt + 1, MAXK_OS), dtype=np.float64)
+        V = np.empty(max(OS_WORK, ne * ne * (2 * lt + 1)), dtype=np.float64)
+    E = np.empty(ne * ne, dtype=np.float64)
+    F1 = np.empty(ne * ncart * ncart, dtype=np.float64)
+    blk = np.empty(ncart ** 4, dtype=np.float64)
+    pw = np.ones((2, 3, lmax + 1), dtype=np.float64)
+    return roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw
+
+
 @njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
 def _boys0(x):
     if x < 1e-12:
@@ -239,8 +354,11 @@ def _boys0(x):
     return SQRT_PI_HALF * math.erf(sx) / sx
 
 
+# ----------------------------------------------------------------------------
+# Rys quadrature
+# ----------------------------------------------------------------------------
 @njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
-def _chunk(K, lbra, lket, ln, gx, gy, gz, E, e0, ne, f0, nf, cart_xyz):
+def _chunk_rys(K, lbra, lket, ln, g2, E, e0, ne, f0, nf, cart_xyz):
     """Rys recurrences of ``K`` (primitive quartet, root) lanes; adds their (e0|f0) to ``E``."""
     b00 = ln[0]
     b10 = ln[1]
@@ -252,6 +370,9 @@ def _chunk(K, lbra, lket, ln, gx, gy, gz, E, e0, ne, f0, nf, cart_xyz):
     d0y = ln[7]
     d0z = ln[8]
     wz = ln[9]
+    gx = g2[0]
+    gy = g2[1]
+    gz = g2[2]
     lk1 = lket + 1
     S = MAXK
     for k in range(K):
@@ -322,76 +443,10 @@ def _chunk(K, lbra, lket, ln, gx, gy, gz, E, e0, ne, f0, nf, cart_xyz):
 
 
 @njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
-def _quartet(i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
-             sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom,
-             roots, weights, ln, gx, gy, gz, E, F1, blk, pw):
-    """
-    Normalized block ``(XY|ZW)`` of bra pair ``i`` and ket pair ``j`` written to ``blk``
-    (index ``((x nY + y) nZ + z) nW + w``). Primitive quartets with ``q_a q_b < thr_prim``
-    (primitive-pair Schwarz factors, sorted in decreasing order within every pair) are skipped.
-    Returns the number of elements.
-    """
-    X = pair_sh[i, 0]
-    Y = pair_sh[i, 1]
-    Z = pair_sh[j, 0]
-    W = pair_sh[j, 1]
-    lx = sh_l[X]
-    ly = sh_l[Y]
-    lz = sh_l[Z]
-    lw = sh_l[W]
-    nX = sh_nbf[X]
-    nY = sh_nbf[Y]
-    nZ = sh_nbf[Z]
-    nW = sh_nbf[W]
-    ncomp = nX * nY * nZ * nW
-    lbra = lx + ly
-    lket = lz + lw
-    ltot = lbra + lket
-    a0 = pair_pp0[i]
-    a1 = a0 + pair_ppn[i]
-    b0 = pair_pp0[j]
-    b1 = b0 + pair_ppn[j]
-    x0 = sh_off[X]
-    y0 = sh_off[Y]
-    z0 = sh_off[Z]
-    w0 = sh_off[W]
-
-    if ltot == 0:
-        acc = 0.0
-        for a in range(a0, a1):
-            qa = pp_q[a]
-            if qa * pp_q[b0] < thr_prim:
-                break
-            p = pp_p[a]
-            px = pp_x[a]
-            py = pp_y[a]
-            pz = pp_z[a]
-            ca = pp_c[a]
-            for b in range(b0, b1):
-                if qa * pp_q[b] < thr_prim:
-                    break
-                q = pp_p[b]
-                pq = p + q
-                dx = px - pp_x[b]
-                dy = py - pp_y[b]
-                dz = pz - pp_z[b]
-                acc += ca * pp_c[b] / (p * q * math.sqrt(pq)) * _boys0(p * q / pq * (dx * dx + dy * dy + dz * dz))
-        blk[0] = TWO_PI_52 * acc * comp_scale[x0] * comp_scale[y0] * comp_scale[z0] * comp_scale[w0]
-        return 1
-
-    nroots = ltot // 2 + 1
-    e0 = cart_off[lx]
-    ne = cart_off[lbra + 1] - e0
-    f0 = cart_off[lz]
-    nf = cart_off[lket + 1] - f0
-    for c in range(ne * nf):
-        E[c] = 0.0
-    xx = sh_cen[X, 0]
-    xy = sh_cen[X, 1]
-    xz = sh_cen[X, 2]
-    zx = sh_cen[Z, 0]
-    zy = sh_cen[Z, 1]
-    zz = sh_cen[Z, 2]
+def _e0f0_rys(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, xx, xy, xz, zx, zy, zz,
+              lbra, lket, e0, ne, f0, nf, cart_xyz, roots, weights, ln, g2, E):
+    """Adds (e0|f0) of all screened primitive quartets to ``E`` (Rys quadrature)."""
+    nroots = (lbra + lket) // 2 + 1
     kmax = MAXK // nroots
     nk = 0
     for a in range(a0, a1):
@@ -449,10 +504,239 @@ def _quartet(i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, p
                 lane += 1
             nk += 1
             if nk == kmax:
-                _chunk(nk * nroots, lbra, lket, ln, gx, gy, gz, E, e0, ne, f0, nf, cart_xyz)
+                _chunk_rys(nk * nroots, lbra, lket, ln, g2, E, e0, ne, f0, nf, cart_xyz)
                 nk = 0
     if nk > 0:
-        _chunk(nk * nroots, lbra, lket, ln, gx, gy, gz, E, e0, ne, f0, nf, cart_xyz)
+        _chunk_rys(nk * nroots, lbra, lket, ln, g2, E, e0, ne, f0, nf, cart_xyz)
+
+
+# ----------------------------------------------------------------------------
+# Obara-Saika
+# ----------------------------------------------------------------------------
+@njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
+def _chunk_os(K, lx, lket, ltot, ea, fa, lo, fm, V, E, e0, ne, f0, nf, cart_xyz, cart_off, dec, dirn):
+    """
+    Obara-Saika recurrences of ``K`` primitive-quartet lanes; adds their (e0|f0) to ``E``.
+    ``V[((e fa + f) (ltot + 1) + m) K + k]`` holds ``[e0|f0]^(m)`` of lane ``k`` for the triples
+    ``e < ea`` (|e| <= l_X + l_Y) and ``f < fa`` (|f| <= l_Z + l_W). At ket level ``|f|`` only the
+    entries the final ``(e0|f0)``, ``|e| >= l_X``, depend on are built: ``m <= l_ket - |f|`` and
+    ``|e| >= l_X - (l_ket - |f|)`` (every level down the ket recurrence raises ``m`` and, through the
+    bra-ket coupling term, lowers ``|e|`` by at most one).
+    """
+    nm = ltot + 1
+    f2p = lo[12]
+    rp = lo[13]
+    f2q = lo[14]
+    rq = lo[15]
+    f2pq = lo[16]
+    for m in range(nm):
+        o = m * K
+        for k in range(K):
+            V[o + k] = fm[m, k]
+    # [e0|00]^(m), built on X
+    for g in range(1, ea):
+        i = dirn[g]
+        e = dec[g, i]
+        lg = cart_xyz[g, 0] + cart_xyz[g, 1] + cart_xyz[g, 2]
+        ei = cart_xyz[e, i]
+        pa = lo[i]
+        wp = lo[3 + i]
+        if ei > 0:
+            e2 = dec[e, i]
+            for m in range(nm - lg):
+                o = (g * fa * nm + m) * K
+                oa = (e * fa * nm + m) * K
+                ob = (e2 * fa * nm + m) * K
+                for k in range(K):
+                    V[o + k] = (pa[k] * V[oa + k] + wp[k] * V[oa + K + k]
+                                + ei * f2p[k] * (V[ob + k] - rp[k] * V[ob + K + k]))
+        else:
+            for m in range(nm - lg):
+                o = (g * fa * nm + m) * K
+                oa = (e * fa * nm + m) * K
+                for k in range(K):
+                    V[o + k] = pa[k] * V[oa + k] + wp[k] * V[oa + K + k]
+    # [e0|f0]^(m), built on Z
+    for h in range(1, fa):
+        i = dirn[h]
+        f = dec[h, i]
+        lh = cart_xyz[h, 0] + cart_xyz[h, 1] + cart_xyz[h, 2]
+        fi = cart_xyz[f, i]
+        f2 = dec[f, i] if fi > 0 else 0
+        qc = lo[6 + i]
+        wq = lo[9 + i]
+        mmax = lket - lh
+        for g in range(cart_off[max(0, lx - mmax)], ea):
+            gi = cart_xyz[g, i]
+            eg = dec[g, i] if gi > 0 else 0
+            for m in range(mmax + 1):
+                o = ((g * fa + h) * nm + m) * K
+                oa = ((g * fa + f) * nm + m) * K
+                ob = ((g * fa + f2) * nm + m) * K
+                oc = ((eg * fa + f) * nm + m + 1) * K
+                if fi > 0 and gi > 0:
+                    for k in range(K):
+                        V[o + k] = (qc[k] * V[oa + k] + wq[k] * V[oa + K + k]
+                                    + fi * f2q[k] * (V[ob + k] - rq[k] * V[ob + K + k])
+                                    + gi * f2pq[k] * V[oc + k])
+                elif fi > 0:
+                    for k in range(K):
+                        V[o + k] = (qc[k] * V[oa + k] + wq[k] * V[oa + K + k]
+                                    + fi * f2q[k] * (V[ob + k] - rq[k] * V[ob + K + k]))
+                elif gi > 0:
+                    for k in range(K):
+                        V[o + k] = qc[k] * V[oa + k] + wq[k] * V[oa + K + k] + gi * f2pq[k] * V[oc + k]
+                else:
+                    for k in range(K):
+                        V[o + k] = qc[k] * V[oa + k] + wq[k] * V[oa + K + k]
+    for ie in range(ne):
+        g = e0 + ie
+        for jf in range(nf):
+            o = ((g * fa + f0 + jf) * nm) * K
+            acc = 0.0
+            for k in range(K):
+                acc += V[o + k]
+            E[ie * nf + jf] += acc
+
+
+@njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
+def _e0f0_os(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, xx, xy, xz, zx, zy, zz,
+             lx, lbra, lket, e0, ne, f0, nf, cart_xyz, cart_off, dec, dirn, boys, lo, fm, V, E):
+    """Adds (e0|f0) of all screened primitive quartets to ``E`` (Obara-Saika)."""
+    ltot = lbra + lket
+    nm = ltot + 1
+    ea = cart_off[lbra + 1]
+    fa = cart_off[lket + 1]
+    kmax = V.shape[0] // (ea * fa * nm)
+    if kmax > MAXK_OS:
+        kmax = MAXK_OS
+    nk = 0
+    for a in range(a0, a1):
+        qa = pp_q[a]
+        if qa * pp_q[b0] < thr_prim:
+            break
+        p = pp_p[a]
+        px = pp_x[a]
+        py = pp_y[a]
+        pz = pp_z[a]
+        ca = pp_c[a]
+        for b in range(b0, b1):
+            if qa * pp_q[b] < thr_prim:
+                break
+            q = pp_p[b]
+            qx = pp_x[b]
+            qy = pp_y[b]
+            qz = pp_z[b]
+            pq = p + q
+            inv_pq = 1.0 / pq
+            pqx = px - qx
+            pqy = py - qy
+            pqz = pz - qz
+            _boys_values(nm, p * q * inv_pq * (pqx * pqx + pqy * pqy + pqz * pqz),
+                         TWO_PI_52 / (p * q * math.sqrt(pq)) * ca * pp_c[b], boys, fm, nk)
+            wx = (p * px + q * qx) * inv_pq
+            wy = (p * py + q * qy) * inv_pq
+            wz = (p * pz + q * qz) * inv_pq
+            lo[0, nk] = px - xx
+            lo[1, nk] = py - xy
+            lo[2, nk] = pz - xz
+            lo[3, nk] = wx - px
+            lo[4, nk] = wy - py
+            lo[5, nk] = wz - pz
+            lo[6, nk] = qx - zx
+            lo[7, nk] = qy - zy
+            lo[8, nk] = qz - zz
+            lo[9, nk] = wx - qx
+            lo[10, nk] = wy - qy
+            lo[11, nk] = wz - qz
+            lo[12, nk] = 0.5 / p
+            lo[13, nk] = q * inv_pq
+            lo[14, nk] = 0.5 / q
+            lo[15, nk] = p * inv_pq
+            lo[16, nk] = 0.5 * inv_pq
+            nk += 1
+            if nk == kmax:
+                _chunk_os(nk, lx, lket, ltot, ea, fa, lo, fm, V, E, e0, ne, f0, nf, cart_xyz, cart_off, dec, dirn)
+                nk = 0
+    if nk > 0:
+        _chunk_os(nk, lx, lket, ltot, ea, fa, lo, fm, V, E, e0, ne, f0, nf, cart_xyz, cart_off, dec, dirn)
+
+
+# ----------------------------------------------------------------------------
+# Shell quartet: (e0|f0) by either scheme, then the horizontal transfers
+# ----------------------------------------------------------------------------
+@njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
+def _quartet(scheme, i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
+             sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
+             roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw):
+    """
+    Normalized block ``(XY|ZW)`` of bra pair ``i`` and ket pair ``j`` written to ``blk``
+    (index ``((x nY + y) nZ + z) nW + w``), by Rys quadrature (``scheme`` 0) or Obara-Saika
+    (``scheme`` 1). Primitive quartets with ``q_a q_b < thr_prim`` (primitive-pair Schwarz
+    factors, sorted in decreasing order within every pair) are skipped. Returns the number of
+    elements.
+    """
+    X = pair_sh[i, 0]
+    Y = pair_sh[i, 1]
+    Z = pair_sh[j, 0]
+    W = pair_sh[j, 1]
+    lx = sh_l[X]
+    ly = sh_l[Y]
+    lz = sh_l[Z]
+    lw = sh_l[W]
+    nX = sh_nbf[X]
+    nY = sh_nbf[Y]
+    nZ = sh_nbf[Z]
+    nW = sh_nbf[W]
+    ncomp = nX * nY * nZ * nW
+    lbra = lx + ly
+    lket = lz + lw
+    a0 = pair_pp0[i]
+    a1 = a0 + pair_ppn[i]
+    b0 = pair_pp0[j]
+    b1 = b0 + pair_ppn[j]
+    x0 = sh_off[X]
+    y0 = sh_off[Y]
+    z0 = sh_off[Z]
+    w0 = sh_off[W]
+
+    if lbra + lket == 0:
+        acc = 0.0
+        for a in range(a0, a1):
+            qa = pp_q[a]
+            if qa * pp_q[b0] < thr_prim:
+                break
+            p = pp_p[a]
+            px = pp_x[a]
+            py = pp_y[a]
+            pz = pp_z[a]
+            ca = pp_c[a]
+            for b in range(b0, b1):
+                if qa * pp_q[b] < thr_prim:
+                    break
+                q = pp_p[b]
+                pq = p + q
+                dx = px - pp_x[b]
+                dy = py - pp_y[b]
+                dz = pz - pp_z[b]
+                acc += ca * pp_c[b] / (p * q * math.sqrt(pq)) * _boys0(p * q / pq * (dx * dx + dy * dy + dz * dz))
+        blk[0] = TWO_PI_52 * acc * comp_scale[x0] * comp_scale[y0] * comp_scale[z0] * comp_scale[w0]
+        return 1
+
+    e0 = cart_off[lx]
+    ne = cart_off[lbra + 1] - e0
+    f0 = cart_off[lz]
+    nf = cart_off[lket + 1] - f0
+    for c in range(ne * nf):
+        E[c] = 0.0
+    if scheme == 0:
+        _e0f0_rys(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
+                  sh_cen[X, 0], sh_cen[X, 1], sh_cen[X, 2], sh_cen[Z, 0], sh_cen[Z, 1], sh_cen[Z, 2],
+                  lbra, lket, e0, ne, f0, nf, cart_xyz, roots, weights, ln, g2, E)
+    else:
+        _e0f0_os(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
+                 sh_cen[X, 0], sh_cen[X, 1], sh_cen[X, 2], sh_cen[Z, 0], sh_cen[Z, 1], sh_cen[Z, 2],
+                 lx, lbra, lket, e0, ne, f0, nf, cart_xyz, cart_off, dec, dirn, boys, lo, fm, V, E)
 
     # Horizontal transfers (once per shell quartet): (e0|f0) -> (e0|zw) -> (xy|zw).
     if ly == 0 and lw == 0:
@@ -585,24 +869,26 @@ def _contract(blk, s, X, Y, Z, W, sh_off, sh_nbf, dmat, H, G, with_k):
 # ----------------------------------------------------------------------------
 @njit(parallel=True, cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False)
 def _pair_schwarz(pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
-                  sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, lmax):
-    """Q_i = sqrt(max |(xy|xy)|) of every shell pair."""
+                  sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
+                  lmax, scheme, nchunk):
+    """Q_i = sqrt(max |(xy|xy)|) of every shell pair (``nchunk`` contiguous chunks of pairs)."""
     npair = pair_sh.shape[0]
     Q = np.zeros(npair, dtype=np.float64)
-    for i in prange(npair):
-        roots, weights, ln, gx, gy, gz, E, F1, blk, pw = _work_arrays(lmax)
-        _quartet(i, i, 0.0, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
-                 sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom,
-                 roots, weights, ln, gx, gy, gz, E, F1, blk, pw)
-        nX = sh_nbf[pair_sh[i, 0]]
-        nY = sh_nbf[pair_sh[i, 1]]
-        m = 0.0
-        for x in range(nX):
-            for y in range(nY):
-                v = abs(blk[((x * nY + y) * nX + x) * nY + y])
-                if v > m:
-                    m = v
-        Q[i] = math.sqrt(m)
+    for c in prange(nchunk):
+        roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw = _work_arrays(lmax, scheme)
+        for i in range(c * npair // nchunk, (c + 1) * npair // nchunk):
+            _quartet(scheme, i, i, 0.0, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
+                     sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, dec, dirn,
+                     boys, roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw)
+            nX = sh_nbf[pair_sh[i, 0]]
+            nY = sh_nbf[pair_sh[i, 1]]
+            m = 0.0
+            for x in range(nX):
+                for y in range(nY):
+                    v = abs(blk[((x * nY + y) * nX + x) * nY + y])
+                    if v > m:
+                        m = v
+            Q[i] = math.sqrt(m)
     return Q
 
 
@@ -651,8 +937,8 @@ def _shell_dmax(dmat, sh_off, sh_nbf):
 
 @njit(parallel=True, cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False)
 def _direct_pass(bin_off, bin_items, Q, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
-                 sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, lmax,
-                 dmat, dsh, dmax, threshold, with_k):
+                 sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
+                 lmax, scheme, dmat, dsh, dmax, threshold, with_k):
     nbins = bin_off.shape[0] - 1
     nbf = dmat.shape[0]
     npair = Q.shape[0]
@@ -663,7 +949,7 @@ def _direct_pass(bin_off, bin_items, Q, pair_sh, pair_pp0, pair_ppn, pair_ab, pp
         G = np.zeros((nbins, 1, 1), dtype=np.float64)
     dlim = 4.0 * dmax
     for bn in prange(nbins):
-        roots, weights, ln, gx, gy, gz, E, F1, blk, pw = _work_arrays(lmax)
+        roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw = _work_arrays(lmax, scheme)
         Hb = H[bn]
         Gb = G[bn]
         for t in range(bin_off[bn], bin_off[bn + 1]):
@@ -683,9 +969,10 @@ def _direct_pass(bin_off, bin_items, Q, pair_sh, pair_pp0, pair_ppn, pair_ab, pp
                     dm = max(dm, dsh[X, Z], dsh[X, W], dsh[Y, Z], dsh[Y, W])
                 if qq * dm < threshold:
                     continue
-                _quartet(i, j, PRIM_FACTOR * threshold / dm, pair_sh, pair_pp0, pair_ppn, pair_ab,
-                         pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom,
-                         roots, weights, ln, gx, gy, gz, E, F1, blk, pw)
+                _quartet(scheme, i, j, PRIM_FACTOR * threshold / dm, pair_sh, pair_pp0, pair_ppn, pair_ab,
+                         pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale,
+                         cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
+                         roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw)
                 s = 1.0
                 if X == Y:
                     s *= 0.5
@@ -700,20 +987,22 @@ def _direct_pass(bin_off, bin_items, Q, pair_sh, pair_pp0, pair_ppn, pair_ab, pp
 @njit(parallel=True, cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False)
 def _store_pass(bin_off, bin_items, jend, row_off, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab,
                 pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
-                sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, lmax, values):
+                sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
+                lmax, scheme, values):
     """Evaluate and store the blocks ``(i, j)``, ``i <= j < jend[i]``, scaled by their degeneracy factor."""
     nbins = bin_off.shape[0] - 1
     for bn in prange(nbins):
-        roots, weights, ln, gx, gy, gz, E, F1, blk, pw = _work_arrays(lmax)
+        roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw = _work_arrays(lmax, scheme)
         for t in range(bin_off[bn], bin_off[bn + 1]):
             i = bin_items[t]
             X = pair_sh[i, 0]
             Y = pair_sh[i, 1]
             off = row_off[i]
             for j in range(i, jend[i]):
-                nc = _quartet(i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab,
-                              pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom,
-                              roots, weights, ln, gx, gy, gz, E, F1, blk, pw)
+                nc = _quartet(scheme, i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab,
+                              pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale,
+                              cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
+                              roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw)
                 s = 1.0
                 if X == Y:
                     s *= 0.5
@@ -811,7 +1100,12 @@ def _reduce(H, G, with_k):
 # ----------------------------------------------------------------------------
 # Python drivers
 # ----------------------------------------------------------------------------
-def build_plan(basis, threshold=1e-12):
+def _nchunks(n):
+    """Chunks of a parallel loop over ``n`` items whose scratch arrays are allocated once per chunk."""
+    return max(1, min(n, 16 * int(numba.get_num_threads())))
+
+
+def build_plan(basis, threshold=1e-12, scheme='rys'):
     """
     Shell pairs with their primitive pairs and Schwarz factors, sorted by decreasing ``Q``.
 
@@ -822,7 +1116,11 @@ def build_plan(basis, threshold=1e-12):
         Screening threshold of the density-weighted Schwarz bound (default of
         :func:`direct_jk` and :func:`stored_jk`). Pairs with ``Q_i max(Q) < threshold`` are
         dropped.
+    scheme : {'rys', 'os'}
+        Integral scheme: Rys quadrature or the Obara-Saika recurrences.
     """
+    if scheme not in SCHEMES:
+        raise ValueError(f"Unknown integral scheme {scheme!r}; use one of {sorted(SCHEMES)}.")
     packed = pack_basis_arrays(basis)
     bfs_coords, contr_norms, bfs_lmn, bfs_nprim, coeffs, prim_norms, expnts = packed
     bf_coef = contr_norms[:, None] * coeffs * prim_norms
@@ -850,10 +1148,11 @@ def build_plan(basis, threshold=1e-12):
 
     (pair_sh, pair_pp0, pair_ppn, pair_ab,
      pp_p, pp_x, pp_y, pp_z, pp_c) = _shell_pairs(sh_l, sh_nprim, sh_exp, sh_coef, sh_cen, EXP_CUTOFF)
-    cart_xyz, cart_off, idx3 = _cart_tables(2 * lmax)
-    binom = _binomials(lmax)
+    cart_xyz, cart_off, idx3, dec, dirn = _cart_tables(2 * lmax)
     bfs_lmn = np.ascontiguousarray(bfs_lmn, dtype=np.int64)
-    tables = (sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, lmax)
+    boys = _boys_table(4 * lmax) if scheme == 'os' else np.zeros((1, 1))
+    tables = (sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, _binomials(lmax),
+              dec, dirn, boys, lmax, SCHEMES[scheme])
 
     # Schwarz factor of every primitive pair (each evaluated as a pair of its own), then the
     # primitive pairs of every shell pair in decreasing order of it, so that the kernel can stop
@@ -862,18 +1161,20 @@ def build_plan(basis, threshold=1e-12):
     owner = np.repeat(np.arange(pair_sh.shape[0]), pair_ppn)
     pp_q = _pair_schwarz(np.ascontiguousarray(pair_sh[owner]), np.arange(npp, dtype=np.int64),
                          np.ones(npp, dtype=np.int64), np.ascontiguousarray(pair_ab[owner]),
-                         pp_p, pp_x, pp_y, pp_z, pp_c, np.ones(npp), *tables)
+                         pp_p, pp_x, pp_y, pp_z, pp_c, np.ones(npp), *tables, _nchunks(npp))
     perm = np.lexsort((-pp_q, owner))
     pp_p, pp_x, pp_y, pp_z, pp_c, pp_q = (np.ascontiguousarray(a[perm]) for a in (pp_p, pp_x, pp_y, pp_z, pp_c, pp_q))
-    Q = _pair_schwarz(pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, *tables)
+    Q = _pair_schwarz(pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, *tables,
+                      _nchunks(pair_sh.shape[0]))
 
     order = np.argsort(-Q, kind='stable')
     keep = order[Q[order] * Q.max() >= threshold * 1e-3] if Q.size else order
 
-    plan = Rys4c2ePlan()
+    plan = Plan4c2e()
     plan.nao = int(basis.bfs_nao)
     plan.nshells = int(nsh)
     plan.lmax = lmax
+    plan.scheme = scheme
     plan.threshold = float(threshold)
     plan.npairs_total = int(pair_sh.shape[0])
     plan.Q = np.ascontiguousarray(Q[keep])
@@ -883,19 +1184,15 @@ def build_plan(basis, threshold=1e-12):
     plan.pair_ab = np.ascontiguousarray(pair_ab[keep])
     plan.npairs = int(plan.Q.shape[0])
     plan.pp = (pp_p, pp_x, pp_y, pp_z, pp_c, pp_q)
+    plan.tables = tables
     plan.sh_l = sh_l
     plan.sh_off = sh_off
     plan.sh_nbf = sh_nbf
-    plan.sh_cen = sh_cen
-    plan.bfs_lmn = bfs_lmn
-    plan.comp_scale = comp_scale
-    plan.cart = (cart_xyz, cart_off, idx3, binom)
     return plan
 
 
 def _kernel_args(plan):
-    return (plan.pair_sh, plan.pair_pp0, plan.pair_ppn, plan.pair_ab, *plan.pp,
-            plan.sh_l, plan.sh_off, plan.sh_nbf, plan.sh_cen, plan.bfs_lmn, plan.comp_scale, *plan.cart, plan.lmax)
+    return (plan.pair_sh, plan.pair_pp0, plan.pair_ppn, plan.pair_ab, *plan.pp, *plan.tables)
 
 
 def _bins(plan, key, costs):

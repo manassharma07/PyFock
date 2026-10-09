@@ -90,7 +90,8 @@ def os_4c2e_symm_internal(nbf, nshells, shell_L, shell_centers, shell_bfs_offset
             schwarz_shell_pair[ish, jsh] = max_val
             schwarz_shell_pair[jsh, ish] = max_val
     
-    fourC2E = np.empty((nbf, nbf, nbf, nbf), dtype=np.float64)
+    # Zeroed: the Schwarz-screened and negligible elements are never written.
+    fourC2E = np.zeros((nbf, nbf, nbf, nbf), dtype=np.float64)
 
     pi = np.pi
     two_pi_52 = 2.0 * pi ** 2.5

@@ -41,6 +41,7 @@ from opt_einsum import contract
 from scipy.sparse import csr_matrix, csc_matrix
 # from memory_profiler import profile
 import os
+import psutil
 from numba import njit, prange, cuda
 import numexpr
 try:
@@ -91,8 +92,7 @@ class DFT:
         matrix (RI-K: DF_algo 1, 2, 3 or 11 on the CPU with XC_algo=2; DF_algo 11 on the GPU with
         XC_algo=3, the defaults; the default DF_algo=12 falls back to 11), or, with ``isDF=False``,
         through the exchange matrix of the four-center integrals (``direct_scf`` or ``coul_algo``
-        1 and 2 with ``rys=True``; ``direct_scf`` or ``coul_algo=1`` with ``rys=False``).
-        Range-separated hybrids are not supported.
+        1 and 2, with ``rys=True`` or ``rys=False``). Range-separated hybrids are not supported.
 
     grids : object, optional
         Precomputed numerical integration grids (a PyFock `Grids` object or any object with `coords` and
@@ -160,6 +160,11 @@ class DFT:
         DF_algo=12, every significant block with DF_algo=11 (None = store everything significant,
         0 = recompute every SCF iteration). The far-field moments of DF_algo=12 are always stored;
         ``multipole_options['low_memory']`` reduces them on the CPU.
+
+    max_memory_4c2e : float or None
+        Memory budget (GB) for the stored four-center integrals without density fitting
+        (``coul_algo`` 1 and 2): a store that would exceed it is not built and the SCF runs with
+        ``direct_scf`` instead (None = 80% of the memory available when the SCF starts, 0 = always direct).
 
     XC_algo : int
         Algorithm selector for XC evaluation (2 for CPU, 3 for GPU).
@@ -393,11 +398,10 @@ class DFT:
         self.threshold_schwarz = 1e-09
         """ Threshold for Schwarz screening of two-electron integrals. Smaller values increase accuracy but reduce sparsity. """
         self.threshold_4c2e = 1e-11
-        """ Screening threshold of the Coulomb and exchange matrices built from four-center integrals by Rys
-        quadrature (``isDF=False`` with ``rys=True``: ``direct_scf`` and ``coul_algo`` 1 and 2). A shell quartet
-        is skipped when its Schwarz bound times the largest density-matrix element it couples is below this
-        value; ``coul_algo=2`` keeps the blocks whose Schwarz bound exceeds a tenth of it. The default keeps the
-        energy within about 1e-10 Ha of the unscreened result. See ``Integrals.rys_4c2e_jk``. """
+        """ Screening threshold of the Coulomb and exchange matrices built from shell-quartet four-center integrals
+        (``isDF=False``: ``direct_scf`` and ``coul_algo`` 1 and 2, with either scheme). A shell quartet is skipped when its Schwarz bound times the largest density-matrix element it couples is
+        below this value; ``coul_algo=2`` keeps the blocks whose Schwarz bound exceeds a tenth of it. The default
+        keeps the energy within about 1e-10 Ha of the unscreened result. See ``Integrals.jk_4c2e``. """
         self.strict_schwarz = True
         """ If True, enforce stricter Schwarz screening to aggressively eliminate small two-electron integrals. """
         self.cholesky = True
@@ -479,18 +483,25 @@ class DFT:
         """ Only relevant for calculations without DF. If True, the 4c2e integrals are recalculated at every SCF iteration.
         Extremely memory efficient. The 4c2e tensor is never stored in memory and is contracted with the density matrix
         (from the second iteration on: with its change since the previous iteration) on the fly to compute the J matrix
-        and, for HF and hybrid functionals, the exchange matrix K. Both ``rys=True`` (shell-quartet Rys quadrature,
-        ``Integrals.rys_4c2e_jk``) and ``rys=False`` (Obara-Saika) build K."""
+        and, for HF and hybrid functionals, the exchange matrix K, by shell-quartet Rys quadrature (``rys=True``) or
+        the Obara-Saika scheme (``rys=False``); see ``Integrals.jk_4c2e``."""
+
+        self.max_memory_4c2e = None
+        """ Memory budget in GB for the stored four-center integrals (``isDF=False`` and ``direct_scf=False``, i.e.
+        ``coul_algo`` 1 and 2). When the store would need more, it is not built and the SCF runs with ``direct_scf``
+        instead (the output says so; ``self.direct_scf`` itself is left unchanged). None (default): 80% of the memory
+        available when the integrals would be stored; 0: always direct. """
 
         self.coul_algo = 2
         """ Determines the algorithm for working with 4c2e ERIs when ``direct_scf`` is False.
-        1: Every unique shell-quartet block (8-fold permutational symmetry) is calculated at the beginning and stored
-        in memory (about nao^4/8 doubles with ``rys=True``; the full nao^4 tensor with ``rys=False``).
-        J (and K) are rebuilt from the stored integrals in every iteration.
-        2: Only the blocks that pass the Schwarz test are stored (``rys=True`` only), and J (and K) are built from
-        the change of the density matrix in every iteration.
-        With ``rys=True`` both are built and contracted by ``Integrals.rys_4c2e_jk`` and support HF and hybrid
-        functionals; ``threshold_4c2e`` controls the screening.
+        1: Every unique shell-quartet block (8-fold permutational symmetry, about nao^4/8 doubles) is calculated at
+        the beginning and stored in memory. J (and K) are rebuilt from the stored integrals in every iteration.
+        2: Only the blocks that pass the Schwarz test are stored, and J (and K) are built from the change of the
+        density matrix in every iteration.
+        Both support HF and hybrid functionals. The integrals are evaluated (Rys quadrature with ``rys=True``, the
+        Obara-Saika scheme with ``rys=False``), stored and contracted by ``Integrals.jk_4c2e``, and
+        ``threshold_4c2e`` controls the screening. A store larger than ``max_memory_4c2e`` is not built: the SCF
+        then runs with ``direct_scf``.
         """
 
         # GPU acceleration
@@ -1464,7 +1475,6 @@ class DFT:
             if blocksize is None:
                 blocksize = 5000
 
-        isSchwarz = True
         
         if strict_schwarz:
             if not (DF_algo in (6, 10, 11, 12)):
@@ -1619,92 +1629,42 @@ class DFT:
             print("\n\nUser requested to use Obara-Saika Algorithm for the evaluation of ERIs")
 
         if not isDF: # 4c2e ERI case
-            
-            if rys:
-                # Shell-quartet Rys quadrature (Integrals.rys_4c2e_jk): J and, for HF and hybrid
-                # functionals, K with direct_scf as well as from stored integrals (coul_algo 1 and 2).
-                start_4c2e = timer()
-                threshold_4c2e = self.threshold_4c2e
-                print('\n\nShell pairs and Schwarz factors of the four-center integrals (Rys quadrature)...', flush=True)
-                startSchwarz = timer()
-                jk_plan = Integrals.rys_4c2e_jk.build_plan(basis, threshold=threshold_4c2e)
-                durationSchwarz = timer() - startSchwarz
-                print(f'{jk_plan.npairs} of {jk_plan.npairs_total} shell pairs kept, screening threshold {threshold_4c2e:.1e}; '
-                      f'time taken: {durationSchwarz:.2f} seconds.', flush=True)
-                if not direct_scf:
-                    dense_4c2e = (coul_algo == 1)
-                    store_gb = Integrals.rys_4c2e_jk.store_size_gb(jk_plan, dense=dense_4c2e,
-                                                                    threshold_store=0.1 * threshold_4c2e)
+            # J and, for HF and hybrid functionals, K from shell-quartet integrals (Integrals.jk_4c2e) by
+            # Rys quadrature or the Obara-Saika scheme: evaluated in every iteration (direct_scf) or stored
+            # once (coul_algo=1: every unique block, coul_algo=2: the Schwarz-significant blocks).
+            start_4c2e = timer()
+            threshold_4c2e = self.threshold_4c2e
+            print('\n\nShell pairs and Schwarz factors of the four-center integrals (' +
+                  ('Rys quadrature' if rys else 'Obara-Saika scheme') + ')...', flush=True)
+            startSchwarz = timer()
+            jk_plan = Integrals.jk_4c2e.build_plan(basis, threshold=threshold_4c2e, scheme='rys' if rys else 'os')
+            durationSchwarz = timer() - startSchwarz
+            print(f'{jk_plan.npairs} of {jk_plan.npairs_total} shell pairs kept, screening threshold {threshold_4c2e:.1e}; '
+                  f'time taken: {durationSchwarz:.2f} seconds.', flush=True)
+            if not direct_scf:
+                dense_4c2e = (coul_algo == 1)
+                store_gb = Integrals.jk_4c2e.store_size_gb(jk_plan, dense=dense_4c2e,
+                                                            threshold_store=0.1 * threshold_4c2e)
+                if self.max_memory_4c2e is None:
+                    available_gb = psutil.virtual_memory().available / 1e9
+                    budget_gb = 0.8 * available_gb
+                    budget_text = f'80% of the {available_gb:.2f} GB of memory available now'
+                else:
+                    budget_gb = float(self.max_memory_4c2e)
+                    budget_text = f'max_memory_4c2e = {budget_gb:.3f} GB'
+                if store_gb > budget_gb:
+                    # Building the store would risk running out of memory: evaluate the integrals in
+                    # every iteration instead.
+                    print(f'\nThe stored four-center integrals would need {store_gb:.3f} GB, more than {budget_text}: '
+                          'switching to direct SCF (set max_memory_4c2e to change the budget).', flush=True)
+                    direct_scf = True
+                else:
                     print('\nCalculating and storing ' + ('every unique' if dense_4c2e else 'the Schwarz-significant') +
                           f' four-center integral block: {store_gb:.3f} GB of memory.', flush=True)
-                    Integrals.rys_4c2e_jk.store_integrals(jk_plan, dense=dense_4c2e, threshold_store=0.1 * threshold_4c2e)
-                durationCoulomb = timer() - start_4c2e
-                if not direct_scf:
-                    print('Time taken for 4c2e integral evaluation (including Schwarz Screening): '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
-
-            elif isSchwarz:
-                start_4c2e = timer()
-                # Four centered two electron integrals (ERIs)
-                
-                if direct_scf:
-                    print('\n\nPerforming Schwarz screening...')
-                    print('Threshold ', threshold_schwarz)
-                    startSchwarz = timer()
-                    duration_4c2e_diag = 0.0
-                    start_4c2e_diag = timer()
-                    # Diagonal elements of ERI 4c2e array
-                    ints4c2e_diag = Integrals.schwarz_helpers.eri_4c2e_diag(basis)
-                    duration_4c2e_diag = timer() - start_4c2e_diag
-                    print('Time taken to evaluate the "diagonal" of 4c2e ERI tensor: ', round(duration_4c2e_diag, 2))
-                    # Calculate the square roots required for 
-                    duration_square_roots = 0.0
-                    start_square_roots = timer()
-                    sqrt_ints4c2e_diag = np.sqrt(np.abs(ints4c2e_diag))
-                    duration_square_roots = timer() - start_square_roots
-                    print('Time taken to evaluate the square roots needed: ', round(duration_square_roots, 2))
-                    if not rys:
-                        # Build shell-pair Schwarz upper bounds: max over bf pairs in the shell pair
-                        # schwarz_shell_pair[i_shell, j_shell] = max_{a in i, b in j} sqrt(|(ab|ab)|)
-                        schwarz_shell_pair = np.zeros((basis.nshells, basis.nshells), dtype=np.float64)
-                        for ish in range(basis.nshells):
-                            bf_i_start = basis.shell_bfs_offset[ish]
-                            nbf_i = basis.bfs_nbfshell[ish]
-                            for jsh in range(ish + 1):
-                                bf_j_start = basis.shell_bfs_offset[jsh]
-                                nbf_j = basis.bfs_nbfshell[jsh]
-                                max_val = 0.0
-                                for ia in range(nbf_i):
-                                    for jb in range(nbf_j):
-                                        val = sqrt_ints4c2e_diag[bf_i_start + ia, bf_j_start + jb]
-                                        if val > max_val:
-                                            max_val = val
-                                schwarz_shell_pair[ish, jsh] = max_val
-                                schwarz_shell_pair[jsh, ish] = max_val
-                    durationSchwarz = timer() - startSchwarz
-                    print('Total time taken for Schwarz screening: ', round(durationSchwarz, 2))
-                else:
-                    if coul_algo==1:
-                        ## WARN USER THAT DIRECT SCF IS OFF AND THUS 4C2E INTEGRALS WILL BE FULLY STORED
-                        ## ALSO NOTIFY THE USER ABOUT THE EXPECTED MEMORY REQUIREMENTS
-                        estimated_mem_GB = (basis.bfs_nao**4)*8/1e9
-                        print('\n\nWARNING: DIRECT SCF IS TURNED OFF. THIS MEANS THAT THE FULL 4C2E ERI TENSOR WILL BE STORED IN MEMORY.', flush=True)
-                        print('FOR THE CURRENT BASIS SET, THE 4C2E ERI TENSOR WILL REQUIRE APPROXIMATELY '+str(round(estimated_mem_GB, 2))+' GB OF MEMORY.', flush=True)
-                        print('IF THIS EXCEEDS THE AVAILABLE MEMORY ON YOUR SYSTEM, THE PROGRAM MAY CRASH OR THE SYSTEM MAY BECOME UNRESPONSIVE.', flush=True)
-                        print('IF YOU WISH TO AVOID THIS, PLEASE ENABLE DIRECT SCF MODE BY SETTING direct_scf = TRUE.\n\n', flush=True)
-                        print('\nCalculating four center two electron integrals (ERIs) using the Obara-Saika scheme with Schwarz screening...\n\n', flush=True)
-                        ints4c2e = Integrals.os_4c2e_schwarz_symm(basis, threshold_schwarz=threshold_schwarz)
-                        print("Size of 4c2e ERI tensor in GB: ", round(ints4c2e.nbytes/1e9, 4), flush=True)
-                        print("Negligible integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)<1.0e-12), flush=True)
-                        print("Significant integrals in the 4c2e ERI tensor = ", np.sum(abs(ints4c2e)>=1.0e-12), flush=True)
-                        print("Total number of integrals in the 4c2e ERI tensor = ", ints4c2e.size, flush=True)
-
-                    elif coul_algo==2:
-                        raise ValueError('coul_algo=2 (stored, Schwarz-screened four-center integrals) needs rys=True.')
-
-                
-                durationCoulomb = timer() - start_4c2e
-                if not direct_scf:
-                    print('Time taken for 4c2e integral evaluation (including Schwarz Screening): '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
+                    Integrals.jk_4c2e.store_integrals(jk_plan, dense=dense_4c2e, threshold_store=0.1 * threshold_4c2e)
+            durationCoulomb = timer() - start_4c2e
+            if not direct_scf:
+                print('Time taken for 4c2e integral evaluation (including Schwarz Screening): '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
             
         else: # Density fitting case (3c2e, and 2c2e will be calculated)
             H_temp, V_temp, ints3c2e, ints2c2e, nsignificant, indicesA, indicesB, indicesC, offsets_3c2e, indices, ints4c2e_diag, sqrt_ints4c2e_diag, sqrt_diag_ints2c2e, indices_dmat_tri, indices_dmat_tri_2, df_coeff0, Qpq, cho_decomp_ints2c2e, durationDF_cholesky, durationCoulomb = density_fitting_prelims_for_DFT_development(mol, basis, auxbasis, self, T, dmat, self.use_gpu, self.keep_ints3c2e_in_gpu, threshold_schwarz, strict_schwarz, rys, DF_algo, cholesky)
@@ -2007,28 +1967,17 @@ class DFT:
                 # Coulomb (Hartree) matrix
                 if not isDF:
                     start_4c2e = timer()
-                    if rys:
-                        # J (and K) of the full density matrix: from integrals evaluated on the fly
-                        # (direct_scf) or from the stored integrals (coul_algo 1 and 2).
-                        if direct_scf:
-                            print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
-                            JK = Integrals.rys_4c2e_jk.direct_jk(jk_plan, dmat, with_k=exx_coef > 0)
-                        else:
-                            JK = Integrals.rys_4c2e_jk.stored_jk(jk_plan, dmat, with_k=exx_coef > 0)
-                        if exx_coef > 0:
-                            J, K = JK
-                        else:
-                            J = JK
-                    elif direct_scf:
+                    # J (and K) of the full density matrix: from integrals evaluated on the fly
+                    # (direct_scf) or from the stored integrals (coul_algo 1 and 2).
+                    if direct_scf:
                         print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
-                        if exx_coef > 0:
-                            J, K = Integrals.os_coulomb_matrix(basis, dmat, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
-                        else:
-                            J = Integrals.os_coulomb_matrix(basis, dmat, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=False)
-                    else: # coul_algo==1, Obara-Saika
-                        J = contract('ijkl,ij', ints4c2e, dmat) # This is in CAO basis
-                        if exx_coef > 0:
-                            K = contract('ijkl,ik', ints4c2e, dmat) # This is in CAO basis
+                        JK = Integrals.jk_4c2e.direct_jk(jk_plan, dmat, with_k=exx_coef > 0)
+                    else:
+                        JK = Integrals.jk_4c2e.stored_jk(jk_plan, dmat, with_k=exx_coef > 0)
+                    if exx_coef > 0:
+                        J, K = JK
+                    else:
+                        J = JK
                     durationCoulomb += timer() - start_4c2e
                     print('Cumulative time taken to evaluate Coulomb matrix: '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
                 else:
@@ -2047,39 +1996,25 @@ class DFT:
                 print('\nDensity matrix difference norm: ', np.linalg.norm(dmat_diff), '\n', flush=True)
                 if not isDF:
                     start_4c2e = timer()
-                    if rys:
-                        if direct_scf or coul_algo==2:
-                            # Change of J (and K) caused by the change of the density matrix; the
-                            # density-weighted screening skips more and more blocks as the SCF converges.
-                            if direct_scf:
-                                print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
-                                JK = Integrals.rys_4c2e_jk.direct_jk(jk_plan, dmat_diff, with_k=exx_coef > 0)
-                            else:
-                                JK = Integrals.rys_4c2e_jk.stored_jk(jk_plan, dmat_diff, with_k=exx_coef > 0)
-                            if exx_coef > 0:
-                                J += JK[0]
-                                K += JK[1]
-                            else:
-                                J += JK
-                        else: # coul_algo==1: rebuilt from the complete set of stored integrals
-                            JK = Integrals.rys_4c2e_jk.stored_jk(jk_plan, dmat, with_k=exx_coef > 0)
-                            if exx_coef > 0:
-                                J, K = JK
-                            else:
-                                J = JK
-                    elif direct_scf:
-                        print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
-                        if exx_coef > 0:
-                            J_diff, K_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=True)
+                    if direct_scf or coul_algo==2:
+                        # Change of J (and K) caused by the change of the density matrix; the
+                        # density-weighted screening skips more and more blocks as the SCF converges.
+                        if direct_scf:
+                            print('\nCalculating four centered two electron integrals (ERIs)...\n\n', flush=True)
+                            JK = Integrals.jk_4c2e.direct_jk(jk_plan, dmat_diff, with_k=exx_coef > 0)
                         else:
-                            J_diff = Integrals.os_coulomb_matrix(basis, dmat_diff, schwarz_shell_pair=schwarz_shell_pair, threshold_schwarz=threshold_schwarz, fock_exchange=False)
-                        J += J_diff
+                            JK = Integrals.jk_4c2e.stored_jk(jk_plan, dmat_diff, with_k=exx_coef > 0)
                         if exx_coef > 0:
-                            K += K_diff
-                    else: # coul_algo==1, Obara-Saika
-                        J = contract('ijkl,ij', ints4c2e, dmat)
+                            J += JK[0]
+                            K += JK[1]
+                        else:
+                            J += JK
+                    else: # coul_algo==1: rebuilt from the complete set of stored integrals
+                        JK = Integrals.jk_4c2e.stored_jk(jk_plan, dmat, with_k=exx_coef > 0)
                         if exx_coef > 0:
-                            K = contract('ijkl,ik', ints4c2e, dmat) # This is in CAO basis
+                            J, K = JK
+                        else:
+                            J = JK
                     durationCoulomb += timer() - start_4c2e
                     print('Cumulative time taken to evaluate Coulomb matrix difference: '+str(round(durationCoulomb, 2))+' seconds.\n', flush=True)
                         
