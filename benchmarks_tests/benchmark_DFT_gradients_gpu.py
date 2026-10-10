@@ -27,6 +27,10 @@ Run it as::
     python benchmark_DFT_gradients_gpu.py --molecules H2O Benzene --basis def2-TZVP --xc PBE
     python benchmark_DFT_gradients_gpu.py --molecules H2O --numerical
     python benchmark_DFT_gradients_gpu.py --xc skala-1.1
+    python benchmark_DFT_gradients_gpu.py --molecules Decane_C10H22 Icosane_C20H42 --xc HF
+
+HF and global hybrids are density-fitted with def2-universal-jkfit (their exact exchange too), every
+other functional with def2-universal-jfit, as DFT chooses by default.
 """
 
 import argparse
@@ -45,9 +49,9 @@ import numpy as np
 from timeit import default_timer as timer
 
 from pyfock import Basis, Data, DFT, DFT_Grad, Grids, Mol
+from pyfock.DFT import default_auxbasis_name
 
 DEFAULT_MOLECULES = ['H2O', 'Benzene', 'Caffeine', 'Serotonin']
-AUX_BASIS = 'def2-universal-jfit'
 
 # Native PyFock functional ids, the same spellings benchmark_DFT_analytical_gradients.py accepts.
 FUNCTIONALS = {
@@ -66,10 +70,10 @@ def resolve_xc(name):
     return name           # Skala and anything else DFT resolves itself
 
 
-def build(xyz, basis_name, level):
+def build(xc, xyz, basis_name, level):
     mol = Mol(coordfile=xyz)
     basis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=basis_name)})
-    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=AUX_BASIS)})
+    auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=default_auxbasis_name(xc))})
     # Built exactly as numerical_gradient() builds the displaced ones, so the finite difference
     # differentiates the same functional on both sides.
     grids = Grids(mol, level=level, verbose=False)
@@ -77,7 +81,7 @@ def build(xyz, basis_name, level):
 
 
 def converged_scf(xc, xyz, basis_name, level, conv_crit, use_gpu):
-    mol, basis, auxbasis, grids = build(xyz, basis_name, level)
+    mol, basis, auxbasis, grids = build(xc, xyz, basis_name, level)
     dft = DFT(mol, basis, auxbasis, xc=xc, grids=grids)
     dft.conv_crit = conv_crit
     dft.max_itr = 50
@@ -124,7 +128,7 @@ def numerical_gradient(xc, mol, basis_name, level, conv_crit, use_gpu, step_bohr
     def energy(geometry):
         displaced = Mol(atoms=[list(a) for a in geometry])
         basis = Basis(displaced, {'all': Basis.load(mol=displaced, basis_name=basis_name)})
-        auxbasis = Basis(displaced, {'all': Basis.load(mol=displaced, basis_name=AUX_BASIS)})
+        auxbasis = Basis(displaced, {'all': Basis.load(mol=displaced, basis_name=default_auxbasis_name(xc))})
         dft = DFT(displaced, basis, auxbasis, xc=xc,
                   grids=Grids(displaced, level=level, verbose=False))
         dft.conv_crit, dft.max_itr, dft.ncores = conv_crit, 50, ncores

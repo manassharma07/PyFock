@@ -2,10 +2,12 @@
 
 Device port of :func:`pyfock.Integrals.rys_2c2e_grad_contract`:
 
-    grad[iatom, xyz] = sum_{PQ} c_P c_Q d(P|Q)/dR_{iatom, xyz}
+    grad[iatom, xyz] = sum_{PQ} W_PQ d(P|Q)/dR_{iatom, xyz}
 
-One thread per auxiliary function pair (P, Q) with Q < P; the diagonal carries no net force and the
-derivative with respect to the second center follows from translational invariance.
+for ``W_PQ = c_P c_Q`` (``df_coeff``) or a general symmetric matrix (``weights``: the metric part
+of the RI exchange gradient). One thread per auxiliary function pair (P, Q) with Q < P; the
+diagonal carries no net force and the derivative with respect to the second center follows from
+translational invariance.
 """
 import math
 
@@ -39,7 +41,7 @@ def _get_kernel(g_rows, g_cols, nroots_max):
 
     @cuda.jit(fastmath=True, cache=False)
     def _kernel(pair_i, pair_k, bfs_coords, bfs_contr_prim_norms, bfs_lmn, bfs_nprim,
-                bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_atoms, df_coeff,
+                bfs_coeffs, bfs_prim_norms, bfs_expnts, bfs_atoms, df_coeff, W, use_matrix,
                 threshold, DATA_X_, DATA_W_, grad_partial):
         idx = cuda.grid(1)
         if idx >= pair_i.shape[0]:
@@ -50,7 +52,10 @@ def _get_kernel(g_rows, g_cols, nroots_max):
         atom_i = bfs_atoms[i]
         atom_k = bfs_atoms[k]
 
-        cik = df_coeff[i] * df_coeff[k]
+        if use_matrix:
+            cik = W[i, k]
+        else:
+            cik = df_coeff[i] * df_coeff[k]
         if abs(cik) < threshold:
             return
 
@@ -150,10 +155,16 @@ def _get_kernel(g_rows, g_cols, nroots_max):
     return _kernel
 
 
-def rys_2c2e_grad_contract_cupy(auxbasis, df_coeff, threshold=1e-14, cp_stream=None):
-    """GPU counterpart of :func:`rys_2c2e_grad_contract`. Returns a NumPy ``(natoms, 3)`` array."""
+def rys_2c2e_grad_contract_cupy(auxbasis, df_coeff=None, threshold=1e-14, cp_stream=None, weights=None):
+    """GPU counterpart of :func:`rys_2c2e_grad_contract`. Returns a NumPy ``(natoms, 3)`` array.
+
+    Pass either the fitting coefficients ``df_coeff`` (``W_PQ = c_P c_Q``) or a symmetric
+    ``(naux, naux)`` ``weights`` matrix (NumPy or CuPy; Cartesian auxiliary functions).
+    """
     if cp is None:
         raise RuntimeError('CuPy is required for rys_2c2e_grad_contract_cupy.')
+    if weights is None and df_coeff is None:
+        raise ValueError('Pass either df_coeff or weights.')
 
     naux = auxbasis.bfs_nao
     bfs_coords = np.array(auxbasis.bfs_coords, dtype=np.float64)
@@ -181,17 +192,8 @@ def rys_2c2e_grad_contract_cupy(auxbasis, df_coeff, threshold=1e-14, cp_stream=N
     g_rows = max_l + 2       # the bra recursion runs to la+1
     g_cols = max_l + 1
 
-    df_coeff = np.ascontiguousarray(df_coeff, dtype=np.float64)
-
-    # Strictly lower triangle, minus the pairs on a common atom (no net force), sorted by the
-    # (l_bra, l_ket) pair so that a warp stays on one recursion shape.
-    tri_i, tri_k = np.tril_indices(naux, k=-1)
-    keep = bfs_atoms[tri_i] != bfs_atoms[tri_k]
-    tri_i = tri_i[keep].astype(np.int32)
-    tri_k = tri_k[keep].astype(np.int32)
-    order = np.argsort(l_tot[tri_i] * (max_l + 1) + l_tot[tri_k], kind='stable')
-    tri_i = np.ascontiguousarray(tri_i[order])
-    tri_k = np.ascontiguousarray(tri_k[order])
+    use_matrix = weights is not None
+    df_coeff = np.zeros(1) if use_matrix else np.ascontiguousarray(df_coeff, dtype=np.float64)
 
     if cp_stream is None:
         cp_stream, nb_stream = gradient_stream()
@@ -199,15 +201,34 @@ def rys_2c2e_grad_contract_cupy(auxbasis, df_coeff, threshold=1e-14, cp_stream=N
         nb_stream = cuda.external_stream(cp_stream.ptr)
 
     with cp_stream:
-        args = [cp.asarray(a) for a in (tri_i, tri_k, bfs_coords, bfs_contr_prim_norms, bfs_lmn,
-                                        bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,
-                                        bfs_atoms, df_coeff)]
+        # Strictly lower triangle, minus the pairs on a common atom (no net force), sorted by the
+        # (l_bra, l_ket) pair so that a warp stays on one recursion shape. Built on the device: for
+        # a JK-fitting basis the naux^2/2 pairs took most of the time as a host sort.
+        atoms_d = cp.asarray(bfs_atoms)
+        ltot_d = cp.asarray(l_tot.astype(np.int32))
+        tri_i, tri_k = cp.tril_indices(naux, k=-1)
+        keep = atoms_d[tri_i] != atoms_d[tri_k]
+        tri_i = tri_i[keep].astype(cp.int32)
+        tri_k = tri_k[keep].astype(cp.int32)
+        order = cp.argsort(ltot_d[tri_i] * (max_l + 1) + ltot_d[tri_k])
+        tri_i = cp.ascontiguousarray(tri_i[order])
+        tri_k = cp.ascontiguousarray(tri_k[order])
+        del keep, order
+        args = [tri_i, tri_k] + [cp.asarray(a) for a in (bfs_coords, bfs_contr_prim_norms, bfs_lmn,
+                                                         bfs_nprim, bfs_coeffs, bfs_prim_norms, bfs_expnts,
+                                                         bfs_atoms, df_coeff)]
+        if use_matrix:
+            W = cp.ascontiguousarray(cp.asarray(weights, dtype=cp.float64))
+            if W.shape != (naux, naux):
+                raise ValueError('weights must have shape (%d, %d)' % (naux, naux))
+        else:
+            W = cp.zeros((1, 1), dtype=cp.float64)
         grad_partial = cp.zeros((_NBINS, natoms, 3), dtype=cp.float64)
         kernel = _get_kernel(g_rows, g_cols, nroots_max)
         threads = 64
         blocks = (tri_i.shape[0] + threads - 1) // threads
         if blocks > 0:
-            kernel[blocks, threads, nb_stream](*args, float(threshold),
+            kernel[blocks, threads, nb_stream](*args, W, use_matrix, float(threshold),
                                                cp.asarray(DATA_X), cp.asarray(DATA_W), grad_partial)
         grad = cp.asnumpy(grad_partial.sum(axis=0))
     cp_stream.synchronize()

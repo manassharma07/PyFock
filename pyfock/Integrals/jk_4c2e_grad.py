@@ -208,14 +208,17 @@ def _chunk_rys_grad(K, lbra, lket, ln, g2, E4, e0, ne, f0, nf, cart_xyz, lx, lz,
 
 
 @njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
-def _e0f0_rys_grad(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, pp_a, xx, xy, xz, zx, zy, zz,
+def _e0f0_rys_grad(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, pp_a, centres,
                    lbra, lket, e0, ne, f0, nf, cart_xyz, roots, weights, ln, g2, E4, lx, lz, needz, tk):
     """
     Adds the plain and exponent-weighted (e0|f0), ``|e| <= lbra``, ``|f| <= lket`` (one more than
     the quartet on the bra side and, with ``needz``, on the ket side), of all screened primitive
     quartets to ``E4``.  No element with both sides raised is needed, so the quadrature is that of
-    ``lbra + lket - 1`` (``lbra + lket`` without ``needz``).
+    ``lbra + lket - 1`` (``lbra + lket`` without ``needz``).  ``centres`` is the tuple
+    ``(X_x, X_y, X_z, Z_x, Z_y, Z_z)``: an inlined call with more than 30 arguments is a ``*args``
+    call on Python 3.10, which Numba cannot inline.
     """
+    xx, xy, xz, zx, zy, zz = centres
     nroots = (lbra + lket - (1 if needz else 0)) // 2 + 1
     kmax = MAXK // nroots
     nk = 0
@@ -354,7 +357,7 @@ def _quartet_grad(i, j, thr_prim, s, exx, needz, dmat, pair_sh, pair_pp0, pair_p
             E4[k, c] = 0.0
     _e0f0_rys_grad(pair_pp0[i], pair_pp0[i] + pair_ppn[i], pair_pp0[j], pair_pp0[j] + pair_ppn[j], thr_prim,
                    pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, pp_a,
-                   sh_cen[X, 0], sh_cen[X, 1], sh_cen[X, 2], sh_cen[Z, 0], sh_cen[Z, 1], sh_cen[Z, 2],
+                   (sh_cen[X, 0], sh_cen[X, 1], sh_cen[X, 2], sh_cen[Z, 0], sh_cen[Z, 1], sh_cen[Z, 2]),
                    lbra + 1, lket_r, e0, ne, f0, nf, cart_xyz, roots, weights, ln, g2, E4, lx, lz, needz, tk)
 
     # powers of AB = X - Y (pw[0]) and CD = Z - W (pw[1])

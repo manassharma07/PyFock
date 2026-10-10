@@ -3,7 +3,8 @@
 RI exact exchange (`xc='HF'` and global hybrids such as B3LYP/PBE0) is built from the
 shell-blocked three-center integrals of `DF_algo=11`, on the CPU (sections 1-3) and, since
 2026-10-07, on the GPU (section 7: the rows stay on the device, the contraction is cuBLAS
-throughout, and the early SCF iterations run it in single precision). This note walks through the
+throughout, and the early SCF iterations run it in single precision); since 2026-10-10 its analytical
+gradient, and that of HF/hybrids without density fitting, run on the GPU as well (section 8). This note walks through the
 implementation, records the def2-SVP benchmarks of 2026-10-05 (CPU) and 2026-10-07 (GPU),
 documents the CPU acceleration (2.2x on the exchange matrix, identical energies), analyses what a
 `DF_algo=12` (multipole) RI-K can and cannot buy, and ranks the remaining options.
@@ -421,3 +422,108 @@ Reading the table:
   becomes irrelevant for the exchange, and the build (one `dtrsm` of `naux^2 nrows` flops,
   230 GFlop for icosane) is a few tens of milliseconds.
 
+
+## 8. Analytical gradients of HF and hybrids on the GPU (implemented 2026-10-10)
+
+`DFT_Grad(dft, use_gpu=True)` - the default after a GPU SCF, and what the ASE calculator gets -
+now evaluates the exact-exchange terms on the device too, with density fitting (RI-K, `DF_algo=11`)
+and without it (four-center integrals). The CPU routines are the value oracle:
+`tests/test_rik_gradient_gpu.py` and `tests/test_jk_4c2e_grad_gpu.py` compare every new device
+routine and the assembled `DFT_Grad` gradients of HF, PBE0 and B3LYP (CAO and SAO, strict Schwarz,
+fused and separate Coulomb/exchange passes, GPU and CPU SCFs) with the CPU ones.
+
+### 8.1 RI exchange (density fitting)
+
+The gradient needs, besides the DF Coulomb terms, `-(a/2) sum (ik|P)' Gamma^P_ik + (a/4) sum
+(P|Q)' W_PQ` with `Y_P = X^T c^P X` (`X` the occupied factor of `D`), `Gamma^P = X Y_P X^T` and
+`W_PQ = <Y_P, Y_Q>` (`pyfock/DFT_Grad.py`). On the device
+(`pyfock/Integrals/df_algo11_exchange_cupy.py`):
+
+1. **Rows.** The DF_algo=11 CUDA plan evaluates the screened blocks on the GPU and
+   `build_exchange_cupy(..., orthonormalize=False)` expands them into raw rows `(ij|P)` (fit space:
+   spherical in SAO mode), as the SCF does minus the orthonormalisation.
+2. **Occupied fit blocks** (`occupied_fit_blocks_cupy`): the half transform of the exchange build
+   (gathered slabs, strided-batched GEMMs, always fp64), one GEMM per auxiliary block for
+   `X^T (ij|Q) X`, and the two triangular solves with the Cholesky factor of the fit metric on the
+   packed lower triangles (the blocks are symmetric in `(a, b)`: half the solve). `W` is one
+   `dsyrk` over the packed triangles with the off-diagonal elements scaled by `sqrt(2)`
+   (`exchange_metric_weights_cupy`: a quarter of the flops of `Y Y^T`).
+3. **Three-center weights and derivatives, block by block** (`exchange_gradient_cupy`). The rows
+   are freed. For one block of whole auxiliary shells at a time, `Y` is mapped onto the Cartesian
+   auxiliary functions of the block, `U = X Y` is one GEMM and the weights
+   `scale Gamma^P_ij (+ D_ij c_P)` of every stored pair come from one padded strided-batched GEMM per
+   bin of functions with a similar number of own rows `(i, j <= i)`; the block goes straight to the
+   derivative kernel (`rys_3c2e_grad_contract_cupy.RowsGradContext`): one thread per (shell pair,
+   auxiliary shell), the Rys derivative recursion of the DF Coulomb kernel with the weight read from
+   the block. Tasks are screened on the device as on the CPU - the plan's Schwarz test and
+   primitive-pair mask, and `Q_pair Q_aux max|weight| >= threshold_schwarz_grad` - and sorted by
+   angular momenta and number of primitive triples (sorting by the angular momenta alone left the
+   lanes of a warp with very different loop lengths; the secondary key made the kernel 1.6x faster).
+   The weights never exist in full; a block is bounded by a third of the free device memory (4 GB at
+   most).
+4. **Two-center term**: `rys_2c2e_grad_contract_cupy(auxbasis, weights=W)`. Its function-pair list
+   is now built and sorted on the device; the host sort took 0.21 of its 0.27 s for icosane/jkfit
+   (the DF Coulomb gradient of pure functionals uses the same routine and gains the same).
+
+As on the CPU, one derivative pass serves the Coulomb and the exchange terms by default
+(`coulomb_exchange_df`); `separate_exchange=True` runs the DF Coulomb terms through the existing
+device kernels and the exchange on its own. The semilocal part of a hybrid needed one more change:
+`eval_xc_grad_2_cupy` took exactly an `[exchange, correlation]` pair and failed for a hybrid's single
+xc ID; it now resolves the functional list with `eval_xc_2._xc_functionals`, as the CPU gradient and
+the GPU SCF driver do.
+
+**Accuracy.** The kernels agree with the CPU ones to round-off (rows kernel 6e-14 on gradients of
+size 30, four-center kernel 7e-14 on 8.5); the assembled gradients to 3-6e-10 Ha/Bohr, with the net
+force at 1e-11 on both devices for HF. With Cartesian auxiliary functions (`sao=False`) the
+def2-universal-jkfit metric is badly conditioned (condition number ~1e12 for two waters), so `Y`
+itself is only determined to ~1e-5 relative - two correct CPU solvers (Cholesky and LU) differ by
+that much - while its contractions with the integrals agree to round-off; the tests therefore check
+`Y` through the residual of the fit equations and compare it element by element only in the
+spherical fit space (condition number ~4e7).
+
+### 8.2 Four-center integrals (`isDF=False`)
+
+`pyfock/Integrals/jk_4c2e_grad_cupy.py` (`grad_4c2e_cupy`) ports `jk_4c2e_grad.grad_4c2e`: one
+thread per shell quartet that survives the density-weighted Schwarz screening of the CPU code (same
+primitive screening, one-centre rule, `Z` derivative skipped when `Z` and `W` share an atom, `(ZW|XY)`
+order when the bra pair is on one atom), tasks generated on the device in chunks of bra pairs and
+sorted by class and number of primitive quartets (1.5x). Per primitive quartet and root the three
+Rys tables are built one order above the quartet, then the horizontal transfers of the plain and the
+shifted integrals of every component quartet are contracted at once with the density weight; the
+CPU kernel's per-quartet `(e0|f0)` tables do not fit a GPU thread.
+
+Two fixes outside the gradient were needed to reach this path:
+
+* `DFT.scf` with `isDF=False` and `use_gpu=True` raised a `TypeError` for every functional: the
+  four-center `J`/`K` are built on the host, and the incremental `J += dJ` (and `K`, never moved to
+  the device) mixed NumPy and CuPy arrays. They are now moved to the device like `J` was; the
+  energies match the CPU run to 2e-13 Ha (the four-center `J` and `K` themselves still run on the
+  CPU).
+* `jk_4c2e.py` and `jk_4c2e_grad.py` did not compile with Python 3.10 (Numba 0.61): CPython 3.10
+  turns a call with more than 30 arguments into a `*args` call, which Numba cannot inline
+  (`inline='always'`), and `_quartet` (38 arguments), `_e0f0_os` (33) and `_e0f0_rys_grad` (34) are
+  such calls. The scratch arrays and the centre coordinates are now passed as tuples; nothing else
+  changed.
+
+### 8.3 Timings
+
+RTX 5070 (472 GFlop/s fp64) against 8 threads of the i9-12900K, def2-SVP / def2-universal-jkfit,
+one converged GPU SCF per molecule and both gradients of it (two warm-up gradients on the GPU, the
+faster of two timed runs) - the protocol of `benchmarks_tests/benchmark_DFT_gradients_gpu.py`, whose
+auxiliary basis now follows the functional:
+`PYFOCK_NCORES=8 python benchmark_DFT_gradients_gpu.py --molecules Decane_C10H22 Icosane_C20H42 --xc HF`
+(decane: 1.36 s / 0.46 s there). Four-center rows: the two-electron term alone (`grad_4c2e` against
+`grad_4c2e_cupy`, threshold 1e-11) on the converged density of the RI-HF SCF, warm caches.
+
+| system | CPU [s] | GPU [s] | speed-up | largest terms, CPU -> GPU [s] |
+|---|---|---|---|---|
+| decane, RI-HF, whole gradient | 1.41 | 0.44 | 3.2x | 3c2e derivatives 0.56 -> 0.12, rows 0.33 -> 0.11 |
+| icosane, RI-HF, whole gradient | 6.54 | 1.75 | 3.7x | 3c2e 2.57 -> 0.54, rows 1.63 -> 0.45, `Y` 1.35 -> 0.30 |
+| decane, B3LYP (RI-K), whole gradient | 3.31 | 0.65 | 5.1x | XC 1.99 -> 0.20, 3c2e 0.57 -> 0.12 |
+| benzene, HF, four-center term | 0.87 | 0.28 | 3.1x | |
+| decane, HF, four-center term | 6.22 | 1.24 | 5.0x | 9.6 M shell quartets |
+
+The GPU-CPU differences of the whole gradients are 3.3e-10 (decane) and 5.6e-10 Ha/Bohr
+(icosane). On this card the remaining device time is spread over the plan and rows (CPU metadata
+plus device integrals), the fp64 GEMMs of `Y` and the derivative kernel; with full-rate fp64
+(A100, H100) the GEMM parts shrink by an order of magnitude.

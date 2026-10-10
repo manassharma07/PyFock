@@ -2062,11 +2062,14 @@ class DFT:
                             JK = Integrals.jk_4c2e.direct_jk(jk_plan, dmat_diff, with_k=exx_coef > 0)
                         else:
                             JK = Integrals.jk_4c2e.stored_jk(jk_plan, dmat_diff, with_k=exx_coef > 0)
+                        # the four-center J and K are built on the host; on a GPU run the accumulated
+                        # matrices already live on the device (see below)
+                        to_dev = cp.asarray if self.use_gpu else (lambda a: a)
                         if exx_coef > 0:
-                            J += JK[0]
-                            K += JK[1]
+                            J += to_dev(JK[0])
+                            K += to_dev(JK[1])
                         else:
-                            J += JK
+                            J += to_dev(JK)
                     else: # coul_algo==1: rebuilt from the complete set of stored integrals
                         JK = Integrals.jk_4c2e.stored_jk(jk_plan, dmat, with_k=exx_coef > 0)
                         if exx_coef > 0:
@@ -2086,9 +2089,11 @@ class DFT:
                 # J += J_diff
             if self.use_gpu:
                 J = cp.asarray(J, dtype=cp.float64)
+                if exx_coef > 0 and not isDF:
+                    K = cp.asarray(K, dtype=cp.float64)    # the four-center K comes from the host
                 streams[0].synchronize()
                 cp.cuda.Stream.null.synchronize()
-            
+
             if xc!='HF':
                 # XC energy and potential
                 startxc = timer()

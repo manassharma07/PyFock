@@ -7,8 +7,10 @@ large CuPy GEMMs instead of by a joblib worker, so the blocks are taken one at a
 parallel.
 
 Supports LDA, GGA and meta-GGA (tau-dependent) functionals, with the native PyFock functionals or
-pylibxc, and the optional grid response. Laplacian-dependent meta-GGAs are not supported (neither is
-the SCF).
+pylibxc, and the optional grid response. As on the CPU (and in the GPU SCF driver eval_xc_3_cupy),
+``funcid`` is an exchange-correlation pair or a single xc ID such as the semilocal part of a global
+hybrid (its exact exchange is not an XC term): the derivatives of the components are summed.
+Laplacian-dependent meta-GGAs are not supported (neither is the SCF).
 
 A note on r2SCAN, which speeds up much less than the rest (~2.5x overall against ~7x for PBE). Its
 native implementation has no analytic potential: it finite-differences its own energy expression,
@@ -32,6 +34,7 @@ from numba import cuda
 from pyfock import XC
 from . import bf_val_helpers
 from .cuda_stream import gradient_stream
+from .eval_xc_2 import _xc_functionals
 
 __all__ = ['eval_xc_grad_2_cupy']
 
@@ -84,19 +87,11 @@ def eval_xc_grad_2_cupy(basis, dmat, weights, coords, funcid=(1, 7), use_libxc=F
     else:
         nb_stream = cuda.external_stream(cp_stream.ptr)
 
-    xc_family_dict = {1: 'LDA', 2: 'GGA', 4: 'MGGA'}
-    if use_libxc:
-        import pylibxc
-        funcx = pylibxc.LibXCFunctional(funcid[0], 'unpolarized')
-        funcc = pylibxc.LibXCFunctional(funcid[1], 'unpolarized')
-        x_family_code = funcx.get_family()
-        c_family_code = funcc.get_family()
-    else:
-        funcx = funcc = None
-        x_family_code = XC.get_family(funcid[0])
-        c_family_code = XC.get_family(funcid[1])
-    is_gga = (xc_family_dict[x_family_code] != 'LDA' or xc_family_dict[c_family_code] != 'LDA')
-    is_mgga = (xc_family_dict[x_family_code] == 'MGGA' or xc_family_dict[c_family_code] == 'MGGA')
+    # Semilocal components of the functional (an exchange-correlation pair, or a single ID such as
+    # the semilocal part of a global hybrid), resolved once as in eval_xc_2.
+    funcs, xc_family = _xc_functionals(funcid, use_libxc)
+    is_gga = xc_family >= 2
+    is_mgga = xc_family == 4
     need_hess = is_gga or grid_response
 
     with cp_stream:
@@ -175,8 +170,7 @@ def eval_xc_grad_2_cupy(basis, dmat, weights, coords, funcid=(1, 7), use_libxc=F
                              + _sum_prod(ao_grad[2], Hgrad[2]))
 
             energy_density, vrho, vsigma, vtau = _functional_derivatives(
-                funcid, use_libxc, funcx, funcc, x_family_code, c_family_code, xc_family_dict,
-                rho, sigma, tau, need_energy=grid_response)
+                funcs, rho, sigma, tau, need_energy=grid_response)
 
             F = weights_block * vrho
             res = cp.empty((3, nbf_block))
@@ -234,52 +228,51 @@ def eval_xc_grad_2_cupy(basis, dmat, weights, coords, funcid=(1, 7), use_libxc=F
     return dexc_dbf_host, atom_grad_host + weight_response_term(grids, eps_host)
 
 
-def _functional_derivatives(funcid, use_libxc, funcx, funcc, x_family_code, c_family_code,
-                            xc_family_dict, rho, sigma, tau, need_energy):
-    """vrho / vsigma / vtau (and the energy density when the grid response needs it)."""
-    if use_libxc:
-        # pylibxc has no device entry point, so the per-point quantities make a round trip.
-        rho_h = cp.asnumpy(rho)
-        sigma_h = None if sigma is None else cp.asnumpy(sigma)
-        tau_h = None if tau is None else cp.asnumpy(tau)
-        out = []
-        for func, family in ((funcx, x_family_code), (funcc, c_family_code)):
-            inp = {'rho': rho_h}
-            if xc_family_dict[family] != 'LDA':
-                inp['sigma'] = sigma_h
-            if xc_family_dict[family] == 'MGGA':
-                inp['tau'] = tau_h
-            out.append(func.compute(inp))
-        retx, retc = out
-        energy_density = cp.asarray((retx['zk'] + retc['zk']).ravel()) if need_energy else None
-        vrho = cp.asarray((retx['vrho'] + retc['vrho'])[:, 0])
-        vsigma = 0.0
-        if xc_family_dict[x_family_code] != 'LDA':
-            vsigma = vsigma + cp.asarray(retx['vsigma'][:, 0])
-        if xc_family_dict[c_family_code] != 'LDA':
-            vsigma = vsigma + cp.asarray(retc['vsigma'][:, 0])
-        vtau = 0.0
-        if xc_family_dict[x_family_code] == 'MGGA':
-            vtau = vtau + cp.asarray(retx['vtau'][:, 0])
-        if xc_family_dict[c_family_code] == 'MGGA':
-            vtau = vtau + cp.asarray(retc['vtau'][:, 0])
-        return energy_density, vrho, vsigma, vtau
-
-    retx = XC.func_compute(funcid[0], rho, sigma=sigma, tau=tau, use_gpu=True)
-    retc = XC.func_compute(funcid[1], rho, sigma=sigma, tau=tau, use_gpu=True)
-    energy_density = (retx[0] + retc[0]) if need_energy else None
-    vrho = retx[1] + retc[1]
+def _functional_derivatives(funcs, rho, sigma, tau, need_energy):
+    """
+    vrho / vsigma / vtau (and the energy density when the grid response needs it), summed over the
+    components ``funcs`` of :func:`pyfock.Integrals.eval_xc_2._xc_functionals`.
+    """
+    energy_density = 0.0
+    vrho = 0.0
     vsigma = 0.0
-    if xc_family_dict[x_family_code] != 'LDA':
-        vsigma = vsigma + retx[2]
-    if xc_family_dict[c_family_code] != 'LDA':
-        vsigma = vsigma + retc[2]
     vtau = 0.0
-    if xc_family_dict[x_family_code] == 'MGGA':
-        vtau = vtau + retx[3]
-    if xc_family_dict[c_family_code] == 'MGGA':
-        vtau = vtau + retc[3]
-    return energy_density, vrho, vsigma, vtau
+    rho_h = sigma_h = tau_h = None
+    for kind, fn, fam in funcs:
+        if kind == 'libxc':
+            # pylibxc has no device entry point, so the per-point quantities make a round trip.
+            if rho_h is None:
+                rho_h = cp.asnumpy(rho)
+                sigma_h = None if sigma is None else cp.asnumpy(sigma)
+                tau_h = None if tau is None else cp.asnumpy(tau)
+            inp = {'rho': rho_h}
+            if fam >= 2:
+                inp['sigma'] = sigma_h
+            if fam == 4:
+                inp['tau'] = tau_h
+            ret = fn.compute(inp)
+            if need_energy:
+                energy_density = energy_density + cp.asarray(ret['zk'].ravel())
+            vrho = vrho + cp.asarray(ret['vrho'][:, 0])
+            if fam >= 2:
+                vsigma = vsigma + cp.asarray(ret['vsigma'][:, 0])
+            if fam == 4:
+                vtau = vtau + cp.asarray(ret['vtau'][:, 0])
+        else:
+            if fam == 4:
+                ret = XC.func_compute(fn, rho, sigma=sigma, tau=tau, use_gpu=True)
+            elif fam == 2:
+                ret = XC.func_compute(fn, rho, sigma=sigma, use_gpu=True)
+            else:
+                ret = XC.func_compute(fn, rho, use_gpu=True)
+            if need_energy:
+                energy_density = energy_density + ret[0]
+            vrho = vrho + ret[1]
+            if fam >= 2:
+                vsigma = vsigma + ret[2]
+            if fam == 4:
+                vtau = vtau + ret[3]
+    return (energy_density if need_energy else None), vrho, vsigma, vtau
 
 
 def _grid_translation_term(c_rho, c_grad, c_tau, ao_grad, ao_hess, Fmj, Hgrad, rho_grad,

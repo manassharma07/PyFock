@@ -606,9 +606,14 @@ def _chunk_os(K, lx, lket, ltot, ea, fa, lo, fm, V, E, e0, ne, f0, nf, cart_xyz,
 
 
 @njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
-def _e0f0_os(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, xx, xy, xz, zx, zy, zz,
+def _e0f0_os(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, centres,
              lx, lbra, lket, e0, ne, f0, nf, cart_xyz, cart_off, dec, dirn, boys, lo, fm, V, E):
-    """Adds (e0|f0) of all screened primitive quartets to ``E`` (Obara-Saika)."""
+    """
+    Adds (e0|f0) of all screened primitive quartets to ``E`` (Obara-Saika). ``centres`` is the tuple
+    ``(X_x, X_y, X_z, Z_x, Z_y, Z_z)``: an inlined call with more than 30 arguments is a ``*args`` call
+    on Python 3.10, which Numba cannot inline.
+    """
+    xx, xy, xz, zx, zy, zz = centres
     ltot = lbra + lket
     nm = ltot + 1
     ea = cart_off[lbra + 1]
@@ -674,14 +679,17 @@ def _e0f0_os(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, xx, x
 @njit(cache=True, fastmath=True, nogil=True, error_model='numpy', boundscheck=False, inline='always')
 def _quartet(scheme, i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
              sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
-             roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw):
+             work):
     """
     Normalized block ``(XY|ZW)`` of bra pair ``i`` and ket pair ``j`` written to ``blk``
     (index ``((x nY + y) nZ + z) nW + w``), by Rys quadrature (``scheme`` 0) or Obara-Saika
     (``scheme`` 1). Primitive quartets with ``q_a q_b < thr_prim`` (primitive-pair Schwarz
     factors, sorted in decreasing order within every pair) are skipped. Returns the number of
-    elements.
+    elements. ``work`` is the tuple of scratch arrays of :func:`_work_arrays` (one argument rather
+    than eleven: an inlined call with more than 30 arguments is a ``*args`` call on Python 3.10,
+    which Numba cannot inline).
     """
+    roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw = work
     X = pair_sh[i, 0]
     Y = pair_sh[i, 1]
     Z = pair_sh[j, 0]
@@ -741,7 +749,7 @@ def _quartet(scheme, i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p,
                   lbra, lket, e0, ne, f0, nf, cart_xyz, roots, weights, ln, g2, E)
     else:
         _e0f0_os(a0, a1, b0, b1, thr_prim, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
-                 sh_cen[X, 0], sh_cen[X, 1], sh_cen[X, 2], sh_cen[Z, 0], sh_cen[Z, 1], sh_cen[Z, 2],
+                 (sh_cen[X, 0], sh_cen[X, 1], sh_cen[X, 2], sh_cen[Z, 0], sh_cen[Z, 1], sh_cen[Z, 2]),
                  lx, lbra, lket, e0, ne, f0, nf, cart_xyz, cart_off, dec, dirn, boys, lo, fm, V, E)
 
     # Horizontal transfers (once per shell quartet): (e0|f0) -> (e0|zw) -> (xy|zw).
@@ -881,11 +889,12 @@ def _pair_schwarz(pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, 
     npair = pair_sh.shape[0]
     Q = np.zeros(npair, dtype=np.float64)
     for c in prange(nchunk):
-        roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw = _work_arrays(lmax, scheme)
+        work = _work_arrays(lmax, scheme)
+        blk = work[9]
         for i in range(c * npair // nchunk, (c + 1) * npair // nchunk):
             _quartet(scheme, i, i, 0.0, pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q,
                      sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale, cart_xyz, cart_off, idx3, binom, dec, dirn,
-                     boys, roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw)
+                     boys, work)
             nX = sh_nbf[pair_sh[i, 0]]
             nY = sh_nbf[pair_sh[i, 1]]
             m = 0.0
@@ -955,7 +964,8 @@ def _direct_pass(bin_off, bin_items, Q, pair_sh, pair_pp0, pair_ppn, pair_ab, pp
         G = np.zeros((nbins, 1, 1), dtype=np.float64)
     dlim = 4.0 * dmax
     for bn in prange(nbins):
-        roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw = _work_arrays(lmax, scheme)
+        work = _work_arrays(lmax, scheme)
+        blk = work[9]
         Hb = H[bn]
         Gb = G[bn]
         for t in range(bin_off[bn], bin_off[bn + 1]):
@@ -977,8 +987,7 @@ def _direct_pass(bin_off, bin_items, Q, pair_sh, pair_pp0, pair_ppn, pair_ab, pp
                     continue
                 _quartet(scheme, i, j, PRIM_FACTOR * threshold / dm, pair_sh, pair_pp0, pair_ppn, pair_ab,
                          pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale,
-                         cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
-                         roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw)
+                         cart_xyz, cart_off, idx3, binom, dec, dirn, boys, work)
                 s = 1.0
                 if X == Y:
                     s *= 0.5
@@ -998,7 +1007,8 @@ def _store_pass(bin_off, bin_items, jend, row_off, thr_prim, pair_sh, pair_pp0, 
     """Evaluate and store the blocks ``(i, j)``, ``i <= j < jend[i]``, scaled by their degeneracy factor."""
     nbins = bin_off.shape[0] - 1
     for bn in prange(nbins):
-        roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw = _work_arrays(lmax, scheme)
+        work = _work_arrays(lmax, scheme)
+        blk = work[9]
         for t in range(bin_off[bn], bin_off[bn + 1]):
             i = bin_items[t]
             X = pair_sh[i, 0]
@@ -1007,8 +1017,7 @@ def _store_pass(bin_off, bin_items, jend, row_off, thr_prim, pair_sh, pair_pp0, 
             for j in range(i, jend[i]):
                 nc = _quartet(scheme, i, j, thr_prim, pair_sh, pair_pp0, pair_ppn, pair_ab,
                               pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, sh_l, sh_off, sh_nbf, sh_cen, bfs_lmn, comp_scale,
-                              cart_xyz, cart_off, idx3, binom, dec, dirn, boys,
-                              roots, weights, ln, g2, lo, fm, V, E, F1, blk, pw)
+                              cart_xyz, cart_off, idx3, binom, dec, dirn, boys, work)
                 s = 1.0
                 if X == Y:
                     s *= 0.5
