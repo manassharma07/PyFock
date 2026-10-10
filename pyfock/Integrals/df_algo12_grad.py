@@ -41,6 +41,10 @@ the geometry, which enters through the truncation error of the expansions alone.
 
 The far field does not need the branch-centred row moments ``Mtil`` of the SCF passes: every group
 is translated once, here, so the plan is built with ``low_memory=True`` and no near-field values.
+
+The near-field kernel also contracts a general weight per function pair and auxiliary function,
+``sum_{ij,P} Gamma^P_ij d(ij|P)/dR`` (:func:`grad_contract_rows`), which the RI exchange gradient
+needs (algorithm 11 only: exchange contracts the integrals themselves, not their multipoles).
 """
 
 import numpy as np
@@ -54,7 +58,7 @@ from .df_algo11_helpers import _lpt_bins
 from . import df_algo12_helpers as a12
 from . import multipole_helpers as mp
 
-__all__ = ['build_grad_plan', 'grad_contract']
+__all__ = ['build_grad_plan', 'grad_contract', 'grad_contract_rows']
 
 PI = 3.141592653589793
 
@@ -129,12 +133,19 @@ def _pair_grad_near(I, J, rc, wmax, coeff, cmax_aux, thr_grad, atom_a, atom_b, a
                     Qp, Q_aux, threshold, pp_group_p, grp_branch_p, ff,
                     roots, weights, gx, gy, gz, Sx, Sy, Sz, dAx, dAy, dAz, dCx, dCy, dCz, Wk, Wp,
                     pp_alpha, pp_beta, pp_gamma, pp_px, pp_py, pp_pz, pp_ip, pp_jp, pp_br,
-                    ax_, ay_, az_, bx_, by_, bz_, cx_, cy_, cz_):
+                    ax_, ay_, az_, bx_, by_, bz_, cx_, cy_, cz_,
+                    mode, Grows, row_of, sao_fit, c2s_flat, c2s_off, sph_off, aux_nsph):
     """
     Add to ``gacc[atom, :]`` the near-field part of ``sum_{ij in (I,J), P} w_ij D_ij c_P d(ij|P)/dR``
     with the row weights ``rc`` of :func:`_row_weights`: the same primitive pairs, auxiliary shells and
     Rys quadrature as :func:`~pyfock.Integrals.df_algo12_helpers._compute_pair_rows`, differentiated
     with respect to ``A`` and ``C`` (``B`` by translational invariance).
+
+    ``mode = 1`` contracts with a general weight per function pair and auxiliary function instead,
+    ``sum_{ij, P} Gamma^P_ij d(ij|P)/dR`` over both triangles (the RI exchange gradient): row
+    ``row_of[i, j]`` of ``Grows`` holds ``Gamma^P_ij`` in the fit space (spherical when ``sao_fit``,
+    mapped onto the Cartesian functions with the per-shell tables ``c2s_*``), ``-1`` marks a pair the
+    energy leaves out, and a block is skipped when ``Q_pair Q_aux max|Gamma|`` is below ``thr_grad``.
     """
     nA = shell_nbf[I]
     nB = shell_nbf[J]
@@ -192,7 +203,7 @@ def _pair_grad_near(I, J, rc, wmax, coeff, cmax_aux, thr_grad, atom_a, atom_b, a
         QQ = Qp * Q_aux[K]
         if QQ <= threshold:
             continue
-        if QQ * wmax * cmax_aux[K] < thr_grad:
+        if mode == 0 and QQ * wmax * cmax_aux[K] < thr_grad:
             continue
         atom_c = aux_atom[K]
         if not need_A and atom_c == atom_a:
@@ -219,12 +230,41 @@ def _pair_grad_near(I, J, rc, wmax, coeff, cmax_aux, thr_grad, atom_a, atom_b, a
         bra_order = lA + lB + 1 if need_A else lA + lB
         aux_order = lC + 1
 
-        for ia in range(nA):
-            ibmax = ia + 1 if diag_pair else nB
-            for ib in range(ibmax):
-                w0 = rc[(ia * (ia + 1)) // 2 + ib if diag_pair else ia * nB + ib]
-                for ic in range(nC):
-                    Wk[ia, ib, ic] = w0 * coeff[c0 + ic]
+        if mode == 0:
+            for ia in range(nA):
+                ibmax = ia + 1 if diag_pair else nB
+                for ib in range(ibmax):
+                    w0 = rc[(ia * (ia + 1)) // 2 + ib if diag_pair else ia * nB + ib]
+                    for ic in range(nC):
+                        Wk[ia, ib, ic] = w0 * coeff[c0 + ic]
+        else:
+            wkmax = 0.0
+            for ia in range(nA):
+                ibmax = ia + 1 if diag_pair else nB
+                for ib in range(ibmax):
+                    r = row_of[a0 + ia, b0 + ib]
+                    if r < 0:
+                        for ic in range(nC):
+                            Wk[ia, ib, ic] = 0.0
+                        continue
+                    fac = 1.0 if a0 + ia == b0 + ib else 2.0     # (ij) and (ji)
+                    if sao_fit:
+                        nS = aux_nsph[K]
+                        t0 = c2s_off[K]
+                        s0 = sph_off[K]
+                        for ic in range(nC):
+                            acc = 0.0
+                            for js in range(nS):
+                                acc += c2s_flat[t0 + js * nC + ic] * Grows[r, s0 + js]
+                            Wk[ia, ib, ic] = fac * acc
+                    else:
+                        for ic in range(nC):
+                            Wk[ia, ib, ic] = fac * Grows[r, c0 + ic]
+                    for ic in range(nC):
+                        if abs(Wk[ia, ib, ic]) > wkmax:
+                            wkmax = abs(Wk[ia, ib, ic])
+            if QQ * wkmax < thr_grad:
+                continue
 
         gax = 0.0
         gay = 0.0
@@ -377,6 +417,10 @@ def _grad_near_pass(bin_off, bin_items, pair_I, pair_J, dmat, coeff, cmax_aux, t
     ppf = np.zeros((nthreads, 6, maxpp))
     ppi = np.zeros((nthreads, 3, maxpp), dtype=np.int64)
     comp = np.zeros((nthreads, 9, max(maxA, maxC)), dtype=np.int64)
+    no_rows = np.zeros((1, 1))
+    no_row_of = np.zeros((1, 1), dtype=np.int64)
+    no_tab = np.zeros(1)
+    no_idx = np.zeros(1, dtype=np.int64)
     for tid in prange(nthreads):
         for idx in range(bin_off[tid], bin_off[tid + 1]):
             p = bin_items[idx]
@@ -397,7 +441,61 @@ def _grad_near_pass(bin_off, bin_items, pair_I, pair_J, dmat, coeff, cmax_aux, t
                             ppf[tid, 0], ppf[tid, 1], ppf[tid, 2], ppf[tid, 3], ppf[tid, 4], ppf[tid, 5],
                             ppi[tid, 0], ppi[tid, 1], ppi[tid, 2],
                             comp[tid, 0], comp[tid, 1], comp[tid, 2], comp[tid, 3], comp[tid, 4],
-                            comp[tid, 5], comp[tid, 6], comp[tid, 7], comp[tid, 8])
+                            comp[tid, 5], comp[tid, 6], comp[tid, 7], comp[tid, 8],
+                            0, no_rows, no_row_of, False, no_tab, no_idx, no_idx, no_idx)
+    grad = np.zeros((natoms, 3))
+    for t in range(nthreads):
+        for a in range(natoms):
+            for d in range(3):
+                grad[a, d] += gacc[t, a, d]
+    return grad
+
+
+@njit(parallel=True, cache=True, fastmath=True, error_model="numpy", nogil=True, boundscheck=False)
+def _grad_near_pass_rows(bin_off, bin_items, pair_I, pair_J, Grows, row_of, sao_fit, c2s_flat, c2s_off,
+                         sph_off, aux_nsph, thr_grad, shell_atom, aux_atom, natoms,
+                         bfs_coords, bfs_lmn, bfs_nprim, bfs_expnts, bf_coef, shell_off, shell_nbf, shell_l,
+                         aux_coords, aux_lmn, aux_nprim, aux_expnts, aux_coef, aux_off, aux_nbf, aux_l,
+                         Q_pair, Q_aux, threshold, pp_group, grp_branch, ff, dims):
+    """Near-field ``sum_{ij,P} Gamma^P_ij d(ij|P)/dR`` (``mode = 1`` of :func:`_pair_grad_near`); ``(natoms, 3)``."""
+    nthreads = bin_off.shape[0] - 1
+    maxA, maxC, lmaxA, lmaxC, maxpp = dims[0], dims[1], dims[2], dims[3], dims[4]
+    gacc = np.zeros((nthreads, natoms, 3))
+    rcv = np.zeros((nthreads, maxA * maxA))
+    roots = np.zeros((nthreads, 12))
+    weights = np.zeros((nthreads, 12))
+    gx = np.zeros((nthreads, 2 * lmaxA + 2, lmaxC + 2))
+    gy = np.zeros((nthreads, 2 * lmaxA + 2, lmaxC + 2))
+    gz = np.zeros((nthreads, 2 * lmaxA + 2, lmaxC + 2))
+    Sx = np.zeros((nthreads, lmaxA + 2, lmaxA + 1, lmaxC + 2))
+    Sy = np.zeros((nthreads, lmaxA + 2, lmaxA + 1, lmaxC + 2))
+    Sz = np.zeros((nthreads, lmaxA + 2, lmaxA + 1, lmaxC + 2))
+    dA = np.zeros((nthreads, 3, lmaxA + 1, lmaxA + 1, lmaxC + 1))
+    dC = np.zeros((nthreads, 3, lmaxA + 1, lmaxA + 1, lmaxC + 1))
+    Wk = np.zeros((nthreads, maxA, maxA, maxC))
+    Wp = np.zeros((nthreads, maxA, maxA, maxC))
+    ppf = np.zeros((nthreads, 6, maxpp))
+    ppi = np.zeros((nthreads, 3, maxpp), dtype=np.int64)
+    comp = np.zeros((nthreads, 9, max(maxA, maxC)), dtype=np.int64)
+    no_coeff = np.zeros(1)
+    for tid in prange(nthreads):
+        for idx in range(bin_off[tid], bin_off[tid + 1]):
+            p = bin_items[idx]
+            I = pair_I[p]
+            J = pair_J[p]
+            _pair_grad_near(I, J, rcv[tid], 1.0, no_coeff, no_coeff, thr_grad,
+                            shell_atom[I], shell_atom[J], aux_atom, gacc[tid],
+                            bfs_coords, bfs_lmn, bfs_nprim, bfs_expnts, bf_coef, shell_off, shell_nbf, shell_l,
+                            aux_coords, aux_lmn, aux_nprim, aux_expnts, aux_coef, aux_off, aux_nbf, aux_l,
+                            Q_pair[p], Q_aux, threshold, pp_group[p], grp_branch[p], ff,
+                            roots[tid], weights[tid], gx[tid], gy[tid], gz[tid], Sx[tid], Sy[tid], Sz[tid],
+                            dA[tid, 0], dA[tid, 1], dA[tid, 2], dC[tid, 0], dC[tid, 1], dC[tid, 2],
+                            Wk[tid], Wp[tid],
+                            ppf[tid, 0], ppf[tid, 1], ppf[tid, 2], ppf[tid, 3], ppf[tid, 4], ppf[tid, 5],
+                            ppi[tid, 0], ppi[tid, 1], ppi[tid, 2],
+                            comp[tid, 0], comp[tid, 1], comp[tid, 2], comp[tid, 3], comp[tid, 4],
+                            comp[tid, 5], comp[tid, 6], comp[tid, 7], comp[tid, 8],
+                            1, Grows, row_of, sao_fit, c2s_flat, c2s_off, sph_off, aux_nsph)
     grad = np.zeros((natoms, 3))
     for t in range(nthreads):
         for a in range(natoms):
@@ -693,6 +791,39 @@ def _near_args(plan):
             plan.aux_coords, plan.aux_lmn, plan.aux_nprim, plan.aux_expnts, plan.aux_coef,
             plan.aux_off, plan.aux_nbf, plan.aux_l,
             plan.Q_pair, plan.Q_aux, plan.threshold)
+
+
+def grad_contract_rows(plan, Grows, row_of, fit_tables=None, threshold_grad=1e-11):
+    """
+    ``grad[A, d] = sum_{ij, P} Gamma^P_ij d(ij|P)/dR_{A,d}`` over both triangles, for a weight that is
+    symmetric in ``(i, j)`` and stored per function pair: ``Gamma^P_ij`` is row ``row_of[i, j]``
+    (``i >= j``, ``-1`` for pairs left out) of ``Grows``.  This is the three-center part of the RI
+    exchange gradient (:func:`~pyfock.Integrals.df_algo11_exchange.gradient_rows`).  ``fit_tables`` =
+    ``(c2s_flat, c2s_off, sph_off, aux_nsph)`` when the columns are spherical fit functions (SAO),
+    ``None`` when they are the Cartesian auxiliary functions.  The plan must be built with
+    ``far_field=False`` (algorithm 11), since the exchange contracts the integrals themselves.
+
+    Returns the ``(natoms, 3)`` gradient term.
+    """
+    if plan.far_field and plan.n_entries:
+        raise ValueError('grad_contract_rows needs a plan without far field (far_field=False).')
+    Grows = np.ascontiguousarray(Grows, dtype=np.float64)
+    row_of = np.ascontiguousarray(row_of, dtype=np.int64)
+    if fit_tables is None:
+        sao_fit = False
+        c2s_flat = np.zeros(1)
+        c2s_off = sph_off = aux_nsph = np.zeros(1, dtype=np.int64)
+    else:
+        sao_fit = True
+        c2s_flat, c2s_off, sph_off, aux_nsph = (np.ascontiguousarray(t) for t in fit_tables)
+    nthreads = int(numba.get_num_threads())
+    work = plan.sig
+    cost = plan.cost_nf_pair[work] + 1.0
+    bin_off, bin_items = _lpt_bins(work, cost, nthreads)
+    return _grad_near_pass_rows(bin_off, bin_items, plan.pair_I, plan.pair_J, Grows, row_of, sao_fit,
+                                c2s_flat, c2s_off, sph_off, aux_nsph, float(threshold_grad),
+                                plan.shell_atom, plan.aux_atom_mol, plan.natoms_mol, *_near_args(plan),
+                                plan.pp_group, plan.grp_branch_eff, plan.ff_eff, plan.dims)
 
 
 def grad_contract(plan, dmat, df_coeff, threshold_grad=1e-11, timings=None, near=True, far=True):

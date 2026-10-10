@@ -7,6 +7,7 @@ from threadpoolctl import threadpool_limits
 
 from pyfock import XC
 from pyfock import Integrals
+from .eval_xc_2 import _xc_functionals
 
 
 def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
@@ -48,8 +49,9 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
         Density matrix in the (Cartesian) AO basis.
     weights, coords : ndarray
         Grid weights and coordinates.
-    funcid : list of int
-        XC functional ids (LibXC convention).
+    funcid : int or list of int
+        XC functional ids (LibXC convention): an exchange-correlation pair, or a single ID such as
+        a global hybrid, whose semilocal part is evaluated here (its exact exchange is not an XC term).
     use_libxc : bool
         Whether to use pylibxc instead of the native PyFock functionals.
     ncores : int
@@ -96,18 +98,9 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
             bfs_prim_norms[i, j] = basis.bfs_prim_norms[i][j]
     bfs_data_as_np_arrays = [bfs_coords[0], bfs_contr_prim_norms[0], bfs_nprim[0], bfs_lmn[0], bfs_coeffs, bfs_prim_norms, bfs_expnts]
 
-    xc_family_dict = {1: 'LDA', 2: 'GGA', 4: 'MGGA'}
-    if use_libxc:
-        import pylibxc
-        funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
-        funcc = pylibxc.LibXCFunctional(funcid[1], "unpolarized")
-        x_family_code = funcx.get_family()
-        c_family_code = funcc.get_family()
-    else:
-        x_family_code = XC.get_family(funcid[0])
-        c_family_code = XC.get_family(funcid[1])
-        funcx = None
-        funcc = None
+    # Semilocal components of the functional (an exchange-correlation pair, or a single ID such as
+    # the semilocal part of a global hybrid), resolved once as in eval_xc_2.
+    funcs, xc_family = _xc_functionals(funcid, use_libxc)
 
     numba.set_num_threads(1)
 
@@ -128,11 +121,9 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
                     weights[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
                     coords[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
                     dmat[np.ix_(list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]], list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]])],
-                    funcid, use_libxc, bfs_data_as_np_arrays,
+                    funcs, xc_family, bfs_data_as_np_arrays,
                     list_nonzero_indices[iblock][0:count_nonzero_indices[iblock]],
-                    funcx=funcx, funcc=funcc,
-                    x_family_code=x_family_code, c_family_code=c_family_code,
-                    xc_family_dict=xc_family_dict, grid_response=grid_response, natm=natm,
+                    grid_response=grid_response, natm=natm,
                     atom_idx_block=(None if atom_idx is None else
                                     atom_idx[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)]))
                 for iblock in block_indices)
@@ -142,10 +133,8 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
                 delayed(block_xc_grad_func)(
                     weights[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
                     coords[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)],
-                    dmat, funcid, use_libxc, bfs_data_as_np_arrays, full_indices,
-                    funcx=funcx, funcc=funcc,
-                    x_family_code=x_family_code, c_family_code=c_family_code,
-                    xc_family_dict=xc_family_dict, grid_response=grid_response, natm=natm,
+                    dmat, funcs, xc_family, bfs_data_as_np_arrays, full_indices,
+                    grid_response=grid_response, natm=natm,
                     atom_idx_block=(None if atom_idx is None else
                                     atom_idx[iblock * blocksize: min(iblock * blocksize + blocksize, ngrids)]))
                 for iblock in block_indices)
@@ -182,10 +171,8 @@ def eval_xc_grad_2(basis, dmat, weights, coords, funcid=[1, 7], use_libxc=False,
     return dexc_dbf, atom_grad
 
 
-def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
+def block_xc_grad_func(weights_block, coords_block, dmat, funcs, xc_family,
                        bfs_data_as_np_arrays, non_zero_indices,
-                       funcx=None, funcc=None, x_family_code=None,
-                       c_family_code=None, xc_family_dict=None,
                        grid_response=False, natm=0, atom_idx_block=None):
     numba.set_num_threads(1)
 
@@ -197,8 +184,8 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
     bfs_prim_norms = bfs_data_as_np_arrays[5]
     bfs_expnts = bfs_data_as_np_arrays[6]
 
-    is_gga = (xc_family_dict[x_family_code] != 'LDA' or xc_family_dict[c_family_code] != 'LDA')
-    is_mgga = (xc_family_dict[x_family_code] == 'MGGA' or xc_family_dict[c_family_code] == 'MGGA')
+    is_gga = xc_family >= 2
+    is_mgga = xc_family == 4
 
     # AO values, gradients (and Hessians for GGA/MGGA, or whenever the grid response is wanted:
     # the translation term needs second derivatives even for an LDA's density gradient)
@@ -233,47 +220,38 @@ def block_xc_grad_func(weights_block, coords_block, dmat, funcid, use_libxc,
             + np.einsum('mj,mj->m', ao_grad_block[2], Hgrad[2])
         )
 
-    # XC functional derivatives
-    if use_libxc:
-        inp = {'rho': rho_block}
-        if xc_family_dict[x_family_code] != 'LDA':
-            inp['sigma'] = sigma_block
-        if xc_family_dict[x_family_code] == 'MGGA':
-            inp['tau'] = tau_block
-        retx = funcx.compute(inp)
-        inp = {'rho': rho_block}
-        if xc_family_dict[c_family_code] != 'LDA':
-            inp['sigma'] = sigma_block
-        if xc_family_dict[c_family_code] == 'MGGA':
-            inp['tau'] = tau_block
-        retc = funcc.compute(inp)
-        energy_density = (retx['zk'] + retc['zk']).ravel() if grid_response else None
-        vrho = (retx['vrho'] + retc['vrho'])[:, 0]
-        vsigma = 0.0
-        if xc_family_dict[x_family_code] != 'LDA':
-            vsigma = vsigma + retx['vsigma'][:, 0]
-        if xc_family_dict[c_family_code] != 'LDA':
-            vsigma = vsigma + retc['vsigma'][:, 0]
-        vtau = 0.0
-        if xc_family_dict[x_family_code] == 'MGGA':
-            vtau = vtau + retx['vtau'][:, 0]
-        if xc_family_dict[c_family_code] == 'MGGA':
-            vtau = vtau + retc['vtau'][:, 0]
-    else:
-        retx = XC.func_compute(funcid[0], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
-        retc = XC.func_compute(funcid[1], rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
-        energy_density = (retx[0] + retc[0]) if grid_response else None
-        vrho = retx[1] + retc[1]
-        vsigma = 0.0
-        if xc_family_dict[x_family_code] != 'LDA':
-            vsigma = vsigma + retx[2]
-        if xc_family_dict[c_family_code] != 'LDA':
-            vsigma = vsigma + retc[2]
-        vtau = 0.0
-        if xc_family_dict[x_family_code] == 'MGGA':
-            vtau = vtau + retx[3]
-        if xc_family_dict[c_family_code] == 'MGGA':
-            vtau = vtau + retc[3]
+    # XC functional derivatives, summed over the components (as in eval_xc_2.block_dens_func)
+    energy_density = 0.0
+    vrho = 0.0
+    vsigma = 0.0
+    vtau = 0.0
+    for kind, fn, fam in funcs:
+        if kind == 'libxc':
+            inp = {'rho': rho_block}
+            if fam >= 2:
+                inp['sigma'] = sigma_block
+            if fam == 4:
+                inp['tau'] = tau_block
+            ret = fn.compute(inp)
+            energy_density = energy_density + ret['zk'].ravel()
+            vrho = vrho + ret['vrho'][:, 0]
+            if fam >= 2:
+                vsigma = vsigma + ret['vsigma'][:, 0]
+            if fam == 4:
+                vtau = vtau + ret['vtau'][:, 0]
+        else:
+            if fam == 4:
+                ret = XC.func_compute(fn, rho_block, sigma=sigma_block, tau=tau_block, use_gpu=False)
+            elif fam == 2:
+                ret = XC.func_compute(fn, rho_block, sigma=sigma_block, use_gpu=False)
+            else:
+                ret = XC.func_compute(fn, rho_block, use_gpu=False)
+            energy_density = energy_density + ret[0]
+            vrho = vrho + ret[1]
+            if fam >= 2:
+                vsigma = vsigma + ret[2]
+            if fam == 4:
+                vtau = vtau + ret[3]
 
     F = weights_block * vrho
 

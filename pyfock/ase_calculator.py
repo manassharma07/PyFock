@@ -22,7 +22,7 @@ from ase.calculators.calculator import Calculator, all_changes
 from . import guess_projection
 from . import XC
 from .Basis import Basis
-from .DFT import DFT
+from .DFT import DFT, default_auxbasis_name
 from .Data import Data
 from .Mol import Mol
 
@@ -101,13 +101,18 @@ class PyFockCalculator(Calculator):
 
     Forces are computed analytically by default (``force_mode="analytical"``,
     using :class:`pyfock.DFT_Grad`), which supports LDA, GGA and meta-GGA
-    functionals (native or pylibxc) with density fitting, including ECPs. If
-    the analytical gradients do not support the requested configuration (e.g.
-    HF, no density fitting, or GPU), the calculation automatically falls back
-    to finite-difference forces and notes this in ``pyfock_results``. Pass
+    functionals (native or pylibxc), Hartree-Fock and global hybrids, with or
+    without density fitting, including ECPs. If the analytical gradients do
+    not support the requested configuration, the calculation automatically
+    falls back to finite-difference forces and notes this in
+    ``pyfock_results``. Pass
     ``force_mode="numerical"`` to explicitly request finite-difference
     forces; the ``force_step_size``/``force_step_unit``/``force_method``/
     ``force_use_fixed_grids`` parameters apply to the numerical path only.
+
+    Without an ``auxbasis``, ``def2-universal-jkfit`` is used for HF and hybrid
+    functionals (their exact exchange is density-fitted as well) and
+    ``def2-universal-jfit`` otherwise.
 
     ``grid_response`` controls whether the analytical XC gradient differentiates the quadrature grid's
     own dependence on the nuclear positions -- the points of an atom translating with it, and the Becke
@@ -505,27 +510,11 @@ class PyFockCalculator(Calculator):
         return pformat(value, sort_dicts=False)
 
     def _prepare_runtime_options(self):
-        options = dict(self.pyfock_options)
-        xc_value = options.get("xc")
-        user_set_df = "isDF" in options
-        user_set_rys = "rys" in options
-        user_set_direct_scf = "direct_scf" in options
+        return dict(self.pyfock_options)
 
-        if xc_value == "HF":
-            if user_set_df and options.get("isDF", True):
-                raise ValueError("PyFock HF through the DFT module requires DF=False.")
-            if not user_set_df:
-                options["isDF"] = False
-            if user_set_rys and options.get("rys", True):
-                raise ValueError("PyFock HF currently requires rys=False.")
-            if not user_set_rys:
-                options["rys"] = False
-            if user_set_direct_scf and not options.get("direct_scf", False):
-                raise ValueError("PyFock HF currently requires direct_scf=True.")
-            if not user_set_direct_scf:
-                options["direct_scf"] = True
-
-        return options
+    def _auxbasis_name(self, options):
+        """The auxiliary basis passed, else PyFock's default for the functional (see DFT)."""
+        return self.parameters["auxbasis"] or default_auxbasis_name(options.get("xc"))
 
     def _write_run_script(
         self,
@@ -539,7 +528,7 @@ class PyFockCalculator(Calculator):
     ):
         options = self._prepare_runtime_options()
         basis_name = self.parameters["basis"] or self._default_basis_name(atoms)
-        auxbasis_name = self.parameters["auxbasis"] or "def2-universal-jfit"
+        auxbasis_name = self._auxbasis_name(options)
         xyz_filename = "structure.xyz"
         output_filename = f"output_pyfock_{task_name}.txt"
         script_path = os.path.join(workdir, f"run_pyfock_{task_name}.py")
@@ -714,8 +703,7 @@ print("PYFOCK_RESULT_JSON=" + json.dumps(result, sort_keys=True))
         basis = Basis(mol, {"all": Basis.load(mol=mol, basis_name=basis_name)})
         auxbasis = None
         if options.get("isDF", True):
-            auxbasis_name = self.parameters["auxbasis"] or "def2-universal-jfit"
-            auxbasis = Basis(mol, {"all": Basis.load(mol=mol, basis_name=auxbasis_name)})
+            auxbasis = Basis(mol, {"all": Basis.load(mol=mol, basis_name=self._auxbasis_name(options))})
 
         dft_obj = DFT(mol, basis, auxbasis)
         for key, value in sorted(options.items()):

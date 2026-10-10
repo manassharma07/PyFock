@@ -45,6 +45,16 @@ Memory: ``B`` holds every active pair (``nrows * naux * 8`` bytes, comparable to
 the algorithm-11 blocks it replaces) and ``P``, when stored, the same again minus
 the diagonal rows; the per-block work buffers are bounded by
 ``DFAlgo11Exchange.block_memory_bytes`` (512 MB default).
+
+Nuclear gradient (:class:`~pyfock.DFT_Grad`).  The same rows, kept raw
+(``build_exchange(..., orthonormalize=False)``), give the occupied blocks of the
+fitted pair densities, ``Y_P = F^T c^P F`` with ``c^P = (P|Q)^-1 (Q|ij)``, by the
+half transform above, one more DGEMM per auxiliary function and one Cholesky solve
+of the small ``(naux, nocc^2)`` block (:func:`occupied_fit_blocks`).  The rows are
+then overwritten with the three-center weights ``Gamma^P_ij = (F Y_P F^T)_ij`` of
+their own function pairs (:func:`gradient_rows`), which the derivative kernel of
+:func:`~pyfock.Integrals.df_algo12_grad.grad_contract_rows` contracts; the gradient
+needs no memory beyond that of the rows.
 """
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -56,7 +66,8 @@ import scipy.linalg
 
 from .df_algo10_helpers import STRICT_PAIR_CUTOFF
 
-__all__ = ['DFAlgo11Exchange', 'build_exchange', 'gamma_from_exchange', 'J_from_exchange', 'K_from_exchange']
+__all__ = ['DFAlgo11Exchange', 'build_exchange', 'gamma_from_exchange', 'J_from_exchange', 'K_from_exchange',
+           'metric_cholesky', 'occupied_fit_blocks', 'gradient_rows']
 
 
 class DFAlgo11Exchange:
@@ -306,7 +317,24 @@ def _partner_structures(ex, store_partner_slabs):
         _copy_rows(ex.B, prow, ex.P)
 
 
-def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values=False, store_partner_slabs=None):
+def metric_cholesky(metric, fit_space='Cartesian'):
+    """
+    Lower Cholesky factor ``L`` of the fit metric, ``(P|Q) = L L^T``.  A metric that is not
+    numerically positive definite gets ``1e-12 max(diag)`` added to its diagonal (and a message):
+    the RI-HF energy and its gradient use the same factor.
+    """
+    metric = np.ascontiguousarray(metric, dtype=np.float64)
+    try:
+        return scipy.linalg.cholesky(metric, lower=True, check_finite=False)
+    except scipy.linalg.LinAlgError:
+        eps = 1e-12 * float(np.max(np.diag(metric)))
+        print('RI-HF: the %s auxiliary metric is not numerically positive definite; adding %.1e to its diagonal.'
+              % (fit_space, eps), flush=True)
+        return scipy.linalg.cholesky(metric + eps * np.eye(metric.shape[0]), lower=True, check_finite=False)
+
+
+def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values=False, store_partner_slabs=None,
+                   orthonormalize=True):
     """
     Convert a fully cached :class:`~pyfock.Integrals.df_algo11_helpers.DFAlgo11Plan`
     into orthonormalized fit-space rows for RI-HF.
@@ -326,6 +354,10 @@ def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values
         Keep a partner-ordered copy of the off-diagonal rows for the exchange build
         (see the module docstring).  ``None`` uses ``DFAlgo11Exchange.store_partner_slabs``
         (by default decided from the available memory).
+    orthonormalize : bool
+        ``False`` keeps the raw integrals ``(ij|P)`` in ``B`` (``metric`` may then be ``None``): the
+        exchange gradient applies the inverse metric to its much smaller occupied blocks instead
+        (:func:`occupied_fit_blocks`).
 
     Returns
     -------
@@ -354,10 +386,13 @@ def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values
         sph_off = np.ascontiguousarray(plan.aux_off, dtype=np.int64)
         aux_nsph = np.ascontiguousarray(plan.aux_nbf, dtype=np.int64)
     ex.naux = naux
-    metric = np.ascontiguousarray(metric, dtype=np.float64)
-    if metric.shape != (naux, naux):
-        raise ValueError('metric has shape %s, expected (%d, %d) for the %s fit space'
-                         % (metric.shape, naux, naux, ex.fit_space))
+    if metric is not None:
+        metric = np.ascontiguousarray(metric, dtype=np.float64)
+        if metric.shape != (naux, naux):
+            raise ValueError('metric has shape %s, expected (%d, %d) for the %s fit space'
+                             % (metric.shape, naux, naux, ex.fit_space))
+    elif orthonormalize:
+        raise ValueError('orthonormalized rows need the fit metric')
 
     work = np.ascontiguousarray(plan.work_iter, dtype=np.int64)
     counts = _count_active_rows(work, plan.pair_I, plan.pair_J, ex.shell_off, ex.shell_nbf,
@@ -398,14 +433,9 @@ def build_exchange(plan, basis, auxbasis, metric, sao=False, release_plan_values
     if release_plan_values:
         plan.values = None
 
-    try:
-        L = scipy.linalg.cholesky(metric, lower=True, check_finite=False)
-    except scipy.linalg.LinAlgError:
-        eps = 1e-12 * float(np.max(np.diag(metric)))
-        print('RI-HF: the %s auxiliary metric is not numerically positive definite; adding %.1e to its diagonal.'
-              % (ex.fit_space, eps), flush=True)
-        L = scipy.linalg.cholesky(metric + eps * np.eye(naux), lower=True, check_finite=False)
-    if nrows:
+    ex.orthonormal = bool(orthonormalize)
+    if nrows and orthonormalize:
+        L = metric_cholesky(metric, ex.fit_space)
         # B = R L^-T, i.e. L Y = R^T with Y = B^T.  R^T is the Fortran-ordered view of R, so
         # LAPACK can solve in place; copy back only if scipy had to make a copy.
         Y = scipy.linalg.solve_triangular(L, R.T, lower=True, overwrite_b=True, check_finite=False)
@@ -459,20 +489,16 @@ def _pool(nthreads):
     return pool
 
 
-def K_from_exchange(ex, factor, block_memory_bytes=None):
+def _half_transform_blocks(ex, factor, nthreads, consume, block_memory_bytes=None):
     """
-    Exchange matrix ``K_ij = sum_kl D_kl (ik|jl)`` in the RI approximation for
-    ``D = factor @ factor.T`` (``factor``: ``(nao, nocc)``).
+    Half transform of the stored rows with the columns of ``factor`` (``F``), one auxiliary block
+    at a time: ``X[i, q, o] = sum_k B[(ik), Q0 + q] F[k, o]`` for every function ``i`` (its own rows
+    and its partner rows), then ``consume(Q0, nb, X, run)``, where ``run(fn, items)`` maps ``fn``
+    over ``items`` on the worker threads.  Runs with single-threaded BLAS.
     """
-    factor = np.ascontiguousarray(factor, dtype=np.float64)
     nao = ex.nao
-    if factor.ndim != 2 or factor.shape[0] != nao:
-        raise ValueError('factor must have shape (nao, nocc)')
     nocc = factor.shape[1]
-    if nocc == 0 or ex.nrows == 0:
-        return np.zeros((nao, nao))
     naux = ex.naux
-    nthreads = max(1, int(numba.get_num_threads()))
     bq = ex.aux_block_size(nocc, block_memory_bytes, nthreads)
     B, P = ex.B, ex.P
     own_ptr, pptr, prow, pidx, row_nu = ex.own_ptr, ex.partner_ptr, ex.partner_row, ex.partner_idx, ex.row_nu
@@ -483,7 +509,6 @@ def K_from_exchange(ex, factor, block_memory_bytes=None):
     F_par = [factor[pidx[pptr[i]:pptr[i + 1]]] for i in range(nao)]
     order = np.argsort(-(n_own + n_par), kind='stable')   # heaviest functions first
     X_flat = np.empty(nao * bq * nocc)
-    Kparts = np.zeros((nthreads, nao, nao))
     local = threading.local()
     gather_cells = 0 if P is not None else ex.max_partner_rows
 
@@ -527,14 +552,158 @@ def K_from_exchange(ex, factor, block_memory_bytes=None):
                     Xi += t
 
             run(half_transform, order)
-            Xr = X.reshape(nao, nb * nocc)
-            bounds = np.linspace(0, nb * nocc, nthreads + 1).astype(np.int64)
+            consume(Q0, nb, X, run)
 
-            def rank_update(t, Xr=Xr, bounds=bounds):
-                if bounds[t + 1] > bounds[t]:
-                    Xc = Xr[:, bounds[t]:bounds[t + 1]]
-                    Kparts[t] += Xc @ Xc.T   # numpy dispatches A @ A.T to dsyrk
 
-            run(rank_update, range(nthreads))
+def K_from_exchange(ex, factor, block_memory_bytes=None):
+    """
+    Exchange matrix ``K_ij = sum_kl D_kl (ik|jl)`` in the RI approximation for
+    ``D = factor @ factor.T`` (``factor``: ``(nao, nocc)``).
+    """
+    factor = np.ascontiguousarray(factor, dtype=np.float64)
+    nao = ex.nao
+    if factor.ndim != 2 or factor.shape[0] != nao:
+        raise ValueError('factor must have shape (nao, nocc)')
+    nocc = factor.shape[1]
+    if nocc == 0 or ex.nrows == 0:
+        return np.zeros((nao, nao))
+    nthreads = max(1, int(numba.get_num_threads()))
+    Kparts = np.zeros((nthreads, nao, nao))
+
+    def consume(Q0, nb, X, run):
+        Xr = X.reshape(nao, nb * nocc)
+        bounds = np.linspace(0, nb * nocc, nthreads + 1).astype(np.int64)
+
+        def rank_update(t):
+            if bounds[t + 1] > bounds[t]:
+                Xc = Xr[:, bounds[t]:bounds[t + 1]]
+                Kparts[t] += Xc @ Xc.T   # numpy dispatches A @ A.T to dsyrk
+
+        run(rank_update, range(nthreads))
+
+    _half_transform_blocks(ex, factor, nthreads, consume, block_memory_bytes)
     K = Kparts.sum(axis=0)
     return 0.5 * (K + K.T)
+
+
+# ----------------------------------------------------------------------------
+# Exchange gradient
+# ----------------------------------------------------------------------------
+def occupied_fit_blocks(ex, factor, metric=None, block_memory_bytes=None):
+    """
+    Occupied blocks of the fitted exchange distributions for ``D = factor @ factor.T``:
+
+        Y[P, a, b] = sum_Q [M]_PQ sum_ij F_ia (ij|Q) F_jb ,
+
+    with ``M`` the inverse fit metric, so that ``Y_P = F^T c^P F`` for the fitting coefficients
+    ``c^P_ij`` of the pair densities.  With orthonormalized rows (``B = R L^-T``) the row
+    contraction gives ``L^T Y`` and one triangular solve remains; with raw rows
+    (``build_exchange(..., orthonormalize=False)``) it gives ``(P|Q) Y``, and ``metric`` (the fit
+    metric the rows were built for) is required.  Returns ``(naux, nocc, nocc)``, symmetric in
+    ``(a, b)``.
+    """
+    factor = np.ascontiguousarray(factor, dtype=np.float64)
+    nao = ex.nao
+    if factor.ndim != 2 or factor.shape[0] != nao:
+        raise ValueError('factor must have shape (nao, nocc)')
+    nocc = factor.shape[1]
+    naux = ex.naux
+    Y = np.zeros((naux, nocc, nocc))
+    if nocc == 0 or ex.nrows == 0:
+        return Y
+    nthreads = max(1, int(numba.get_num_threads()))
+    Ft = np.ascontiguousarray(factor.T)
+
+    def consume(Q0, nb, X, run):
+        bounds = np.linspace(0, nb, nthreads + 1).astype(np.int64)
+
+        def contract(t):
+            for q in range(bounds[t], bounds[t + 1]):
+                np.matmul(Ft, X[:, q, :], out=Y[Q0 + q])
+
+        run(contract, range(nthreads))
+
+    _half_transform_blocks(ex, factor, nthreads, consume, block_memory_bytes)
+    if metric is None:
+        raise ValueError('occupied_fit_blocks needs the fit metric the rows were built for.')
+    L = metric_cholesky(metric, ex.fit_space)
+    Y = Y.reshape(naux, nocc * nocc)
+    if getattr(ex, 'orthonormal', True):
+        # rows B = R L^-T: the contraction gave L^-1 (P|Q) Y
+        Y = scipy.linalg.solve_triangular(L, Y, lower=True, trans='T', overwrite_b=True, check_finite=False)
+    else:
+        Y = scipy.linalg.cho_solve((L, True), Y, overwrite_b=True, check_finite=False)
+    Y = Y.reshape(naux, nocc, nocc)
+    return 0.5 * (Y + Y.transpose(0, 2, 1))
+
+
+def gradient_rows(ex, factor, Y, scale=1.0, dmat=None, coeff=None, block_memory_bytes=None):
+    """
+    Overwrite the stored rows with the weights of the three-center exchange gradient,
+
+        B[r, P] <- scale * Gamma^P_ij + D_ij c_P      for row r = (i, j),
+
+    where ``Gamma^P = F Y_P F^T`` is the fitted exchange distribution of ``P`` folded with the
+    density on both sides (``Gamma^P = D c^P D``) and the optional ``D_ij c_P`` (``dmat``, ``coeff``
+    in the fit space) adds the weights of the DF Coulomb gradient, so that one derivative pass
+    serves both terms.  Only the own rows of every function are written, each once; the partner
+    copy ``P`` is dropped.
+    """
+    factor = np.ascontiguousarray(factor, dtype=np.float64)
+    nao = ex.nao
+    nocc = factor.shape[1]
+    naux = ex.naux
+    B = ex.B
+    ex.P = None
+    if ex.nrows == 0:
+        return ex
+    if nocc == 0:
+        B[...] = 0.0
+        return ex
+    nthreads = max(1, int(numba.get_num_threads()))
+    budget = ex.block_memory_bytes if block_memory_bytes is None else int(block_memory_bytes)
+    bq = int(max(1, min(naux, budget // max(8 * nocc * (nao + nocc), 1))))
+    own_ptr, row_nu = ex.own_ptr, ex.row_nu
+    F_own = [factor[row_nu[own_ptr[i]:own_ptr[i + 1]]] for i in range(nao)]
+    order = np.argsort(-np.diff(own_ptr), kind='stable')
+    d_rows = None
+    if coeff is not None:
+        d_rows = np.ascontiguousarray(dmat, dtype=np.float64)[ex.row_mu, ex.row_nu]
+        coeff = np.ascontiguousarray(coeff, dtype=np.float64)
+    U_flat = np.empty(nao * bq * nocc)
+    pool = _pool(nthreads) if nthreads > 1 else None
+
+    def run(fn, items):
+        if pool is None:
+            for it in items:
+                fn(it)
+        else:
+            list(pool.map(fn, items))
+
+    rows = np.linspace(0, nao, nthreads + 1).astype(np.int64)
+    with _blas_threads(1):
+        for Q0 in range(0, naux, bq):
+            nb = min(bq, naux - Q0)
+            # U[i, q, b] = sum_a F[i, a] Y[Q0 + q, a, b]
+            Yt = np.ascontiguousarray(Y[Q0:Q0 + nb].transpose(1, 0, 2)).reshape(nocc, nb * nocc)
+            U = U_flat[:nao * nb * nocc].reshape(nao, nb * nocc)
+
+            def left(t, Yt=Yt, U=U):
+                if rows[t + 1] > rows[t]:
+                    np.matmul(factor[rows[t]:rows[t + 1]], Yt, out=U[rows[t]:rows[t + 1]])
+
+            run(left, range(nthreads))
+            U3 = U.reshape(nao, nb, nocc)
+
+            def right(i, Q0=Q0, nb=nb, U3=U3):
+                r0, r1 = own_ptr[i], own_ptr[i + 1]
+                if r1 > r0:
+                    blk = F_own[i] @ U3[i].T
+                    if scale != 1.0:
+                        blk *= scale
+                    if d_rows is not None:
+                        blk += np.outer(d_rows[r0:r1], coeff[Q0:Q0 + nb])
+                    B[r0:r1, Q0:Q0 + nb] = blk
+
+            run(right, order)
+    return ex

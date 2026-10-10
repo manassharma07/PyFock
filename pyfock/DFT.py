@@ -58,6 +58,46 @@ from pyfock.DFT_Helper_Coulomb import Jmat_from_density_fitting
 from pyfock.DFT_Helper_Coulomb import Kmat_from_density_fitting
 
 
+def default_auxbasis_name(xc):
+    """
+    Default auxiliary basis for the functional ``xc`` (as passed to :class:`DFT`):
+    'def2-universal-jkfit' for HF and global hybrids, whose exact exchange is density-fitted as well,
+    'def2-universal-jfit' otherwise. Hybrids that only pylibxc knows are recognized when it is installed.
+    """
+    return 'def2-universal-jkfit' if _uses_exact_exchange(xc) else 'def2-universal-jfit'
+
+
+def _uses_exact_exchange(xc):
+    if xc is None:
+        return False
+    if isinstance(xc, str):
+        if xc == 'HF':
+            return True
+        if XC.is_skala(xc):
+            return False
+        try:
+            xc = XC.resolve_functional(xc)
+        except Exception:
+            return False
+    ids = [xc] if isinstance(xc, (int, np.integer, str)) else list(xc)
+    for fid in ids:
+        try:
+            fid = XC.get_functional_id(fid) if isinstance(fid, str) else int(fid)
+        except Exception:
+            continue
+        if XC.is_hybrid(fid):
+            return True
+        if fid not in XC.get_implemented_ids():
+            try:
+                import pylibxc
+                fn = pylibxc.LibXCFunctional(fid, 'unpolarized')
+                if fn.get_family() in (32, 64, 128) and fn.get_hyb_exx_coef() > 0:  # HYB_GGA, HYB_MGGA, HYB_LDA
+                    return True
+            except Exception:
+                pass
+    return False
+
+
 class DFT:
     """
     A class for performing Density Functional Theory (DFT) calculations 
@@ -72,7 +112,9 @@ class DFT:
         Orbital basis set used for the SCF calculation.
 
     auxbasis : Basis, optional
-        Auxiliary basis set for density fitting (DF). If None, a default will be assigned.
+        Auxiliary basis set for density fitting (DF). If None, def2-universal-jkfit is used for HF and
+        hybrid functionals (their exact exchange is density-fitted as well) and def2-universal-jfit
+        otherwise; this default follows ``xc`` if it is changed before ``scf()``.
 
     conv_crit : float, optional
         Convergence criterion for the SCF cycle in Hartrees (default is 1e-7).
@@ -318,9 +360,14 @@ class DFT:
         Not using DF is possible but not recommended as it is slower with no advantage in accuracy. """
 
         self.auxbasis = auxbasis
-        """ Basis object to be used as the auxiliary basis for DF. Use universal by default. """
+        """ Basis object to be used as the auxiliary basis for DF. Default: def2-universal-jkfit for HF and
+        hybrid functionals, def2-universal-jfit otherwise (see `default_auxbasis_name`); the default follows
+        `xc` if it is changed before `scf()`, while a supplied basis is always kept. """
+        self._default_auxbasis = None
         if self.auxbasis is None:
-            self.auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name='def2-universal-jfit')})
+            self._default_auxbasis_name = default_auxbasis_name(self.xc)
+            self.auxbasis = Basis(mol, {'all':Basis.load(mol=mol, basis_name=self._default_auxbasis_name)})
+            self._default_auxbasis = self.auxbasis
 
         self.rys = True
         """ Use rys quadrature for the evaluation of two electron integrals (with and without DF)
@@ -1357,6 +1404,15 @@ class DFT:
             else:
                 exx_coef = sum(XC.get_exx_coefficient(fid) for fid in xc)
         self.exx_coef = exx_coef
+        if isDF and self.auxbasis is getattr(self, '_default_auxbasis', None):
+            # The default auxiliary basis follows the functional, which may have been set after the
+            # object was created: J+K fitting when exact exchange is density-fitted too.
+            auxbasis_name = 'def2-universal-jkfit' if exx_coef > 0 else 'def2-universal-jfit'
+            if auxbasis_name != self._default_auxbasis_name:
+                self.auxbasis = Basis(mol, {'all': Basis.load(mol=mol, basis_name=auxbasis_name)})
+                self._default_auxbasis = self.auxbasis
+                self._default_auxbasis_name = auxbasis_name
+            auxbasis = self.auxbasis
         if exx_coef > 0 and isDF and DF_algo == 12:
             # The far field of DF_algo=12 replaces whole (ij|P) blocks by multipole expansions,
             # while RI exact exchange contracts the blocks themselves. Fall back to the near-field
@@ -1390,6 +1446,8 @@ class DFT:
         print('\n\nNumber of basis functions or Cartesian atomic orbitals (6d, 10f, 15g and so on): ', basis.bfs_nao)
             
         if isDF:
+            if auxbasis is getattr(self, '_default_auxbasis', None):
+                print('\n\nAuxiliary basis (default for this functional): ', self._default_auxbasis_name)
             print('\n\nNumber of auxiliary basis functions (in Cartesian atomic orbital basis): ', auxbasis.bfs_nao)
         print("\n" + "="*70 + "\n")
 

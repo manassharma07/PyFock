@@ -88,3 +88,35 @@ def test_exchange_contraction_independent_of_threads_storage_and_blocking():
     g = algo11x.gamma_from_exchange(ex_stored, dmat)
     np.testing.assert_allclose(algo11x.gamma_from_exchange(ex_gather, dmat), g, atol=1e-13, rtol=1e-13)
     np.testing.assert_allclose(algo11x.J_from_exchange(ex_gather, g), algo11x.J_from_exchange(ex_stored, g), atol=1e-13, rtol=1e-13)
+
+
+def test_default_auxiliary_basis_follows_the_functional():
+    """Without an auxbasis, HF and hybrids fit with def2-universal-jkfit, other functionals with jfit."""
+    import contextlib
+    import io
+    from pyfock.DFT import default_auxbasis_name
+
+    mol = Mol(atoms=[list(a) for a in WATER])
+    basis = Basis(mol, {"all": Basis.load(mol=mol, basis_name=BASIS)})
+    naux = {name: Basis(mol, {"all": Basis.load(mol=mol, basis_name=name)}).bfs_nao
+            for name in ("def2-universal-jkfit", "def2-universal-jfit")}
+    assert naux["def2-universal-jkfit"] != naux["def2-universal-jfit"]
+    for xc, name in (("HF", "def2-universal-jkfit"), ("B3LYP", "def2-universal-jkfit"), ([402], "def2-universal-jkfit"),
+                     ("PBE0", "def2-universal-jkfit"), ("PBE", "def2-universal-jfit"), (None, "def2-universal-jfit")):
+        assert default_auxbasis_name(xc) == name
+        assert DFT(mol, basis, xc=xc).auxbasis.bfs_nao == naux[name]
+    # a functional set after construction moves the default, a supplied basis is kept
+    late = DFT(mol, basis, conv_crit=1e-9, ncores=2)
+    late.xc = "B3LYP"
+    jfit = Basis(mol, {"all": Basis.load(mol=mol, basis_name="def2-universal-jfit")})
+    kept = DFT(mol, basis, jfit, xc="B3LYP", conv_crit=1e-9, ncores=2)
+    explicit = DFT(mol, basis, Basis(mol, {"all": Basis.load(mol=mol, basis_name=AUX)}), xc="B3LYP",
+                   conv_crit=1e-9, ncores=2)
+    energies = []
+    for dft in (late, kept, explicit):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            energies.append(float(dft.scf()[0]))
+        assert dft.converged
+    assert late.auxbasis.bfs_nao == naux["def2-universal-jkfit"] and kept.auxbasis is jfit
+    assert abs(energies[0] - energies[2]) < 1e-9 and abs(energies[1] - energies[2]) > 1e-6

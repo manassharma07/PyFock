@@ -162,3 +162,32 @@ def test_mo_factor_matches_density_factor_path():
     K_direct = algo11x.K_from_exchange(ex, C)
     K_eig = algo11x.K_from_exchange(ex, _density_matrix_factor(C @ C.T))
     np.testing.assert_allclose(K_direct, K_eig, atol=1e-10, rtol=1e-10)
+
+
+@pytest.mark.parametrize("sao", [False, True])
+@pytest.mark.parametrize("strict", [False, True])
+@pytest.mark.parametrize("orthonormalize", [True, False])
+def test_gradient_blocks_match_dense(sao, strict, orthonormalize):
+    """
+    Occupied fit blocks Y_P = F^T c^P F and the gradient rows Gamma^P = F Y_P F^T against dense
+    references.  The fitting coefficients themselves are only determined to cond(metric) x eps
+    (~5e11 for the Cartesian fit space of this auxiliary basis), so Y is checked through the
+    residual of its defining equation, (P|Q) Y_Q = F^T (ij|P) F, rather than against a second solve.
+    """
+    basis, aux, sqrt4, sqrt2, dense, metric_plan, metric_fit, to_fit, dmat = _system("two_waters", "def2-SVP", sao)
+    plan = algo11.build_plan(basis, aux, sqrt4, sqrt2, 1e-9, strict, sao=sao)
+    kept_fit = np.einsum("ijP,QP->ijQ", dense * _block_mask(plan, basis, aux), to_fit)
+    ex = algo11x.build_exchange(plan, basis, aux, metric_fit, sao=sao, orthonormalize=orthonormalize)
+    nao, naux = basis.bfs_nao, ex.naux
+    rng = np.random.default_rng(11)
+    F = rng.standard_normal((nao, 6))
+    rhs = np.einsum("ia,ijP,jb->Pab", F, kept_fit, F, optimize=True)
+    for budget in (None, 4096):
+        Y = algo11x.occupied_fit_blocks(ex, F, metric_fit, block_memory_bytes=budget)
+        assert np.allclose(Y, Y.transpose(0, 2, 1), atol=0)
+        residual = np.einsum("PQ,Qab->Pab", metric_fit, Y) - rhs
+        assert np.abs(residual).max() < 1e-12 * np.abs(metric_fit).max() * np.abs(Y).max()
+    algo11x.gradient_rows(ex, F, Y, block_memory_bytes=4096)
+    G = np.einsum("ia,Pab,jb->Pij", F, Y, F, optimize=True)
+    G_rows = G[:, ex.row_mu, ex.row_nu].T
+    np.testing.assert_allclose(ex.B, G_rows, atol=1e-12 * np.abs(G_rows).max(), rtol=0)

@@ -2,34 +2,42 @@ import numpy as np
 import numba
 from numba import njit, prange
 
-from .rys_helpers import Roots, Recur_3c2e_new, Shift_3c2e
+from .rys_helpers import Roots, Recur_3c2e_new
+from .df_algo10_helpers import pack_basis_arrays, aux_shell_arrays
+from .df_algo11_helpers import _lpt_bins, _bf_coef_table
 
 
-def rys_2c2e_grad_contract(auxbasis, df_coeff, ncores=None, threshold=1e-14):
+def rys_2c2e_grad_contract(auxbasis, df_coeff=None, ncores=None, threshold=1e-14, weights=None):
     """
     Contracted nuclear gradient of two-center two-electron (2c2e) integrals.
 
     Computes
 
-        grad[iatom, xyz] = sum_{PQ} c_P * c_Q * d(P|Q)/dR_{iatom, xyz}
+        grad[iatom, xyz] = sum_{PQ} W_PQ * d(P|Q)/dR_{iatom, xyz}
 
-    without storing the derivative tensor. This is the metric-derivative part
-    of the density-fitted Coulomb gradient (the caller multiplies by -0.5).
+    without storing the derivative tensor, either for ``W_PQ = c_P c_Q`` (``df_coeff``: the
+    metric-derivative part of the density-fitted Coulomb gradient, which the caller multiplies by
+    -0.5) or for a general symmetric matrix ``weights`` (the metric part of the RI exchange
+    gradient).
 
     The derivative with respect to the second center is obtained from
     translational invariance: d/dQ = -d/dP. Pairs with both functions on the
-    same atom therefore do not contribute.
+    same atom therefore do not contribute. The recursions are built once per
+    shell pair, primitive pair and root for all components of the two shells,
+    and the shell pairs are distributed over the threads in balanced bins.
 
     Parameters
     ----------
     auxbasis : Basis
         Auxiliary basis set object.
-    df_coeff : ndarray (naux,)
-        Density fitting coefficients c_P.
+    df_coeff : ndarray (naux,), optional
+        Density fitting coefficients c_P (used when ``weights`` is not given).
     ncores : int, optional
         Number of threads for Numba. If None the current setting is used.
     threshold : float, optional
-        Skip pairs with |c_P * c_Q| below this threshold.
+        Skip shell pairs whose largest ``|W_PQ|`` is below this threshold.
+    weights : ndarray (naux, naux), optional
+        Symmetric weight matrix ``W`` (Cartesian auxiliary functions).
 
     Returns
     -------
@@ -38,200 +46,161 @@ def rys_2c2e_grad_contract(auxbasis, df_coeff, ncores=None, threshold=1e-14):
     """
     if ncores is not None:
         numba.set_num_threads(ncores)
+    naux = auxbasis.bfs_nao
+    if weights is not None:
+        W = np.ascontiguousarray(weights, dtype=np.float64)
+        if W.shape != (naux, naux):
+            raise ValueError('weights must have shape (%d, %d)' % (naux, naux))
+        coeff = np.zeros(1)
+        use_matrix = True
+    else:
+        if df_coeff is None:
+            raise ValueError('Pass either df_coeff or weights.')
+        coeff = np.ascontiguousarray(df_coeff, dtype=np.float64)
+        W = np.zeros((1, 1))
+        use_matrix = False
 
-    bfs_coords = np.array(auxbasis.bfs_coords, dtype=np.float64)
-    bfs_contr_prim_norms = np.array(auxbasis.bfs_contr_prim_norms, dtype=np.float64)
-    bfs_lmn = np.array(auxbasis.bfs_lmn, dtype=np.int32)
-    bfs_nprim = np.array(auxbasis.bfs_nprim, dtype=np.int32)
-    bfs_atoms = np.array(auxbasis.bfs_atoms, dtype=np.int32)
+    packed = pack_basis_arrays(auxbasis)
+    coords, _, lmn, nprim, _, _, expnts = packed
+    coef = _bf_coef_table(auxbasis, packed)
+    shell_off, shell_nbf, shell_l = aux_shell_arrays(auxbasis)
+    bfs_atoms = np.asarray(auxbasis.bfs_atoms, dtype=np.int64)
+    shell_atom = np.ascontiguousarray(bfs_atoms[shell_off])
     natoms = int(bfs_atoms.max()) + 1
 
-    maxnprim = max(auxbasis.bfs_nprim)
-    bfs_coeffs = np.zeros((auxbasis.bfs_nao, maxnprim), dtype=np.float64)
-    bfs_expnts = np.zeros((auxbasis.bfs_nao, maxnprim), dtype=np.float64)
-    bfs_prim_norms = np.zeros((auxbasis.bfs_nao, maxnprim), dtype=np.float64)
-    for i in range(auxbasis.bfs_nao):
-        for j in range(auxbasis.bfs_nprim[i]):
-            bfs_coeffs[i, j] = auxbasis.bfs_coeffs[i][j]
-            bfs_expnts[i, j] = auxbasis.bfs_expnts[i][j]
-            bfs_prim_norms[i, j] = auxbasis.bfs_prim_norms[i][j]
-
-    df_coeff = np.ascontiguousarray(df_coeff, dtype=np.float64)
+    # shell pairs K > L on different atoms (pairs on one atom have no net force)
+    pair_K, pair_L = np.tril_indices(shell_off.shape[0], -1)
+    keep = shell_atom[pair_K] != shell_atom[pair_L]
+    pair_K = np.ascontiguousarray(pair_K[keep], dtype=np.int64)
+    pair_L = np.ascontiguousarray(pair_L[keep], dtype=np.int64)
+    nrt = (shell_l[pair_K] + shell_l[pair_L] + 1) // 2 + 1
+    cost = (nprim[shell_off[pair_K]] * nprim[shell_off[pair_L]] * nrt
+            * (12 + shell_nbf[pair_K] * shell_nbf[pair_L])).astype(np.float64)
     nthreads = numba.get_num_threads()
-
-    return rys_2c2e_grad_contract_internal(
-        natoms,
-        nthreads,
-        auxbasis.bfs_nao,
-        bfs_coords,
-        bfs_contr_prim_norms,
-        bfs_lmn,
-        bfs_nprim,
-        bfs_coeffs,
-        bfs_prim_norms,
-        bfs_expnts,
-        bfs_atoms,
-        df_coeff,
-        threshold,
-    )
+    bin_off, bin_items = _lpt_bins(np.arange(pair_K.shape[0]), cost, nthreads)
+    return _grad_2c2e_pass(bin_off, bin_items, pair_K, pair_L, coeff, W, use_matrix, float(threshold),
+                           coords, lmn, expnts, coef, nprim, shell_off, shell_nbf, shell_l, shell_atom,
+                           natoms, int(shell_l.max()), int(shell_nbf.max()))
 
 
-@njit(parallel=True, cache=True, fastmath=True, nogil=True, error_model="numpy")
-def rys_2c2e_grad_contract_internal(
-    natoms,
-    nthreads,
-    naux,
-    bfs_coords,
-    bfs_contr_prim_norms,
-    bfs_lmn,
-    bfs_nprim,
-    bfs_coeffs,
-    bfs_prim_norms,
-    bfs_expnts,
-    bfs_atoms,
-    df_coeff,
-    threshold,
-):
+@njit(parallel=True, cache=True, fastmath=True, nogil=True, error_model="numpy", boundscheck=False)
+def _grad_2c2e_pass(bin_off, bin_items, pair_K, pair_L, coeff, W, use_matrix, threshold,
+                    coords, lmn, expnts, coef, nprim, shell_off, shell_nbf, shell_l, shell_atom,
+                    natoms, lmax, maxnbf):
+    """Bins of shell pairs ``(K, L)`` -> ``sum_PQ W_PQ d(P|Q)/dR`` as ``(natoms, 3)``."""
     pi = 3.141592653589793
-
-    max_l = 0
-    for i in range(naux):
-        l_tot = bfs_lmn[i, 0] + bfs_lmn[i, 1] + bfs_lmn[i, 2]
-        if l_tot > max_l:
-            max_l = l_tot
-
-    grad_threads = np.zeros((nthreads, natoms, 3), dtype=np.float64)
-
-    for i in prange(naux):
-        tid = numba.get_thread_id()
-
-        I = bfs_coords[i]
-        Ni = bfs_contr_prim_norms[i]
-        lmni = bfs_lmn[i]
-        la, ma, na = lmni[0], lmni[1], lmni[2]
-        nprimi = bfs_nprim[i]
-        atom_i = bfs_atoms[i]
-        ci = df_coeff[i]
-
-        roots = np.zeros(10, dtype=np.float64)
-        weights = np.zeros(10, dtype=np.float64)
-        # bra order on axis 0 (+1 for derivative), ket order on axis 1
-        G = np.zeros((2 * max_l + 2, max_l + 1), dtype=np.float64)
-
-        gx = 0.0
-        gy = 0.0
-        gz = 0.0
-
-        for k in range(i):  # strictly lower triangle; diagonal has no net force
-            atom_k = bfs_atoms[k]
-            if atom_i == atom_k:
+    nbins = bin_off.shape[0] - 1
+    gbin = np.zeros((nbins, natoms, 3))
+    for b in prange(nbins):
+        roots = np.zeros(12)
+        rweights = np.zeros(12)
+        G = np.zeros((lmax + 2, lmax + 1))
+        Gx = np.zeros((lmax + 2, lmax + 1))
+        Gy = np.zeros((lmax + 2, lmax + 1))
+        Gz = np.zeros((lmax + 2, lmax + 1))
+        Wb = np.zeros((maxnbf, maxnbf))
+        for idx in range(bin_off[b], bin_off[b + 1]):
+            p = bin_items[idx]
+            K = pair_K[p]
+            L = pair_L[p]
+            k0 = shell_off[K]
+            l0 = shell_off[L]
+            nK = shell_nbf[K]
+            nL = shell_nbf[L]
+            wmax = 0.0
+            for i in range(nK):
+                for k in range(nL):
+                    if use_matrix:
+                        w = W[k0 + i, l0 + k]
+                    else:
+                        w = coeff[k0 + i] * coeff[l0 + k]
+                    Wb[i, k] = w
+                    if abs(w) > wmax:
+                        wmax = abs(w)
+            if wmax < threshold:
                 continue
-
-            cik = ci * df_coeff[k]
-            if abs(cik) < threshold:
-                continue
-
-            K = bfs_coords[k]
-            Nk = bfs_contr_prim_norms[k]
-            lmnk = bfs_lmn[k]
-            lc, mc, nc = lmnk[0], lmnk[1], lmnk[2]
-            nprimk = bfs_nprim[k]
-
-            norder = (la + ma + na + 1 + lc + mc + nc) // 2 + 1
-
-            PQx = I[0] - K[0]
-            PQy = I[1] - K[1]
-            PQz = I[2] - K[2]
-            pqsq = PQx * PQx + PQy * PQy + PQz * PQz
-
-            gax = 0.0
-            gay = 0.0
-            gaz = 0.0
-
-            tempcoeff1 = Ni * Nk
-
-            for ik in range(nprimi):
-                alpha = bfs_expnts[i, ik]
+            lK = shell_l[K]
+            lL = shell_l[L]
+            norder = (lK + 1 + lL) // 2 + 1
+            Px = coords[k0, 0]
+            Py = coords[k0, 1]
+            Pz = coords[k0, 2]
+            Qx = coords[l0, 0]
+            Qy = coords[l0, 1]
+            Qz = coords[l0, 2]
+            pqsq = (Px - Qx) ** 2 + (Py - Qy) ** 2 + (Pz - Qz) ** 2
+            gx = 0.0
+            gy = 0.0
+            gz = 0.0
+            for ik in range(nprim[k0]):
+                alpha = expnts[k0, ik]
                 two_alpha = 2.0 * alpha
-                dik = bfs_coeffs[i, ik]
-                Nik = bfs_prim_norms[i, ik]
-                tempcoeff2 = tempcoeff1 * dik * Nik
-                gamma_p = alpha
-
-                for kk in range(nprimk):
-                    gamma_q = bfs_expnts[k, kk]
-                    dkk = bfs_coeffs[k, kk]
-                    Nkk = bfs_prim_norms[k, kk]
-                    tempcoeff3 = tempcoeff2 * dkk * Nkk
-
-                    rho = gamma_p * gamma_q / (gamma_p + gamma_q)
-                    x = rho * pqsq
-                    gamma_pq_sqrt = np.sqrt(gamma_p * gamma_q)
-
-                    Roots(norder, x, roots, weights)
-                    rys_prefactor = 2.0 * np.sqrt(rho / pi) * tempcoeff3
-
-                    for iroot in range(norder):
-                        root = roots[iroot]
-                        root_weight = rys_prefactor * weights[iroot]
-
-                        # The 2c2e integral (P|Q) is a 3c2e integral with a
-                        # dummy s-function at the bra: alpha_j = 0, so xj is
-                        # irrelevant (we pass I so that xij = 0).
-                        Recur_3c2e_new(
-                            G, root, la + 1, 0, lc, 0,
-                            I[0], I[0], K[0], 0.0,
-                            alpha, 0.0, gamma_q, 0.0,
-                            gamma_p, gamma_q, 0.0, gamma_pq_sqrt,
-                        )
-                        sx = G[la, lc]
-                        dax = two_alpha * G[la + 1, lc]
-                        if la > 0:
-                            dax -= la * G[la - 1, lc]
-
-                        Recur_3c2e_new(
-                            G, root, ma + 1, 0, mc, 0,
-                            I[1], I[1], K[1], 0.0,
-                            alpha, 0.0, gamma_q, 0.0,
-                            gamma_p, gamma_q, 0.0, gamma_pq_sqrt,
-                        )
-                        sy = G[ma, mc]
-                        day = two_alpha * G[ma + 1, mc]
-                        if ma > 0:
-                            day -= ma * G[ma - 1, mc]
-
-                        Recur_3c2e_new(
-                            G, root, na + 1, 0, nc, 0,
-                            I[2], I[2], K[2], 0.0,
-                            alpha, 0.0, gamma_q, 0.0,
-                            gamma_p, gamma_q, 0.0, gamma_pq_sqrt,
-                        )
-                        sz = G[na, nc]
-                        daz = two_alpha * G[na + 1, nc]
-                        if na > 0:
-                            daz -= na * G[na - 1, nc]
-
-                        gax += root_weight * dax * sy * sz
-                        gay += root_weight * sx * day * sz
-                        gaz += root_weight * sx * sy * daz
-
-            # Both (P|Q) and (Q|P) appear in the double sum, so weight by 2.
-            gx = 2.0 * cik * gax
-            gy = 2.0 * cik * gay
-            gz = 2.0 * cik * gaz
-
-            grad_threads[tid, atom_i, 0] += gx
-            grad_threads[tid, atom_i, 1] += gy
-            grad_threads[tid, atom_i, 2] += gz
-            # Translational invariance: d/dQ = -d/dP
-            grad_threads[tid, atom_k, 0] -= gx
-            grad_threads[tid, atom_k, 1] -= gy
-            grad_threads[tid, atom_k, 2] -= gz
-
-    grad = np.zeros((natoms, 3), dtype=np.float64)
-    for t in range(nthreads):
-        for iatom in range(natoms):
-            for direction in range(3):
-                grad[iatom, direction] += grad_threads[t, iatom, direction]
-
+                for il in range(nprim[l0]):
+                    gamma_q = expnts[l0, il]
+                    rho = alpha * gamma_q / (alpha + gamma_q)
+                    gpq_sqrt = np.sqrt(alpha * gamma_q)
+                    Roots(norder, rho * pqsq, roots, rweights)
+                    pref = 2.0 * np.sqrt(rho / pi)
+                    for ir in range(norder):
+                        t = roots[ir]
+                        # (P|Q) as a three-center integral with a dummy s function (exponent 0) at
+                        # the bra, one order higher on P for its derivative
+                        Recur_3c2e_new(G, t, lK + 1, 0, lL, 0, Px, Px, Qx, 0.0,
+                                       alpha, 0.0, gamma_q, 0.0, alpha, gamma_q, 0.0, gpq_sqrt)
+                        for a in range(lK + 2):
+                            for c in range(lL + 1):
+                                Gx[a, c] = G[a, c]
+                        Recur_3c2e_new(G, t, lK + 1, 0, lL, 0, Py, Py, Qy, 0.0,
+                                       alpha, 0.0, gamma_q, 0.0, alpha, gamma_q, 0.0, gpq_sqrt)
+                        for a in range(lK + 2):
+                            for c in range(lL + 1):
+                                Gy[a, c] = G[a, c]
+                        Recur_3c2e_new(G, t, lK + 1, 0, lL, 0, Pz, Pz, Qz, 0.0,
+                                       alpha, 0.0, gamma_q, 0.0, alpha, gamma_q, 0.0, gpq_sqrt)
+                        for a in range(lK + 2):
+                            for c in range(lL + 1):
+                                Gz[a, c] = G[a, c]
+                        wr = pref * rweights[ir]
+                        for i in range(nK):
+                            la = lmn[k0 + i, 0]
+                            ma = lmn[k0 + i, 1]
+                            na = lmn[k0 + i, 2]
+                            ci = wr * coef[k0 + i, ik]
+                            for k in range(nL):
+                                w = Wb[i, k]
+                                if w == 0.0:
+                                    continue
+                                lc = lmn[l0 + k, 0]
+                                mc = lmn[l0 + k, 1]
+                                nc = lmn[l0 + k, 2]
+                                sx = Gx[la, lc]
+                                sy = Gy[ma, mc]
+                                sz = Gz[na, nc]
+                                dax = two_alpha * Gx[la + 1, lc]
+                                day = two_alpha * Gy[ma + 1, mc]
+                                daz = two_alpha * Gz[na + 1, nc]
+                                if la > 0:
+                                    dax -= la * Gx[la - 1, lc]
+                                if ma > 0:
+                                    day -= ma * Gy[ma - 1, mc]
+                                if na > 0:
+                                    daz -= na * Gz[na - 1, nc]
+                                f = ci * coef[l0 + k, il] * w
+                                gx += f * dax * sy * sz
+                                gy += f * sx * day * sz
+                                gz += f * sx * sy * daz
+            # both (P|Q) and (Q|P) appear in the double sum; d/dQ = -d/dP
+            atom_k = shell_atom[K]
+            atom_l = shell_atom[L]
+            gbin[b, atom_k, 0] += 2.0 * gx
+            gbin[b, atom_k, 1] += 2.0 * gy
+            gbin[b, atom_k, 2] += 2.0 * gz
+            gbin[b, atom_l, 0] -= 2.0 * gx
+            gbin[b, atom_l, 1] -= 2.0 * gy
+            gbin[b, atom_l, 2] -= 2.0 * gz
+    grad = np.zeros((natoms, 3))
+    for b in range(nbins):
+        for a in range(natoms):
+            for d in range(3):
+                grad[a, d] += gbin[b, a, d]
     return grad

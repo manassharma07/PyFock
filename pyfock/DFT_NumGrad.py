@@ -3,7 +3,7 @@ import numpy as np
 
 from . import Data
 from .Basis import Basis
-from .DFT import DFT
+from .DFT import DFT, default_auxbasis_name
 from .Mol import Mol
 
 # This code is a simple finite difference numerical derivative code for getting DFT forces uising the DFT object
@@ -82,7 +82,7 @@ class DFT_NumGrad:
             else:
                 auxbasis = Basis(
                     mol,
-                    {"all": Basis.load(mol=mol, basis_name="def2-universal-jfit")},
+                    {"all": Basis.load(mol=mol, basis_name=default_auxbasis_name(self.dft_obj.xc))},
                 )
 
         return mol, basis, auxbasis

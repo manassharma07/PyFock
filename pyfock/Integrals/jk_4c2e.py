@@ -157,7 +157,10 @@ class Plan4c2e:
 
 @njit(cache=True, nogil=True)
 def _shell_pairs(sh_l, sh_nprim, sh_exp, sh_coef, sh_cen, exp_cutoff):
-    """All shell pairs (higher angular momentum first) and their surviving primitive pairs."""
+    """
+    All shell pairs (higher angular momentum first) and their surviving primitive pairs: total
+    exponent, centre, coefficient and the exponent of the primitive on the first shell.
+    """
     nsh = sh_l.shape[0]
     npair = nsh * (nsh + 1) // 2
     maxpp = 0
@@ -173,6 +176,7 @@ def _shell_pairs(sh_l, sh_nprim, sh_exp, sh_coef, sh_cen, exp_cutoff):
     pp_y = np.empty(maxpp, dtype=np.float64)
     pp_z = np.empty(maxpp, dtype=np.float64)
     pp_c = np.empty(maxpp, dtype=np.float64)
+    pp_a = np.empty(maxpp, dtype=np.float64)
     ip = 0
     n = 0
     for A in range(nsh):
@@ -206,11 +210,13 @@ def _shell_pairs(sh_l, sh_nprim, sh_exp, sh_coef, sh_cen, exp_cutoff):
                     pp_y[ip] = (ai * sh_cen[X, 1] + aj * sh_cen[Y, 1]) / p
                     pp_z[ip] = (ai * sh_cen[X, 2] + aj * sh_cen[Y, 2]) / p
                     pp_c[ip] = sh_coef[X, i] * sh_coef[Y, j] * math.exp(-mur2)
+                    pp_a[ip] = ai
                     ip += 1
             pair_ppn[n] = ip - pair_pp0[n]
             n += 1
     return (pair_sh, pair_pp0, pair_ppn, pair_ab,
-            pp_p[:ip].copy(), pp_x[:ip].copy(), pp_y[:ip].copy(), pp_z[:ip].copy(), pp_c[:ip].copy())
+            pp_p[:ip].copy(), pp_x[:ip].copy(), pp_y[:ip].copy(), pp_z[:ip].copy(), pp_c[:ip].copy(),
+            pp_a[:ip].copy())
 
 
 # ----------------------------------------------------------------------------
@@ -1147,7 +1153,7 @@ def build_plan(basis, threshold=1e-12, scheme='rys'):
                 raise ValueError('Basis function normalization does not factorize over the primitives of its shell.')
 
     (pair_sh, pair_pp0, pair_ppn, pair_ab,
-     pp_p, pp_x, pp_y, pp_z, pp_c) = _shell_pairs(sh_l, sh_nprim, sh_exp, sh_coef, sh_cen, EXP_CUTOFF)
+     pp_p, pp_x, pp_y, pp_z, pp_c, pp_a) = _shell_pairs(sh_l, sh_nprim, sh_exp, sh_coef, sh_cen, EXP_CUTOFF)
     cart_xyz, cart_off, idx3, dec, dirn = _cart_tables(2 * lmax)
     bfs_lmn = np.ascontiguousarray(bfs_lmn, dtype=np.int64)
     boys = _boys_table(4 * lmax) if scheme == 'os' else np.zeros((1, 1))
@@ -1163,7 +1169,8 @@ def build_plan(basis, threshold=1e-12, scheme='rys'):
                          np.ones(npp, dtype=np.int64), np.ascontiguousarray(pair_ab[owner]),
                          pp_p, pp_x, pp_y, pp_z, pp_c, np.ones(npp), *tables, _nchunks(npp))
     perm = np.lexsort((-pp_q, owner))
-    pp_p, pp_x, pp_y, pp_z, pp_c, pp_q = (np.ascontiguousarray(a[perm]) for a in (pp_p, pp_x, pp_y, pp_z, pp_c, pp_q))
+    pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, pp_a = (np.ascontiguousarray(a[perm])
+                                                for a in (pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, pp_a))
     Q = _pair_schwarz(pair_sh, pair_pp0, pair_ppn, pair_ab, pp_p, pp_x, pp_y, pp_z, pp_c, pp_q, *tables,
                       _nchunks(pair_sh.shape[0]))
 
@@ -1184,7 +1191,9 @@ def build_plan(basis, threshold=1e-12, scheme='rys'):
     plan.pair_ab = np.ascontiguousarray(pair_ab[keep])
     plan.npairs = int(plan.Q.shape[0])
     plan.pp = (pp_p, pp_x, pp_y, pp_z, pp_c, pp_q)
+    plan.pp_a = pp_a        # exponent of the first-shell primitive (derivative integrals)
     plan.tables = tables
+    plan.bfs_atoms = np.ascontiguousarray(basis.bfs_atoms, dtype=np.int64)
     plan.sh_l = sh_l
     plan.sh_off = sh_off
     plan.sh_nbf = sh_nbf
