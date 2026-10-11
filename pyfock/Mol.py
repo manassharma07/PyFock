@@ -140,7 +140,7 @@ class Mol:
         #Validate if the atoms attribute are provided correctly
         self.success = self.validateAtoms(atoms)
         if self.success:
-            self.nelectrons = self.nelectrons+charge
+            self.nelectrons = self.nelectrons-charge
             self.coordsBohrs = self.coords*Data.Angs2BohrFactor
             #Basis set names for the atoms.
             #Either just one basis function can be specified for all atoms

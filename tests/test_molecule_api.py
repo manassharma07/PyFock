@@ -1,10 +1,30 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from pyfock import Integrals, Mol
 
 from .conftest import build_basis, build_h2o_mol
+
+
+@pytest.mark.parametrize("atoms,charge,expected", [
+    ([["H", 0.0, 0.0, 0.0]], -1, 2),
+    ([["He", 0.0, 0.0, 0.0]], 1, 1),
+    ([["He", 0.0, 0.0, 0.0]], 2, 0),
+    ([["O", 0.0, 0.0, 0.0], ["H", 0.0, 0.0, 1.0], ["H", 1.0, 0.0, 0.0]], 2, 8),
+    ([["O", 0.0, 0.0, 0.0], ["Ghost-H", 0.0, 0.0, 1.0]], 1, 7),
+    ([["Pb", 0.0, 0.0, 0.0]], 2, 20),
+    ([["Pb", 0.0, 0.0, 0.0]], -2, 24),
+    ([["O", 0.0, 0.0, 0.0]], 0, 8),
+])
+def test_molecular_charge_removes_electrons_for_cations(atoms, charge, expected):
+    mol = Mol(atoms=atoms, charge=charge)
+
+    assert mol.success is True
+    assert mol.charge == charge
+    assert mol.nelectrons == expected
+    assert mol.nelectrons == sum(mol.Zcharges) - charge
 
 
 def test_molecule_from_xyz_has_expected_basic_properties():
