@@ -468,7 +468,7 @@ class DFT_Grad:
 
         list_nonzero_indices = None
         count_nonzero_indices = None
-        if dft_obj.xc_bf_screen:
+        if dft_obj.xc_bf_screen and (use_gpu or getattr(dft_obj, 'XC_algo', None) != 3):
             list_nonzero_indices, count_nonzero_indices = Integrals.bf_val_helpers.nonzero_ao_indices(
                 basis, coords_grid, blocksize, nblocks, ngrids)
 
@@ -495,6 +495,21 @@ class DFT_Grad:
                 cp_stream=self._cp_stream,
             )
             dexc_dbf, explicit_xc_grad = xc_result if self.grid_response else (xc_result, None)
+        elif getattr(dft_obj, 'XC_algo', None) == 3:
+            # Algorithm 3 (the CPU default): the plan of the SCF is reused when it was built for this grid.
+            plan = getattr(dft_obj, 'xc_plan', None)
+            if plan is not None and not plan.matches(coords_grid, weights_grid):
+                plan = None
+            xc_result = Integrals.eval_xc_grad_3(
+                basis, dmat, weights_grid, coords_grid, funcid=self.funcid,
+                use_libxc=dft_obj.use_libxc, ncores=ncores, blocksize=blocksize,
+                grids=self.grids, grid_response=self.grid_response, plan=plan,
+                xc_bf_screen=dft_obj.xc_bf_screen,
+            )
+            if self.grid_response:
+                dexc_dbf, explicit_xc_grad = xc_result
+            else:
+                dexc_dbf = xc_result
         else:
             xc_result = Integrals.eval_xc_grad_2(
                 basis, dmat, weights_grid, coords_grid, funcid=self.funcid,

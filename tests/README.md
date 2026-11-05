@@ -21,7 +21,8 @@ added without changing the calculation input or the shared driver.
 
 All ten initial CPU inputs use density fitting, native PyFock XC, PySCF grids,
 and the MINAO starting density from `benchmark_DFT_LDA_DF.py`. The matrix covers
-CAO and SAO, CPU `XC_algo` 1 and 2, several native LDA/GGA functionals, and
+CAO and SAO, CPU `XC_algo` 1 and 2 (3, the current CPU default, is covered by
+`tests/test_eval_xc_3.py` against 2), several native LDA/GGA functionals, and
 `def2-SVP`, `def2-TZVP`, and `def2-QZVP` in both short and long suites.
 
 ## Run one directory

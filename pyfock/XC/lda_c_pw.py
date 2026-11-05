@@ -10,11 +10,13 @@ except Exception as e:
             return func 
         return decorator
 import numpy as np
+from numba import njit
 
 # The following implementation of the Perdew-Wang parametrization of the correlation functional
 # has been taken from this repository (https://github.com/wangenau/eminus/blob/main/eminus/xc/lda_c_pw.py)
 # pretty much as is. The repo has the Apache 2.0 license.
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_pw_(rho):
     """
     Compute the LDA correlation energy and potential using the Perdew-Wang (PW92) parametrization.
@@ -68,6 +70,7 @@ def lda_c_pw_(rho):
 
     return ec, vc
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_pw(rho):
     """
     Numerically stable wrapper for the Perdew-Wang (PW92) LDA correlation functional.

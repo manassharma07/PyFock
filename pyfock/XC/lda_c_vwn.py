@@ -10,11 +10,13 @@ except Exception as e:
             return func 
         return decorator
 import numpy as np
+from numba import njit
 
 # The following implementation of the Vosko-Wilk-Nusair parametrization of the correlation functional
 # has been taken from this repository (https://github.com/wangenau/eminus/blob/main/eminus/xc/lda_x.py)
 # pretty much as is. The repo has the Apache 2.0 license.
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_vwn_(rho):
     """
     Compute the correlation energy and potential using the Vosko-Wilk-Nusair (VWN) LDA correlation functional.
@@ -66,6 +68,7 @@ def lda_c_vwn_(rho):
                               f2 * (2 / (rs12 - x0) - tx / fx - 4 * (2 * x0 + b) / tt))
     return ec, vc
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_vwn(rho):
     """
     Wrapper function for `lda_c_vwn_` providing the LDA correlation energy and potential using VWN parametrization.

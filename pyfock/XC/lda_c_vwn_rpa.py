@@ -1,4 +1,5 @@
 import numpy as np
+from numba import njit
 try:
     import cupy as cp
     from cupy import fuse
@@ -15,6 +16,7 @@ except Exception:
 # in the original B3LYP of Gaussian and in LibXC's / PySCF's HYB_GGA_XC_B3LYP.
 
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_vwn_rpa_(rho):
     """
     Spin-unpolarized VWN correlation energy per particle and potential with the
@@ -43,6 +45,7 @@ def lda_c_vwn_rpa_(rho):
     return ec, vc
 
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def lda_c_vwn_rpa(rho):
     """LDA_C_VWN_RPA (LibXC ID 8): correlation energy per particle and potential."""
     return lda_c_vwn_rpa_(rho)

@@ -131,7 +131,7 @@ class DFT:
         an ``[exchange, correlation]`` pair of LibXC IDs; or a single LibXC xc-functional ID such as
         ``[402]`` (B3LYP). Global hybrids (native 402/475/406, or any LibXC global hybrid with
         ``use_libxc=True``) add their exact-exchange fraction through the density-fitted exchange
-        matrix (RI-K: DF_algo 1, 2, 3 or 11 on the CPU with XC_algo=2; DF_algo 11 on the GPU with
+        matrix (RI-K: DF_algo 1, 2, 3 or 11 on the CPU with XC_algo 2 or 3; DF_algo 11 on the GPU with
         XC_algo=3, the defaults; the default DF_algo=12 falls back to 11), or, with ``isDF=False``,
         through the exchange matrix of the four-center integrals (``direct_scf`` or ``coul_algo``
         1 and 2, with ``rys=True`` or ``rys=False``). Range-separated hybrids are not supported.
@@ -153,10 +153,14 @@ class DFT:
         object is supplied.
 
     blocksize : int, optional
-        Block size for XC grid evaluations. Defaults depend on whether GPU is used.
+        Block size for XC grid evaluations (XC_algo 1 and 2 on the CPU, and the GPU algorithms; the
+        CPU default XC_algo=3 partitions the grid itself). Defaults depend on whether GPU is used.
 
     save_ao_values : bool, optional
-        If True, saves AO values to reuse during XC evaluation. Increases speed but uses more memory.
+        If True, keeps the values (and gradients) of the basis functions on the grid between the SCF
+        iterations instead of recomputing them. With the CPU default XC_algo=3 the cache is compact
+        (per leaf of the grid partition) and the recomputation is cheap, so it pays off mainly when
+        few cores share ample memory bandwidth; it uses more memory in any case.
 
     use_gpu : bool, optional
         Whether to use GPU acceleration.
@@ -209,7 +213,8 @@ class DFT:
         ``direct_scf`` instead (None = 80% of the memory available when the SCF starts, 0 = always direct).
 
     XC_algo : int
-        Algorithm selector for XC evaluation (2 for CPU, 3 for GPU).
+        Algorithm selector for XC evaluation (3 for CPU and GPU by default; 2 is the previous CPU
+        algorithm and 1 the serial one).
 
     sortGrids : bool
         Whether to sort DFT integration grids (not recommended).
@@ -428,7 +433,9 @@ class DFT:
                 self.blocksize = 5000
         
         self.XC_algo = None
-        """ This is only for developers. Users should not change it. The algorithm for XC evaluation should be 2 for CPU and 3 for GPU."""
+        """ The algorithm for the XC term: None picks the default, 3 on the CPU (Integrals.eval_xc_3: grid partitioned
+        into compact leaves, one Numba parallel region) and 3 on the GPU (Integrals.eval_xc_3_cupy). 2 and 1 are the
+        previous CPU algorithms (batch-parallel joblib, and serial). """
         # if use_gpu:
         #     self.XC_algo = 3
         # else:
@@ -440,8 +447,11 @@ class DFT:
         """ Enable/Disable sorting of DFT grids. Doesn't seem to offer any signficant advantage."""
         self.save_ao_values = save_ao_values
         """ Whether to save atomic orbital (AO) values for reuse during XC evaluation. Improves performance but requires more memory. """
+        self.xc_plan = None
+        """ The grid partition of XC_algo=3 (Integrals.eval_xc_3.XCPlan), built by `scf` and reused by DFT_Grad. """
         self.xc_bf_screen = True
-        """ Enable screening of basis functions for XC term evaluation to reduce computation time drastically. """
+        """ Enable screening of basis functions for XC term evaluation to reduce computation time drastically
+        (False evaluates every function on every batch/leaf; only for checking the screening). """
         self.threshold_schwarz = 1e-09
         """ Threshold for Schwarz screening of two-electron integrals. Smaller values increase accuracy but reduce sparsity. """
         self.threshold_4c2e = 1e-11
@@ -1432,10 +1442,10 @@ class DFT:
             exit()
         if xc != 'HF' and skala is None and (exx_coef > 0 or len(xc) == 1):
             # The semilocal part of a hybrid (or any single xc functional ID) is a sum of components:
-            # supported by the functional-list drivers eval_xc_2 (CPU) and eval_xc_3_cupy (GPU).
-            if (XC_algo not in (None, 3)) if self.use_gpu else (XC_algo not in (None, 2)):
+            # supported by the functional-list drivers eval_xc_2 and eval_xc_3 (CPU) and eval_xc_3_cupy (GPU).
+            if (XC_algo not in (None, 3)) if self.use_gpu else (XC_algo not in (None, 2, 3)):
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                print('ERROR: Hybrid functionals (and single xc functional IDs) are currently supported only with XC_algo=2 on the CPU and XC_algo=3 on the GPU!')
+                print('ERROR: Hybrid functionals (and single xc functional IDs) are currently supported only with XC_algo=2 or 3 on the CPU and XC_algo=3 on the GPU!')
                 print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                 exit()
 
@@ -1528,10 +1538,10 @@ class DFT:
 
 
         if XC_algo is None and not self.use_gpu:
-            XC_algo = 2
-            self.XC_algo = 2
-            if blocksize is None:
-                blocksize = 5000
+            XC_algo = 3
+            self.XC_algo = 3
+        if blocksize is None and not self.use_gpu:
+            blocksize = 5000
 
         
         if strict_schwarz:
@@ -1861,7 +1871,38 @@ class DFT:
             count_nonzero_indices = None
             list_ao_values = None
             list_ao_grad_values = None
-            if xc_bf_screen:
+            xc_plan = None
+            durationAO_values = 0
+            if XC_algo == 3 and not self.use_gpu and skala is None:
+                # Algorithm 3 partitions the grid into compact leaves with their own shell lists (its plan),
+                # which replaces the per-batch screening below; the plan is reused by every SCF iteration
+                # and by the gradient.
+                startXCpreprocessing = timer()
+                print('\nPreliminary processing for XC term evaluations...', flush=True)
+                print('Partitioning the grid into compact leaves and screening the basis functions per leaf...', flush=True)
+                xc_plan = Integrals.eval_xc_3_module.build_xc_plan(basis, grids.coords, grids.weights, ncores=ncores,
+                                                                   screen=xc_bf_screen)
+                self.xc_plan = xc_plan
+                print('done!', flush=True)
+                print(xc_plan.describe(), flush=True)
+                durationXCpreprocessing = timer() - startXCpreprocessing
+                print('Time taken '+str(round(durationXCpreprocessing, 2))+' seconds.\n', flush=True)
+                if save_ao_values:
+                    startAO_values = timer()
+                    xc_semilocal_family = XC.xc_semilocal_family(xc, self.use_libxc)
+                    nd_cache = 1 if xc_semilocal_family == 1 else 4
+                    memory_required = xc_plan.ao_cache_bytes(nd_cache) / 1024 / 1024 / 1024
+                    print('\nYou have asked to save the values of the significant basis functions'
+                          + (' and their gradients' if nd_cache == 4 else '')
+                          + ' on the grid points so as to avoid recalculation for each SCF cycle.', flush=True)
+                    print('Please note: This will require additional memory that is approximately: '
+                          + str(np.round(memory_required, 1)) + ' GB', flush=True)
+                    print('Calculating the values of the significantly contributing basis functions (atomic orbitals) on every leaf...', flush=True)
+                    list_ao_values = xc_plan.build_ao_cache(nd_cache, ncores)
+                    print('done!', flush=True)
+                    durationAO_values = timer() - startAO_values
+                    print('Time taken '+str(round(durationAO_values, 2))+' seconds.\n', flush=True)
+            elif xc_bf_screen:
                 # 1 LDA, 2 GGA, 4 mGGA: the highest semilocal family among the functionals (hybrids count as their semilocal part)
                 xc_semilocal_family = XC.xc_semilocal_family(xc, self.use_libxc)
                 ### Find the list of significanlty contributing bfs for xc evaluations
@@ -1881,7 +1922,6 @@ class DFT:
                 print('Average no. of basis functions contributing to a batch of grid points:   ', int(np.mean(count_nonzero_indices)))
 
                 
-                durationAO_values = 0
                 if save_ao_values:
                     startAO_values = timer()
                     bfs_data = Integrals.bf_val_helpers.pack_bfs_data(basis)  # pack the basis once for all blocks
@@ -2128,13 +2168,14 @@ class DFT:
                                                     list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
                                                         list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values)
                     elif XC_algo==2:
-                        # Much faster than above and stable too, therefore this should be default now.
-                        # Used to unstable and had memory leaks,
-                        # But now all that is fixed by using threadpoolctl, garbage collection or freeing up memory after XC evaluation at each iteration
-                        
+                        # Batch-parallel (joblib) algorithm, the CPU default before algorithm 3.
                         Exc, Vxc = Integrals.eval_xc_2(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, ncores=ncores, blocksize=blocksize, \
                                                     list_nonzero_indices=list_nonzero_indices, count_nonzero_indices=count_nonzero_indices, \
                                                         list_ao_values=list_ao_values, list_ao_grad_values=list_ao_grad_values, debug=debug)
+                    elif XC_algo==3:
+                        # Default for CPUs: compact leaves of the grid, one Numba parallel region (see Integrals.eval_xc_3)
+                        Exc, Vxc = Integrals.eval_xc_3(basis, dmat, grids.weights, grids.coords, funcid, self.use_libxc, ncores=ncores,
+                                                       list_ao_values=list_ao_values, plan=xc_plan, debug=debug)
                 else: # GPU
                     if self.use_libxc:
                         funcx = pylibxc.LibXCFunctional(funcid[0], "unpolarized")
@@ -2459,6 +2500,11 @@ class DFT:
             cp.cuda.Device(0).use()
         blas_limiter.restore_original_limits()
         rt_tddft = self.rt_tddft
+        if xc_plan is not None and not rt_tddft:
+            # The plan stays on the object for DFT_Grad; the AO cache (possibly GBs) and the thread
+            # workspaces are released, as the per-batch cache of the other algorithms is.
+            xc_plan.cache = None
+            xc_plan._ws.clear()
         if rt_tddft:
             if xc_bf_screen and save_ao_values:
                 return Etot, dmat, list_nonzero_indices, count_nonzero_indices, list_ao_values, list_ao_grad_values

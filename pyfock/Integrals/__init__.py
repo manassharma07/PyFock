@@ -82,6 +82,8 @@ from .rys_nuc_mat_symm import rys_nuc_mat_symm
 from .schwarz_helpers import rys_3c2e_tri_schwarz
 from .eval_xc_1 import eval_xc_1
 from .eval_xc_2 import eval_xc_2
+from . import eval_xc_3 as eval_xc_3_module  # the module (bound before the function of the same name below)
+from .eval_xc_3 import eval_xc_3
 from .eval_xc_skala import eval_xc_skala
 from .eval_xc_1_cupy import eval_xc_1_cupy
 from .eval_xc_2_cupy import eval_xc_2_cupy
@@ -123,6 +125,7 @@ from .rys_nuc_grad_contract import rys_nuc_grad_contract
 from .rys_nuc_grad_contract_cupy import rys_nuc_grad_contract_cupy
 from .ecp_grad import ecp_grad_contract
 from .eval_xc_grad_2 import eval_xc_grad_2
+from .eval_xc_grad_3 import eval_xc_grad_3
 from .eval_xc_grad_2_cupy import eval_xc_grad_2_cupy
 from .eval_xc_grad_skala import eval_xc_grad_skala
 from .eval_xc_grad_skala_cupy import eval_xc_grad_skala_cupy
@@ -132,11 +135,11 @@ from .eval_xc_grad_skala_cupy import eval_xc_grad_skala_cupy
 
 __all__ = ['integral_helpers', 'mmd_nuc_mat_symm', 'nuc_mat_symm', 'ecp_mat_symm', 'ecp_mat_symm_analytical', 'kin_mat_symm', 'overlap_mat_symm', 'conv_4c2e_symm', 'mmd_4c2e_symm', 'rys_helpers', 'rys_4c2e_symm',\
      'rys_4c2e_symm_old', 'rys_4c2e_schwarz_symm', 'conv_3c2e_symm', 'rys_3c2e_symm', 'rys_3c2e_symm_old', 'rys_3c2e_symm_test2', 'conv_2c2e_symm', 'rys_2c2e_symm', 'rys_3c2e_tri', 'rys_nuc_mat_symm', 'schwarz_helpers', 'rys_3c2e_tri_schwarz'\
-        'bf_val_helpers', 'eval_xc_1', 'eval_xc_2', 'eval_xc_skala', 'eval_xc_1_cupy', 'eval_xc_2_cupy', 'eval_xc_3_cupy', 'eval_xc_skala_cupy', 'dipole_moment_mat_symm', 'kin_mat_symm_cupy'\
+        'bf_val_helpers', 'eval_xc_1', 'eval_xc_2', 'eval_xc_3', 'eval_xc_3_module', 'eval_xc_skala', 'eval_xc_1_cupy', 'eval_xc_2_cupy', 'eval_xc_3_cupy', 'eval_xc_skala_cupy', 'dipole_moment_mat_symm', 'kin_mat_symm_cupy'\
         , 'overlap_mat_symm_cupy', 'dipole_moment_mat_symm_cupy', 'nuc_mat_symm_cupy', 'kin_mat_symm_shell_cupy', 'rys_2c2e_symm_cupy', 'rys_3c2e_symm_cupy',\
         'rys_3c2e_symm_cupy_fp32', 'schwarz_helpers_cupy', 'df_algo10_helpers', 'df_algo10_helpers_cupy', 'df_algo11_helpers', 'df_algo11_helpers_cupy', 'df_algo11_exchange', 'df_algo11_exchange_cupy', 'multipole_helpers', 'df_algo12_helpers', 'multipole_helpers_cuda', 'df_algo12_helpers_cupy', 'df_algo12_grad', 'overlap_mat_grad_symm', 'kin_mat_grad_symm', 'overlap_mat_grad_r_symm', 'kin_mat_grad_r_symm', 'nuc_mat_grad_symm', 'nuc_mat_grad_r_symm', 'cross_overlap_mat_symm', 'rys_coulomb_matrix',\
          'rys_4c2e_schwarz_sparse_symm', 'rys_coulomb_matrix_sparse', 'jk_4c2e', 'jk_4c2e_grad', 'jk_4c2e_grad_cupy', 'rys_2c2e_diag', 'os_4c2e_symm', 'os_4c2e_symm_old', 'os_3c2e_symm', 'rys_3c2e_grad_symm',\
-         'rys_3c2e_grad_contract', 'rys_2c2e_grad_contract', 'rys_nuc_grad_contract', 'eval_xc_grad_2', 'eval_xc_grad_skala',\
+         'rys_3c2e_grad_contract', 'rys_2c2e_grad_contract', 'rys_nuc_grad_contract', 'eval_xc_grad_2', 'eval_xc_grad_3', 'eval_xc_grad_skala',\
          'overlap_mat_grad_r_symm_cupy', 'kin_mat_grad_r_symm_cupy', 'nuc_mat_grad_r_symm_cupy', 'ecp_grad_contract',
          'rys_3c2e_grad_contract_cupy', 'rys_2c2e_grad_contract_cupy', 'rys_nuc_grad_contract_cupy',
          'eval_xc_grad_2_cupy', 'rys_3c2e_gamma_contract_cupy', 'eval_xc_grad_skala_cupy', 'cuda_stream']

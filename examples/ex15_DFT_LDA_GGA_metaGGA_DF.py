@@ -66,5 +66,5 @@ dftObj = DFT(mol, basis, auxbasis, xc=funcidpyfock)
 dftObj.conv_crit = 1e-7
 dftObj.max_itr = 20
 dftObj.ncores = ncores
-dftObj.save_ao_values = True # Requires more memory but is faster
+dftObj.save_ao_values = True # Keeps the basis functions on the grid: more memory, faster when few cores share ample memory bandwidth
 energyCrysX, dmat = dftObj.scf()

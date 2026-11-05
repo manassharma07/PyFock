@@ -91,8 +91,8 @@ def load_case(directory: Path, suite: Optional[str] = None) -> RegressionCase:
         raise ValueError("GPU cases must set device='gpu'")
     if suite != "gpu" and metadata["device"] != "cpu":
         raise ValueError("Short and long cases must set device='cpu'")
-    if metadata["device"] == "cpu" and int(metadata["xc_algo"]) not in (1, 2):
-        raise ValueError("CPU XC_algo must be 1 or 2")
+    if metadata["device"] == "cpu" and int(metadata["xc_algo"]) not in (1, 2, 3):
+        raise ValueError("CPU XC_algo must be 1, 2 or 3")
     if str(metadata["ao_basis"]).upper() not in ("CAO", "SAO"):
         raise ValueError("ao_basis must be CAO or SAO")
     if metadata["use_pyscf_grids"] is not True and suite != "gpu":

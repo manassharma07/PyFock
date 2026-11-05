@@ -10,7 +10,9 @@ except Exception as e:
             return func 
         return decorator
 import numpy as np
+from numba import njit
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_x_b88_e(rho, sigma):
     # Adapted from https://github.com/dylan-jayatilaka/tonto/blob/master/foofiles/dft_functional.foo
     # The restricted Becke 88 exchange energy density.
@@ -36,6 +38,7 @@ def gga_x_b88_e(rho, sigma):
 
     return ex
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_x_b88_v(rho, sigma):
     # Adapted from https://github.com/dylan-jayatilaka/tonto/blob/master/foofiles/dft_functional.foo
     # The restricted Becke 88 exchange potential. These equations are
@@ -73,6 +76,7 @@ def gga_x_b88_v(rho, sigma):
     return vx, vsigma
 
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_x_b88(rho, sigma):
     # Corresponds to 106 id in Libxc
     ex = gga_x_b88_e(rho, sigma)

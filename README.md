@@ -667,6 +667,28 @@ The GPU integral builder supports orbital and auxiliary shells through i (`l=6`)
 See [GPU design and validation](docs/df_algo11_gpu.md) for validation coverage,
 benchmark commands, memory accounting, and limitations of the surrounding driver.
 
+### Exchange-Correlation Term on the CPU
+
+The XC energy, potential matrix and nuclear gradient are evaluated by `XC_algo=3` by default on
+the CPU (`Integrals.eval_xc_3`, `Integrals.eval_xc_grad_3`). The grid is partitioned into compact
+leaves of at most 256 points by recursive bisection, every leaf carries the list of shells whose
+cutoff reaches it, and one Numba parallel region evaluates basis functions, densities, the
+functional and the two matrix products per leaf (BLAS with one thread each), with a static
+longest-processing-time schedule over the threads and a deterministic assembly of the matrix.
+All natively implemented functionals (LDA, GGA, meta-GGA, the global hybrids) are evaluated
+inside the kernel; LibXC functionals are evaluated between two passes. The previous
+batch-parallel algorithm stays available as `XC_algo=2`.
+
+```python
+dft_obj.XC_algo = 3            # default on the CPU
+dft_obj.save_ao_values = True  # optional AO cache, stored leaf by leaf (see docs/xc_algo3.md)
+```
+
+On a 47-water cluster (def2-SVP, 1175 basis functions, 1.28 million grid points, 24 cores) the
+XC term takes 0.29 s instead of 6.3 s (PBE), 0.27 s instead of 3.9 s (LDA) and 0.69 s instead of
+16.5 s (r2SCAN); see [docs/xc_algo3.md](docs/xc_algo3.md) for the design, the validation and the
+single-core, cache-mode and gradient numbers.
+
 ### Analytical Forces & Geometry Optimization
 
 After a converged DFT calculation, analytical nuclear gradients (and forces)

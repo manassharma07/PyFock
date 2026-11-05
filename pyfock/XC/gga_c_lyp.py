@@ -10,8 +10,10 @@ except Exception as e:
             return func 
         return decorator
 import numpy as np
+from numba import njit
 
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_c_lyp_e(rho, sigma):
     # Corresponds to 106 id in Libxc
     # Adapted from https://github.com/dylan-jayatilaka/tonto/blob/master/foofiles/dft_functional.foo
@@ -37,6 +39,7 @@ def gga_c_lyp_e(rho, sigma):
     return ec
 
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_c_lyp_v(rho, sigma):
     # Corresponds to 106 id in Libxc
     # Adapted from https://github.com/dylan-jayatilaka/tonto/blob/master/foofiles/dft_functional.foo
@@ -73,6 +76,7 @@ def gga_c_lyp_v(rho, sigma):
 
     return vc, vsigma
 
+@njit(cache=True, fastmath=True, error_model="numpy", nogil=True, inline='always')
 def gga_c_lyp(rho, sigma):
     # Corresponds to 131 id in Libxc
     ec = gga_c_lyp_e(rho, sigma)
