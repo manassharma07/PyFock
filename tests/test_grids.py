@@ -301,3 +301,44 @@ def test_ecp_atoms_are_gridded_as_their_element():
     assert grid.charges.tolist() == [53, 1]
     assert grid.element_points == reference.element_points
     assert np.array_equal(grid.coords, reference.coords) and np.array_equal(grid.weights, reference.weights)
+
+
+WATER_CLUSTERS = ROOT / "benchmarks_tests" / "FINAL_Benchmarks_for_paper" / "Structures"
+
+
+@pytest.mark.parametrize("name, natoms", [("h2o", 3), ("water_cluster_5", 15), ("water_cluster_20", 60)])
+def test_screened_partitioning_matches_the_all_pairs_kernel(name, natoms):
+    """The default Becke kernel skips the cell functions that cannot contribute to a point; its factors agree
+    with the all-pairs kernel to the screening tolerance, whatever the number of threads or probes."""
+    import numba
+    mol = _water() if name == "h2o" else Mol(coordfile=str(WATER_CLUSTERS / (name + ".xyz")))
+    assert mol.natoms == natoms
+    exact = Grids(mol, level=3, ncores=2, verbose=False, partition_screening=False)
+    screened = Grids(mol, level=3, ncores=2, verbose=False)
+    assert screened.partition_screening and not exact.partition_screening
+    assert np.array_equal(exact.coords, screened.coords) and np.array_equal(exact.atom_idx, screened.atom_idx)
+    assert np.array_equal(exact.atomic_weights, screened.atomic_weights)
+    factors_exact = exact.weights / exact.atomic_weights
+    factors = screened.weights / screened.atomic_weights
+    assert np.abs(factors - factors_exact).max() < 1e-13
+    assert abs(screened.weights.sum() - exact.weights.sum()) <= 1e-14 * exact.weights.sum()
+
+    # The kernel itself: the result does not depend on the thread count, every atom may be a probe (nprobe
+    # beyond the atom count) and the all-pairs kernel is what screening=False runs.
+    raw = Grids(mol, level=3, ncores=2, verbose=False, sort=False)
+    centres = np.asarray(mol.coordsBohrs, dtype=np.float64).reshape(-1, 3)
+    table = GridsMod.size_adjustment_table(raw.charges, "treutler")
+    w_exact = GridsMod.becke_partition_weights(raw.coords, raw.atom_idx, centres, table, screening=False)
+    before = numba.get_num_threads()
+    try:
+        numba.set_num_threads(1)
+        w1 = GridsMod.becke_partition_weights(raw.coords, raw.atom_idx, centres, table)
+        numba.set_num_threads(min(2, numba.config.NUMBA_NUM_THREADS))
+        w2 = GridsMod.becke_partition_weights(raw.coords, raw.atom_idx, centres, table)
+        w_all = GridsMod.becke_partition_weights(raw.coords, raw.atom_idx, centres, table, nprobe=natoms + 5)
+    finally:
+        numba.set_num_threads(before)
+    assert np.array_equal(w1, w2)
+    assert np.abs(w1 - w_exact).max() < 1e-13
+    assert np.abs(w_all - w_exact).max() < 1e-13
+    assert np.array_equal(raw.weights, w2 * raw.atomic_weights)

@@ -1661,6 +1661,7 @@ class DFT:
 
 
         dmat_grid_pruning = None
+        xc_plan = None   # set by the XC_algo=3 preprocessing; stays None for HF and the other algorithms
         if self.grid_pruning_use_core_guess and xc != 'HF' and grids is None:
             # Density of the configured initial guess, independent of a user-supplied dmat
             dmat_grid_pruning = self.guess_dmat(mol, basis, Hcore=H, S=S)

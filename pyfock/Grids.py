@@ -499,6 +499,129 @@ def _becke_partition_kernel(coords, atom_idx, atm_coords, inv_dist, a_table, use
             out[p] = P[atom_idx[p]] / s
 
 
+PARTITION_SCREENING_PROBES = 8
+"""Screened Becke partitioning: number of atoms nearest to a grid point whose switching factors alone bound the
+cell functions of all other atoms (see :func:`becke_partition_weights`)."""
+
+PARTITION_SCREENING_TOL = 1e-15
+"""Screened Becke partitioning: bound on the error of every partition factor (see :func:`becke_partition_weights`)."""
+
+
+@njit(cache=True, nogil=True, fastmath=True, error_model="numpy")
+def _cell_function(c, d, inv_dist, a_cb):
+    # Becke cell function P_c(r) = prod_b s(nu_cb) over every atom b, for a point at the distances d[b] from the
+    # atoms. The diagonal entries inv_dist[c, c] = 0 and a_cb[c, c] = -1 turn the b == c factor into exactly 1
+    # (nu = -1, f(-1) = -1, s = 1), so the loop has no branch and vectorizes.
+    natm = d.shape[0]
+    dc = d[c]
+    p = 1.0
+    for b in range(natm):
+        g = (dc - d[b]) * inv_dist[c, b]
+        g += a_cb[c, b] * (1.0 - g * g)
+        g = (3.0 - g * g) * g * 0.5
+        g = (3.0 - g * g) * g * 0.5
+        g = (3.0 - g * g) * g * 0.5
+        p *= 0.5 * (1.0 - g)
+    return p
+
+
+@njit(cache=True, nogil=True, fastmath=True, error_model="numpy")
+def _becke_weight_screened(x, y, z, A, atm_coords, inv_dist, a_cb, a_bc, nprobe, tol, d, q, probe, pdist):
+    # Becke factor W = P_A(r) / Z(r), Z = sum_c P_c(r), of one grid point of atom A, with an error below ``tol``
+    # but without evaluating all atom pairs. The switching factors s(nu) lie in [0, 1], so dropping factors from
+    # a cell function can only increase it, and every partial product is an upper bound of P_c:
+    #
+    # 1. The nearest atom N of the point gives Z >= P_A + P_N. If P_A / (P_A + P_N) <= tol, the point lies deep
+    #    inside another cell; its factor is at most tol and that bound is returned (two cell functions, O(natm)).
+    # 2. Otherwise the ``nprobe`` atoms nearest to the point (the dominant terms of Z) get their cell functions
+    #    in full, and for every other atom c the product q_c of its factors with the probes alone, q_c >= P_c.
+    #    Atoms with q_c < tol/natm * Z_lower, Z_lower the sum so far, are dropped: together they change Z by
+    #    less than tol * Z. The rest are evaluated in full. In a dense cluster only the few dozen atoms around the
+    #    point survive, so the cost per point is O(natm * (nprobe + survivors)) instead of O(natm^2).
+    #
+    # ``d`` and ``q`` are scratch arrays of natm elements, ``probe`` and ``pdist`` of nprobe; nprobe <= natm.
+    natm = atm_coords.shape[0]
+    for k in range(natm):
+        dx = x - atm_coords[k, 0]
+        dy = y - atm_coords[k, 1]
+        dz = z - atm_coords[k, 2]
+        d[k] = np.sqrt(dx * dx + dy * dy + dz * dz)
+
+    # The nprobe atoms nearest to the point, by increasing distance (insertion into a short sorted list).
+    for k in range(nprobe):
+        pdist[k] = 1.0e300
+        probe[k] = -1
+    for k in range(natm):
+        dk = d[k]
+        if dk < pdist[nprobe - 1]:
+            j = nprobe - 1
+            while j > 0 and pdist[j - 1] > dk:
+                pdist[j] = pdist[j - 1]
+                probe[j] = probe[j - 1]
+                j -= 1
+            pdist[j] = dk
+            probe[j] = k
+
+    PA = _cell_function(A, d, inv_dist, a_cb)
+    N = probe[0]
+    Z = PA
+    if N != A:
+        PN = _cell_function(N, d, inv_dist, a_cb)
+        Z += PN
+        if PA <= tol * Z:
+            return PA / Z
+    for ip in range(1, nprobe):
+        c = probe[ip]
+        if c != A:
+            Z += _cell_function(c, d, inv_dist, a_cb)
+
+    # Upper bounds q_c of the remaining cell functions from the factors with the probes alone. The factor of
+    # c with probe b is s(nu_cb) with nu_cb = mu_cb + a_cb (1 - mu_cb^2): a_bc[b, c] = a_cb[c, b] keeps the
+    # access to the table contiguous in c (its diagonal is -1 as well, so the c == b factor is 1).
+    for c in range(natm):
+        q[c] = 1.0
+    for ip in range(nprobe):
+        b = probe[ip]
+        db = d[b]
+        for c in range(natm):
+            g = (d[c] - db) * inv_dist[b, c]
+            g += a_bc[b, c] * (1.0 - g * g)
+            g = (3.0 - g * g) * g * 0.5
+            g = (3.0 - g * g) * g * 0.5
+            g = (3.0 - g * g) * g * 0.5
+            q[c] *= 0.5 * (1.0 - g)
+    q[A] = 0.0
+    for ip in range(nprobe):
+        q[probe[ip]] = 0.0
+    threshold = tol / natm * Z
+    for c in range(natm):
+        if q[c] >= threshold:
+            Z += _cell_function(c, d, inv_dist, a_cb)
+    return PA / Z
+
+
+@njit(parallel=True, cache=True, nogil=True, fastmath=True, error_model="numpy")
+def _becke_partition_kernel_screened(coords, atom_idx, atm_coords, inv_dist, a_cb, a_bc, nprobe, tol, blocksize,
+                                     nthreads, out):
+    # Screened Becke factors of all points (see _becke_weight_screened). The blocks of points are dealt out to the
+    # threads round-robin: the points come atom by atom, so contiguous chunks would hand a thread whole atomic
+    # grids of unequal cost. Every point is evaluated independently, so the result does not depend on nthreads.
+    npts = coords.shape[0]
+    natm = atm_coords.shape[0]
+    nblocks = (npts + blocksize - 1) // blocksize
+    for t in prange(nthreads):
+        d = np.empty(natm)
+        q = np.empty(natm)
+        probe = np.empty(nprobe, dtype=np.int64)
+        pdist = np.empty(nprobe)
+        for ib in range(t, nblocks, nthreads):
+            p0 = ib * blocksize
+            p1 = min(p0 + blocksize, npts)
+            for p in range(p0, p1):
+                out[p] = _becke_weight_screened(coords[p, 0], coords[p, 1], coords[p, 2], atom_idx[p], atm_coords,
+                                                inv_dist, a_cb, a_bc, nprobe, tol, d, q, probe, pdist)
+
+
 @njit(parallel=True, cache=True, nogil=True, fastmath=True, error_model="numpy")
 def _becke_weight_grad_kernel(coords, atom_idx, atm_coords, inv_dist, a_table, use_adjust,
                               cot, blocksize, out):
@@ -645,12 +768,20 @@ def becke_weight_gradient(coords, atom_idx, atm_coords, a_table=None, cotangent=
     return out.sum(axis=0)
 
 
-def becke_partition_weights(coords, atom_idx, atm_coords, a_table=None, blocksize=128):
+def becke_partition_weights(coords, atom_idx, atm_coords, a_table=None, blocksize=128, screening=True,
+                            nprobe=PARTITION_SCREENING_PROBES, tol=PARTITION_SCREENING_TOL):
     """Becke partitioning factors P_A(r)/sum_B P_B(r) of grid points belonging to the atoms ``atom_idx``.
 
     ``coords`` (N, 3) and ``atm_coords`` (natoms, 3) in Bohr; ``a_table`` is the (natoms, natoms) atomic-size
     adjustment from :func:`size_adjustment_table` or ``None``. Multiplying the single-atom volume elements by
     these factors gives the molecular quadrature weights. Runs on the Numba threads set by the caller.
+
+    With ``screening`` (default) the cell functions P_B that cannot contribute to the normalization of a point
+    are not evaluated: the factors of an atom with the ``nprobe`` atoms nearest to the point already bound its
+    cell function, and points deep inside another atom's cell are recognized from their two leading cell
+    functions. Every factor comes out within ``tol`` of the unscreened value (``screening=False``: all atom
+    pairs for every point, the kernel the GPU grid mirrors) and the cost per point drops from O(natoms^2) to
+    O(natoms) times the number of atoms around the point. The result does not depend on the number of threads.
     """
     coords = np.ascontiguousarray(coords, dtype=np.float64)
     atm_coords = np.ascontiguousarray(atm_coords, dtype=np.float64)
@@ -670,7 +801,18 @@ def becke_partition_weights(coords, atom_idx, atm_coords, a_table=None, blocksiz
     else:
         a_table = np.ascontiguousarray(a_table, dtype=np.float64)
         use_adjust = True
-    _becke_partition_kernel(coords, atom_idx, atm_coords, inv_dist, a_table, use_adjust, int(blocksize), out)
+    if not screening:
+        _becke_partition_kernel(coords, atom_idx, atm_coords, inv_dist, a_table, use_adjust, int(blocksize), out)
+        return out
+    # a_cb[c, b] = a_cb of the pair, a_bc[b, c] the same number (a_table is antisymmetric); the diagonal -1
+    # makes the self factor of every cell function exactly 1 in the branch-free loops of the kernel.
+    a_cb = a_table.copy()
+    np.fill_diagonal(a_cb, -1.0)
+    a_bc = np.ascontiguousarray(a_cb.T)
+    nprobe = int(max(1, min(int(nprobe), natm)))
+    nthreads = int(max(1, numba.get_num_threads()))
+    _becke_partition_kernel_screened(coords, atom_idx, atm_coords, inv_dist, a_cb, a_bc, nprobe, float(tol),
+                                     int(blocksize), nthreads, out)
     return out
 
 
@@ -704,7 +846,8 @@ class Grids:
 
     def __init__(self, mol=None, basis=None, level=3, radial_precision=None, ncores=os.cpu_count(),
                  scheme=None, preset=None, angular_points=None, hardness=3, sort=True, verbose=True,
-                 pruning='regions', size_adjustment='treutler', points_per_element=None, use_gpu=False):
+                 pruning='regions', size_adjustment='treutler', points_per_element=None, use_gpu=False,
+                 partition_screening=True):
         """
         Generate the molecular integration grid.
 
@@ -755,10 +898,16 @@ class Grids:
             the Numba CPU kernel. The points, the partitioning and the box grouping are all computed on the
             device and the finished grid is copied back, so ``coords``, ``weights`` and ``atom_idx`` are
             NumPy arrays either way: the points, their atom indices and their box order are identical to the
-            CPU ones and the weights agree to the last bits (see :mod:`pyfock.Grids_cupy`). Falls back to the
+            CPU ones and the weights agree to about 1e-13 (the GPU evaluates all atom pairs like
+            ``partition_screening=False``; see :mod:`pyfock.Grids_cupy` for the last digits). Falls back to the
             CPU with a warning when CuPy or a CUDA device is unavailable or the molecule has more atoms than
             the kernels are compiled for (``Grids_cupy.MAX_GPU_ATOMS``). The attribute ``use_gpu`` records
             what was actually used.
+        partition_screening : bool, default=True
+            ``scheme='treutler'`` on the CPU only: evaluate the Becke partitioning with the screened kernel of
+            :func:`becke_partition_weights` (cost per point proportional to the number of atoms around it
+            rather than to the square of the number of atoms; factors within ``PARTITION_SCREENING_TOL`` of the
+            all-pairs result). ``False`` evaluates all atom pairs for every point, as the GPU kernel does.
 
         Raises
         ------
@@ -817,6 +966,8 @@ class Grids:
                   + ' grid is built on the CPU.', flush=True)
         self.use_gpu = bool(use_gpu) and scheme == 'treutler'
         """Whether the grid was built on the GPU (see the ``use_gpu`` argument)."""
+        self.partition_screening = bool(partition_screening)
+        """'treutler' scheme on the CPU: whether the Becke partitioning used the screened kernel."""
 
         atm_coords = np.ascontiguousarray(np.asarray(mol.coordsBohrs, dtype=np.float64).reshape(-1, 3))
         charges = grid_charges(mol)
@@ -929,7 +1080,7 @@ class Grids:
         nthreads_before = numba.get_num_threads()
         try:
             numba.set_num_threads(max(1, min(self.ncores, numba.config.NUMBA_NUM_THREADS)))
-            factors = becke_partition_weights(coords, atom_idx, atm_coords, a_table)
+            factors = becke_partition_weights(coords, atom_idx, atm_coords, a_table, screening=self.partition_screening)
         finally:
             numba.set_num_threads(nthreads_before)
         return coords, vol * factors, atom_idx, vol

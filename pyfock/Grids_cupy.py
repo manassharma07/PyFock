@@ -12,8 +12,9 @@ The three steps of a grid build run on the device:
    (the single-atom grids of :func:`pyfock.Grids.single_atom_grid`, which are cached on the host) cross
    the bus. The molecular point set is built on the device by a gather from that pool, so nothing of
    size N is transferred or allocated on the host.
-2. **Becke partitioning** (:func:`becke_partition_weights_cupy`): a CUDA kernel that mirrors the Numba
-   CPU kernel pair for pair, one thread per grid point. Every thread keeps the distances to all atoms
+2. **Becke partitioning** (:func:`becke_partition_weights_cupy`): a CUDA kernel that mirrors the all-pairs
+   Numba CPU kernel (``becke_partition_weights(..., screening=False)``) pair for pair, one thread per grid
+   point; the screened CPU default agrees with both to its tolerance. Every thread keeps the distances to all atoms
    and their unnormalised cell functions in local memory, so the kernel is compiled for the few numbers
    of atoms in ``_MAX_ATOMS_VARIANTS`` and the smallest variant that fits the molecule is launched.
    This step dominates the cost of a build (N_points x N_atoms^2).

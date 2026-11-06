@@ -80,8 +80,56 @@ Build times (4 cores of an Apple M4, Numba kernel already compiled):
 | C60 | 3 | 847,080 | 1.09 s | 0.83 s |
 | C60 | 5 | 2,578,680 | 8.6 s | 5.5 s |
 
-The cost grows as N_points x N_atoms^2 because all atom pairs enter the partition weight of every
-point.
+The all-pairs partitioning costs N_points x N_atoms^2 switching factors, so for a cluster, whose
+number of points grows linearly, the build time grows with the cube of its size. The default kernel
+screens that work away (next section).
+
+### Screened partitioning
+
+The Becke factor of a point, P_A(r) / sum_B P_B(r), needs the cell function P_B = prod_C s(nu_BC) of
+every atom B, and each one is a product over all atoms C. The screened kernel (the default,
+`Grids(..., partition_screening=True)`, `becke_partition_weights(..., screening=True)`) avoids most of
+those products without changing the result beyond its tolerance of 1e-15, using only that the
+switching factors lie in [0, 1], so that leaving factors out of a cell function can only increase it:
+
+* P_A and the cell function of the atom nearest to the point bound the normalisation from below. A point
+  whose P_A is below 1e-15 of that bound lies deep inside another atom's cell; its factor is below 1e-15,
+  the bound is returned and nothing else is evaluated (two cell functions, O(N_atoms)).
+* For the other points, the eight atoms nearest to the point get their cell functions in full, and for
+  every remaining atom the product of its factors with those eight atoms alone is formed: an upper bound
+  of its cell function. Atoms whose bound stays below 1e-15 / N_atoms of the normalisation accumulated so
+  far are dropped, and together they change the normalisation by less than 1e-15 of its value; the rest
+  (a few dozen atoms around the point in a dense cluster) are evaluated in full.
+
+The cost per point is then N_atoms times the number of atoms around the point, instead of N_atoms^2, and
+the kernel is branch-free in its inner loops (the self factor of a cell function is made exactly 1 by
+the diagonal of the tables), so it vectorises. The weights agree with the all-pairs kernel
+(`partition_screening=False`, the kernel the GPU grid mirrors) to 1e-14 in absolute value, the sum of
+the weights to 1e-15 relative (`tests/test_grids.py`), and SCF energies to the convergence threshold
+(20 waters, PBE/def2-SVP converged to 1e-9: 5e-12 Ha apart); the result does not depend on the number
+of threads. Build times of the default grid on 4 cores of an AMD
+Threadripper PRO 5975WX (Numba kernels compiled; the partitioning is all but 0.5 s of the build):
+
+| water cluster | atoms | points | all pairs | screened |
+|---|---|---|---|---|
+| 20 | 60 | 673,960 | 1.2 s | 0.25 s |
+| 47 | 141 | 1,583,806 | 14.7 s | 1.0 s |
+| 76 | 228 | 2,561,048 | 64.4 s | 2.3 s |
+| 100 | 300 | 3,369,800 | 148.5 s | 3.8 s |
+| 139 | 417 | 4,684,022 | 399.3 s | 7.1 s |
+
+The all-pairs times grow as N^3.0 with the size of the cluster, the screened ones as N^1.9: the cell
+functions that survive the screening are still products over all atoms. A build that took longer than
+the whole SCF of the 139-water cluster is now a side cost of it (the density pruning that follows the
+build, which evaluates the guess density on every point, takes longer).
+
+The partitioning of the 139-water grid takes 25.7 s on one thread of the same machine, 12.9 s on two,
+6.5 s on four, 3.4 s on eight and 1.24 s on 24 (86% parallel efficiency; every point is independent
+and blocks of 128 points are dealt out to the threads round-robin). Eight probe atoms is the sweet
+spot (four leave too many atoms to evaluate in full, 11.3 s; sixteen cost more bounds than they
+save, 8.6 s), the tolerance hardly matters for the time (1e-13: 5.9 s, 1e-17: 7.1 s) and the block
+size not at all. The two numbers are the module constants `PARTITION_SCREENING_PROBES` and
+`PARTITION_SCREENING_TOL`, and arguments of `becke_partition_weights`.
 
 ### Building the grid on the GPU
 
