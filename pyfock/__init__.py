@@ -28,7 +28,7 @@ import os
 # in the environment otherwise.
 os.environ.setdefault("OPENBLAS_THREAD_TIMEOUT", "4")
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 __author__ = 'Manas Sharma'
 __credits__ = 'Phys Whiz (bragitoff.com)'
 
